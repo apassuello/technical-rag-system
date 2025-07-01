@@ -1,10 +1,11 @@
 import faiss
 import numpy as np
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
 from shared_utils.document_processing.chunker import chunk_technical_text
 from shared_utils.embeddings.generator import generate_embeddings
+from shared_utils.retrieval.hybrid_search import HybridRetriever
 
 
 class BasicRAG:
@@ -15,6 +16,7 @@ class BasicRAG:
         self.index = None
         self.chunks = []  # Store chunk text and metadata
         self.embedding_dim = 384  # all-MiniLM-L6-v2 dimension
+        self.hybrid_retriever: Optional[HybridRetriever] = None
         
     def index_document(self, pdf_path: Path) -> int:
         """
@@ -58,6 +60,13 @@ class BasicRAG:
             }
             self.chunks.append(chunk_info)
         
+        # Initialize hybrid retriever and index chunks
+        if self.hybrid_retriever is None:
+            self.hybrid_retriever = HybridRetriever()
+        
+        # Re-index all chunks for hybrid search
+        self.hybrid_retriever.index_documents(self.chunks)
+        
         return len(chunks)
     
     def query(self, question: str, top_k: int = 5) -> Dict:
@@ -97,3 +106,69 @@ class BasicRAG:
             "chunks": relevant_chunks,
             "sources": list(sources)
         }
+    
+    def hybrid_query(self, question: str, top_k: int = 5, dense_weight: float = 0.7) -> Dict:
+        """
+        Enhanced query using hybrid dense + sparse retrieval.
+        
+        Combines semantic similarity (embeddings) with keyword matching (BM25)
+        using Reciprocal Rank Fusion for optimal relevance ranking.
+        
+        Args:
+            question: User query
+            top_k: Number of results to return
+            dense_weight: Weight for dense retrieval (0.7 = 70% semantic, 30% keyword)
+        
+        Returns:
+            Enhanced results with hybrid_score field and retrieval method indicators
+            
+        Raises:
+            ValueError: If hybrid retriever not initialized
+        """
+        if self.hybrid_retriever is None or len(self.chunks) == 0:
+            return {"question": question, "chunks": [], "sources": [], "retrieval_method": "none"}
+        
+        # Perform hybrid search
+        try:
+            # Update hybrid retriever weight if different
+            if abs(self.hybrid_retriever.dense_weight - dense_weight) > 0.01:
+                self.hybrid_retriever.dense_weight = dense_weight
+            
+            hybrid_results = self.hybrid_retriever.search(question, top_k)
+            
+            # Process results for consistency with basic query format
+            relevant_chunks = []
+            sources = set()
+            
+            for chunk_idx, rrf_score, chunk_dict in hybrid_results:
+                # Add hybrid-specific metadata
+                enhanced_chunk = chunk_dict.copy()
+                enhanced_chunk["hybrid_score"] = float(rrf_score)
+                enhanced_chunk["retrieval_method"] = "hybrid"
+                
+                relevant_chunks.append(enhanced_chunk)
+                sources.add(enhanced_chunk["source"])
+            
+            # Get retrieval statistics for transparency
+            stats = self.hybrid_retriever.get_retrieval_stats()
+            
+            return {
+                "question": question,
+                "chunks": relevant_chunks,
+                "sources": list(sources),
+                "retrieval_method": "hybrid",
+                "dense_weight": dense_weight,
+                "sparse_weight": 1.0 - dense_weight,
+                "stats": stats
+            }
+            
+        except Exception as e:
+            # Fallback to basic semantic search on hybrid failure
+            print(f"Hybrid search failed: {e}")
+            print("Falling back to basic semantic search...")
+            
+            basic_result = self.query(question, top_k)
+            basic_result["retrieval_method"] = "fallback_semantic"
+            basic_result["error"] = str(e)
+            
+            return basic_result
