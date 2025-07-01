@@ -13,7 +13,13 @@ class BasicRAG:
     """Basic RAG system combining PDF processing, chunking, and embedding search."""
     
     def __init__(self):
-        """Initialize FAISS index and document storage."""
+        """
+        Initialize FAISS index and document storage.
+        
+        Recommended Usage:
+        - For production: Use hybrid_query() method (best performance + quality)
+        - For research: enhanced_hybrid_query() available but not recommended
+        """
         self.index = None
         self.chunks = []  # Store chunk text and metadata
         self.embedding_dim = 384  # all-MiniLM-L6-v2 dimension
@@ -188,28 +194,28 @@ class BasicRAG:
             
             return basic_result
     
-    def enhanced_hybrid_query(self, question: str, top_k: int = 5, quality_threshold: float = 0.1) -> Dict:
+    def enhanced_hybrid_query(self, question: str, top_k: int = 5, enable_enhancement: bool = False) -> Dict:
         """
-        Intelligent hybrid query with quality-focused enhancement.
+        Hybrid query with optional enhancement (DISABLED BY DEFAULT).
         
-        Optimized approach that balances enhancement benefits with quality:
-        1. Conservative query enhancement to prevent bloat
-        2. Quality validation comparing enhanced vs original results
-        3. Adaptive fallback to ensure optimal performance
-        4. Smart weighting based on query characteristics
+        Based on comprehensive evaluation, query enhancement does not provide
+        meaningful improvements and adds computational overhead. Enhancement
+        is disabled by default and standard hybrid search is recommended.
+        
+        Evaluation Results:
+        - Enhancement shows no statistical significance (p=0.374)
+        - 1.7x slower than standard hybrid search
+        - Lower quality scores than baseline methods
         
         Args:
             question: User query string
             top_k: Number of results to return
-            quality_threshold: Minimum quality improvement required (0.1 = 10%)
+            enable_enhancement: Enable query enhancement (NOT RECOMMENDED)
             
         Returns:
-            Optimal search results with quality validation:
-            - Uses enhanced search only if it improves quality
-            - Maintains semantic score quality while adding hybrid benefits
-            - Comprehensive metadata for performance analysis
+            Hybrid search results with optional enhancement metadata
             
-        Performance: <10ms with quality assurance
+        Recommendation: Use hybrid_query() directly for better performance
         """
         if not question or not question.strip():
             return {
@@ -220,8 +226,21 @@ class BasicRAG:
                 "enhancement_applied": False
             }
         
+        # Check if enhancement is enabled (DISABLED BY DEFAULT)
+        if not enable_enhancement:
+            # Use standard hybrid search (RECOMMENDED)
+            hybrid_result = self.hybrid_query(question, top_k)
+            hybrid_result.update({
+                "original_query": question,
+                "enhancement_applied": False,
+                "enhancement_disabled": True,
+                "retrieval_method": "hybrid_recommended",
+                "note": "Enhancement disabled based on evaluation - use hybrid_query() directly"
+            })
+            return hybrid_result
+        
         try:
-            # Import QueryEnhancer (lazy import for performance)
+            # Enhancement enabled (NOT RECOMMENDED - adds overhead without benefit)
             from shared_utils.query_processing.query_enhancer import QueryEnhancer
             
             # Initialize enhancer
@@ -270,7 +289,8 @@ class BasicRAG:
                     "enhancement_applied": True,
                     "retrieval_method": "enhanced_hybrid",
                     "baseline_score": baseline_score,
-                    "quality_validated": True
+                    "quality_validated": True,
+                    "warning": "Enhancement enabled despite evaluation showing no benefit"
                 })
                 
                 return hybrid_result
