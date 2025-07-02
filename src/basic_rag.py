@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
 from shared_utils.document_processing.chunker import chunk_technical_text
+from shared_utils.document_processing.hybrid_parser import parse_pdf_with_hybrid_approach
 from shared_utils.embeddings.generator import generate_embeddings
 from shared_utils.retrieval.hybrid_search import HybridRetriever
 from shared_utils.retrieval.vocabulary_index import VocabularyIndex
@@ -22,7 +23,7 @@ class BasicRAG:
         """
         self.index = None
         self.chunks = []  # Store chunk text and metadata
-        self.embedding_dim = 384  # all-MiniLM-L6-v2 dimension
+        self.embedding_dim = 384  # multi-qa-MiniLM-L6-cos-v1 dimension
         self.hybrid_retriever: Optional[HybridRetriever] = None
         self.vocabulary_index: Optional[VocabularyIndex] = None
         
@@ -36,12 +37,13 @@ class BasicRAG:
         Returns:
             Number of chunks indexed
         """
-        # Extract text from PDF
+        # Extract text from PDF with metadata  
         text_data = extract_text_with_metadata(pdf_path)
-        full_text = text_data["text"]
         
-        # Chunk the text
-        chunks = chunk_technical_text(full_text, chunk_size=500, overlap=50)
+        # Chunk the text using hybrid TOC + PDFPlumber approach
+        chunks = parse_pdf_with_hybrid_approach(
+            pdf_path, text_data, target_chunk_size=1400, min_chunk_size=800, max_chunk_size=2000
+        )
         
         # Generate embeddings
         chunk_texts = [chunk["text"] for chunk in chunks]
@@ -56,7 +58,7 @@ class BasicRAG:
         normalized_embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
         self.index.add(normalized_embeddings.astype(np.float32))
         
-        # Store chunks with metadata
+        # Store chunks with enhanced metadata from structure-preserving parser
         for i, chunk in enumerate(chunks):
             chunk_info = {
                 "text": chunk["text"],
@@ -64,7 +66,14 @@ class BasicRAG:
                 "page": chunk.get("page", 0),
                 "chunk_id": len(self.chunks) + i,
                 "start_char": chunk.get("start_char", 0),
-                "end_char": chunk.get("end_char", len(chunk["text"]))
+                "end_char": chunk.get("end_char", len(chunk["text"])),
+                # Structure-preserving metadata
+                "title": chunk.get("title", ""),
+                "parent_title": chunk.get("parent_title", ""),
+                "context": chunk.get("context", ""),
+                "level": chunk.get("level", 0),
+                "quality_score": chunk.get("metadata", {}).get("quality_score", 0.0),
+                "parsing_method": "structure_preserving"
             }
             self.chunks.append(chunk_info)
         

@@ -2,10 +2,12 @@ import pytest
 import sys
 from pathlib import Path
 
-# Add shared-utils to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent / "shared-utils"))
+# Add project paths
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
+sys.path.append(str(project_root.parent))
 
-from document_processing.pdf_parser import extract_text_with_metadata
+from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
 
 def test_extract_text_with_metadata():
     """Test PDF text extraction with RISC-V specification file."""
