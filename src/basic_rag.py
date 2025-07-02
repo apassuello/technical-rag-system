@@ -3,7 +3,6 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, List, Optional
 from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
-from shared_utils.document_processing.chunker import chunk_technical_text
 from shared_utils.document_processing.hybrid_parser import parse_pdf_with_hybrid_approach
 from shared_utils.embeddings.generator import generate_embeddings
 from shared_utils.retrieval.hybrid_search import HybridRetriever
@@ -98,6 +97,49 @@ class BasicRAG:
               f"{stats['technical_terms']} technical terms")
         
         return len(chunks)
+    
+    def index_documents(self, pdf_folder: Path) -> Dict[str, int]:
+        """
+        Process multiple PDF documents from a folder into the unified index.
+        
+        Args:
+            pdf_folder: Path to folder containing PDF files
+            
+        Returns:
+            Dict mapping document names to number of chunks indexed
+            
+        Raises:
+            ValueError: If folder doesn't exist or no PDFs found
+        """
+        if not pdf_folder.exists() or not pdf_folder.is_dir():
+            raise ValueError(f"PDF folder not found: {pdf_folder}")
+        
+        pdf_files = list(pdf_folder.glob("*.pdf"))
+        if not pdf_files:
+            raise ValueError(f"No PDF files found in {pdf_folder}")
+        
+        results = {}
+        total_chunks = 0
+        
+        print(f"Processing {len(pdf_files)} PDF documents...")
+        
+        for pdf_file in pdf_files:
+            print(f"\nProcessing: {pdf_file.name}")
+            try:
+                chunk_count = self.index_document(pdf_file)
+                results[pdf_file.name] = chunk_count
+                total_chunks += chunk_count
+                print(f"  ✅ Indexed {chunk_count} chunks")
+            except Exception as e:
+                print(f"  ❌ Failed to process {pdf_file.name}: {e}")
+                results[pdf_file.name] = 0
+        
+        print(f"\n📊 Multi-document indexing complete:")
+        print(f"   - {len([r for r in results.values() if r > 0])}/{len(pdf_files)} documents processed successfully")
+        print(f"   - {total_chunks} total chunks indexed")
+        print(f"   - {len(set(chunk['source'] for chunk in self.chunks))} unique sources")
+        
+        return results
     
     def query(self, question: str, top_k: int = 5) -> Dict:
         """
