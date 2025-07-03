@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.streamlit/
+*.log
+.DS_Store
+*.tmp
+*.cache
+verification_report_*.json
+monitoring_report_*.json
+calibration_debug_*.json
+confidence_*.json
