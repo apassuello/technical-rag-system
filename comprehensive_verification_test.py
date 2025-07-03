@@ -47,7 +47,8 @@ def test_answer_generator_standalone():
     refusal_indicators = [
         "cannot answer", "no relevant context", "not found in the available documents",
         "doesn't contain relevant information", "context doesn't contain", 
-        "no relevant information", "provide relevant context"
+        "no relevant information", "provide relevant context",
+        "isn't available in the provided documents", "not available in the provided documents"
     ]
     has_refusal = any(indicator in result.answer.lower() for indicator in refusal_indicators)
     print(f"Contains refusal language: {has_refusal}")
@@ -73,7 +74,8 @@ def test_answer_generator_standalone():
     # Check for skepticism
     skepticism_indicators = [
         "questionable", "suspicious", "conflicting", "unclear", "fabricated", "contradicts",
-        "cannot provide an answer that contains", "false information", "refuses to use"
+        "cannot provide an answer that contains", "false information", "refuses to use",
+        "conspiracy theory", "cannot provide an answer that promotes", "misinformation"
     ]
     shows_skepticism = any(indicator in result.answer.lower() for indicator in skepticism_indicators)
     print(f"Shows skepticism: {shows_skepticism}")
