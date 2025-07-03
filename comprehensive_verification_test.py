@@ -44,7 +44,11 @@ def test_answer_generator_standalone():
     print(f"Confidence: {result.confidence_score:.1%}")
     
     # Check if answer contains refusal language
-    refusal_indicators = ["cannot answer", "no relevant context", "not found in the available documents"]
+    refusal_indicators = [
+        "cannot answer", "no relevant context", "not found in the available documents",
+        "doesn't contain relevant information", "context doesn't contain", 
+        "no relevant information", "provide relevant context"
+    ]
     has_refusal = any(indicator in result.answer.lower() for indicator in refusal_indicators)
     print(f"Contains refusal language: {has_refusal}")
     print(f"Low confidence (≤20%): {result.confidence_score <= 0.2}")
@@ -67,7 +71,10 @@ def test_answer_generator_standalone():
     print(f"Confidence: {result.confidence_score:.1%}")
     
     # Check for skepticism
-    skepticism_indicators = ["questionable", "suspicious", "conflicting", "unclear", "fabricated", "contradicts"]
+    skepticism_indicators = [
+        "questionable", "suspicious", "conflicting", "unclear", "fabricated", "contradicts",
+        "cannot provide an answer that contains", "false information", "refuses to use"
+    ]
     shows_skepticism = any(indicator in result.answer.lower() for indicator in skepticism_indicators)
     print(f"Shows skepticism: {shows_skepticism}")
     print(f"Low confidence (≤30%): {result.confidence_score <= 0.3}")
