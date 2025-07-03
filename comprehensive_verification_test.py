@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from src.rag_with_generation import RAGWithGeneration
 from shared_utils.generation.answer_generator import AnswerGenerator
+from src.confidence_calibration import CalibrationEvaluator, CalibrationDataPoint, ConfidenceCalibrator
 
 
 def test_answer_generator_standalone():
@@ -273,7 +274,173 @@ def test_edge_cases():
     return results
 
 
-def generate_verification_report(standalone_results, pipeline_results, edge_case_results):
+def test_confidence_calibration():
+    """Test the confidence calibration framework."""
+    print("\n" + "=" * 80)
+    print("TEST 4: CONFIDENCE CALIBRATION FRAMEWORK")
+    print("=" * 80)
+    
+    print("\n4A: CALIBRATION METRICS TEST")
+    print("-" * 40)
+    
+    # Create test data with known calibration issues
+    import numpy as np
+    np.random.seed(42)
+    
+    # Simulate overconfident predictions
+    n_samples = 50
+    true_correctness = np.random.binomial(1, 0.6, n_samples)  # 60% actual accuracy
+    predicted_confidence = np.random.beta(8, 3, n_samples)    # Overconfident (high values)
+    
+    # Create calibration data points
+    data_points = []
+    for i, (conf, correct) in enumerate(zip(predicted_confidence, true_correctness)):
+        data_points.append(CalibrationDataPoint(
+            predicted_confidence=conf,
+            actual_correctness=float(correct),
+            query=f"test_query_{i}",
+            answer=f"test_answer_{i}",
+            context_relevance=0.7,
+            metadata={"test_case": i}
+        ))
+    
+    # Evaluate calibration
+    evaluator = CalibrationEvaluator()
+    metrics_before = evaluator.evaluate_calibration(data_points)
+    
+    print(f"Before calibration:")
+    print(f"  ECE (Expected Calibration Error): {metrics_before.ece:.3f}")
+    print(f"  ACE (Adaptive Calibration Error): {metrics_before.ace:.3f}")
+    print(f"  MCE (Maximum Calibration Error): {metrics_before.mce:.3f}")
+    print(f"  Brier Score: {metrics_before.brier_score:.3f}")
+    
+    print("\n4B: TEMPERATURE SCALING TEST")
+    print("-" * 40)
+    
+    # Fit temperature scaling
+    calibrator = ConfidenceCalibrator()
+    optimal_temp = calibrator.fit_temperature_scaling(
+        predicted_confidence.tolist(),
+        true_correctness.tolist()
+    )
+    
+    print(f"Optimal temperature parameter: {optimal_temp:.3f}")
+    print(f"Temperature > 1.0 (overconfident): {'YES' if optimal_temp > 1.0 else 'NO'}")
+    
+    # Apply calibration
+    calibrated_confidences = [
+        calibrator.calibrate_confidence(conf) for conf in predicted_confidence
+    ]
+    
+    # Create calibrated data points
+    calibrated_data_points = []
+    for i, (conf, correct) in enumerate(zip(calibrated_confidences, true_correctness)):
+        calibrated_data_points.append(CalibrationDataPoint(
+            predicted_confidence=conf,
+            actual_correctness=float(correct),
+            query=f"test_query_{i}",
+            answer=f"test_answer_{i}",
+            context_relevance=0.7,
+            metadata={"test_case": i, "calibrated": True}
+        ))
+    
+    # Re-evaluate
+    metrics_after = evaluator.evaluate_calibration(calibrated_data_points)
+    
+    print(f"\nAfter temperature scaling:")
+    print(f"  ECE: {metrics_after.ece:.3f}")
+    print(f"  ACE: {metrics_after.ace:.3f}")
+    print(f"  MCE: {metrics_after.mce:.3f}")
+    print(f"  Brier Score: {metrics_after.brier_score:.3f}")
+    
+    # Calculate improvements
+    ece_improvement = (metrics_before.ece - metrics_after.ece) / metrics_before.ece * 100
+    ace_improvement = (metrics_before.ace - metrics_after.ace) / metrics_before.ace * 100
+    brier_improvement = (metrics_before.brier_score - metrics_after.brier_score) / metrics_before.brier_score * 100
+    
+    print(f"\nCalibration improvements:")
+    print(f"  ECE improvement: {ece_improvement:.1f}%")
+    print(f"  ACE improvement: {ace_improvement:.1f}%")
+    print(f"  Brier improvement: {brier_improvement:.1f}%")
+    
+    print("\n4C: CALIBRATION INTEGRATION TEST")
+    print("-" * 40)
+    
+    # Test integration with actual RAG system
+    generator = AnswerGenerator()
+    
+    # Test cases with different expected confidence levels
+    test_cases = [
+        {
+            "name": "good_context",
+            "query": "What is RISC-V?",
+            "chunks": [
+                {
+                    "id": "chunk_1",
+                    "content": "RISC-V is an open-source instruction set architecture (ISA) based on reduced instruction set computer (RISC) principles.",
+                    "metadata": {"page_number": 1, "source": "riscv-spec.pdf"},
+                    "score": 0.95
+                }
+            ],
+            "expected_confidence_range": (0.6, 1.0)
+        },
+        {
+            "name": "poor_context",
+            "query": "What is RISC-V?",
+            "chunks": [
+                {
+                    "id": "chunk_1", 
+                    "content": "Copyright 2023. All rights reserved. This document contains confidential information.",
+                    "metadata": {"page_number": 1, "source": "license.pdf"},
+                    "score": 0.1
+                }
+            ],
+            "expected_confidence_range": (0.0, 0.2)
+        }
+    ]
+    
+    calibration_results = {}
+    for case in test_cases:
+        result = generator.generate(case["query"], case["chunks"])
+        
+        expected_min, expected_max = case["expected_confidence_range"]
+        confidence_appropriate = expected_min <= result.confidence_score <= expected_max
+        
+        print(f"\nCase: {case['name']}")
+        print(f"  Confidence: {result.confidence_score:.3f}")
+        print(f"  Expected range: {expected_min:.1f}-{expected_max:.1f}")
+        print(f"  Appropriate: {'YES' if confidence_appropriate else 'NO'}")
+        
+        calibration_results[case['name']] = {
+            "confidence": result.confidence_score,
+            "expected_range": case["expected_confidence_range"],
+            "appropriate": confidence_appropriate
+        }
+    
+    return {
+        "metrics_before": {
+            "ece": metrics_before.ece,
+            "ace": metrics_before.ace,
+            "mce": metrics_before.mce,
+            "brier_score": metrics_before.brier_score
+        },
+        "metrics_after": {
+            "ece": metrics_after.ece,
+            "ace": metrics_after.ace,
+            "mce": metrics_after.mce,
+            "brier_score": metrics_after.brier_score
+        },
+        "optimal_temperature": optimal_temp,
+        "improvements": {
+            "ece_improvement_pct": ece_improvement,
+            "ace_improvement_pct": ace_improvement,
+            "brier_improvement_pct": brier_improvement
+        },
+        "integration_tests": calibration_results
+    }
+
+
+def generate_verification_report(standalone_results, pipeline_results, edge_case_results, calibration_results=None):
     """Generate comprehensive verification report."""
     print("\n" + "=" * 80)
     print("COMPREHENSIVE VERIFICATION REPORT")
@@ -284,6 +451,7 @@ def generate_verification_report(standalone_results, pipeline_results, edge_case
         "standalone_tests": standalone_results,
         "pipeline_tests": pipeline_results,
         "edge_case_tests": edge_case_results,
+        "calibration_tests": calibration_results,
         "overall_assessment": {}
     }
     
@@ -317,13 +485,34 @@ def generate_verification_report(standalone_results, pipeline_results, edge_case
     pipeline_working = not ('error' in pipeline_results)
     print(f"✅ Pipeline functionality: {'PASS' if pipeline_working else 'FAIL'}")
     
+    # Confidence calibration
+    if calibration_results:
+        ece_improvement = calibration_results['improvements']['ece_improvement_pct']
+        calibration_working = ece_improvement > 20  # At least 20% ECE improvement
+        print(f"✅ Confidence calibration (>{ece_improvement:.1f}% ECE improvement): {'PASS' if calibration_working else 'FAIL'}")
+        
+        # Check integration tests
+        good_context_appropriate = calibration_results['integration_tests']['good_context']['appropriate']
+        poor_context_appropriate = calibration_results['integration_tests']['poor_context']['appropriate']
+        integration_working = good_context_appropriate and poor_context_appropriate
+        print(f"✅ Calibration integration: {'PASS' if integration_working else 'FAIL'}")
+    else:
+        calibration_working = False
+        integration_working = False
+        print(f"✅ Confidence calibration: SKIPPED")
+    
     # Overall system health
     critical_components_working = no_context_working and pipeline_working
     quality_components_working = fake_context_working and good_context_working
     
+    # Include calibration in quality assessment if tested
+    if calibration_results:
+        quality_components_working = quality_components_working and calibration_working and integration_working
+    
     report['overall_assessment'] = {
         "critical_components": critical_components_working,
         "quality_components": quality_components_working,
+        "calibration_framework": calibration_working if calibration_results else None,
         "production_ready": critical_components_working and quality_components_working
     }
     
@@ -354,9 +543,10 @@ def main():
         standalone_results = test_answer_generator_standalone()
         pipeline_results = test_full_rag_pipeline()
         edge_case_results = test_edge_cases()
+        calibration_results = test_confidence_calibration()
         
         # Generate report
-        report = generate_verification_report(standalone_results, pipeline_results, edge_case_results)
+        report = generate_verification_report(standalone_results, pipeline_results, edge_case_results, calibration_results)
         
         # Final assessment
         if report['overall_assessment']['production_ready']:
