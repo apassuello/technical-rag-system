@@ -222,6 +222,21 @@ def test_edge_cases():
             "name": "Technical jargon chunks",
             "chunks": [{"content": "The RISC-V ISA specification defines base integer instruction formats including R-type, I-type, S-type, B-type, U-type, and J-type formats with varying immediate field encodings.", "metadata": {"page_number": 10, "source": "spec.pdf"}, "score": 0.95, "id": "chunk_1"}],
             "query": "What are RISC-V instruction formats?"
+        },
+        {
+            "name": "Hallucination-prone: Incomplete register info",
+            "chunks": [{"content": "RV32E has fewer registers than standard RISC-V implementations.", "metadata": {"page_number": 1, "source": "test.pdf"}, "score": 0.8, "id": "chunk_1"}],
+            "query": "How many registers does RV32E have?"
+        },
+        {
+            "name": "Hallucination-prone: Vague performance specs",
+            "chunks": [{"content": "The processor supports multiple clock frequencies for power optimization.", "metadata": {"page_number": 1, "source": "test.pdf"}, "score": 0.8, "id": "chunk_1"}],
+            "query": "What are the supported clock frequencies?"
+        },
+        {
+            "name": "Hallucination-prone: Partial instruction details",
+            "chunks": [{"content": "RISC-V supports compressed instructions for code density optimization.", "metadata": {"page_number": 1, "source": "test.pdf"}, "score": 0.8, "id": "chunk_1"}],
+            "query": "What is the size of compressed instructions?"
         }
     ]
     
