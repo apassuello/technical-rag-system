@@ -155,6 +155,16 @@ HF Spaces Docker Container
 - **Recovery Guidance**: Specific instructions for each error type
 - **System Transparency**: Clear model status and deployment environment display
 
+### **Ollama Flag Consistency Fix**
+- **Issue Fixed**: use_ollama=True was falling back to HF API silently
+- **Root Cause**: Ollama connection test failure during initialization
+- **Solution Applied**: 
+  - Enhanced debugging with generator type logging
+  - Improved error reporting during Ollama connection
+  - Reduced connection timeout for faster initialization (60s vs 150s)
+  - Added UI display of actual generator being used
+  - Clear fallback indication when Ollama fails to connect
+
 ---
 
 ## 🔄 Architectural Options Going Forward

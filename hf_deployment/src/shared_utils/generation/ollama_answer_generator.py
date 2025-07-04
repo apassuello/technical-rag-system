@@ -10,6 +10,7 @@ import time
 import requests
 import json
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
@@ -57,14 +58,16 @@ class OllamaAnswerGenerator:
     
     def _test_connection(self):
         """Test if Ollama server is accessible."""
-        max_retries = 30  # Wait up to 150 seconds for Ollama to start
+        # Reduce retries for faster initialization - container should be ready quickly
+        max_retries = 12  # Wait up to 60 seconds for Ollama to start
         retry_delay = 5
+        
+        print(f"🔧 Testing connection to {self.base_url}/api/tags...", file=sys.stderr, flush=True)
         
         for attempt in range(max_retries):
             try:
-                response = requests.get(f"{self.base_url}/api/tags", timeout=10)
+                response = requests.get(f"{self.base_url}/api/tags", timeout=8)
                 if response.status_code == 200:
-                    import sys
                     print(f"✅ Connected to Ollama at {self.base_url}", file=sys.stderr, flush=True)
                     
                     # Check if our model is available
@@ -90,22 +93,19 @@ class OllamaAnswerGenerator:
                     print(f"⚠️ Ollama server returned status {response.status_code}")
                     if attempt < max_retries - 1:
                         print(f"🔄 Retry {attempt + 1}/{max_retries} in {retry_delay} seconds...")
-                        import time
                         time.sleep(retry_delay)
                         continue
                     
             except requests.exceptions.ConnectionError:
                 if attempt < max_retries - 1:
                     print(f"⏳ Ollama not ready yet, retry {attempt + 1}/{max_retries} in {retry_delay} seconds...")
-                    import time
                     time.sleep(retry_delay)
                     continue
                 else:
-                    raise Exception("Cannot connect to Ollama server after 150 seconds. Check if it's running.")
+                    raise Exception(f"Cannot connect to Ollama server at {self.base_url} after 60 seconds. Check if it's running.")
             except requests.exceptions.Timeout:
                 if attempt < max_retries - 1:
                     print(f"⏳ Ollama timeout, retry {attempt + 1}/{max_retries}...")
-                    import time
                     time.sleep(retry_delay)
                     continue
                 else:
@@ -113,7 +113,6 @@ class OllamaAnswerGenerator:
             except Exception as e:
                 if attempt < max_retries - 1:
                     print(f"⚠️ Ollama error: {e}, retry {attempt + 1}/{max_retries}...")
-                    import time
                     time.sleep(retry_delay)
                     continue
                 else:
@@ -370,7 +369,6 @@ Answer:"""
         prompt = self._create_prompt(query, context)
         
         # Generate answer
-        import sys
         print(f"🤖 Calling Ollama with {self.model_name}...", file=sys.stderr, flush=True)
         answer_with_citations = self._call_ollama(prompt)
         

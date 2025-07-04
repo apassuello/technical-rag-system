@@ -52,7 +52,7 @@ class RAGWithGeneration(BasicRAG):
         
         # Choose generator based on configuration with fallback
         if use_ollama:
-            print("🦙 Trying local Ollama server...")
+            print(f"🦙 Trying local Ollama server at {ollama_url}...", file=sys.stderr, flush=True)
             try:
                 self.answer_generator = OllamaAnswerGenerator(
                     model_name=model_name,
@@ -60,10 +60,12 @@ class RAGWithGeneration(BasicRAG):
                     temperature=temperature,
                     max_tokens=max_tokens
                 )
-                print(f"✅ Ollama connected successfully with {model_name}")
+                print(f"✅ Ollama connected successfully with {model_name}", file=sys.stderr, flush=True)
+                # Store the fact that we're using Ollama
+                self._using_ollama = True
             except Exception as e:
-                print(f"❌ Ollama failed: {e}")
-                print("🔄 Falling back to HuggingFace API...")
+                print(f"❌ Ollama failed: {e}", file=sys.stderr, flush=True)
+                print(f"🔄 Falling back to HuggingFace API...", file=sys.stderr, flush=True)
                 # Fallback to HuggingFace
                 hf_model = "sshleifer/distilbart-cnn-12-6"
                 self.answer_generator = HuggingFaceAnswerGenerator(
@@ -72,18 +74,29 @@ class RAGWithGeneration(BasicRAG):
                     temperature=temperature,
                     max_tokens=max_tokens
                 )
-                print(f"✅ HuggingFace fallback ready with {hf_model}")
+                print(f"✅ HuggingFace fallback ready with {hf_model}", file=sys.stderr, flush=True)
+                self._using_ollama = False
         else:
-            print("🤗 Using HuggingFace API...")
+            print("🤗 Using HuggingFace API...", file=sys.stderr, flush=True)
             self.answer_generator = HuggingFaceAnswerGenerator(
                 model_name=model_name,
                 api_token=api_token,
                 temperature=temperature,
                 max_tokens=max_tokens
             )
+            self._using_ollama = False
         
         self.prompt_templates = TechnicalPromptTemplates()
         self.enable_streaming = False  # HF API doesn't support streaming in this implementation
+        
+    def get_generator_info(self) -> Dict[str, str]:
+        """Get information about the current answer generator."""
+        return {
+            "using_ollama": getattr(self, '_using_ollama', False),
+            "generator_type": type(self.answer_generator).__name__,
+            "model_name": getattr(self.answer_generator, 'model_name', 'unknown'),
+            "base_url": getattr(self.answer_generator, 'base_url', None)
+        }
         
     def query_with_answer(
         self,
@@ -116,6 +129,10 @@ class RAGWithGeneration(BasicRAG):
                 - context (optional): Retrieved chunks if requested
         """
         start_time = time.time()
+        
+        # Debug: Show which generator is being used
+        generator_info = self.get_generator_info()
+        print(f"🔧 Debug: Using {generator_info['generator_type']} (Ollama: {generator_info['using_ollama']}) with model {generator_info['model_name']}", file=sys.stderr, flush=True)
         
         # Step 1: Retrieve relevant chunks
         if use_hybrid and self.hybrid_retriever is not None:

@@ -125,7 +125,7 @@ def initialize_rag_system():
 
         # Check if we're running locally or in HuggingFace Spaces
         is_hf_spaces = os.getenv("SPACE_ID") is not None  # HF Spaces sets SPACE_ID
-        use_ollama = True  # os.getenv("USE_OLLAMA", "false").lower() == "true"
+        use_ollama = os.getenv("USE_OLLAMA", "false").lower() == "true"
 
         if is_hf_spaces:
             print("🚀 Running in HuggingFace Spaces", file=sys.stderr, flush=True)
@@ -147,7 +147,7 @@ def initialize_rag_system():
         ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
         if use_ollama:
-            model_name = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+            model_name = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
             print(
                 f"🦙 Configured for local Ollama with model: {model_name}",
                 file=sys.stderr,
@@ -240,19 +240,31 @@ def display_system_status(rag_system):
             )
             st.write(f"**Model:** {model_name}")
             
+            # Get detailed generator info
+            if hasattr(rag_system, 'get_generator_info'):
+                generator_info = rag_system.get_generator_info()
+                st.write(f"**Generator:** {generator_info['generator_type']}")
+                st.write(f"**Using Ollama:** {generator_info['using_ollama']}")
+                if generator_info['base_url']:
+                    st.write(f"**Base URL:** {generator_info['base_url']}")
+            
             # Show status based on model type
             if hasattr(rag_system.answer_generator, 'base_url') or 'llama' in model_name.lower():
-                st.success("🦙 **Ollama Connected**")
-                st.warning("⏱️ **First Query Notice**\nFirst query may take 30-60s for model warmup. Subsequent queries will be much faster!")
-                
-                # Add helpful tips
-                with st.expander("💡 Performance Tips"):
-                    st.markdown("""
-                    - **First query**: 30-60 seconds (warmup)
-                    - **Subsequent queries**: 10-20 seconds
-                    - **Best practice**: Wait for first query to complete before trying another
-                    - **If timeout occurs**: Simply retry the same query
-                    """)
+                if getattr(rag_system, '_using_ollama', False):
+                    st.success("🦙 **Ollama Connected**")
+                    st.warning("⏱️ **First Query Notice**\nFirst query may take 30-60s for model warmup. Subsequent queries will be much faster!")
+                    
+                    # Add helpful tips
+                    with st.expander("💡 Performance Tips"):
+                        st.markdown("""
+                        - **First query**: 30-60 seconds (warmup)
+                        - **Subsequent queries**: 10-20 seconds
+                        - **Best practice**: Wait for first query to complete before trying another
+                        - **If timeout occurs**: Simply retry the same query
+                        """)
+                else:
+                    st.warning("🔄 **Ollama Fallback to HF API**")
+                    st.info("Ollama connection failed, using HuggingFace API as fallback")
             else:
                 st.success("🤗 **HuggingFace API Ready**")
         else:
