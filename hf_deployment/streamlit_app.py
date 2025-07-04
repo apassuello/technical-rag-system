@@ -126,27 +126,35 @@ def initialize_rag_system():
         # Check if we're running locally or in HuggingFace Spaces
         is_hf_spaces = os.getenv("SPACE_ID") is not None  # HF Spaces sets SPACE_ID
         use_ollama = os.getenv("USE_OLLAMA", "false").lower() == "true"
+        use_inference_providers = os.getenv("USE_INFERENCE_PROVIDERS", "false").lower() == "true"
 
         if is_hf_spaces:
             print("🚀 Running in HuggingFace Spaces", file=sys.stderr, flush=True)
-            if use_ollama:
-                print(
-                    "🦙 Ollama enabled in HuggingFace Spaces",
-                    file=sys.stderr,
-                    flush=True,
-                )
+            if use_inference_providers:
+                print("🚀 Using Inference Providers API in HuggingFace Spaces", file=sys.stderr, flush=True)
+            elif use_ollama:
+                print("🦙 Ollama enabled in HuggingFace Spaces", file=sys.stderr, flush=True)
             else:
-                print("🤗 Using HuggingFace API in Spaces", file=sys.stderr, flush=True)
+                print("🤗 Using classic HuggingFace API in Spaces", file=sys.stderr, flush=True)
         else:
             print("💻 Running locally", file=sys.stderr, flush=True)
-            if use_ollama:
+            if use_inference_providers:
+                print("🚀 Using Inference Providers API locally", file=sys.stderr, flush=True)
+            elif use_ollama:
                 print("🦙 Using local Ollama", file=sys.stderr, flush=True)
             else:
-                print("🤗 Using HuggingFace API locally", file=sys.stderr, flush=True)
+                print("🤗 Using classic HuggingFace API locally", file=sys.stderr, flush=True)
 
         ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
-        if use_ollama:
+        if use_inference_providers:
+            model_name = os.getenv("INFERENCE_PROVIDERS_MODEL", "microsoft/DialoGPT-medium")
+            print(
+                f"🚀 Configured for Inference Providers API with model: {model_name}",
+                file=sys.stderr,
+                flush=True,
+            )
+        elif use_ollama:
             model_name = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
             print(
                 f"🦙 Configured for local Ollama with model: {model_name}",
@@ -156,7 +164,7 @@ def initialize_rag_system():
         else:
             model_name = "sshleifer/distilbart-cnn-12-6"  # Confirmed working HF model
             print(
-                f"🤗 Configured for HuggingFace API with model: {model_name}",
+                f"🤗 Configured for classic HuggingFace API with model: {model_name}",
                 file=sys.stderr,
                 flush=True,
             )
@@ -168,6 +176,7 @@ def initialize_rag_system():
             max_tokens=512,
             use_ollama=use_ollama,
             ollama_url=ollama_url,
+            use_inference_providers=use_inference_providers,
         )
         return rag, None
     except Exception as e:
@@ -245,28 +254,38 @@ def display_system_status(rag_system):
                 generator_info = rag_system.get_generator_info()
                 st.write(f"**Generator:** {generator_info['generator_type']}")
                 st.write(f"**Using Ollama:** {generator_info['using_ollama']}")
+                st.write(f"**Using Inference Providers:** {generator_info['using_inference_providers']}")
                 if generator_info['base_url']:
                     st.write(f"**Base URL:** {generator_info['base_url']}")
             
-            # Show status based on model type
-            if hasattr(rag_system.answer_generator, 'base_url') or 'llama' in model_name.lower():
-                if getattr(rag_system, '_using_ollama', False):
-                    st.success("🦙 **Ollama Connected**")
-                    st.warning("⏱️ **First Query Notice**\nFirst query may take 30-60s for model warmup. Subsequent queries will be much faster!")
-                    
-                    # Add helpful tips
-                    with st.expander("💡 Performance Tips"):
-                        st.markdown("""
-                        - **First query**: 30-60 seconds (warmup)
-                        - **Subsequent queries**: 10-20 seconds
-                        - **Best practice**: Wait for first query to complete before trying another
-                        - **If timeout occurs**: Simply retry the same query
-                        """)
-                else:
-                    st.warning("🔄 **Ollama Fallback to HF API**")
-                    st.info("Ollama connection failed, using HuggingFace API as fallback")
+            # Show status based on generator type
+            if getattr(rag_system, '_using_inference_providers', False):
+                st.success("🚀 **Inference Providers API Connected**")
+                st.info("⚡ **Fast Responses**\nExpected response time: 2-5 seconds for most queries")
+                
+                # Add helpful tips
+                with st.expander("💡 Performance Tips"):
+                    st.markdown("""
+                    - **Response time**: 2-5 seconds (much faster than Ollama)
+                    - **Reliability**: Enterprise-grade infrastructure with automatic failover
+                    - **Models**: Latest instruction-tuned models optimized for Q&A
+                    - **Rate limits**: Free tier available, PRO tier for higher limits
+                    """)
+            elif getattr(rag_system, '_using_ollama', False):
+                st.success("🦙 **Ollama Connected**")
+                st.warning("⏱️ **First Query Notice**\nFirst query may take 30-60s for model warmup. Subsequent queries will be much faster!")
+                
+                # Add helpful tips
+                with st.expander("💡 Performance Tips"):
+                    st.markdown("""
+                    - **First query**: 30-60 seconds (warmup)
+                    - **Subsequent queries**: 10-20 seconds
+                    - **Best practice**: Wait for first query to complete before trying another
+                    - **If timeout occurs**: Simply retry the same query
+                    """)
             else:
-                st.success("🤗 **HuggingFace API Ready**")
+                st.success("🤗 **Classic HuggingFace API Ready**")
+                st.info("📊 Using traditional Inference API with model-specific parsing")
         else:
             st.write(f"**Model:** gpt2-medium (HuggingFace API)")
             st.success("🤗 **HuggingFace API Ready**")

@@ -75,24 +75,34 @@ def start_ollama():
 
 
 def main():
-    """Start Ollama and Streamlit."""
+    """Start services and Streamlit based on configuration."""
     log("🚀 Starting Technical RAG Assistant in HuggingFace Spaces...")
 
-    # Check if we should use Ollama
-    use_ollama = os.getenv("USE_OLLAMA", "true").lower() == "true"
+    # Check which inference method to use
+    use_ollama = os.getenv("USE_OLLAMA", "false").lower() == "true"
+    use_inference_providers = os.getenv("USE_INFERENCE_PROVIDERS", "false").lower() == "true"
     
     ollama_process = None
-    if use_ollama:
+    
+    # Configure environment variables based on selected inference method
+    if use_inference_providers:
+        os.environ["USE_INFERENCE_PROVIDERS"] = "true"
+        os.environ["USE_OLLAMA"] = "false"
+        log("🚀 Using Inference Providers API")
+    elif use_ollama:
         os.environ["USE_OLLAMA"] = "true"
+        os.environ["USE_INFERENCE_PROVIDERS"] = "false"
         log("🦙 Ollama enabled - starting server...")
         ollama_process = start_ollama()
         
         if ollama_process is None:
             log("🔄 Ollama failed to start, falling back to HuggingFace API")
             os.environ["USE_OLLAMA"] = "false"
+            os.environ["USE_INFERENCE_PROVIDERS"] = "false"
     else:
         os.environ["USE_OLLAMA"] = "false"
-        log("🤗 Using HuggingFace API (Ollama disabled)")
+        os.environ["USE_INFERENCE_PROVIDERS"] = "false"
+        log("🤗 Using classic HuggingFace API")
 
     # Start Streamlit
     log("🎯 Starting Streamlit application...")

@@ -14,9 +14,10 @@ import sys
 # Import from same directory
 from src.basic_rag import BasicRAG
 
-# Import from shared utils - Support both HF API and Ollama
+# Import from shared utils - Support HF API, Ollama, and Inference Providers
 from src.shared_utils.generation.hf_answer_generator import HuggingFaceAnswerGenerator, GeneratedAnswer
 from src.shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
+from src.shared_utils.generation.inference_providers_generator import InferenceProvidersGenerator
 from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates
 
 
@@ -35,7 +36,8 @@ class RAGWithGeneration(BasicRAG):
         temperature: float = 0.3,
         max_tokens: int = 512,
         use_ollama: bool = False,
-        ollama_url: str = "http://localhost:11434"
+        ollama_url: str = "http://localhost:11434",
+        use_inference_providers: bool = False
     ):
         """
         Initialize RAG with generation capabilities.
@@ -47,11 +49,38 @@ class RAGWithGeneration(BasicRAG):
             max_tokens: Maximum tokens to generate
             use_ollama: If True, use local Ollama instead of HuggingFace API
             ollama_url: Ollama server URL (if using Ollama)
+            use_inference_providers: If True, use new Inference Providers API
         """
         super().__init__()
         
-        # Choose generator based on configuration with fallback
-        if use_ollama:
+        # Choose generator based on configuration with fallback chain
+        if use_inference_providers:
+            # Try new Inference Providers API first
+            print(f"🚀 Trying HuggingFace Inference Providers API...", file=sys.stderr, flush=True)
+            try:
+                self.answer_generator = InferenceProvidersGenerator(
+                    model_name=None,  # Let it auto-select best available model
+                    api_token=api_token,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                print(f"✅ Inference Providers API connected successfully", file=sys.stderr, flush=True)
+                self._using_ollama = False
+                self._using_inference_providers = True
+            except Exception as e:
+                print(f"❌ Inference Providers failed: {e}", file=sys.stderr, flush=True)
+                print(f"🔄 Falling back to classic HuggingFace API...", file=sys.stderr, flush=True)
+                # Fallback to classic HF API
+                self.answer_generator = HuggingFaceAnswerGenerator(
+                    model_name=model_name,
+                    api_token=api_token,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                print(f"✅ HuggingFace classic API ready", file=sys.stderr, flush=True)
+                self._using_ollama = False
+                self._using_inference_providers = False
+        elif use_ollama:
             print(f"🦙 Trying local Ollama server at {ollama_url}...", file=sys.stderr, flush=True)
             try:
                 self.answer_generator = OllamaAnswerGenerator(
@@ -61,8 +90,8 @@ class RAGWithGeneration(BasicRAG):
                     max_tokens=max_tokens
                 )
                 print(f"✅ Ollama connected successfully with {model_name}", file=sys.stderr, flush=True)
-                # Store the fact that we're using Ollama
                 self._using_ollama = True
+                self._using_inference_providers = False
             except Exception as e:
                 print(f"❌ Ollama failed: {e}", file=sys.stderr, flush=True)
                 print(f"🔄 Falling back to HuggingFace API...", file=sys.stderr, flush=True)
@@ -76,8 +105,9 @@ class RAGWithGeneration(BasicRAG):
                 )
                 print(f"✅ HuggingFace fallback ready with {hf_model}", file=sys.stderr, flush=True)
                 self._using_ollama = False
+                self._using_inference_providers = False
         else:
-            print("🤗 Using HuggingFace API...", file=sys.stderr, flush=True)
+            print("🤗 Using HuggingFace classic API...", file=sys.stderr, flush=True)
             self.answer_generator = HuggingFaceAnswerGenerator(
                 model_name=model_name,
                 api_token=api_token,
@@ -85,6 +115,7 @@ class RAGWithGeneration(BasicRAG):
                 max_tokens=max_tokens
             )
             self._using_ollama = False
+            self._using_inference_providers = False
         
         self.prompt_templates = TechnicalPromptTemplates()
         self.enable_streaming = False  # HF API doesn't support streaming in this implementation
@@ -93,6 +124,7 @@ class RAGWithGeneration(BasicRAG):
         """Get information about the current answer generator."""
         return {
             "using_ollama": getattr(self, '_using_ollama', False),
+            "using_inference_providers": getattr(self, '_using_inference_providers', False),
             "generator_type": type(self.answer_generator).__name__,
             "model_name": getattr(self.answer_generator, 'model_name', 'unknown'),
             "base_url": getattr(self.answer_generator, 'base_url', None)
