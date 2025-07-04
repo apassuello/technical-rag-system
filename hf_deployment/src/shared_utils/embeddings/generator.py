@@ -46,7 +46,15 @@ def generate_embeddings(
     
     # Load model if needed
     if model_name not in _model_cache:
-        model = SentenceTransformer(model_name)
+        try:
+            model = SentenceTransformer(model_name)
+        except Exception as e:
+            # If default cache fails, try with explicit cache directory
+            import os
+            cache_dir = os.environ.get('SENTENCE_TRANSFORMERS_HOME', '/app/.cache/sentence-transformers')
+            os.makedirs(cache_dir, exist_ok=True)
+            model = SentenceTransformer(model_name, cache_folder=cache_dir)
+        
         device = 'mps' if use_mps and torch.backends.mps.is_available() else 'cpu'
         model = model.to(device)
         model.eval()

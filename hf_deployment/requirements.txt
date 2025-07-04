@@ -26,5 +26,5 @@ rank-bm25>=0.2.2
 python-dotenv>=1.0.0
 typing-extensions>=4.4.0
 
-# LLM Integration
-ollama>=0.3.0
+# LLM Integration - HuggingFace API
+huggingface_hub>=0.17.0

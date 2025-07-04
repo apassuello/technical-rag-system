@@ -6,6 +6,12 @@ A professional web interface for the RAG system with answer generation,
 optimized for technical documentation Q&A.
 """
 
+import os
+# Set environment variables before importing streamlit
+os.environ['HOME'] = '/app'
+os.environ['STREAMLIT_CONFIG_DIR'] = '/app/.streamlit'
+os.environ['STREAMLIT_BROWSER_GATHER_USAGE_STATS'] = 'false'
+
 import streamlit as st
 import sys
 from pathlib import Path
@@ -103,14 +109,25 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-def initialize_rag_system():
-    """Initialize the RAG system with error handling."""
+def initialize_rag_system(api_token=None, model_name=None):
+    """Initialize the RAG system with HuggingFace API."""
     try:
+        # Check for token in environment first
+        import os
+        token = api_token or os.getenv("HUGGINGFACE_API_TOKEN")
+        
+        # Use selected model or default based on Pro vs Free tier
+        if not model_name:
+            if token:
+                model_name = "mistralai/Mistral-7B-Instruct-v0.2"  # Pro: Best for technical Q&A
+            else:
+                model_name = "gpt2-medium"  # Free tier: Best available
+        
         rag_system = RAGWithGeneration(
-            primary_model="llama3.2:3b",
-            fallback_model="mistral:latest",
+            model_name=model_name,
+            api_token=token,  # Use provided token or env variable
             temperature=0.3,
-            enable_streaming=True
+            max_tokens=512
         )
         return rag_system, None
     except Exception as e:
@@ -151,8 +168,121 @@ def display_system_status(rag_system):
         
         # Model info
         st.markdown("### 🤖 Model Status")
-        st.success("✅ Llama 3.2 (3B) Ready")
+        if rag_system.answer_generator.api_token:
+            st.success("✅ HuggingFace API (Authenticated)")
+        else:
+            st.info("ℹ️ HuggingFace API (Free Tier)")
         st.info("🔍 Hybrid Search Active")
+        
+        # API Configuration
+        st.markdown("### ⚙️ API Configuration")
+        with st.expander("HuggingFace Configuration"):
+            st.markdown("""
+            **Using HF Token:**
+            1. Set as Space Secret: `HUGGINGFACE_API_TOKEN`
+            2. Or paste token below
+            
+            **Benefits of token:**
+            - Higher rate limits
+            - Better models (Llama 2, Falcon)
+            - Faster response times
+            """)
+            
+            token_input = st.text_input(
+                "HF Token", 
+                type="password", 
+                help="Your HuggingFace API token",
+                key="hf_token_input"
+            )
+            
+            # Model selection - Pro tier models from your guide
+            if rag_system.answer_generator.api_token:
+                model_options = [
+                    "mistralai/Mistral-7B-Instruct-v0.2",    # Best for technical Q&A
+                    "codellama/CodeLlama-7b-Instruct-hf",    # Perfect for code docs
+                    "meta-llama/Llama-2-7b-chat-hf",        # Well-rounded
+                    "codellama/CodeLlama-13b-Instruct-hf",   # Higher quality (slower)
+                    "meta-llama/Llama-2-13b-chat-hf",       # Better reasoning
+                    "microsoft/DialoGPT-large",              # Conversational fallback
+                    "tiiuae/falcon-7b-instruct",             # Efficient option
+                    "gpt2-medium"                            # Emergency fallback
+                ]
+            else:
+                model_options = [
+                    "gpt2-medium",  # Best bet for free tier  
+                    "gpt2",         # Always available
+                    "distilgpt2"    # Fastest option
+                ]
+            
+            current_model = rag_system.answer_generator.model_name
+            selected_model = st.selectbox(
+                "Model",
+                model_options,
+                index=model_options.index(current_model) if current_model in model_options else 0,
+                key="model_select"
+            )
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Update Configuration"):
+                    if token_input or selected_model != current_model:
+                        # Reinitialize with new settings
+                        st.session_state['api_token'] = token_input if token_input else st.session_state.get('api_token')
+                        st.session_state['selected_model'] = selected_model
+                        st.session_state['rag_system'] = None
+                        st.rerun()
+            
+            with col2:
+                if st.button("Test Pro Models"):
+                    # Test all Pro models from your guide
+                    pro_models = [
+                        "mistralai/Mistral-7B-Instruct-v0.2",
+                        "codellama/CodeLlama-7b-Instruct-hf", 
+                        "meta-llama/Llama-2-7b-chat-hf",
+                        "codellama/CodeLlama-13b-Instruct-hf",
+                        "meta-llama/Llama-2-13b-chat-hf",
+                        "microsoft/DialoGPT-large",
+                        "tiiuae/falcon-7b-instruct"
+                    ]
+                    
+                    test_token = token_input if token_input else st.session_state.get('api_token')
+                    
+                    with st.spinner("Testing Pro models..."):
+                        results = {}
+                        for model in pro_models:
+                            try:
+                                import requests
+                                import os
+                                token = test_token or os.getenv("HUGGINGFACE_API_TOKEN")
+                                
+                                headers = {"Content-Type": "application/json"}
+                                if token:
+                                    headers["Authorization"] = f"Bearer {token}"
+                                
+                                response = requests.post(
+                                    f"https://api-inference.huggingface.co/models/{model}",
+                                    headers=headers,
+                                    json={"inputs": "What is RISC-V?", "parameters": {"max_new_tokens": 50}},
+                                    timeout=15
+                                )
+                                
+                                if response.status_code == 200:
+                                    results[model] = "✅ Available"
+                                elif response.status_code == 404:
+                                    results[model] = "❌ Not found"
+                                elif response.status_code == 503:
+                                    results[model] = "⏳ Loading"
+                                else:
+                                    results[model] = f"❌ Error {response.status_code}"
+                                    
+                            except Exception as e:
+                                results[model] = f"❌ Failed: {str(e)[:30]}"
+                        
+                        # Display results
+                        st.subheader("🧪 Pro Model Test Results:")
+                        for model, status in results.items():
+                            model_short = model.split('/')[-1]
+                            st.write(f"**{model_short}**: {status}")
         
         if chunk_count > 0:
             st.markdown("### 📊 Index Statistics")
@@ -235,7 +365,7 @@ def display_query_results(result: Dict, total_time: float):
     # Answer
     st.markdown("### 💬 Generated Answer")
     st.markdown(f"""
-    <div style="background-color: #f8f9fa; padding: 1.5rem; border-radius: 10px; border-left: 5px solid #28a745;">
+    <div style="background-color: #f8f9fa; padding: 1.5rem; border-radius: 10px; border-left: 5px solid #28a745; color: #333333;">
         {result['answer']}
     </div>
     """, unsafe_allow_html=True)
@@ -279,19 +409,57 @@ def handle_document_upload(rag_system):
         for uploaded_file in uploaded_files:
             if st.button(f"Index {uploaded_file.name}", key=f"index_{uploaded_file.name}"):
                 try:
-                    # Save uploaded file temporarily
-                    temp_path = Path(f"/tmp/{uploaded_file.name}")
+                    # Save uploaded file temporarily in app directory
+                    import tempfile
+                    import os
+                    
+                    # Create temp directory in app folder
+                    temp_dir = Path("/app/temp_uploads")
+                    temp_dir.mkdir(exist_ok=True)
+                    
+                    temp_path = temp_dir / uploaded_file.name
                     with open(temp_path, "wb") as f:
                         f.write(uploaded_file.getvalue())
                     
                     # Index the document
-                    with st.spinner(f"Processing {uploaded_file.name}..."):
-                        chunk_count = rag_system.index_document(temp_path)
-                        st.success(f"✅ {uploaded_file.name} indexed! {chunk_count} chunks added.")
-                        st.rerun()
+                    st.write(f"🔄 Starting to process {uploaded_file.name}...")
+                    st.write(f"📁 File saved to: {temp_path}")
+                    st.write(f"📏 File size: {temp_path.stat().st_size} bytes")
+                    
+                    # Capture print output for debugging
+                    import io
+                    import sys
+                    
+                    captured_output = io.StringIO()
+                    sys.stdout = captured_output
+                    
+                    try:
+                        with st.spinner(f"Processing {uploaded_file.name}..."):
+                            chunk_count = rag_system.index_document(temp_path)
+                            
+                    finally:
+                        # Restore stdout
+                        sys.stdout = sys.__stdout__
+                        
+                        # Show captured output
+                        output = captured_output.getvalue()
+                        if output:
+                            st.text_area("Processing Log:", output, height=150)
+                    
+                    st.success(f"✅ {uploaded_file.name} indexed! {chunk_count} chunks added.")
+                    
+                    # Clean up temp file
+                    try:
+                        temp_path.unlink()
+                    except:
+                        pass
+                        
+                    st.rerun()
                         
                 except Exception as e:
                     st.error(f"❌ Failed to index {uploaded_file.name}: {str(e)}")
+                    import traceback
+                    st.error(f"Details: {traceback.format_exc()}")
 
 
 def display_sample_queries():
@@ -323,6 +491,8 @@ def main():
     if 'rag_system' not in st.session_state:
         st.session_state['rag_system'] = None
         st.session_state['init_error'] = None
+    if 'api_token' not in st.session_state:
+        st.session_state['api_token'] = None
     
     # Display header
     display_header()
@@ -330,7 +500,11 @@ def main():
     # Initialize RAG system
     if st.session_state['rag_system'] is None:
         with st.spinner("Initializing RAG system..."):
-            rag_system, error = initialize_rag_system()
+            selected_model = st.session_state.get('selected_model')
+            rag_system, error = initialize_rag_system(
+                st.session_state.get('api_token'),
+                selected_model
+            )
             st.session_state['rag_system'] = rag_system
             st.session_state['init_error'] = error
     
@@ -343,9 +517,8 @@ def main():
         <div class="error-box">
             ❌ <strong>Failed to initialize RAG system:</strong><br>
             {init_error}<br><br>
-            <strong>Please ensure:</strong><br>
-            • Ollama is running (run <code>ollama serve</code>)<br>
-            • Llama 3.2 model is available (run <code>ollama pull llama3.2:3b</code>)
+            <strong>System uses HuggingFace Inference API</strong><br>
+            If you see network errors, please check your internet connection.
         </div>
         """, unsafe_allow_html=True)
         return
@@ -383,11 +556,16 @@ def main():
             if st.button("Load RISC-V Test Document"):
                 try:
                     with st.spinner("Loading test document..."):
+                        st.write(f"🔄 Processing test document: {test_pdf_path}")
+                        st.write(f"📏 File size: {test_pdf_path.stat().st_size} bytes")
+                        
                         chunk_count = rag_system.index_document(test_pdf_path)
                         st.success(f"✅ Test document loaded! {chunk_count} chunks indexed.")
                         st.rerun()
                 except Exception as e:
                     st.error(f"Failed to load test document: {e}")
+                    import traceback
+                    st.error(f"Details: {traceback.format_exc()}")
         else:
             st.info("Test document not found at data/test/riscv-base-instructions.pdf")
     
@@ -398,7 +576,7 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style="text-align: center; color: #666; font-size: 0.9rem;">
-        Technical Documentation RAG Assistant | Powered by Llama 3.2 & RISC-V Documentation<br>
+        Technical Documentation RAG Assistant | Powered by HuggingFace API & RISC-V Documentation<br>
         Built for ML Engineer Portfolio | Swiss Tech Market Focus
     </div>
     """, unsafe_allow_html=True)

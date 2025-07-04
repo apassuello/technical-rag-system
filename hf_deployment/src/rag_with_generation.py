@@ -14,8 +14,9 @@ import sys
 # Import from same directory
 from src.basic_rag import BasicRAG
 
-# Import from shared utils (now in src)
-from src.shared_utils.generation.answer_generator import AnswerGenerator, GeneratedAnswer
+# Import from shared utils - Support both HF API and Ollama
+from src.shared_utils.generation.hf_answer_generator import HuggingFaceAnswerGenerator, GeneratedAnswer
+from src.shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
 from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates
 
 
@@ -29,33 +30,60 @@ class RAGWithGeneration(BasicRAG):
     
     def __init__(
         self,
-        primary_model: str = "llama3.2:3b",
-        fallback_model: str = "mistral:latest",
+        model_name: str = "sshleifer/distilbart-cnn-12-6",
+        api_token: str = None,
         temperature: float = 0.3,
-        enable_streaming: bool = True
+        max_tokens: int = 512,
+        use_ollama: bool = False,
+        ollama_url: str = "http://localhost:11434"
     ):
         """
         Initialize RAG with generation capabilities.
         
         Args:
-            primary_model: Primary Ollama model for generation
-            fallback_model: Fallback model for complex queries
+            model_name: Model for generation (HF model or Ollama model)
+            api_token: HF API token (for HF models only)
             temperature: Generation temperature
-            enable_streaming: Whether to enable streaming responses
+            max_tokens: Maximum tokens to generate
+            use_ollama: If True, use local Ollama instead of HuggingFace API
+            ollama_url: Ollama server URL (if using Ollama)
         """
         super().__init__()
         
-        # Initialize answer generator with calibration disabled to fix confidence bug
-        self.answer_generator = AnswerGenerator(
-            primary_model=primary_model,
-            fallback_model=fallback_model,
-            temperature=temperature,
-            stream=enable_streaming,
-            enable_calibration=False  # Disable unfitted calibration that was causing confidence bugs
-        )
+        # Choose generator based on configuration with fallback
+        if use_ollama:
+            print("🦙 Trying local Ollama server...")
+            try:
+                self.answer_generator = OllamaAnswerGenerator(
+                    model_name=model_name,
+                    base_url=ollama_url,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                print(f"✅ Ollama connected successfully with {model_name}")
+            except Exception as e:
+                print(f"❌ Ollama failed: {e}")
+                print("🔄 Falling back to HuggingFace API...")
+                # Fallback to HuggingFace
+                hf_model = "sshleifer/distilbart-cnn-12-6"
+                self.answer_generator = HuggingFaceAnswerGenerator(
+                    model_name=hf_model,
+                    api_token=api_token,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                print(f"✅ HuggingFace fallback ready with {hf_model}")
+        else:
+            print("🤗 Using HuggingFace API...")
+            self.answer_generator = HuggingFaceAnswerGenerator(
+                model_name=model_name,
+                api_token=api_token,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
         
         self.prompt_templates = TechnicalPromptTemplates()
-        self.enable_streaming = enable_streaming
+        self.enable_streaming = False  # HF API doesn't support streaming in this implementation
         
     def query_with_answer(
         self,
@@ -136,8 +164,7 @@ class RAGWithGeneration(BasicRAG):
         generation_start = time.time()
         generated_answer = self.answer_generator.generate(
             query=question,
-            chunks=formatted_chunks,
-            use_fallback=use_fallback_llm
+            chunks=formatted_chunks
         )
         generation_time = time.time() - generation_start
         

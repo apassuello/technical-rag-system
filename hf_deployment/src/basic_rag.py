@@ -36,13 +36,24 @@ class BasicRAG:
         Returns:
             Number of chunks indexed
         """
-        # Extract text from PDF with metadata  
-        text_data = extract_text_with_metadata(pdf_path)
-        
-        # Chunk the text using hybrid TOC + PDFPlumber approach
-        chunks = parse_pdf_with_hybrid_approach(
-            pdf_path, text_data, target_chunk_size=1400, min_chunk_size=800, max_chunk_size=2000
-        )
+        try:
+            # Extract text from PDF with metadata  
+            print(f"Extracting text from {pdf_path}...")
+            text_data = extract_text_with_metadata(pdf_path)
+            print(f"Extracted {len(text_data.get('text', ''))} characters")
+            
+            # Chunk the text using hybrid TOC + PDFPlumber approach
+            print("Chunking text...")
+            chunks = parse_pdf_with_hybrid_approach(
+                pdf_path, text_data, target_chunk_size=1400, min_chunk_size=800, max_chunk_size=2000
+            )
+            print(f"Created {len(chunks)} chunks")
+            
+        except Exception as e:
+            print(f"Error in document processing: {e}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            raise
         
         # Generate embeddings
         chunk_texts = [chunk["text"] for chunk in chunks]
