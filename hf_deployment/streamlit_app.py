@@ -185,16 +185,24 @@ def display_header():
         """
     **Intelligent Q&A System for Technical Documentation**
     
-    This system uses advanced hybrid search (semantic + keyword matching) combined with HuggingFace API generation 
+    This system uses advanced hybrid search (semantic + keyword matching) combined with local LLM generation 
     to provide accurate, cited answers from your technical documentation.
     
     **Features:**
     - 🚀 Hybrid retrieval for optimal relevance
     - 📚 Automatic citation and source attribution
     - 🎯 Confidence scoring for answer quality
-    - ⚡ HuggingFace API for reliable generation
+    - 🦙 Local Ollama LLM for privacy and speed
+    - 🔧 Advanced prompt engineering with domain expertise
     """
     )
+    
+    # Add deployment status info
+    import os
+    if os.getenv("SPACE_ID"):
+        st.info("🌟 **Running on HuggingFace Spaces** - Local Ollama model with containerized inference")
+    else:
+        st.info("💻 **Running locally** - Connect to your local Ollama server")
 
 
 def display_system_status(rag_system):
@@ -224,20 +232,35 @@ def display_system_status(rag_system):
             st.warning("⚠️ No documents indexed")
             st.info("Upload a PDF to get started")
 
-        # Model information
-        st.header("🤖 Model Info")
+        # Model information and status
+        st.header("🤖 Model Status")
         if hasattr(rag_system, "answer_generator"):
             model_name = getattr(
                 rag_system.answer_generator, "model_name", "gpt2-medium"
             )
             st.write(f"**Model:** {model_name}")
             
-            # Show warmup warning for Ollama models
+            # Show status based on model type
             if hasattr(rag_system.answer_generator, 'base_url') or 'llama' in model_name.lower():
+                st.success("🦙 **Ollama Connected**")
                 st.warning("⏱️ **First Query Notice**\nFirst query may take 30-60s for model warmup. Subsequent queries will be much faster!")
+                
+                # Add helpful tips
+                with st.expander("💡 Performance Tips"):
+                    st.markdown("""
+                    - **First query**: 30-60 seconds (warmup)
+                    - **Subsequent queries**: 10-20 seconds
+                    - **Best practice**: Wait for first query to complete before trying another
+                    - **If timeout occurs**: Simply retry the same query
+                    """)
+            else:
+                st.success("🤗 **HuggingFace API Ready**")
         else:
             st.write(f"**Model:** gpt2-medium (HuggingFace API)")
+            st.success("🤗 **HuggingFace API Ready**")
+        
         st.write(f"**Temperature:** 0.3")
+        st.write(f"**Max Tokens:** 512")
 
 
 def handle_document_upload(rag_system):
@@ -345,67 +368,123 @@ def handle_query_interface(rag_system):
     # Query processing
     if query and st.button("Get Answer", type="primary"):
         try:
-            with st.spinner("Searching and generating answer..."):
-                start_time = time.time()
+            # Check if this might be a first query with Ollama
+            is_ollama = hasattr(rag_system, 'answer_generator') and hasattr(rag_system.answer_generator, 'base_url')
+            
+            if is_ollama:
+                # Show special loading message for potential warmup
+                with st.spinner("🔥 Initializing model (first query may take 30-60s for warmup)..."):
+                    start_time = time.time()
+                    # Add progress indicator for warmup
+                    progress_placeholder = st.empty()
+                    progress_placeholder.info("⏳ Model warming up... This is normal for the first query and won't happen again.")
+            else:
+                with st.spinner("Searching and generating answer..."):
+                    start_time = time.time()
+                    progress_placeholder = None
 
-                # Debug: Check if documents are actually indexed
+            # Debug: Check if documents are actually indexed
+            print(
+                f"🔍 Debug: Chunks available: {len(getattr(rag_system, 'chunks', []))}",
+                file=sys.stderr,
+                flush=True,
+            )
+            if hasattr(rag_system, "chunks") and rag_system.chunks:
                 print(
-                    f"🔍 Debug: Chunks available: {len(getattr(rag_system, 'chunks', []))}",
-                    file=sys.stderr,
-                    flush=True,
-                )
-                if hasattr(rag_system, "chunks") and rag_system.chunks:
-                    print(
-                        f"🔍 Debug: First chunk preview: {rag_system.chunks[0].get('text', '')[:100]}...",
-                        file=sys.stderr,
-                        flush=True,
-                    )
-
-                # Get answer
-                result = rag_system.query_with_answer(
-                    question=query,
-                    top_k=top_k,
-                    use_hybrid=use_hybrid,
-                    dense_weight=dense_weight,
-                    use_fallback_llm=use_fallback_llm,
-                    return_context=True,
-                )
-
-                # Debug: Check what was retrieved
-                print(
-                    f"🔍 Debug: Retrieved chunks: {len(result.get('context', []))}",
-                    file=sys.stderr,
-                    flush=True,
-                )
-                print(
-                    f"🔍 Debug: Citations: {len(result.get('citations', []))}",
-                    file=sys.stderr,
-                    flush=True,
-                )
-                print(
-                    f"🔍 Debug: Answer preview: {result.get('answer', '')[:100]}...",
+                    f"🔍 Debug: First chunk preview: {rag_system.chunks[0].get('text', '')[:100]}...",
                     file=sys.stderr,
                     flush=True,
                 )
 
-                total_time = time.time() - start_time
-
-                # Display results
-                display_answer_results(result, total_time)
-
-        except Exception as e:
-            st.markdown(
-                f"""
-            <div class="error-box">
-                ❌ <strong>Error generating answer:</strong><br>
-                {str(e)}
-            </div>
-            """,
-                unsafe_allow_html=True,
+            # Get answer
+            result = rag_system.query_with_answer(
+                question=query,
+                top_k=top_k,
+                use_hybrid=use_hybrid,
+                dense_weight=dense_weight,
+                use_fallback_llm=use_fallback_llm,
+                return_context=True,
             )
 
+            # Clear progress indicator if it was shown
+            if is_ollama and progress_placeholder:
+                progress_placeholder.empty()
+
+            # Debug: Check what was retrieved
+            print(
+                f"🔍 Debug: Retrieved chunks: {len(result.get('context', []))}",
+                file=sys.stderr,
+                flush=True,
+            )
+            print(
+                f"🔍 Debug: Citations: {len(result.get('citations', []))}",
+                file=sys.stderr,
+                flush=True,
+            )
+            print(
+                f"🔍 Debug: Answer preview: {result.get('answer', '')[:100]}...",
+                file=sys.stderr,
+                flush=True,
+            )
+
+            total_time = time.time() - start_time
+
+            # Display results
+            display_answer_results(result, total_time)
+
+        except Exception as e:
+            # Clear progress indicator if it was shown
+            if is_ollama and progress_placeholder:
+                progress_placeholder.empty()
+            
+            # Distinguish between different error types
+            error_message = str(e)
+            
+            if "timeout" in error_message.lower() or "read timed out" in error_message.lower():
+                # Likely warmup timeout
+                st.markdown(
+                    f"""
+                <div class="error-box">
+                    ⏱️ <strong>Model Warmup Timeout</strong><br>
+                    The first query timed out during model initialization. This is normal behavior.<br><br>
+                    <strong>What to do:</strong><br>
+                    • Wait a moment and try the same query again<br>
+                    • Subsequent queries should complete much faster (10-20 seconds)<br>
+                    • The model is now warmed up and ready
+                </div>
+                """,
+                    unsafe_allow_html=True,
+                )
+            elif "connection" in error_message.lower() or "host" in error_message.lower():
+                # Connection issues
+                st.markdown(
+                    f"""
+                <div class="error-box">
+                    🔌 <strong>Connection Error</strong><br>
+                    Unable to connect to the model service.<br><br>
+                    <strong>What to do:</strong><br>
+                    • Wait a moment for the service to start up<br>
+                    • Try your query again<br>
+                    • Check if the container is still initializing
+                </div>
+                """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                # Generic error
+                st.markdown(
+                    f"""
+                <div class="error-box">
+                    ❌ <strong>Error generating answer:</strong><br>
+                    {str(e)}<br><br>
+                    <strong>Suggestion:</strong> Try rephrasing your question or wait a moment and retry.
+                </div>
+                """,
+                    unsafe_allow_html=True,
+                )
+
             # Show detailed error in expander for debugging
-            with st.expander("🔍 Error Details"):
+            with st.expander("🔍 Technical Details"):
                 st.code(traceback.format_exc())
 
 
