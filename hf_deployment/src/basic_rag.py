@@ -152,13 +152,14 @@ class BasicRAG:
         
         return results
     
-    def query(self, question: str, top_k: int = 5) -> Dict:
+    def query(self, question: str, top_k: int = 5, similarity_threshold: float = 0.3) -> Dict:
         """
         Search for relevant chunks and return results.
         
         Args:
             question: User question
             top_k: Number of top results to return
+            similarity_threshold: Minimum similarity score (0.3 = 30% similarity)
             
         Returns:
             Dict with question, relevant chunks, and sources
@@ -173,12 +174,12 @@ class BasicRAG:
         # Search FAISS index
         scores, indices = self.index.search(normalized_question.astype(np.float32), top_k)
         
-        # Retrieve relevant chunks
+        # Retrieve relevant chunks with similarity filtering
         relevant_chunks = []
         sources = set()
         
         for score, idx in zip(scores[0], indices[0]):
-            if idx < len(self.chunks):  # Valid index
+            if idx < len(self.chunks) and float(score) >= similarity_threshold:  # Filter by similarity
                 chunk = self.chunks[idx].copy()
                 chunk["similarity_score"] = float(score)
                 relevant_chunks.append(chunk)
@@ -187,10 +188,12 @@ class BasicRAG:
         return {
             "question": question,
             "chunks": relevant_chunks,
-            "sources": list(sources)
+            "sources": list(sources),
+            "similarity_threshold": similarity_threshold,
+            "total_candidates": len([s for s in scores[0] if s >= similarity_threshold])
         }
     
-    def hybrid_query(self, question: str, top_k: int = 5, dense_weight: float = 0.7) -> Dict:
+    def hybrid_query(self, question: str, top_k: int = 5, dense_weight: float = 0.7, similarity_threshold: float = 0.3) -> Dict:
         """
         Enhanced query using hybrid dense + sparse retrieval.
         
@@ -201,6 +204,7 @@ class BasicRAG:
             question: User query
             top_k: Number of results to return
             dense_weight: Weight for dense retrieval (0.7 = 70% semantic, 30% keyword)
+            similarity_threshold: Minimum similarity score to include results (0.3 = 30%)
         
         Returns:
             Enhanced results with hybrid_score field and retrieval method indicators
@@ -217,7 +221,7 @@ class BasicRAG:
             if abs(self.hybrid_retriever.dense_weight - dense_weight) > 0.01:
                 self.hybrid_retriever.dense_weight = dense_weight
             
-            hybrid_results = self.hybrid_retriever.search(question, top_k)
+            hybrid_results = self.hybrid_retriever.search(question, top_k, similarity_threshold=similarity_threshold)
             
             # Process results for consistency with basic query format
             relevant_chunks = []

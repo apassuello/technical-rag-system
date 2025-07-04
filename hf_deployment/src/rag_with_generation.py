@@ -137,7 +137,8 @@ class RAGWithGeneration(BasicRAG):
         use_hybrid: bool = True,
         dense_weight: float = 0.7,
         use_fallback_llm: bool = False,
-        return_context: bool = False
+        return_context: bool = False,
+        similarity_threshold: float = 0.3
     ) -> Dict:
         """
         Query the system and generate a complete answer.
@@ -149,6 +150,7 @@ class RAGWithGeneration(BasicRAG):
             dense_weight: Weight for dense retrieval in hybrid search
             use_fallback_llm: Whether to use fallback LLM model
             return_context: Whether to include retrieved chunks in response
+            similarity_threshold: Minimum similarity score to include results (0.3 = 30%)
             
         Returns:
             Dict containing:
@@ -168,9 +170,9 @@ class RAGWithGeneration(BasicRAG):
         
         # Step 1: Retrieve relevant chunks
         if use_hybrid and self.hybrid_retriever is not None:
-            retrieval_result = self.hybrid_query(question, top_k, dense_weight)
+            retrieval_result = self.hybrid_query(question, top_k, dense_weight, similarity_threshold)
         else:
-            retrieval_result = self.query(question, top_k)
+            retrieval_result = self.query(question, top_k, similarity_threshold)
         
         retrieval_time = time.time() - start_time
         
@@ -288,9 +290,9 @@ class RAGWithGeneration(BasicRAG):
         
         # Step 1: Retrieve relevant chunks
         if use_hybrid and self.hybrid_retriever is not None:
-            retrieval_result = self.hybrid_query(question, top_k, dense_weight)
+            retrieval_result = self.hybrid_query(question, top_k, dense_weight, similarity_threshold)
         else:
-            retrieval_result = self.query(question, top_k)
+            retrieval_result = self.query(question, top_k, similarity_threshold)
         
         retrieval_time = time.time() - start_time
         

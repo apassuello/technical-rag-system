@@ -117,7 +117,8 @@ class HybridRetriever:
         query: str, 
         top_k: int = 10,
         dense_top_k: Optional[int] = None,
-        sparse_top_k: Optional[int] = None
+        sparse_top_k: Optional[int] = None,
+        similarity_threshold: float = 0.3
     ) -> List[Tuple[int, float, Dict]]:
         """
         Hybrid search combining dense and sparse retrieval with RRF.
@@ -127,6 +128,7 @@ class HybridRetriever:
             top_k: Final number of results to return
             dense_top_k: Results from dense search (default: 2*top_k)
             sparse_top_k: Results from sparse search (default: 2*top_k)
+            similarity_threshold: Minimum similarity score to include results (0.3 = 30%)
             
         Returns:
             List of (chunk_index, rrf_score, chunk_dict) tuples
@@ -151,8 +153,8 @@ class HybridRetriever:
         if sparse_top_k is None:
             sparse_top_k = min(2 * top_k, len(self.chunks))
             
-        # Dense semantic search
-        dense_results = self._dense_search(query, dense_top_k)
+        # Dense semantic search with similarity filtering
+        dense_results = self._dense_search(query, dense_top_k, similarity_threshold)
         
         # Sparse BM25 search  
         sparse_results = self.sparse_retriever.search(query, sparse_top_k)
@@ -176,13 +178,14 @@ class HybridRetriever:
             
         return diverse_results
         
-    def _dense_search(self, query: str, top_k: int) -> List[Tuple[int, float]]:
+    def _dense_search(self, query: str, top_k: int, similarity_threshold: float = 0.3) -> List[Tuple[int, float]]:
         """
         Perform dense semantic search using FAISS.
         
         Args:
             query: Search query
             top_k: Number of results to return
+            similarity_threshold: Minimum similarity score to include
             
         Returns:
             List of (chunk_index, similarity_score) tuples
@@ -200,11 +203,11 @@ class HybridRetriever:
         # Search dense index
         similarities, indices = self.dense_index.search(query_embedding, top_k)
         
-        # Convert to required format
+        # Convert to required format with similarity filtering
         results = [
             (int(indices[0][i]), float(similarities[0][i]))
             for i in range(len(indices[0]))
-            if indices[0][i] != -1  # Filter out invalid results
+            if indices[0][i] != -1 and float(similarities[0][i]) >= similarity_threshold  # Filter by similarity
         ]
         
         return results

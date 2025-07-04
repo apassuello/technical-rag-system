@@ -56,6 +56,7 @@ st.markdown(
         padding: 1rem;
         margin: 0.5rem 0;
         border-radius: 0.25rem;
+        color: #212529;
     }
     
     .answer-box {
@@ -64,6 +65,7 @@ st.markdown(
         border-radius: 0.5rem;
         padding: 1.5rem;
         margin: 1rem 0;
+        color: #212529;
     }
     
     .error-box {
@@ -390,6 +392,14 @@ def handle_query_interface(rag_system):
                 5,
                 help="Number of source chunks to retrieve",
             )
+            similarity_threshold = st.slider(
+                "Similarity Threshold",
+                0.0,
+                1.0,
+                0.3,
+                0.05,
+                help="Minimum similarity to include results (higher = more strict)",
+            )
             use_fallback_llm = st.checkbox(
                 "Use Fallback Model",
                 value=False,
@@ -435,6 +445,7 @@ def handle_query_interface(rag_system):
                 dense_weight=dense_weight,
                 use_fallback_llm=use_fallback_llm,
                 return_context=True,
+                similarity_threshold=similarity_threshold,
             )
 
             # Clear progress indicator if it was shown
@@ -533,6 +544,19 @@ def display_answer_results(result: Dict[str, Any], total_time: float):
         unsafe_allow_html=True,
     )
 
+    # Check if this is a rejection/out-of-scope answer
+    answer_text = result['answer'].lower()
+    is_rejection = any(phrase in answer_text for phrase in [
+        "not available in the context",
+        "cannot answer",
+        "not found in the documentation",
+        "outside the scope",
+        "not covered in the provided",
+        "no information about",
+        "cannot provide information",
+        "doesn't contain information"
+    ])
+
     # Metrics row
     col1, col2, col3, col4 = st.columns(4)
 
@@ -544,7 +568,11 @@ def display_answer_results(result: Dict[str, Any], total_time: float):
         )
 
     with col2:
-        st.metric("Sources", len(result["citations"]))
+        # Show different metric for rejections
+        if is_rejection:
+            st.metric("Status", "Out of scope")
+        else:
+            st.metric("Sources", len(result["citations"]))
 
     with col3:
         st.metric("Total Time", f"{total_time:.2f}s")
@@ -553,8 +581,8 @@ def display_answer_results(result: Dict[str, Any], total_time: float):
         retrieval_method = result.get("retrieval_stats", {}).get("method", "unknown")
         st.metric("Method", retrieval_method)
 
-    # Citations
-    if result["citations"]:
+    # Citations - only show for valid answers
+    if result["citations"] and not is_rejection:
         st.markdown("### 📚 Sources")
         for i, citation in enumerate(result["citations"], 1):
             st.markdown(
@@ -567,6 +595,8 @@ def display_answer_results(result: Dict[str, Any], total_time: float):
             """,
                 unsafe_allow_html=True,
             )
+    elif is_rejection:
+        st.info("💡 **Tip**: This question appears to be outside the scope of the uploaded documentation. Try asking about topics covered in the indexed documents.")
 
     # Detailed metrics
     with st.expander("📊 Detailed Metrics"):
