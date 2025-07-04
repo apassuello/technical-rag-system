@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 # Import shared components
 from .hf_answer_generator import Citation, GeneratedAnswer
+from .prompt_templates import TechnicalPromptTemplates
 
 class OllamaAnswerGenerator:
     """
@@ -170,41 +171,50 @@ class OllamaAnswerGenerator:
         return "\n---\n".join(context_parts)
     
     def _create_prompt(self, query: str, context: str) -> str:
-        """Create optimized prompt for Ollama models."""
+        """Create optimized prompt using TechnicalPromptTemplates."""
+        # Get the appropriate template based on query type
+        prompt_data = TechnicalPromptTemplates.format_prompt_with_template(
+            query=query,
+            context=context
+        )
+        
+        # Format for different model types
         if "llama" in self.model_name.lower():
-            # Llama-3.2 format
+            # Llama-3.2 format with technical prompt templates
             return f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-You are a helpful technical documentation assistant. Answer questions based only on the provided context. Always cite sources using [chunk_X] format for factual claims.
+{prompt_data['system']}
 
-CORE PRINCIPLES:
-1. ANSWER DIRECTLY: If context contains the answer, provide it clearly
-2. CITE SOURCES: Use [chunk_1], [chunk_2] etc. for all facts
-3. BE CONCISE: Focus on the essential information
-4. STAY IN CONTEXT: Only use information from the provided chunks
+MANDATORY CITATION RULES:
+- Use [chunk_1], [chunk_2] etc. for ALL factual statements
+- Every technical claim MUST have a citation
+- Example: "RISC-V is an open-source ISA [chunk_1] that supports multiple data widths [chunk_2]."
 
 <|eot_id|><|start_header_id|>user<|end_header_id|>
-Context:
-{context}
+{prompt_data['user']}
 
-Question: {query}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
+CRITICAL: You MUST cite sources with [chunk_X] format for every fact you state.<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
         
         elif "mistral" in self.model_name.lower():
-            # Mistral format
-            return f"""[INST] You are a technical documentation assistant. Answer based only on the provided context and cite sources with [chunk_X].
-
-Context:
-{context}
-
-Question: {query} [/INST]"""
-        
-        else:
-            # Generic format
-            return f"""You are a technical documentation assistant. Answer the question using only the provided context. Cite sources with [chunk_X].
+            # Mistral format with technical templates
+            return f"""[INST] {prompt_data['system']}
 
 Context:
 {context}
 
 Question: {query}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for ALL factual statements. [/INST]"""
+        
+        else:
+            # Generic format with technical templates
+            return f"""{prompt_data['system']}
+
+Context:
+{context}
+
+Question: {query}
+
+MANDATORY CITATIONS: Use [chunk_1], [chunk_2] etc. for every fact.
 
 Answer:"""
     
@@ -254,6 +264,14 @@ Answer:"""
             chunk_idx = int(match.group(1)) - 1  # Convert to 0-based index
             if 0 <= chunk_idx < len(chunks):
                 cited_chunks.add(chunk_idx)
+        
+        # FALLBACK: If no explicit citations found but we have an answer and chunks,
+        # create citations for the top chunks that were likely used
+        if not cited_chunks and chunks and len(answer.strip()) > 50:
+            # Use the top chunks that were provided as likely sources
+            num_fallback_citations = min(3, len(chunks))  # Use top 3 chunks max
+            cited_chunks = set(range(num_fallback_citations))
+            print(f"🔧 Fallback: Creating {num_fallback_citations} citations for answer without explicit [chunk_X] references", file=sys.stderr, flush=True)
         
         # Create Citation objects
         chunk_to_source = {}

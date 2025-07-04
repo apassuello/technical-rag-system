@@ -50,12 +50,13 @@ class RAGWithGeneration(BasicRAG):
         """
         super().__init__()
         
-        # Initialize answer generator
+        # Initialize answer generator with calibration disabled to fix confidence bug
         self.answer_generator = AnswerGenerator(
             primary_model=primary_model,
             fallback_model=fallback_model,
             temperature=temperature,
-            stream=enable_streaming
+            stream=enable_streaming,
+            enable_calibration=False  # Disable unfitted calibration that was causing confidence bugs
         )
         
         self.prompt_templates = TechnicalPromptTemplates()

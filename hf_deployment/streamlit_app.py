@@ -104,20 +104,37 @@ def initialize_rag_system():
 
         # Debug logging (will show in Spaces logs) - force to stderr for visibility
         import sys
+
         if api_token:
-            print(f"✅ Found HF token (starts with: {api_token[:8]}...)", file=sys.stderr, flush=True)
+            print(
+                f"✅ Found HF token (starts with: {api_token[:8]}...)",
+                file=sys.stderr,
+                flush=True,
+            )
         else:
-            print("⚠️ No HF token found in environment variables", file=sys.stderr, flush=True)
-            print(f"Available env vars: {list(os.environ.keys())}", file=sys.stderr, flush=True)
+            print(
+                "⚠️ No HF token found in environment variables",
+                file=sys.stderr,
+                flush=True,
+            )
+            print(
+                f"Available env vars: {list(os.environ.keys())}",
+                file=sys.stderr,
+                flush=True,
+            )
 
         # Check if we're running locally or in HuggingFace Spaces
         is_hf_spaces = os.getenv("SPACE_ID") is not None  # HF Spaces sets SPACE_ID
-        use_ollama = os.getenv("USE_OLLAMA", "false").lower() == "true"
+        use_ollama = True  # os.getenv("USE_OLLAMA", "false").lower() == "true"
 
         if is_hf_spaces:
             print("🚀 Running in HuggingFace Spaces", file=sys.stderr, flush=True)
             if use_ollama:
-                print("🦙 Ollama enabled in HuggingFace Spaces", file=sys.stderr, flush=True)
+                print(
+                    "🦙 Ollama enabled in HuggingFace Spaces",
+                    file=sys.stderr,
+                    flush=True,
+                )
             else:
                 print("🤗 Using HuggingFace API in Spaces", file=sys.stderr, flush=True)
         else:
@@ -131,10 +148,18 @@ def initialize_rag_system():
 
         if use_ollama:
             model_name = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
-            print(f"🦙 Configured for local Ollama with model: {model_name}", file=sys.stderr, flush=True)
+            print(
+                f"🦙 Configured for local Ollama with model: {model_name}",
+                file=sys.stderr,
+                flush=True,
+            )
         else:
             model_name = "sshleifer/distilbart-cnn-12-6"  # Confirmed working HF model
-            print(f"🤗 Configured for HuggingFace API with model: {model_name}", file=sys.stderr, flush=True)
+            print(
+                f"🤗 Configured for HuggingFace API with model: {model_name}",
+                file=sys.stderr,
+                flush=True,
+            )
 
         rag = RAGWithGeneration(
             model_name=model_name,
@@ -206,6 +231,10 @@ def display_system_status(rag_system):
                 rag_system.answer_generator, "model_name", "gpt2-medium"
             )
             st.write(f"**Model:** {model_name}")
+            
+            # Show warmup warning for Ollama models
+            if hasattr(rag_system.answer_generator, 'base_url') or 'llama' in model_name.lower():
+                st.warning("⏱️ **First Query Notice**\nFirst query may take 30-60s for model warmup. Subsequent queries will be much faster!")
         else:
             st.write(f"**Model:** gpt2-medium (HuggingFace API)")
         st.write(f"**Temperature:** 0.3")
@@ -322,12 +351,14 @@ def handle_query_interface(rag_system):
                 # Debug: Check if documents are actually indexed
                 print(
                     f"🔍 Debug: Chunks available: {len(getattr(rag_system, 'chunks', []))}",
-                    file=sys.stderr, flush=True
+                    file=sys.stderr,
+                    flush=True,
                 )
                 if hasattr(rag_system, "chunks") and rag_system.chunks:
                     print(
                         f"🔍 Debug: First chunk preview: {rag_system.chunks[0].get('text', '')[:100]}...",
-                        file=sys.stderr, flush=True
+                        file=sys.stderr,
+                        flush=True,
                     )
 
                 # Get answer
@@ -341,9 +372,21 @@ def handle_query_interface(rag_system):
                 )
 
                 # Debug: Check what was retrieved
-                print(f"🔍 Debug: Retrieved chunks: {len(result.get('context', []))}", file=sys.stderr, flush=True)
-                print(f"🔍 Debug: Citations: {len(result.get('citations', []))}", file=sys.stderr, flush=True)
-                print(f"🔍 Debug: Answer preview: {result.get('answer', '')[:100]}...", file=sys.stderr, flush=True)
+                print(
+                    f"🔍 Debug: Retrieved chunks: {len(result.get('context', []))}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                print(
+                    f"🔍 Debug: Citations: {len(result.get('citations', []))}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                print(
+                    f"🔍 Debug: Answer preview: {result.get('answer', '')[:100]}...",
+                    file=sys.stderr,
+                    flush=True,
+                )
 
                 total_time = time.time() - start_time
 

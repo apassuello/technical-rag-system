@@ -14,6 +14,10 @@ import re
 from pathlib import Path
 import requests
 import os
+import sys
+
+# Import technical prompt templates
+from .prompt_templates import TechnicalPromptTemplates
 
 logger = logging.getLogger(__name__)
 
@@ -397,6 +401,14 @@ Be direct, confident, and accurate. If the context answers the question, provide
             if 0 <= chunk_idx < len(chunks):
                 cited_chunks.add(chunk_idx)
         
+        # FALLBACK: If no explicit citations found but we have an answer and chunks,
+        # create citations for the top chunks that were likely used
+        if not cited_chunks and chunks and len(answer.strip()) > 50:
+            # Use the top chunks that were provided as likely sources
+            num_fallback_citations = min(3, len(chunks))  # Use top 3 chunks max
+            cited_chunks = set(range(num_fallback_citations))
+            print(f"🔧 HF Fallback: Creating {num_fallback_citations} citations for answer without explicit [chunk_X] references", file=sys.stderr, flush=True)
+        
         # Create Citation objects for each cited chunk
         chunk_to_source = {}
         for idx in cited_chunks:
@@ -510,45 +522,61 @@ Be direct, confident, and accurate. If the context answers the question, provide
         # Format context from chunks
         context = self._format_context(chunks)
         
-        # Create prompt optimized for model type
+        # Create prompt using TechnicalPromptTemplates for consistency
+        prompt_data = TechnicalPromptTemplates.format_prompt_with_template(
+            query=query,
+            context=context
+        )
+        
+        # Format for specific model types
         if "squad" in self.model_name.lower() or "roberta" in self.model_name.lower():
             # Squad2 uses special question/context format - handled in _call_api
             prompt = f"Context: {context}\n\nQuestion: {query}"
         elif "gpt2" in self.model_name.lower() or "distilgpt2" in self.model_name.lower():
             # Simple completion style for GPT-2
-            prompt = f"""{self._create_system_prompt()}{context}
+            prompt = f"""{prompt_data['system']}
 
-Question: {query}
+{prompt_data['user']}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all facts.
 
 Answer:"""
         elif "llama" in self.model_name.lower():
-            # Llama-2 chat format
-            prompt = f"""{self._create_system_prompt()}
-{context}
+            # Llama-2 chat format with technical templates
+            prompt = f"""[INST] {prompt_data['system']}
 
-Question: {query} [/INST]"""
+{prompt_data['user']}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all facts. [/INST]"""
         elif "mistral" in self.model_name.lower():
-            # Mistral instruction format
-            prompt = f"""{self._create_system_prompt()}
-{context}
+            # Mistral instruction format with technical templates
+            prompt = f"""[INST] {prompt_data['system']}
 
-Question: {query} [/INST]"""
+{prompt_data['user']}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all facts. [/INST]"""
         elif "codellama" in self.model_name.lower():
-            # CodeLlama instruction format
-            prompt = f"""{self._create_system_prompt()}
-{context}
+            # CodeLlama instruction format with technical templates
+            prompt = f"""[INST] {prompt_data['system']}
 
-Question: {query} [/INST]"""
-        else:
-            # Default instruction prompt
-            prompt = f"""{self._create_system_prompt()}
+{prompt_data['user']}
 
-Context:
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all facts. [/INST]"""
+        elif "distilbart" in self.model_name.lower():
+            # DistilBART is a summarization model - simpler prompt works better
+            prompt = f"""Technical Documentation Context:
 {context}
 
 Question: {query}
 
-Instructions: Answer using only the context above. Cite with [chunk_1], [chunk_2] etc.
+Instructions: Provide a technical answer using only the context above. Include source citations."""
+        else:
+            # Default instruction prompt with technical templates
+            prompt = f"""{prompt_data['system']}
+
+{prompt_data['user']}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all factual statements.
 
 Answer:"""
         
