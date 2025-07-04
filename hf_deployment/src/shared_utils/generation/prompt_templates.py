@@ -29,6 +29,7 @@ class PromptTemplate:
     context_format: str
     query_format: str
     answer_guidelines: str
+    few_shot_examples: Optional[List[str]] = None
 
 
 class TechnicalPromptTemplates:
@@ -82,7 +83,15 @@ Provide a comprehensive technical definition with proper citations.""",
 1. Primary definition [chunk_X]
 2. Technical details and specifications [chunk_Y]
 3. Related concepts or applications [chunk_Z]
-4. Any relevant acronyms or abbreviations"""
+4. Any relevant acronyms or abbreviations""",
+            
+            few_shot_examples=[
+                """Q: What is RISC-V?
+A: RISC-V is an open-source instruction set architecture (ISA) based on established reduced instruction set computing (RISC) principles [chunk_1]. Unlike proprietary ISAs, RISC-V is freely available under open-source licenses, allowing anyone to implement RISC-V processors without licensing fees [chunk_2]. The architecture supports 32-bit, 64-bit, and 128-bit address spaces, with a modular design that includes base integer instruction sets and optional extensions [chunk_3]. RISC-V stands for "RISC-Five" referring to the fifth generation of RISC architecture developed at UC Berkeley.""",
+                
+                """Q: What is FreeRTOS?
+A: FreeRTOS is a real-time operating system kernel for embedded devices that provides multitasking capabilities for microcontrollers and small microprocessors [chunk_1]. It implements a preemptive scheduler with priority-based task scheduling, ensuring deterministic real-time behavior [chunk_2]. FreeRTOS includes core features like task management, semaphores, queues, and memory management while maintaining a small footprint typically under 10KB [chunk_3]. The "Free" in FreeRTOS refers to both its open-source license and the fact that it's free of charge for commercial use."""
+            ]
         )
     
     @staticmethod
@@ -115,7 +124,65 @@ Provide detailed implementation guidance with code examples where available.""",
 ```language
 // Code here
 ```
-5. Important considerations or warnings"""
+5. Important considerations or warnings""",
+            
+            few_shot_examples=[
+                """Q: How do I configure GPIO pins for output in RISC-V?
+A: GPIO configuration for output requires setting the pin direction and initial value through memory-mapped registers [chunk_1]. First, identify the GPIO base address for your specific RISC-V implementation (commonly 0x10060000 for SiFive cores) [chunk_2]. 
+
+Steps:
+1. Set pin direction to output by writing to GPIO_OUTPUT_EN register [chunk_3]
+2. Configure initial output value using GPIO_OUTPUT_VAL register [chunk_4]
+
+```c
+#define GPIO_BASE     0x10060000
+#define GPIO_OUTPUT_EN (GPIO_BASE + 0x08)
+#define GPIO_OUTPUT_VAL (GPIO_BASE + 0x0C)
+
+// Configure pin 5 as output
+volatile uint32_t *gpio_en = (uint32_t*)GPIO_OUTPUT_EN;
+volatile uint32_t *gpio_val = (uint32_t*)GPIO_OUTPUT_VAL;
+
+*gpio_en |= (1 << 5);   // Enable output on pin 5
+*gpio_val |= (1 << 5);  // Set pin 5 high
+```
+
+Important: Always check your board's documentation for the correct GPIO base address and pin mapping [chunk_5].""",
+                
+                """Q: How to implement a basic timer interrupt in RISC-V?
+A: Timer interrupts in RISC-V use the machine timer (mtime) and timer compare (mtimecmp) registers for precise timing control [chunk_1]. The implementation requires configuring the timer hardware, setting up the interrupt handler, and enabling machine timer interrupts [chunk_2].
+
+Prerequisites:
+- RISC-V processor with timer support
+- Access to machine-level CSRs
+- Understanding of memory-mapped timer registers [chunk_3]
+
+Implementation steps:
+1. Set up timer compare value in mtimecmp register [chunk_4]
+2. Enable machine timer interrupt in mie CSR [chunk_5]
+3. Configure interrupt handler in mtvec CSR [chunk_6]
+
+```c
+#define MTIME_BASE    0x0200bff8
+#define MTIMECMP_BASE 0x02004000
+
+void setup_timer_interrupt(uint64_t interval) {
+    uint64_t *mtime = (uint64_t*)MTIME_BASE;
+    uint64_t *mtimecmp = (uint64_t*)MTIMECMP_BASE;
+    
+    // Set next interrupt time
+    *mtimecmp = *mtime + interval;
+    
+    // Enable machine timer interrupt
+    asm volatile ("csrs mie, %0" : : "r"(0x80));
+    
+    // Enable global interrupts
+    asm volatile ("csrs mstatus, %0" : : "r"(0x8));
+}
+```
+
+Critical considerations: Timer registers are 64-bit and must be accessed atomically on 32-bit systems [chunk_7]."""
+            ]
         )
     
     @staticmethod
@@ -384,7 +451,8 @@ Provide a comprehensive technical answer based on the documentation.""",
     def format_prompt_with_template(
         query: str,
         context: str,
-        template: Optional[PromptTemplate] = None
+        template: Optional[PromptTemplate] = None,
+        include_few_shot: bool = True
     ) -> Dict[str, str]:
         """
         Format a complete prompt using the appropriate template.
@@ -393,6 +461,7 @@ Provide a comprehensive technical answer based on the documentation.""",
             query: User's question
             context: Retrieved context chunks
             template: Optional specific template (auto-detected if None)
+            include_few_shot: Whether to include few-shot examples
             
         Returns:
             Dict with 'system' and 'user' prompts
@@ -406,12 +475,22 @@ Provide a comprehensive technical answer based on the documentation.""",
         # Format the query
         formatted_query = template.query_format.format(query=query)
         
-        # Combine into user prompt
-        user_prompt = f"""{formatted_context}
-
-{formatted_query}
-
-{template.answer_guidelines}"""
+        # Build user prompt with optional few-shot examples
+        user_prompt_parts = []
+        
+        # Add few-shot examples if available and requested
+        if include_few_shot and template.few_shot_examples:
+            user_prompt_parts.append("Here are some examples of how to answer similar questions:")
+            user_prompt_parts.append("\n\n".join(template.few_shot_examples))
+            user_prompt_parts.append("\nNow answer the following question using the same format:")
+        
+        user_prompt_parts.extend([
+            formatted_context,
+            formatted_query,
+            template.answer_guidelines
+        ])
+        
+        user_prompt = "\n\n".join(user_prompt_parts)
         
         return {
             "system": template.system_prompt,
