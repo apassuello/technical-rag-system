@@ -19,6 +19,8 @@ from src.shared_utils.generation.hf_answer_generator import HuggingFaceAnswerGen
 from src.shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
 from src.shared_utils.generation.inference_providers_generator import InferenceProvidersGenerator
 from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates
+from src.shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
+from src.shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
 
 
 class RAGWithGeneration(BasicRAG):
@@ -37,7 +39,9 @@ class RAGWithGeneration(BasicRAG):
         max_tokens: int = 512,
         use_ollama: bool = False,
         ollama_url: str = "http://localhost:11434",
-        use_inference_providers: bool = False
+        use_inference_providers: bool = False,
+        enable_adaptive_prompts: bool = True,
+        enable_chain_of_thought: bool = True
     ):
         """
         Initialize RAG with generation capabilities.
@@ -50,6 +54,8 @@ class RAGWithGeneration(BasicRAG):
             use_ollama: If True, use local Ollama instead of HuggingFace API
             ollama_url: Ollama server URL (if using Ollama)
             use_inference_providers: If True, use new Inference Providers API
+            enable_adaptive_prompts: If True, use context-aware prompt adaptation
+            enable_chain_of_thought: If True, enable multi-step reasoning for complex queries
         """
         super().__init__()
         
@@ -117,7 +123,12 @@ class RAGWithGeneration(BasicRAG):
             self._using_ollama = False
             self._using_inference_providers = False
         
+        # Initialize prompt engineering components
         self.prompt_templates = TechnicalPromptTemplates()
+        self.adaptive_engine = AdaptivePromptEngine() if enable_adaptive_prompts else None
+        self.cot_engine = ChainOfThoughtEngine() if enable_chain_of_thought else None
+        self.enable_adaptive_prompts = enable_adaptive_prompts
+        self.enable_chain_of_thought = enable_chain_of_thought
         self.enable_streaming = False  # HF API doesn't support streaming in this implementation
         
     def get_generator_info(self) -> Dict[str, str]:
@@ -211,12 +222,22 @@ class RAGWithGeneration(BasicRAG):
             }
             formatted_chunks.append(formatted_chunk)
         
-        # Generate answer
+        # Generate answer using enhanced prompt engineering
         generation_start = time.time()
-        generated_answer = self.answer_generator.generate(
-            query=question,
-            chunks=formatted_chunks
-        )
+        
+        # Use adaptive prompt engineering if enabled
+        if self.enable_adaptive_prompts and self.adaptive_engine:
+            generated_answer = self._generate_with_adaptive_prompts(
+                question=question,
+                chunks=formatted_chunks
+            )
+        else:
+            # Use standard generation
+            generated_answer = self.answer_generator.generate(
+                query=question,
+                chunks=formatted_chunks
+            )
+        
         generation_time = time.time() - generation_start
         
         # Prepare response
@@ -252,6 +273,89 @@ class RAGWithGeneration(BasicRAG):
             response["context"] = chunks
             
         return response
+    
+    def _generate_with_adaptive_prompts(self, question: str, chunks: List[Dict]) -> 'GeneratedAnswer':
+        """
+        Generate answer using adaptive prompt engineering.
+        
+        Args:
+            question: User's question
+            chunks: Retrieved context chunks
+            
+        Returns:
+            GeneratedAnswer with adaptive prompt enhancement
+        """
+        # Convert chunks to adaptive engine format
+        adaptive_chunks = []
+        for chunk in chunks:
+            adaptive_chunks.append({
+                "content": chunk.get("content", ""),
+                "metadata": chunk.get("metadata", {}),
+                "confidence": chunk.get("score", 0.5)
+            })
+        
+        # Generate adaptive configuration
+        config = self.adaptive_engine.generate_adaptive_config(
+            query=question,
+            context_chunks=adaptive_chunks,
+            prefer_speed=False
+        )
+        
+        # Create adaptive prompt
+        if self.enable_chain_of_thought and self.cot_engine and config.enable_chain_of_thought:
+            # Use chain-of-thought for complex queries
+            query_type = self.prompt_templates.detect_query_type(question)
+            base_template = self.prompt_templates.get_template_for_query(question)
+            
+            # Format context for CoT
+            context = self._format_context_for_prompt(adaptive_chunks)
+            
+            # Generate CoT prompt
+            enhanced_prompt = self.cot_engine.generate_chain_of_thought_prompt(
+                query=question,
+                query_type=query_type,
+                context=context,
+                base_template=base_template
+            )
+            
+            # Use the enhanced prompt with the answer generator
+            return self.answer_generator.generate_with_custom_prompt(
+                query=question,
+                chunks=chunks,
+                custom_prompt=enhanced_prompt
+            )
+        else:
+            # Use adaptive prompt without CoT
+            adaptive_prompt = self.adaptive_engine.create_adaptive_prompt(
+                query=question,
+                context_chunks=adaptive_chunks,
+                config=config
+            )
+            
+            # Use the adaptive prompt with the answer generator
+            return self.answer_generator.generate_with_custom_prompt(
+                query=question,
+                chunks=chunks,
+                custom_prompt=adaptive_prompt
+            )
+    
+    def _format_context_for_prompt(self, chunks: List[Dict]) -> str:
+        """Format chunks for prompt context."""
+        if not chunks:
+            return "No relevant context available."
+        
+        context_parts = []
+        for i, chunk in enumerate(chunks):
+            content = chunk.get('content', '')
+            metadata = chunk.get('metadata', {})
+            page_num = metadata.get('page_number', 'unknown')
+            source = metadata.get('source', 'unknown')
+            
+            context_parts.append(
+                f"[chunk_{i+1}] (Page {page_num} from {source}):\n{content}"
+            )
+        
+        return "\n\n---\n\n".join(context_parts)
     
     def query_with_answer_stream(
         self,

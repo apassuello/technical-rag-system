@@ -613,6 +613,87 @@ Answer:"""
                 context_used=chunks
             )
     
+    def generate_with_custom_prompt(
+        self,
+        query: str,
+        chunks: List[Dict[str, Any]],
+        custom_prompt: Dict[str, str]
+    ) -> GeneratedAnswer:
+        """
+        Generate answer using a custom prompt (for adaptive prompting).
+        
+        Args:
+            query: User's question
+            chunks: Retrieved context chunks
+            custom_prompt: Dict with 'system' and 'user' prompts
+            
+        Returns:
+            GeneratedAnswer with custom prompt enhancement
+        """
+        start_time = datetime.now()
+        
+        # Format context
+        context = self._format_context(chunks)
+        
+        # Build prompt using custom format
+        if "llama" in self.model_name.lower():
+            prompt = f"""[INST] {custom_prompt['system']}
+
+{custom_prompt['user']}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all facts. [/INST]"""
+        elif "mistral" in self.model_name.lower():
+            prompt = f"""[INST] {custom_prompt['system']}
+
+{custom_prompt['user']}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all facts. [/INST]"""
+        elif "distilbart" in self.model_name.lower():
+            # For BART, use the user prompt directly (it already contains context)
+            prompt = custom_prompt['user']
+        else:
+            # Default format
+            prompt = f"""{custom_prompt['system']}
+
+{custom_prompt['user']}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all factual statements.
+
+Answer:"""
+        
+        # Generate response
+        try:
+            answer_with_citations = self._call_api(prompt)
+            
+            # Extract and clean citations
+            clean_answer, citations = self._extract_citations(answer_with_citations, chunks)
+            
+            # Calculate confidence
+            confidence = self._calculate_confidence(clean_answer, citations, chunks)
+            
+            # Calculate generation time
+            generation_time = (datetime.now() - start_time).total_seconds()
+            
+            return GeneratedAnswer(
+                answer=clean_answer,
+                citations=citations,
+                confidence_score=confidence,
+                generation_time=generation_time,
+                model_used=self.model_name,
+                context_used=chunks
+            )
+            
+        except Exception as e:
+            logger.error(f"Error generating answer with custom prompt: {e}")
+            return GeneratedAnswer(
+                answer="I apologize, but I encountered an error while generating the answer. Please try again.",
+                citations=[],
+                confidence_score=0.0,
+                generation_time=0.0,
+                model_used=self.model_name,
+                context_used=chunks
+            )
+    
     def format_answer_with_citations(self, generated_answer: GeneratedAnswer) -> str:
         """
         Format the generated answer with citations for display.

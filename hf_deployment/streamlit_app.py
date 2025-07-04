@@ -171,6 +171,12 @@ def initialize_rag_system():
                 flush=True,
             )
 
+        # Get prompt engineering settings
+        enable_adaptive_prompts = os.getenv("ENABLE_ADAPTIVE_PROMPTS", "true").lower() == "true"
+        enable_chain_of_thought = os.getenv("ENABLE_CHAIN_OF_THOUGHT", "true").lower() == "true"
+        
+        print(f"🧠 Prompt engineering: Adaptive={enable_adaptive_prompts}, CoT={enable_chain_of_thought}", file=sys.stderr, flush=True)
+        
         rag = RAGWithGeneration(
             model_name=model_name,
             api_token=api_token,
@@ -179,6 +185,8 @@ def initialize_rag_system():
             use_ollama=use_ollama,
             ollama_url=ollama_url,
             use_inference_providers=use_inference_providers,
+            enable_adaptive_prompts=enable_adaptive_prompts,
+            enable_chain_of_thought=enable_chain_of_thought,
         )
         return rag, None
     except Exception as e:
@@ -294,6 +302,37 @@ def display_system_status(rag_system):
         
         st.write(f"**Temperature:** 0.3")
         st.write(f"**Max Tokens:** 512")
+        
+        # Prompt Engineering Status
+        st.header("🧠 Prompt Engineering")
+        if hasattr(rag_system, 'enable_adaptive_prompts'):
+            adaptive_status = "✅ Enabled" if rag_system.enable_adaptive_prompts else "❌ Disabled"
+            st.write(f"**Adaptive Prompts:** {adaptive_status}")
+        
+        if hasattr(rag_system, 'enable_chain_of_thought'):
+            cot_status = "✅ Enabled" if rag_system.enable_chain_of_thought else "❌ Disabled"
+            st.write(f"**Chain-of-Thought:** {cot_status}")
+        
+        with st.expander("💡 Prompt Engineering Features"):
+            st.markdown("""
+            **Adaptive Prompts:**
+            - Automatically adjusts prompt complexity based on query type
+            - Uses context quality analysis for better responses
+            - Includes few-shot examples for complex queries
+            
+            **Chain-of-Thought:**
+            - Multi-step reasoning for complex implementation questions
+            - Structured analysis for troubleshooting queries
+            - Enhanced technical explanations
+            
+            **Query Types Supported:**
+            - Definition queries (with examples)
+            - Implementation guides (with step-by-step reasoning)
+            - Comparison analysis
+            - Code examples
+            - Hardware constraints
+            - Troubleshooting
+            """)
 
 
 def handle_document_upload(rag_system):

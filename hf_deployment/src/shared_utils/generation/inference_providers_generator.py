@@ -429,6 +429,75 @@ class InferenceProvidersGenerator:
                 model_used=self.model_name,
                 context_used=chunks
             )
+    
+    def generate_with_custom_prompt(
+        self,
+        query: str,
+        chunks: List[Dict[str, Any]],
+        custom_prompt: Dict[str, str]
+    ) -> GeneratedAnswer:
+        """
+        Generate answer using a custom prompt (for adaptive prompting).
+        
+        Args:
+            query: User's question
+            chunks: Retrieved context chunks
+            custom_prompt: Dict with 'system' and 'user' prompts
+            
+        Returns:
+            GeneratedAnswer with custom prompt enhancement
+        """
+        start_time = datetime.now()
+        
+        if not chunks:
+            return GeneratedAnswer(
+                answer="I don't have enough context to answer your question.",
+                citations=[],
+                confidence_score=0.0,
+                generation_time=0.1,
+                model_used=self.model_name,
+                context_used=chunks
+            )
+        
+        try:
+            # Try chat completion with custom prompt
+            messages = [
+                {"role": "system", "content": custom_prompt['system']},
+                {"role": "user", "content": custom_prompt['user']}
+            ]
+            
+            answer_text = self._call_chat_completion(messages)
+            
+            # Extract citations and clean answer
+            natural_answer, citations = self._extract_citations(answer_text, chunks)
+            
+            # Calculate confidence
+            confidence = self._calculate_confidence(natural_answer, citations, chunks)
+            
+            generation_time = (datetime.now() - start_time).total_seconds()
+            
+            return GeneratedAnswer(
+                answer=natural_answer,
+                citations=citations,
+                confidence_score=confidence,
+                generation_time=generation_time,
+                model_used=self.model_name,
+                context_used=chunks
+            )
+            
+        except Exception as e:
+            logger.error(f"Error generating answer with custom prompt: {e}")
+            print(f"❌ Custom prompt generation failed: {e}", file=sys.stderr, flush=True)
+            
+            # Return error response
+            return GeneratedAnswer(
+                answer="I apologize, but I encountered an error while generating the answer. Please try again.",
+                citations=[],
+                confidence_score=0.0,
+                generation_time=(datetime.now() - start_time).total_seconds(),
+                model_used=self.model_name,
+                context_used=chunks
+            )
 
 
 # Example usage

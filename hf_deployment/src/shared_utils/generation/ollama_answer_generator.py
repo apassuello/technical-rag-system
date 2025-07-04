@@ -432,6 +432,79 @@ Answer:"""
             model_used=self.model_name,
             context_used=chunks,
         )
+    
+    def generate_with_custom_prompt(
+        self,
+        query: str,
+        chunks: List[Dict[str, Any]],
+        custom_prompt: Dict[str, str]
+    ) -> GeneratedAnswer:
+        """
+        Generate answer using a custom prompt (for adaptive prompting).
+        
+        Args:
+            query: User's question
+            chunks: Retrieved context chunks
+            custom_prompt: Dict with 'system' and 'user' prompts
+            
+        Returns:
+            GeneratedAnswer with custom prompt enhancement
+        """
+        start_time = datetime.now()
+        
+        if not chunks:
+            return GeneratedAnswer(
+                answer="I don't have enough context to answer your question.",
+                citations=[],
+                confidence_score=0.0,
+                generation_time=0.1,
+                model_used=self.model_name,
+                context_used=chunks,
+            )
+        
+        # Build custom prompt based on model type
+        if "llama" in self.model_name.lower():
+            prompt = f"""[INST] {custom_prompt['system']}
+
+{custom_prompt['user']}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all facts. [/INST]"""
+        elif "mistral" in self.model_name.lower():
+            prompt = f"""[INST] {custom_prompt['system']}
+
+{custom_prompt['user']}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all facts. [/INST]"""
+        else:
+            # Generic format for other models
+            prompt = f"""{custom_prompt['system']}
+
+{custom_prompt['user']}
+
+MANDATORY: Use [chunk_1], [chunk_2] etc. for all factual statements.
+
+Answer:"""
+        
+        # Generate answer
+        print(f"🤖 Calling Ollama with custom prompt using {self.model_name}...", file=sys.stderr, flush=True)
+        answer_with_citations = self._call_ollama(prompt)
+        
+        generation_time = (datetime.now() - start_time).total_seconds()
+        
+        # Extract citations and create natural answer
+        natural_answer, citations = self._extract_citations(answer_with_citations, chunks)
+        
+        # Calculate confidence
+        confidence = self._calculate_confidence(natural_answer, citations, chunks)
+        
+        return GeneratedAnswer(
+            answer=natural_answer,
+            citations=citations,
+            confidence_score=confidence,
+            generation_time=generation_time,
+            model_used=self.model_name,
+            context_used=chunks,
+        )
 
 
 # Example usage
