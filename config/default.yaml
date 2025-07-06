@@ -1,0 +1,43 @@
+# RAG Pipeline Configuration
+# This file defines the components and settings for the RAG pipeline
+
+# Document processor for handling input files
+document_processor:
+  type: "hybrid_pdf"  # Options: hybrid_pdf, simple_pdf
+  config:
+    chunk_size: 1024
+    chunk_overlap: 128
+
+# Embedding generator for converting text to vectors
+embedder:
+  type: "sentence_transformer"  # Options: sentence_transformer, openai
+  config:
+    model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    use_mps: true
+
+# Vector storage backend
+vector_store:
+  type: "faiss"  # Options: faiss, chroma, pinecone
+  config:
+    index_type: "IndexFlatIP"
+    normalize: true
+
+# Retrieval strategy
+retriever:
+  type: "hybrid"  # Options: hybrid, semantic, bm25
+  config:
+    dense_weight: 0.7
+    sparse_weight: 0.3
+    top_k: 5
+
+# Answer generation strategy
+answer_generator:
+  type: "adaptive"  # Options: adaptive, simple, chain_of_thought
+  config:
+    enable_adaptive_prompts: true
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
+    max_tokens: 512
+
+# Global settings (optional)
+global_settings: {}
