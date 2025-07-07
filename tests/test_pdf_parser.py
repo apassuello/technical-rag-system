@@ -11,7 +11,7 @@ from shared_utils.document_processing.pdf_parser import extract_text_with_metada
 
 def test_extract_text_with_metadata():
     """Test PDF text extraction with RISC-V specification file."""
-    pdf_path = Path("project-1-technical-rag/data/test/riscv-base-instructions.pdf")
+    pdf_path = Path("data/test/riscv-base-instructions.pdf")
     
     result = extract_text_with_metadata(pdf_path)
     

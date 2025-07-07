@@ -64,7 +64,7 @@ def test_basic_rag_initialization():
     # Validate initial state
     assert rag.index is None, "FAISS index should not be initialized until first document"
     assert len(rag.chunks) == 0, "Chunk storage should be empty initially"
-    assert rag.embedding_dim == 768, "Should match all-mpnet-base-v2 dimensions"
+    assert rag.embedding_dim == 384, "Should match multi-qa-MiniLM-L6-cos-v1 dimensions"
 
 
 def test_basic_rag_index_document():

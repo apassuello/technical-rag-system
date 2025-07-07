@@ -72,7 +72,7 @@ def test_generate_embeddings_basic():
 
     # Validate output shape and type
     assert isinstance(embeddings, np.ndarray), "Output should be numpy array"
-    assert embeddings.shape == (5, 768), "Shape should be (num_texts, 768)"
+    assert embeddings.shape == (5, 384), "Shape should be (num_texts, 384)"
     assert embeddings.dtype == np.float32, "Should use float32 for memory efficiency"
 
     # Validate semantic discrimination
@@ -114,7 +114,7 @@ def test_embedding_performance():
     duration = time.perf_counter() - start
 
     # Validate output
-    assert embeddings.shape == (50, 768), "Should process all texts"
+    assert embeddings.shape == (50, 384), "Should process all texts"
     assert duration < 10.0, f"Should complete in <10s, took {duration:.3f}s"
     
     # Calculate and report throughput

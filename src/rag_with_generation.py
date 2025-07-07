@@ -11,17 +11,16 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union, Generator
 import sys
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
 # Import from same directory
-sys.path.insert(0, str(Path(__file__).parent))
-from basic_rag import BasicRAG
+from .basic_rag import BasicRAG
 
-# Import from shared utils
-from shared_utils.generation.answer_generator import AnswerGenerator, GeneratedAnswer
+# Import from shared utils - Support HF API, Ollama, and Inference Providers
+from shared_utils.generation.hf_answer_generator import HuggingFaceAnswerGenerator, GeneratedAnswer
+from shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
+from shared_utils.generation.inference_providers_generator import InferenceProvidersGenerator
 from shared_utils.generation.prompt_templates import TechnicalPromptTemplates
+from shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
+from shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
 
 
 class RAGWithGeneration(BasicRAG):
@@ -34,33 +33,113 @@ class RAGWithGeneration(BasicRAG):
     
     def __init__(
         self,
-        primary_model: str = "llama3.2:3b",
-        fallback_model: str = "mistral:latest",
+        model_name: str = "sshleifer/distilbart-cnn-12-6",
+        api_token: str = None,
         temperature: float = 0.3,
-        enable_streaming: bool = True
+        max_tokens: int = 512,
+        use_ollama: bool = False,
+        ollama_url: str = "http://localhost:11434",
+        use_inference_providers: bool = False,
+        enable_adaptive_prompts: bool = True,
+        enable_chain_of_thought: bool = True
     ):
         """
         Initialize RAG with generation capabilities.
         
         Args:
-            primary_model: Primary Ollama model for generation
-            fallback_model: Fallback model for complex queries
+            model_name: Model for generation (HF model or Ollama model)
+            api_token: HF API token (for HF models only)
             temperature: Generation temperature
-            enable_streaming: Whether to enable streaming responses
+            max_tokens: Maximum tokens to generate
+            use_ollama: If True, use local Ollama instead of HuggingFace API
+            ollama_url: Ollama server URL (if using Ollama)
+            use_inference_providers: If True, use new Inference Providers API
+            enable_adaptive_prompts: If True, use context-aware prompt adaptation
+            enable_chain_of_thought: If True, enable multi-step reasoning for complex queries
         """
         super().__init__()
         
-        # Initialize answer generator with calibration disabled to fix confidence bug
-        self.answer_generator = AnswerGenerator(
-            primary_model=primary_model,
-            fallback_model=fallback_model,
-            temperature=temperature,
-            stream=enable_streaming,
-            enable_calibration=False  # Disable unfitted calibration that was causing confidence bugs
-        )
+        # Choose generator based on configuration with fallback chain
+        if use_inference_providers:
+            # Try new Inference Providers API first
+            print(f"🚀 Trying HuggingFace Inference Providers API...", file=sys.stderr, flush=True)
+            try:
+                self.answer_generator = InferenceProvidersGenerator(
+                    model_name=None,  # Let it auto-select best available model
+                    api_token=api_token,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                print(f"✅ Inference Providers API connected successfully", file=sys.stderr, flush=True)
+                self._using_ollama = False
+                self._using_inference_providers = True
+            except Exception as e:
+                print(f"❌ Inference Providers failed: {e}", file=sys.stderr, flush=True)
+                print(f"🔄 Falling back to classic HuggingFace API...", file=sys.stderr, flush=True)
+                # Fallback to classic HF API
+                self.answer_generator = HuggingFaceAnswerGenerator(
+                    model_name=model_name,
+                    api_token=api_token,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                print(f"✅ HuggingFace classic API ready", file=sys.stderr, flush=True)
+                self._using_ollama = False
+                self._using_inference_providers = False
+        elif use_ollama:
+            print(f"🦙 Trying local Ollama server at {ollama_url}...", file=sys.stderr, flush=True)
+            try:
+                self.answer_generator = OllamaAnswerGenerator(
+                    model_name=model_name,
+                    base_url=ollama_url,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                print(f"✅ Ollama connected successfully with {model_name}", file=sys.stderr, flush=True)
+                self._using_ollama = True
+                self._using_inference_providers = False
+            except Exception as e:
+                print(f"❌ Ollama failed: {e}", file=sys.stderr, flush=True)
+                print(f"🔄 Falling back to HuggingFace API...", file=sys.stderr, flush=True)
+                # Fallback to HuggingFace
+                hf_model = "sshleifer/distilbart-cnn-12-6"
+                self.answer_generator = HuggingFaceAnswerGenerator(
+                    model_name=hf_model,
+                    api_token=api_token,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                print(f"✅ HuggingFace fallback ready with {hf_model}", file=sys.stderr, flush=True)
+                self._using_ollama = False
+                self._using_inference_providers = False
+        else:
+            print("🤗 Using HuggingFace classic API...", file=sys.stderr, flush=True)
+            self.answer_generator = HuggingFaceAnswerGenerator(
+                model_name=model_name,
+                api_token=api_token,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+            self._using_ollama = False
+            self._using_inference_providers = False
         
+        # Initialize prompt engineering components
         self.prompt_templates = TechnicalPromptTemplates()
-        self.enable_streaming = enable_streaming
+        self.adaptive_engine = AdaptivePromptEngine() if enable_adaptive_prompts else None
+        self.cot_engine = ChainOfThoughtEngine() if enable_chain_of_thought else None
+        self.enable_adaptive_prompts = enable_adaptive_prompts
+        self.enable_chain_of_thought = enable_chain_of_thought
+        self.enable_streaming = False  # HF API doesn't support streaming in this implementation
+        
+    def get_generator_info(self) -> Dict[str, str]:
+        """Get information about the current answer generator."""
+        return {
+            "using_ollama": getattr(self, '_using_ollama', False),
+            "using_inference_providers": getattr(self, '_using_inference_providers', False),
+            "generator_type": type(self.answer_generator).__name__,
+            "model_name": getattr(self.answer_generator, 'model_name', 'unknown'),
+            "base_url": getattr(self.answer_generator, 'base_url', None)
+        }
         
     def query_with_answer(
         self,
@@ -69,7 +148,8 @@ class RAGWithGeneration(BasicRAG):
         use_hybrid: bool = True,
         dense_weight: float = 0.7,
         use_fallback_llm: bool = False,
-        return_context: bool = False
+        return_context: bool = False,
+        similarity_threshold: float = 0.3
     ) -> Dict:
         """
         Query the system and generate a complete answer.
@@ -81,6 +161,7 @@ class RAGWithGeneration(BasicRAG):
             dense_weight: Weight for dense retrieval in hybrid search
             use_fallback_llm: Whether to use fallback LLM model
             return_context: Whether to include retrieved chunks in response
+            similarity_threshold: Minimum similarity score to include results (0.3 = 30%)
             
         Returns:
             Dict containing:
@@ -94,11 +175,15 @@ class RAGWithGeneration(BasicRAG):
         """
         start_time = time.time()
         
+        # Debug: Show which generator is being used
+        generator_info = self.get_generator_info()
+        print(f"🔧 Debug: Using {generator_info['generator_type']} (Ollama: {generator_info['using_ollama']}) with model {generator_info['model_name']}", file=sys.stderr, flush=True)
+        
         # Step 1: Retrieve relevant chunks
         if use_hybrid and self.hybrid_retriever is not None:
-            retrieval_result = self.hybrid_query(question, top_k, dense_weight)
+            retrieval_result = self.hybrid_query(question, top_k, dense_weight, similarity_threshold)
         else:
-            retrieval_result = self.query(question, top_k)
+            retrieval_result = self.query(question, top_k, similarity_threshold)
         
         retrieval_time = time.time() - start_time
         
@@ -137,13 +222,22 @@ class RAGWithGeneration(BasicRAG):
             }
             formatted_chunks.append(formatted_chunk)
         
-        # Generate answer
+        # Generate answer using enhanced prompt engineering
         generation_start = time.time()
-        generated_answer = self.answer_generator.generate(
-            query=question,
-            chunks=formatted_chunks,
-            use_fallback=use_fallback_llm
-        )
+        
+        # Use adaptive prompt engineering if enabled
+        if self.enable_adaptive_prompts and self.adaptive_engine:
+            generated_answer = self._generate_with_adaptive_prompts(
+                question=question,
+                chunks=formatted_chunks
+            )
+        else:
+            # Use standard generation
+            generated_answer = self.answer_generator.generate(
+                query=question,
+                chunks=formatted_chunks
+            )
+        
         generation_time = time.time() - generation_start
         
         # Prepare response
@@ -179,6 +273,89 @@ class RAGWithGeneration(BasicRAG):
             response["context"] = chunks
             
         return response
+    
+    def _generate_with_adaptive_prompts(self, question: str, chunks: List[Dict]) -> 'GeneratedAnswer':
+        """
+        Generate answer using adaptive prompt engineering.
+        
+        Args:
+            question: User's question
+            chunks: Retrieved context chunks
+            
+        Returns:
+            GeneratedAnswer with adaptive prompt enhancement
+        """
+        # Convert chunks to adaptive engine format
+        adaptive_chunks = []
+        for chunk in chunks:
+            adaptive_chunks.append({
+                "content": chunk.get("content", ""),
+                "metadata": chunk.get("metadata", {}),
+                "confidence": chunk.get("score", 0.5)
+            })
+        
+        # Generate adaptive configuration
+        config = self.adaptive_engine.generate_adaptive_config(
+            query=question,
+            context_chunks=adaptive_chunks,
+            prefer_speed=False
+        )
+        
+        # Create adaptive prompt
+        if self.enable_chain_of_thought and self.cot_engine and config.enable_chain_of_thought:
+            # Use chain-of-thought for complex queries
+            query_type = self.prompt_templates.detect_query_type(question)
+            base_template = self.prompt_templates.get_template_for_query(question)
+            
+            # Format context for CoT
+            context = self._format_context_for_prompt(adaptive_chunks)
+            
+            # Generate CoT prompt
+            enhanced_prompt = self.cot_engine.generate_chain_of_thought_prompt(
+                query=question,
+                query_type=query_type,
+                context=context,
+                base_template=base_template
+            )
+            
+            # Use the enhanced prompt with the answer generator
+            return self.answer_generator.generate_with_custom_prompt(
+                query=question,
+                chunks=chunks,
+                custom_prompt=enhanced_prompt
+            )
+        else:
+            # Use adaptive prompt without CoT
+            adaptive_prompt = self.adaptive_engine.create_adaptive_prompt(
+                query=question,
+                context_chunks=adaptive_chunks,
+                config=config
+            )
+            
+            # Use the adaptive prompt with the answer generator
+            return self.answer_generator.generate_with_custom_prompt(
+                query=question,
+                chunks=chunks,
+                custom_prompt=adaptive_prompt
+            )
+    
+    def _format_context_for_prompt(self, chunks: List[Dict]) -> str:
+        """Format chunks for prompt context."""
+        if not chunks:
+            return "No relevant context available."
+        
+        context_parts = []
+        for i, chunk in enumerate(chunks):
+            content = chunk.get('content', '')
+            metadata = chunk.get('metadata', {})
+            page_num = metadata.get('page_number', 'unknown')
+            source = metadata.get('source', 'unknown')
+            
+            context_parts.append(
+                f"[chunk_{i+1}] (Page {page_num} from {source}):\n{content}"
+            )
+        
+        return "\n\n---\n\n".join(context_parts)
     
     def query_with_answer_stream(
         self,
@@ -217,9 +394,9 @@ class RAGWithGeneration(BasicRAG):
         
         # Step 1: Retrieve relevant chunks
         if use_hybrid and self.hybrid_retriever is not None:
-            retrieval_result = self.hybrid_query(question, top_k, dense_weight)
+            retrieval_result = self.hybrid_query(question, top_k, dense_weight, similarity_threshold)
         else:
-            retrieval_result = self.query(question, top_k)
+            retrieval_result = self.query(question, top_k, similarity_threshold)
         
         retrieval_time = time.time() - start_time
         
