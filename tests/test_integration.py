@@ -21,8 +21,8 @@ def test_full_pipeline():
     doc_data = extract_text_with_metadata(pdf_path)
     assert len(doc_data["text"]) > 1000
 
-    # Step 2: Chunk text
-    chunks = chunk_technical_text(doc_data["text"], chunk_size=512, overlap=50)
+    # Step 2: Chunk text - use default parameters that work with sentence boundary enforcement
+    chunks = chunk_technical_text(doc_data["text"], chunk_size=1400, overlap=200)
     assert len(chunks) > 10  # Should produce many chunks
 
     # Step 3: Generate embeddings
