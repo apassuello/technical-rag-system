@@ -10,7 +10,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def test_formatting_cleanup():
@@ -19,7 +19,7 @@ def test_formatting_cleanup():
     print("=" * 50)
     
     # Index RISC-V document
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     pdf_path = project_root / "data" / "test" / "riscv-base-instructions.pdf"
     rag.index_document(pdf_path)
     
@@ -80,9 +80,9 @@ def test_scoring_variation():
     print("=" * 50)
     
     # Index all documents
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     data_folder = project_root / "data" / "test"
-    rag.index_documents(data_folder)
+    rag.index_document(data_folder)
     
     # Test queries
     test_queries = [
@@ -99,7 +99,7 @@ def test_scoring_variation():
     print(f"\n📊 Testing {len(test_queries)} queries...")
     
     for query in test_queries:
-        result = rag.hybrid_query(query, top_k=10)
+        result = rag.query(query, top_k=10)
         scores = [chunk.get('hybrid_score', 0) for chunk in result.get('chunks', [])]
         
         if scores:
@@ -143,9 +143,9 @@ def test_retrieval_relevance():
     print("\n\n🔍 TESTING RETRIEVAL RELEVANCE")
     print("=" * 50)
     
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     data_folder = project_root / "data" / "test"
-    rag.index_documents(data_folder)
+    rag.index_document(data_folder)
     
     # Specific queries with expected content
     test_cases = [
@@ -163,7 +163,7 @@ def test_retrieval_relevance():
     
     for test in test_cases:
         print(f"\n📌 Query: '{test['query']}'")
-        result = rag.hybrid_query(test['query'], top_k=3)
+        result = rag.query(test['query'], top_k=3)
         
         if result.get('chunks'):
             top_chunk = result['chunks'][0]

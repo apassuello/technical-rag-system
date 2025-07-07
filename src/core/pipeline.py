@@ -57,6 +57,10 @@ class RAGPipeline:
             FileNotFoundError: If configuration file doesn't exist
             ValueError: If configuration is invalid
         """
+        # Convert string to Path if needed
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
+            
         if not config_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {config_path}")
         

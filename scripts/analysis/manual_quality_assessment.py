@@ -25,7 +25,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def assess_chunk_quality_manually(chunks: List[Dict], sample_size: int = 10) -> Dict:
@@ -121,8 +121,8 @@ def test_scoring_soundness(rag: BasicRAG) -> Dict:
     print(f"\n🔄 Test 1: Identical Query Consistency")
     print(f"Query: {query}")
     
-    result1 = rag.hybrid_query(query, top_k=3)
-    result2 = rag.hybrid_query(query, top_k=3)
+    result1 = rag.query(query, top_k=3)
+    result2 = rag.query(query, top_k=3)
     
     scores1 = [chunk.get('hybrid_score', 0) for chunk in result1.get('chunks', [])]
     scores2 = [chunk.get('hybrid_score', 0) for chunk in result2.get('chunks', [])]
@@ -147,7 +147,7 @@ def test_scoring_soundness(rag: BasicRAG) -> Dict:
     query_results = []
     
     for query in queries:
-        result = rag.hybrid_query(query, top_k=2)
+        result = rag.query(query, top_k=2)
         scores = [chunk.get('hybrid_score', 0) for chunk in result.get('chunks', [])]
         all_scores.extend(scores)
         query_results.append((query[:30] + "...", scores))
@@ -262,7 +262,7 @@ def test_source_diversity_reality(rag: BasicRAG) -> Dict:
     diversity_results = []
     
     for query in test_queries:
-        result = rag.hybrid_query(query, top_k=8)
+        result = rag.query(query, top_k=8)
         chunks = result.get('chunks', [])
         
         sources = [Path(chunk['source']).name for chunk in chunks]
@@ -308,12 +308,12 @@ def main():
     print("=" * 80)
     
     # Initialize and index documents
-    rag = BasicRAG()
+    rag = RAGPipeline("config/default.yaml")
     data_folder = project_root / "data" / "test"
     
     print(f"🔄 Indexing documents from {data_folder}...")
     try:
-        results = rag.index_documents(data_folder)
+        results = rag.index_document(data_folder)
         print(f"✅ Indexed {len(rag.chunks)} total chunks from {len(results)} documents")
     except Exception as e:
         print(f"❌ Indexing failed: {e}")

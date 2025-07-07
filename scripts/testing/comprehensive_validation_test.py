@@ -25,7 +25,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def main():
@@ -34,7 +34,7 @@ def main():
     print("=" * 60)
     
     # Initialize RAG system
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     
     # Test data folder
     data_folder = project_root / "data" / "test"
@@ -47,7 +47,7 @@ def main():
     print("-" * 40)
     
     try:
-        results = rag.index_documents(data_folder)
+        results = rag.index_document(data_folder)
         print(f"✅ Multi-document indexing completed")
         
         # Validate all documents processed
@@ -127,7 +127,7 @@ def main():
         print(f"🔍 Testing {len(test_queries)} different queries:")
         
         for i, query in enumerate(test_queries):
-            result = rag.hybrid_query(query, top_k=3)
+            result = rag.query(query, top_k=3)
             scores = [chunk.get('hybrid_score', 0) for chunk in result.get('chunks', [])]
             
             print(f"   Query {i+1}: {query[:30]}...")
@@ -197,7 +197,7 @@ def main():
     
     try:
         test_query = "technical documentation and validation"
-        result = rag.hybrid_query(test_query, top_k=10)
+        result = rag.query(test_query, top_k=10)
         
         sources = [Path(chunk['source']).name for chunk in result.get('chunks', [])]
         unique_sources = set(sources)

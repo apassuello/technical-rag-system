@@ -14,7 +14,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def test_retrieval_quality():
@@ -23,7 +23,7 @@ def test_retrieval_quality():
     print("="*70)
     
     # Initialize RAG system
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     pdf_path = project_root / "data" / "test" / "riscv-base-instructions.pdf"
     
     if not pdf_path.exists():
@@ -67,7 +67,7 @@ def test_retrieval_quality():
         
         # Test Hybrid Search
         print("🔗 HYBRID SEARCH RESULTS:")
-        hybrid_result = rag.hybrid_query(query, top_k=3)
+        hybrid_result = rag.query(query, top_k=3)
         
         for i, chunk in enumerate(hybrid_result.get('chunks', []), 1):
             score = chunk.get('hybrid_score', 0.0)
@@ -108,7 +108,7 @@ def analyze_document_coverage():
     print("\n📚 DOCUMENT COVERAGE ANALYSIS")
     print("="*70)
     
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     pdf_path = project_root / "data" / "test" / "riscv-base-instructions.pdf"
     rag.index_document(pdf_path)
     

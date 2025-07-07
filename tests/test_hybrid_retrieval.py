@@ -12,7 +12,7 @@ sys.path.append(str(project_root.parent))
 from src.sparse_retrieval import BM25SparseRetriever
 from src.fusion import reciprocal_rank_fusion, weighted_score_fusion
 from shared_utils.retrieval.hybrid_search import HybridRetriever
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 @pytest.fixture
@@ -56,7 +56,7 @@ def sample_chunks():
 def bm25_retriever(sample_chunks):
     """Pre-indexed BM25 retriever for testing."""
     retriever = BM25SparseRetriever()
-    retriever.index_documents(sample_chunks)
+    retriever.index_document(sample_chunks)
     return retriever
 
 
@@ -64,7 +64,7 @@ def bm25_retriever(sample_chunks):
 def hybrid_retriever(sample_chunks):
     """Pre-indexed hybrid retriever for testing."""
     retriever = HybridRetriever()
-    retriever.index_documents(sample_chunks)
+    retriever.index_document(sample_chunks)
     return retriever
 
 
@@ -99,7 +99,7 @@ class TestBM25SparseRetriever:
     def test_index_documents(self, sample_chunks):
         """Test document indexing."""
         retriever = BM25SparseRetriever()
-        retriever.index_documents(sample_chunks)
+        retriever.index_document(sample_chunks)
         
         assert retriever.bm25 is not None
         assert len(retriever.corpus) == len(sample_chunks)
@@ -173,7 +173,7 @@ class TestHybridRetriever:
     def test_index_documents(self, sample_chunks):
         """Test hybrid indexing."""
         retriever = HybridRetriever(use_mps=False)
-        retriever.index_documents(sample_chunks)
+        retriever.index_document(sample_chunks)
         
         assert retriever.dense_index is not None
         assert retriever.embeddings is not None
@@ -209,7 +209,7 @@ class TestBasicRAGHybrid:
     @pytest.fixture
     def basic_rag_with_data(self):
         """BasicRAG with test PDF data."""
-        rag = BasicRAG()
+        rag = RAGPipeline("config/test.yaml")
         
         # Mock PDF data processing since we don't have actual PDF
         mock_chunks = [
@@ -234,13 +234,13 @@ class TestBasicRAGHybrid:
         # Manually populate for testing
         rag.chunks = mock_chunks
         rag.hybrid_retriever = HybridRetriever(use_mps=False)
-        rag.hybrid_retriever.index_documents(mock_chunks)
+        rag.hybrid_retriever.index_document(mock_chunks)
         
         return rag
         
     def test_hybrid_query(self, basic_rag_with_data):
         """Test hybrid query method."""
-        result = basic_rag_with_data.hybrid_query("RISC-V instruction set", top_k=2)
+        result = basic_rag_with_data.query("RISC-V instruction set", top_k=2)
         
         assert result["retrieval_method"] == "hybrid"
         assert "chunks" in result
@@ -266,7 +266,7 @@ def test_hybrid_outperforms_semantic():
     
     # Test exact keyword match - should prefer BM25 component
     hybrid_retriever = HybridRetriever(dense_weight=0.5, use_mps=False)
-    hybrid_retriever.index_documents(chunks)
+    hybrid_retriever.index_document(chunks)
     
     results = hybrid_retriever.search("RV32I", top_k=2)
     
@@ -287,7 +287,7 @@ def test_hybrid_preserves_semantic():
     ]
     
     hybrid_retriever = HybridRetriever(dense_weight=0.8, use_mps=False)  # Favor semantic
-    hybrid_retriever.index_documents(chunks)
+    hybrid_retriever.index_document(chunks)
     
     results = hybrid_retriever.search("artificial intelligence learning", top_k=2)
     
@@ -310,11 +310,11 @@ def test_fusion_weighting():
     
     # Test high dense weight (favor semantic)
     hybrid_high_dense = HybridRetriever(dense_weight=0.9, use_mps=False)
-    hybrid_high_dense.index_documents(chunks)
+    hybrid_high_dense.index_document(chunks)
     
     # Test low dense weight (favor sparse/BM25)
     hybrid_low_dense = HybridRetriever(dense_weight=0.1, use_mps=False)
-    hybrid_low_dense.index_documents(chunks)
+    hybrid_low_dense.index_document(chunks)
     
     query = "RV32I"
     
@@ -347,7 +347,7 @@ def test_performance_benchmark():
     hybrid_retriever = HybridRetriever(use_mps=False)
     
     start_time = time.time()
-    hybrid_retriever.index_documents(chunks)
+    hybrid_retriever.index_document(chunks)
     hybrid_index_time = time.time() - start_time
     
     start_time = time.time()

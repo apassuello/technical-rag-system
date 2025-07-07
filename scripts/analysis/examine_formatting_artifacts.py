@@ -12,7 +12,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def analyze_formatting_artifacts():
@@ -21,7 +21,7 @@ def analyze_formatting_artifacts():
     print("=" * 50)
     
     # Index RISC-V document (has most artifacts)
-    rag = BasicRAG()
+    rag = RAGPipeline("config/default.yaml")
     pdf_path = project_root / "data" / "test" / "riscv-base-instructions.pdf"
     rag.index_document(pdf_path)
     

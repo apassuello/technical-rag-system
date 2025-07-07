@@ -11,7 +11,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def test_individual_document(pdf_path: Path) -> dict:
@@ -19,7 +19,7 @@ def test_individual_document(pdf_path: Path) -> dict:
     print(f"\n📄 Testing: {pdf_path.name}")
     print("-" * 50)
     
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     
     try:
         chunk_count = rag.index_document(pdf_path)

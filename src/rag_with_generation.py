@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Union, Generator
 import sys
 
 # Import from same directory
-from .basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 # Import from shared utils - Support HF API, Ollama, and Inference Providers
 from shared_utils.generation.hf_answer_generator import (
@@ -226,7 +226,7 @@ class RAGWithGeneration(BasicRAG):
 
         # Step 1: Retrieve relevant chunks
         if use_hybrid and self.hybrid_retriever is not None:
-            retrieval_result = self.hybrid_query(question, top_k, dense_weight)
+            retrieval_result = self.query(question, top_k, dense_weight)
         else:
             retrieval_result = self.query(question, top_k)
 
@@ -434,7 +434,7 @@ class RAGWithGeneration(BasicRAG):
 
         # Step 1: Retrieve relevant chunks
         if use_hybrid and self.hybrid_retriever is not None:
-            retrieval_result = self.hybrid_query(question, top_k, dense_weight)
+            retrieval_result = self.query(question, top_k, dense_weight)
         else:
             retrieval_result = self.query(question, top_k)
 

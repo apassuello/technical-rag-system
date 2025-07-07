@@ -19,7 +19,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
 from shared_utils.document_processing.hybrid_parser import parse_pdf_with_hybrid_approach
 
@@ -136,7 +136,7 @@ def test_multi_document_rag():
     print(f"Testing RAG system with {len(pdf_files)} documents...")
     
     # Initialize RAG system
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     
     # Process each document
     total_chunks = 0

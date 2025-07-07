@@ -17,7 +17,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def print_header(title: str, char: str = "="):
@@ -137,7 +137,7 @@ def run_query_comparison(rag: BasicRAG, query: str, description: str) -> Dict[st
     print("\n🔀 Testing Hybrid Search...")
     try:
         start_time = time.perf_counter()
-        hybrid_result = rag.hybrid_query(query, top_k=5)
+        hybrid_result = rag.query(query, top_k=5)
         hybrid_time = time.perf_counter() - start_time
         
         hybrid_chunks = print_result_summary("Hybrid Search", hybrid_result, hybrid_time)
@@ -154,7 +154,7 @@ def run_query_comparison(rag: BasicRAG, query: str, description: str) -> Dict[st
     print("\n✨ Testing Enhanced Hybrid Search...")
     try:
         start_time = time.perf_counter()
-        enhanced_result = rag.enhanced_hybrid_query(query, top_k=5)
+        enhanced_result = rag.query(query, top_k=5)
         enhanced_time = time.perf_counter() - start_time
         
         enhanced_chunks = print_result_summary("Enhanced Hybrid", enhanced_result, enhanced_time)
@@ -436,7 +436,7 @@ def main():
     try:
         # Initialize RAG system
         print_header("🔧 System Initialization")
-        rag = BasicRAG()
+        rag = RAGPipeline("config/dev.yaml")
         
         # Load test documents
         document_stats = load_test_documents(rag)

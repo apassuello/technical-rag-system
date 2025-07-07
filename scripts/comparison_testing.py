@@ -26,7 +26,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 # Import both systems
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 from src.core.pipeline import RAGPipeline
 
 # Import all components to trigger auto-registration
@@ -179,7 +179,7 @@ class ComparisonTester:
         print("🚀 Initializing systems...")
         
         # Initialize old system
-        self.old_system = BasicRAG()
+        self.old_system = RAGPipeline("config/test.yaml")
         print("✓ BasicRAG initialized")
         
         # Initialize new system
@@ -218,7 +218,7 @@ class ComparisonTester:
         """Compare retrieval results between systems."""
         # Get results from old system
         try:
-            old_results = self.old_system.hybrid_query(query, k=k)
+            old_results = self.old_system.query(query, k=k)
             old_chunks = old_results if isinstance(old_results, list) else []
         except Exception as e:
             self.logger.warning(f"Old system retrieval failed: {e}")
@@ -261,7 +261,7 @@ class ComparisonTester:
         # Time old system
         start_time = time.time()
         try:
-            self.old_system.hybrid_query(query, k=5)
+            self.old_system.query(query, k=5)
             old_time = time.time() - start_time
         except Exception:
             old_time = float('inf')

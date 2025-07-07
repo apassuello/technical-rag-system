@@ -11,7 +11,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def analyze_fragments(chunks: list) -> dict:
@@ -65,7 +65,7 @@ def test_fragment_fix():
     print("=" * 40)
     
     # Test with RISC-V document (previously had 20% fragments)
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     pdf_path = project_root / "data" / "test" / "riscv-base-instructions.pdf"
     
     print(f"📄 Testing: {pdf_path.name}")
@@ -119,7 +119,7 @@ def test_small_document():
     """Test on smaller document for comparison."""
     print(f"\n📄 Testing smaller document for comparison...")
     
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     pdf_path = project_root / "data" / "test" / "GMLP_Guiding_Principles.pdf"
     
     try:

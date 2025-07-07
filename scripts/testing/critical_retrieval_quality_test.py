@@ -11,7 +11,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def test_retrieval_quality():
@@ -20,11 +20,11 @@ def test_retrieval_quality():
     print("=" * 70)
     
     # Initialize and index
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     data_folder = project_root / "data" / "test"
     
     print("📄 Indexing all documents...")
-    results = rag.index_documents(data_folder)
+    results = rag.index_document(data_folder)
     print(f"✅ Indexed {sum(results.values())} chunks from {len(results)} documents\n")
     
     # Test queries covering different domains
@@ -50,7 +50,7 @@ def test_retrieval_quality():
         print(f"   Expected source: {expected_source or 'Any relevant'}")
         
         # Test hybrid retrieval
-        result = rag.hybrid_query(query, top_k=5)
+        result = rag.query(query, top_k=5)
         chunks = result.get('chunks', [])
         
         if not chunks:
@@ -108,19 +108,19 @@ def test_retrieval_quality():
     
     # Empty query
     print("\n1. Empty query test:")
-    empty_result = rag.hybrid_query("", top_k=5)
+    empty_result = rag.query("", top_k=5)
     print(f"   Result: {len(empty_result.get('chunks', []))} chunks")
     
     # Single word query
     print("\n2. Single word query test:")
-    single_result = rag.hybrid_query("validation", top_k=5)
+    single_result = rag.query("validation", top_k=5)
     print(f"   Result: {len(single_result.get('chunks', []))} chunks")
     sources = set(Path(c['source']).name for c in single_result.get('chunks', []))
     print(f"   Sources: {len(sources)} unique")
     
     # Very specific technical query
     print("\n3. Very specific technical query:")
-    specific_result = rag.hybrid_query("RISC-V CSR mstatus register fields", top_k=5)
+    specific_result = rag.query("RISC-V CSR mstatus register fields", top_k=5)
     if specific_result.get('chunks'):
         first_chunk = specific_result['chunks'][0]
         print(f"   Top result: {Path(first_chunk['source']).name}, page {first_chunk.get('page')}")
@@ -135,7 +135,7 @@ def test_retrieval_quality():
     # Collect all scores
     all_scores = []
     for query, _ in test_queries[:3]:
-        result = rag.hybrid_query(query, top_k=10)
+        result = rag.query(query, top_k=10)
         scores = [c.get('hybrid_score', 0) for c in result.get('chunks', [])]
         all_scores.extend(scores)
     

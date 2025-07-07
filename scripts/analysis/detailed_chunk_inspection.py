@@ -11,7 +11,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def inspect_chunk_fragments(rag: BasicRAG):
@@ -92,7 +92,7 @@ def test_score_variation_manually(rag: BasicRAG):
     
     print("Testing similar queries for score sensitivity:")
     for query in similar_queries:
-        result = rag.hybrid_query(query, top_k=3)
+        result = rag.query(query, top_k=3)
         scores = [chunk.get('hybrid_score', 0) for chunk in result.get('chunks', [])]
         print(f"'{query}': {[f'{s:.6f}' for s in scores]}")
     
@@ -106,7 +106,7 @@ def test_score_variation_manually(rag: BasicRAG):
     
     print("\nTesting different domain queries:")
     for query in different_queries:
-        result = rag.hybrid_query(query, top_k=3)
+        result = rag.query(query, top_k=3)
         scores = [chunk.get('hybrid_score', 0) for chunk in result.get('chunks', [])]
         sources = [Path(chunk['source']).name for chunk in result.get('chunks', [])]
         print(f"'{query}': {[f'{s:.6f}' for s in scores]} from {set(sources)}")
@@ -119,9 +119,9 @@ def main():
     print("=" * 80)
     
     # Initialize RAG
-    rag = BasicRAG()
+    rag = RAGPipeline("config/default.yaml")
     data_folder = project_root / "data" / "test"
-    results = rag.index_documents(data_folder)
+    results = rag.index_document(data_folder)
     
     # Detailed inspections
     inspect_chunk_fragments(rag)

@@ -22,7 +22,7 @@ project_root = Path(__file__).parent
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def main():
@@ -42,7 +42,7 @@ def main():
     print(f"   Enhancement: Vocabulary-aware query expansion")
 
     # Initialize RAG system
-    rag = BasicRAG()
+    rag = RAGPipeline("config/dev.yaml")
 
     # Document indexing benchmark
     print(f"\n🔧 Document Indexing Benchmark:")
@@ -205,7 +205,7 @@ def main():
     example_query = "What is RISC-V architecture?"
     print(f"   Query: '{example_query}'")
 
-    result = rag.hybrid_query(example_query, top_k=2)
+    result = rag.query(example_query, top_k=2)
     chunks = result.get("chunks", [])
 
     if chunks:

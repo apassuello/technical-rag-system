@@ -19,7 +19,7 @@ sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))
 
 from shared_utils.query_processing.query_enhancer import QueryEnhancer
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 class TestQueryEnhancer:
@@ -288,7 +288,7 @@ class TestBasicRAGIntegration:
     @pytest.fixture
     def mock_rag_with_data(self):
         """Create BasicRAG with mock data for testing."""
-        rag = BasicRAG()
+        rag = RAGPipeline("config/test.yaml")
         
         # Mock chunks with technical content
         mock_chunks = [
@@ -325,7 +325,7 @@ class TestBasicRAGIntegration:
         try:
             from shared_utils.retrieval.hybrid_search import HybridRetriever
             rag.hybrid_retriever = HybridRetriever(use_mps=False)
-            rag.hybrid_retriever.index_documents(mock_chunks)
+            rag.hybrid_retriever.index_document(mock_chunks)
         except ImportError:
             # Hybrid retriever not available - tests will handle gracefully
             pass
@@ -334,7 +334,7 @@ class TestBasicRAGIntegration:
     
     def test_enhanced_hybrid_query_success(self, mock_rag_with_data):
         """Test successful enhanced hybrid query execution."""
-        result = mock_rag_with_data.enhanced_hybrid_query("CPU performance optimization")
+        result = mock_rag_with_data.query("CPU performance optimization")
         
         # Verify enhanced query structure
         assert "original_query" in result
@@ -358,12 +358,12 @@ class TestBasicRAGIntegration:
     def test_enhanced_hybrid_query_fallback(self, mock_rag_with_data):
         """Test fallback behavior when enhancement fails."""
         # Test with empty query
-        result = mock_rag_with_data.enhanced_hybrid_query("")
+        result = mock_rag_with_data.query("")
         assert result["retrieval_method"] == "none"
         assert result["enhancement_applied"] == False
         
         # Test graceful degradation when components not available
-        result = mock_rag_with_data.enhanced_hybrid_query("test query")
+        result = mock_rag_with_data.query("test query")
         
         # Should either succeed with enhancement or fallback gracefully
         assert "enhancement_applied" in result
@@ -374,12 +374,12 @@ class TestBasicRAGIntegration:
         """Test that different query types get appropriate treatment."""
         
         # Technical query - should favor sparse weighting
-        tech_result = mock_rag_with_data.enhanced_hybrid_query("RV32I instruction encoding")
+        tech_result = mock_rag_with_data.query("RV32I instruction encoding")
         if tech_result["enhancement_applied"]:
             assert tech_result["adaptive_weight"] < 0.6  # Should favor sparse
         
         # Conceptual query - should favor dense weighting
-        concept_result = mock_rag_with_data.enhanced_hybrid_query("How does memory management work?")
+        concept_result = mock_rag_with_data.query("How does memory management work?")
         if concept_result["enhancement_applied"]:
             assert concept_result["adaptive_weight"] > 0.6  # Should favor semantic
     
@@ -396,7 +396,7 @@ class TestBasicRAGIntegration:
         
         for query in queries:
             start = time.perf_counter()
-            result = mock_rag_with_data.enhanced_hybrid_query(query)
+            result = mock_rag_with_data.query(query)
             total_time = (time.perf_counter() - start) * 1000
             
             # Should complete within reasonable time

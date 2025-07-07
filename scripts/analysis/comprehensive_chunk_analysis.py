@@ -19,7 +19,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def analyze_chunk_quality(chunks):
@@ -289,7 +289,7 @@ def main():
     print("="*80)
     
     # Initialize RAG system
-    rag = BasicRAG()
+    rag = RAGPipeline("config/default.yaml")
     
     # Load document
     pdf_path = project_root / "data" / "test" / "riscv-base-instructions.pdf"

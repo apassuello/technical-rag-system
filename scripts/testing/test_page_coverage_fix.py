@@ -11,7 +11,7 @@ project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technic
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
 
-from src.basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 
 
 def test_page_coverage_fix():
@@ -20,7 +20,7 @@ def test_page_coverage_fix():
     print("=" * 50)
     
     # Test with RISC-V document (238 pages)
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     pdf_path = project_root / "data" / "test" / "riscv-base-instructions.pdf"
     
     if not pdf_path.exists():
@@ -86,7 +86,7 @@ def test_chunk_quality_sample():
     print("\n🔍 CHUNK QUALITY SAMPLE")
     print("=" * 30)
     
-    rag = BasicRAG()
+    rag = RAGPipeline("config/test.yaml")
     pdf_path = project_root / "data" / "test" / "riscv-base-instructions.pdf"
     rag.index_document(pdf_path)
     

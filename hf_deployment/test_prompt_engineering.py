@@ -15,7 +15,7 @@ from typing import Dict, List, Any
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from basic_rag import BasicRAG
+from src.core.pipeline import RAGPipeline
 from shared_utils.generation.prompt_templates import TechnicalPromptTemplates, QueryType
 from shared_utils.generation.prompt_optimizer import PromptOptimizer, OptimizationMetric
 from shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
@@ -28,7 +28,7 @@ class PromptEngineeringTester:
     def __init__(self, test_doc_path: str = "data/test/riscv-base-instructions.pdf"):
         """Initialize the testing environment."""
         self.test_doc_path = Path(test_doc_path)
-        self.rag_system = BasicRAG()
+        self.rag_system = RAGPipeline("config/test.yaml")
         self.prompt_optimizer = PromptOptimizer(experiment_dir="experiments")
         self.adaptive_engine = AdaptivePromptEngine()
         self.cot_engine = ChainOfThoughtEngine()
@@ -76,7 +76,7 @@ class PromptEngineeringTester:
             print(f"Query: {query}")
             
             # Get relevant chunks
-            chunks = self.rag_system.hybrid_query(query, top_k=3)
+            chunks = self.rag_system.query(query, top_k=3)
             
             # Test baseline prompt
             query_type = TechnicalPromptTemplates.detect_query_type(query)
@@ -125,7 +125,7 @@ class PromptEngineeringTester:
             print(f"\nTesting: {query_name}")
             
             # Get relevant chunks
-            chunks = self.rag_system.hybrid_query(query, top_k=3)
+            chunks = self.rag_system.query(query, top_k=3)
             
             # Test few-shot prompt
             query_type = TechnicalPromptTemplates.detect_query_type(query)
@@ -174,7 +174,7 @@ class PromptEngineeringTester:
             print(f"\nTesting: {query_name}")
             
             # Get relevant chunks
-            chunks = self.rag_system.hybrid_query(query, top_k=5)
+            chunks = self.rag_system.query(query, top_k=5)
             
             # Test adaptive prompt
             start_time = time.time()
@@ -258,7 +258,7 @@ class PromptEngineeringTester:
             print(f"\nTesting: {query_name}")
             
             # Get relevant chunks
-            chunks = self.rag_system.hybrid_query(query, top_k=5)
+            chunks = self.rag_system.query(query, top_k=5)
             
             # Test chain-of-thought prompt
             query_type = TechnicalPromptTemplates.detect_query_type(query)
