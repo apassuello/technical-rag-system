@@ -285,6 +285,33 @@ class ComponentRegistry:
         return list(cls._generators.keys())
     
     @classmethod
+    def is_registered(cls, component_type: str, name: str) -> bool:
+        """
+        Check if a component is registered.
+        
+        Args:
+            component_type: Type of component ('processor', 'embedder', 'vector_store', 
+                           'retriever', 'generator')
+            name: Component name to check
+            
+        Returns:
+            True if component is registered, False otherwise
+        """
+        registries = {
+            'processor': cls._processors,
+            'embedder': cls._embedders,
+            'vector_store': cls._vector_stores,
+            'retriever': cls._retrievers,
+            'generator': cls._generators
+        }
+        
+        registry = registries.get(component_type)
+        if registry is None:
+            return False
+        
+        return name in registry
+    
+    @classmethod
     def clear_all(cls) -> None:
         """Clear all registered components. Useful for testing."""
         cls._processors.clear()

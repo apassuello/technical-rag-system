@@ -121,17 +121,14 @@ class HybridRetriever(Retriever):
             # Use the original hybrid retriever for search
             search_results = self.hybrid_retriever.search(
                 query=query,
-                top_k=k,
-                fusion_method="rrf"
+                top_k=k
             )
             
             # Convert results to RetrievalResult objects
             retrieval_results = []
             for result in search_results:
-                # Extract chunk information
-                chunk_idx = result.get('chunk_idx', 0)
-                score = result.get('score', 0.0)
-                method = result.get('method', 'hybrid')
+                # Extract tuple components: (chunk_index, rrf_score, chunk_dict)
+                chunk_idx, score, chunk_dict = result
                 
                 # Get corresponding document
                 if chunk_idx < len(self.indexed_documents):
@@ -140,7 +137,7 @@ class HybridRetriever(Retriever):
                     retrieval_result = RetrievalResult(
                         document=document,
                         score=float(score),
-                        retrieval_method=f"hybrid_{method}"
+                        retrieval_method="hybrid_rrf"
                     )
                     retrieval_results.append(retrieval_result)
             

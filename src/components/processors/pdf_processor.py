@@ -16,8 +16,11 @@ sys.path.append(str(project_root))
 
 from src.core.interfaces import Document, DocumentProcessor
 from src.core.registry import register_component
+
+# Import from correct shared_utils location
+sys.path.append(str(project_root / "hf_deployment" / "src"))
 from shared_utils.document_processing.hybrid_parser import HybridParser
-from shared_utils.document_processing.toc_guided_parser import TOCGuidedParser
+from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
 
 
 @register_component("processor", "hybrid_pdf")
@@ -69,9 +72,6 @@ class HybridPDFProcessor(DocumentProcessor):
             min_chunk_size=min_chunk_size,
             max_chunk_size=max_chunk_size
         )
-        
-        # Initialize TOC parser for metadata extraction
-        self.toc_parser = TOCGuidedParser()
     
     def process(self, file_path: Path) -> List[Document]:
         """
@@ -97,8 +97,8 @@ class HybridPDFProcessor(DocumentProcessor):
             raise ValueError(f"Unsupported file format: {file_path.suffix}")
         
         try:
-            # Extract PDF data using TOC parser for metadata
-            pdf_data = self.toc_parser.extract_pdf_data(file_path)
+            # Extract PDF data using standard parser
+            pdf_data = extract_text_with_metadata(file_path)
             
             # Parse document using hybrid approach
             chunks = self.hybrid_parser.parse_document(file_path, pdf_data)
@@ -106,8 +106,15 @@ class HybridPDFProcessor(DocumentProcessor):
             # Convert chunks to Document objects
             documents = []
             for chunk_data in chunks:
-                doc = self._create_document_from_chunk(chunk_data, file_path)
-                documents.append(doc)
+                try:
+                    doc = self._create_document_from_chunk(chunk_data, file_path)
+                    documents.append(doc)
+                except ValueError as e:
+                    # Skip empty chunks
+                    if "empty" in str(e):
+                        continue
+                    else:
+                        raise
             
             return documents
             
@@ -139,7 +146,11 @@ class HybridPDFProcessor(DocumentProcessor):
             Document object with standardized metadata
         """
         # Extract content from chunk
-        content = chunk_data.get('content', '')
+        content = chunk_data.get('text', '') or chunk_data.get('content', '')
+        
+        # Skip empty content chunks
+        if not content or not content.strip():
+            raise ValueError("Chunk content is empty, skipping")
         
         # Create comprehensive metadata
         metadata = {

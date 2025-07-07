@@ -7,8 +7,11 @@ enabling it to be used in the modular architecture.
 """
 
 import sys
+import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent
@@ -22,13 +25,22 @@ from shared_utils.generation.hf_answer_generator import (
     HuggingFaceAnswerGenerator,
     GeneratedAnswer,
 )
-from shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
-from shared_utils.generation.inference_providers_generator import (
-    InferenceProvidersGenerator,
-)
-from shared_utils.generation.prompt_templates import TechnicalPromptTemplates
-from shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
-from shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
+try:
+    from shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
+    from shared_utils.generation.inference_providers_generator import (
+        InferenceProvidersGenerator,
+    )
+    from shared_utils.generation.prompt_templates import TechnicalPromptTemplates
+    from shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
+    from shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
+except ImportError as e:
+    # Fallback for missing optional components
+    logger.warning(f"Optional generation components not available: {e}")
+    OllamaAnswerGenerator = None
+    InferenceProvidersGenerator = None
+    TechnicalPromptTemplates = None
+    AdaptivePromptEngine = None
+    ChainOfThoughtEngine = None
 
 
 @register_component("generator", "adaptive")
@@ -99,16 +111,22 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         # Initialize the appropriate generator
         self._initialize_generator()
         
-        # Initialize prompt engines if enabled
-        self.prompt_templates = TechnicalPromptTemplates()
+        # Initialize prompt engines if enabled and available
+        self.prompt_templates = TechnicalPromptTemplates() if TechnicalPromptTemplates else None
         self.adaptive_engine = None
         self.cot_engine = None
         
-        if self.enable_adaptive_prompts:
+        if self.enable_adaptive_prompts and AdaptivePromptEngine:
             self.adaptive_engine = AdaptivePromptEngine()
+        elif self.enable_adaptive_prompts:
+            logger.warning("Adaptive prompts requested but AdaptivePromptEngine not available")
+            self.enable_adaptive_prompts = False
         
-        if self.enable_chain_of_thought:
+        if self.enable_chain_of_thought and ChainOfThoughtEngine:
             self.cot_engine = ChainOfThoughtEngine()
+        elif self.enable_chain_of_thought:
+            logger.warning("Chain of thought requested but ChainOfThoughtEngine not available")
+            self.enable_chain_of_thought = False
     
     def generate(self, query: str, context: List[Document]) -> Answer:
         """
@@ -161,19 +179,27 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
     
     def _initialize_generator(self) -> None:
         """Initialize the appropriate LLM generator based on configuration."""
-        if self.use_ollama:
+        if self.use_ollama and OllamaAnswerGenerator:
             self.generator = OllamaAnswerGenerator(
                 model_name=self.model_name,
                 ollama_url=self.ollama_url,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens
             )
-        elif self.use_inference_providers:
+        elif self.use_ollama:
+            logger.warning("Ollama requested but OllamaAnswerGenerator not available, falling back to HuggingFace")
+            self.use_ollama = False
+            self._initialize_generator()
+        elif self.use_inference_providers and InferenceProvidersGenerator:
             self.generator = InferenceProvidersGenerator(
                 model_name=self.model_name,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens
             )
+        elif self.use_inference_providers:
+            logger.warning("Inference providers requested but InferenceProvidersGenerator not available, falling back to HuggingFace")
+            self.use_inference_providers = False
+            self._initialize_generator()
         else:
             self.generator = HuggingFaceAnswerGenerator(
                 model_name=self.model_name,
@@ -234,7 +260,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             )
         else:
             # Fallback to standard generation
-            response = self.generator.generate_answer(query, chunks)
+            response = self.generator.generate(query, chunks)
         
         # Add adaptive prompt metadata
         if isinstance(response, dict):
@@ -253,7 +279,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         Returns:
             Generation response dictionary
         """
-        return self.generator.generate_answer(query, chunks)
+        return self.generator.generate(query, chunks)
     
     def _analyze_context_quality(self, chunks: List[Dict]) -> float:
         """
@@ -288,7 +314,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
     def _extract_confidence(self, response: Dict) -> float:
         """Extract confidence score from generation response."""
         if isinstance(response, GeneratedAnswer):
-            return response.confidence
+            return response.confidence_score
         elif isinstance(response, dict):
             return response.get("confidence", 0.8)  # Default confidence
         else:
