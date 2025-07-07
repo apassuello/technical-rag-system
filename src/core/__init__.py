@@ -11,6 +11,12 @@ from .interfaces import (
     AnswerGenerator
 )
 
+from .registry import (
+    ComponentRegistry,
+    register_component,
+    get_available_components
+)
+
 __all__ = [
     'Document',
     'RetrievalResult', 
@@ -19,5 +25,8 @@ __all__ = [
     'Embedder',
     'VectorStore',
     'Retriever',
-    'AnswerGenerator'
+    'AnswerGenerator',
+    'ComponentRegistry',
+    'register_component',
+    'get_available_components'
 ]
