@@ -39,13 +39,13 @@ retriever:
 answer_generator:
   type: "adaptive"  # Options: adaptive, simple, chain_of_thought
   config:
-    model_name: "sshleifer/distilbart-cnn-12-6"
+    model_name: "deepset/roberta-base-squad2"
     api_token: null
     temperature: 0.3
     max_tokens: 512
     use_ollama: false
     use_inference_providers: false
-    enable_adaptive_prompts: true
+    enable_adaptive_prompts: false
     enable_chain_of_thought: false
     confidence_threshold: 0.85
 

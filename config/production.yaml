@@ -42,13 +42,13 @@ retriever:
 answer_generator:
   type: "adaptive"
   config:
-    model_name: "microsoft/DialoGPT-medium"  # Reliable conversational model
-    api_token: "${HUGGINGFACE_API_TOKEN}"    # Production API token from env
+    model_name: "deepset/roberta-base-squad2"  # Reliable QA model for production
+    api_token: null              # No API token required for this model
     temperature: 0.3             # Balanced creativity/consistency
     max_tokens: 512              # Comprehensive responses
     use_ollama: false
     use_inference_providers: false
-    enable_adaptive_prompts: true   # Enable advanced prompting
+    enable_adaptive_prompts: false  # Disable for production stability
     enable_chain_of_thought: false # Disable for production speed
     confidence_threshold: 0.85      # High confidence threshold
 

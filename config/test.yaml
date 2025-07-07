@@ -42,7 +42,7 @@ retriever:
 answer_generator:
   type: "adaptive"
   config:
-    model_name: "sshleifer/distilbart-cnn-12-6"  # Fast summarization model
+    model_name: "deepset/roberta-base-squad2"  # Reliable QA model for testing
     api_token: null              # Use free tier for testing
     temperature: 0.0             # Deterministic for testing
     max_tokens: 256              # Shorter responses

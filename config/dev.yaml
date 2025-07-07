@@ -42,14 +42,14 @@ retriever:
 answer_generator:
   type: "adaptive"
   config:
-    model_name: "sshleifer/distilbart-cnn-12-6"  # Fast local model
+    model_name: "deepset/roberta-base-squad2"  # Reliable QA model
     api_token: null              # Start without API token
     temperature: 0.2             # Low temperature for consistent development
     max_tokens: 384              # Moderate response length
     use_ollama: false            # Use HuggingFace for development
     use_inference_providers: false
-    enable_adaptive_prompts: true   # Enable for testing
-    enable_chain_of_thought: true   # Enable for development testing
+    enable_adaptive_prompts: false  # Disable for stability
+    enable_chain_of_thought: false  # Disable for stability
     confidence_threshold: 0.7       # Moderate threshold
 
 # Development global settings with extensive debugging
