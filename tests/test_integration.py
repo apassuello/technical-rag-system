@@ -15,7 +15,7 @@ from shared_utils.embeddings.generator import generate_embeddings
 
 def test_full_pipeline():
     """Test complete document processing pipeline."""
-    pdf_path = Path("project-1-technical-rag/data/test/riscv-base-instructions.pdf")
+    pdf_path = Path("data/test/riscv-base-instructions.pdf")
 
     # Step 1: Extract text
     doc_data = extract_text_with_metadata(pdf_path)
@@ -40,7 +40,7 @@ def test_pipeline_performance():
     """Test end-to-end performance."""
     import time
 
-    pdf_path = Path("project-1-technical-rag/data/test/riscv-base-instructions.pdf")
+    pdf_path = Path("data/test/riscv-base-instructions.pdf")
 
     start = time.perf_counter()
 
