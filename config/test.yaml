@@ -1,0 +1,61 @@
+# Test Configuration - Minimal components for fast testing
+# This configuration uses lightweight components to speed up test execution
+
+# Simple document processor for basic testing
+document_processor:
+  type: "hybrid_pdf"  # Use same processor but with minimal settings
+  config:
+    chunk_size: 512      # Smaller chunks for faster processing
+    chunk_overlap: 64    # Minimal overlap
+    min_chunk_size: 100  # Lower minimum
+    max_chunk_size: 800  # Lower maximum
+
+# Lightweight embedding model for testing
+embedder:
+  type: "sentence_transformer"
+  config:
+    model_name: "sentence-transformers/all-MiniLM-L6-v2"  # Smaller, faster model
+    batch_size: 16       # Smaller batches
+    use_mps: false       # Disable MPS for consistent CI/testing
+
+# In-memory vector store for testing (no persistence needed)
+vector_store:
+  type: "faiss"
+  config:
+    embedding_dim: 384
+    index_type: "IndexFlatL2"    # L2 distance for testing
+    normalize_embeddings: false  # Skip normalization for speed
+    metric: "l2"
+
+# Simple retrieval for testing
+retriever:
+  type: "hybrid"
+  config:
+    dense_weight: 0.6            # Slightly different from production
+    embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+    use_mps: false               # Consistent with embedder
+    bm25_k1: 1.0                # Simplified BM25 parameters
+    bm25_b: 0.5
+    rrf_k: 5                     # Lower RRF for faster fusion
+
+# Fast answer generation for testing
+answer_generator:
+  type: "adaptive"
+  config:
+    model_name: "sshleifer/distilbart-cnn-12-6"  # Fast summarization model
+    api_token: null              # Use free tier for testing
+    temperature: 0.0             # Deterministic for testing
+    max_tokens: 256              # Shorter responses
+    use_ollama: false
+    use_inference_providers: false
+    enable_adaptive_prompts: false  # Disable for predictable testing
+    enable_chain_of_thought: false  # Disable for speed
+    confidence_threshold: 0.5       # Lower threshold for testing
+
+# Global settings for testing
+global_settings:
+  environment: "test"
+  log_level: "WARNING"           # Reduce logging noise in tests
+  enable_metrics: false          # Disable metrics collection
+  cache_embeddings: false        # Disable caching for clean tests
+  max_concurrent_requests: 1     # Single-threaded for deterministic tests

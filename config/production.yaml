@@ -1,0 +1,82 @@
+# Production Configuration - Optimized for deployment and performance
+# This configuration is optimized for cloud deployment with best quality settings
+
+# Production-grade document processor
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 1400             # Larger chunks for better context
+    chunk_overlap: 200           # Higher overlap for semantic continuity
+    min_chunk_size: 800          # Ensure substantial content
+    max_chunk_size: 2000         # Allow for comprehensive chunks
+
+# High-quality embedding model
+embedder:
+  type: "sentence_transformer"
+  config:
+    model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"  # Optimized for Q&A
+    batch_size: 32               # Optimal batch size for throughput
+    use_mps: true                # Enable MPS on Apple Silicon
+
+# Optimized vector store for production
+vector_store:
+  type: "faiss"
+  config:
+    embedding_dim: 384
+    index_type: "IndexFlatIP"    # Inner product for cosine similarity
+    normalize_embeddings: true   # Normalize for consistent scoring
+    metric: "cosine"
+
+# Production hybrid retrieval
+retriever:
+  type: "hybrid"
+  config:
+    dense_weight: 0.7            # Proven optimal weighting
+    embedding_model: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    use_mps: true                # Apple Silicon acceleration
+    bm25_k1: 1.2                # Optimal BM25 parameters
+    bm25_b: 0.75
+    rrf_k: 1                     # Production RRF setting for quality
+
+# Production answer generation
+answer_generator:
+  type: "adaptive"
+  config:
+    model_name: "microsoft/DialoGPT-medium"  # Reliable conversational model
+    api_token: "${HUGGINGFACE_API_TOKEN}"    # Production API token from env
+    temperature: 0.3             # Balanced creativity/consistency
+    max_tokens: 512              # Comprehensive responses
+    use_ollama: false
+    use_inference_providers: false
+    enable_adaptive_prompts: true   # Enable advanced prompting
+    enable_chain_of_thought: false # Disable for production speed
+    confidence_threshold: 0.85      # High confidence threshold
+
+# Production global settings
+global_settings:
+  environment: "production"
+  log_level: "INFO"              # Informational logging
+  enable_metrics: true           # Enable metrics collection
+  cache_embeddings: true         # Enable all caching
+  max_concurrent_requests: 5     # Allow concurrent processing
+  rate_limit_per_minute: 100     # Rate limiting for stability
+  enable_monitoring: true        # Enable production monitoring
+  health_check_interval: 300     # Health checks every 5 minutes
+  
+  # Performance optimization
+  optimization:
+    enable_batch_processing: true
+    batch_size: 16
+    memory_limit_mb: 2048
+    
+  # Security settings
+  security:
+    api_key_required: true
+    rate_limiting: true
+    request_validation: true
+    
+  # Deployment settings
+  deployment:
+    max_workers: 4
+    worker_timeout: 60
+    graceful_shutdown_timeout: 30

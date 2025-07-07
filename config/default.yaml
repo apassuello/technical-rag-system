@@ -19,25 +19,35 @@ embedder:
 vector_store:
   type: "faiss"  # Options: faiss, chroma, pinecone
   config:
+    embedding_dim: 384
     index_type: "IndexFlatIP"
-    normalize: true
+    normalize_embeddings: true
+    metric: "cosine"
 
 # Retrieval strategy
 retriever:
   type: "hybrid"  # Options: hybrid, semantic, bm25
   config:
     dense_weight: 0.7
-    sparse_weight: 0.3
-    top_k: 5
+    embedding_model: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    use_mps: true
+    bm25_k1: 1.2
+    bm25_b: 0.75
+    rrf_k: 10
 
 # Answer generation strategy
 answer_generator:
   type: "adaptive"  # Options: adaptive, simple, chain_of_thought
   config:
+    model_name: "sshleifer/distilbart-cnn-12-6"
+    api_token: null
+    temperature: 0.3
+    max_tokens: 512
+    use_ollama: false
+    use_inference_providers: false
     enable_adaptive_prompts: true
     enable_chain_of_thought: false
     confidence_threshold: 0.85
-    max_tokens: 512
 
 # Global settings (optional)
 global_settings: {}

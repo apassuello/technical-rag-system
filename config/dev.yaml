@@ -1,0 +1,90 @@
+# Development Configuration - Optimized for local development
+# This configuration balances quality and development speed with debugging features
+
+# Development document processor with debugging
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 1024             # Balanced size for development
+    chunk_overlap: 128           # Standard overlap
+    min_chunk_size: 400          # Reasonable minimum
+    max_chunk_size: 1600         # Reasonable maximum
+
+# Development embedding with local models
+embedder:
+  type: "sentence_transformer"
+  config:
+    model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    batch_size: 16               # Smaller batches for memory efficiency
+    use_mps: true                # Enable Apple Silicon if available
+
+# Development vector store with debugging
+vector_store:
+  type: "faiss"
+  config:
+    embedding_dim: 384
+    index_type: "IndexFlatIP"    # Simple index for debugging
+    normalize_embeddings: true   # Keep normalization for consistency
+    metric: "cosine"
+
+# Development retrieval with verbose logging
+retriever:
+  type: "hybrid"
+  config:
+    dense_weight: 0.7            # Same as production
+    embedding_model: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    use_mps: true                # Enable if available
+    bm25_k1: 1.2                # Standard parameters
+    bm25_b: 0.75
+    rrf_k: 5                     # Moderate RRF for development
+
+# Development answer generation with local fallbacks
+answer_generator:
+  type: "adaptive"
+  config:
+    model_name: "sshleifer/distilbart-cnn-12-6"  # Fast local model
+    api_token: null              # Start without API token
+    temperature: 0.2             # Low temperature for consistent development
+    max_tokens: 384              # Moderate response length
+    use_ollama: false            # Use HuggingFace for development
+    use_inference_providers: false
+    enable_adaptive_prompts: true   # Enable for testing
+    enable_chain_of_thought: true   # Enable for development testing
+    confidence_threshold: 0.7       # Moderate threshold
+
+# Development global settings with extensive debugging
+global_settings:
+  environment: "development"
+  log_level: "DEBUG"             # Verbose logging for development
+  enable_metrics: true           # Collect metrics for analysis
+  cache_embeddings: true         # Enable caching
+  max_concurrent_requests: 2     # Limited concurrency for debugging
+  enable_monitoring: false       # Disable heavy monitoring
+  
+  # Development-specific features
+  development:
+    hot_reload: true             # Enable hot reloading
+    debug_mode: true             # Global debug mode
+    profile_performance: true    # Profile all operations
+    save_intermediate_data: true # Save data for inspection
+    enable_breakpoints: true     # Enable debugging breakpoints
+    verbose_errors: true         # Detailed error messages
+    
+  # Local file paths for development
+  paths:
+    data_dir: "./dev_data"
+    cache_dir: "./dev_cache" 
+    logs_dir: "./dev_logs"
+    temp_dir: "./dev_temp"
+    
+  # Development performance settings
+  performance:
+    memory_profiling: true       # Track memory usage
+    timing_all_operations: true  # Time every operation
+    cache_size_limit_mb: 512     # Reasonable cache limit
+    
+  # Development quality settings
+  quality:
+    manual_verification_mode: true  # Enable manual verification prompts
+    quality_sampling_rate: 0.1      # Sample 10% for quality checks
+    save_quality_reports: true      # Save detailed quality reports
