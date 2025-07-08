@@ -42,7 +42,7 @@ class EndToEndQualityAnalysis:
     edge_cases_handling_rate: float
     confidence_calibration_quality: float
     system_coherence_score: float
-    portfolio_readiness_score: float
+    portfolio_readiness_score: float  # DISABLED - was using fake values
     critical_failures: List[str]
     quality_issues: List[str]
     system_strengths: List[str]
@@ -144,7 +144,9 @@ class EndToEndQualityForensics(DiagnosticTestBase):
         print(f"Edge Cases Handling Rate: {analysis.edge_cases_handling_rate:.1%}")
         print(f"Confidence Calibration Quality: {analysis.confidence_calibration_quality:.1%}")
         print(f"System Coherence Score: {analysis.system_coherence_score:.1%}")
-        print(f"Portfolio Readiness Score: {analysis.portfolio_readiness_score:.1%}")
+        print(f"\n⚠️  PORTFOLIO READINESS ASSESSMENT DISABLED")
+        print(f"Portfolio scoring was using hardcoded placeholder values.")
+        print(f"Use data collection mode for manual analysis instead.")
         
         if analysis.critical_failures:
             print(f"\n🚨 Critical Failures ({len(analysis.critical_failures)}):")
@@ -221,6 +223,126 @@ class EndToEndQualityForensics(DiagnosticTestBase):
                     continue
         
         return documents
+    
+    def _collect_good_case_data(self, case: Dict, answer) -> Dict[str, Any]:
+        """Collect raw data for good cases instead of scoring."""
+        data = {
+            "query": case['query'],
+            "expected_difficulty": case.get('difficulty', 'unknown'),
+            "raw_answer_data": {
+                "answer_text": answer.text,
+                "answer_length": len(answer.text),
+                "word_count": len(answer.text.split()),
+                "confidence": answer.confidence,
+                "sources_count": len(answer.sources) if hasattr(answer, 'sources') else 0,
+                "metadata": answer.metadata if hasattr(answer, 'metadata') else {}
+            },
+            "quality_analysis": {
+                "citation_format": self._analyze_citation_format_issues(answer.text),
+                "content_repetition": self._analyze_content_repetition(answer.text),
+                "answer_structure": self._analyze_answer_structure(answer.text),
+                "confidence_appropriateness": self._analyze_confidence_appropriateness(case, answer)
+            },
+            "issues_detected": []
+        }
+        
+        # Flag obvious issues for manual review
+        if data["quality_analysis"]["citation_format"].get("has_broken_citations", False):
+            data["issues_detected"].append("Broken citations detected")
+        
+        if data["quality_analysis"]["content_repetition"].get("has_repetitive_patterns", False):
+            data["issues_detected"].append("Repetitive content detected")
+        
+        if data["quality_analysis"]["confidence_appropriateness"].get("inappropriate_confidence", False):
+            data["issues_detected"].append("Inappropriate confidence level")
+        
+        return data
+    
+    def _collect_bad_case_data(self, case: Dict, answer) -> Dict[str, Any]:
+        """Collect raw data for bad cases instead of scoring refusal."""
+        data = {
+            "query": case['query'],
+            "expected_behavior": case.get('expected_behavior', 'refuse'),
+            "out_of_scope_reason": case.get('reason', 'unknown'),
+            "raw_answer_data": {
+                "answer_text": answer.text,
+                "answer_length": len(answer.text),
+                "word_count": len(answer.text.split()),
+                "confidence": answer.confidence,
+                "sources_count": len(answer.sources) if hasattr(answer, 'sources') else 0,
+                "metadata": answer.metadata if hasattr(answer, 'metadata') else {}
+            },
+            "refusal_analysis": {
+                "should_refuse": True,
+                "expected_confidence_range": case.get('expected_confidence_range', (0.0, 0.3)),
+                "actual_confidence": answer.confidence,
+                "answer_indicates_refusal": self._analyze_refusal_indicators(answer.text),
+                "confidence_appropriate": self._analyze_bad_case_confidence(case, answer)
+            },
+            "issues_detected": []
+        }
+        
+        # Flag obvious issues for manual review
+        if data["refusal_analysis"]["actual_confidence"] > 0.5:
+            data["issues_detected"].append("High confidence for out-of-scope query")
+        
+        if not data["refusal_analysis"]["answer_indicates_refusal"]:
+            data["issues_detected"].append("System answered instead of refusing out-of-scope query")
+        
+        return data
+    
+    def _analyze_refusal_indicators(self, answer_text: str) -> bool:
+        """Check if answer indicates refusal."""
+        refusal_indicators = [
+            "cannot", "unable", "not found", "no information", 
+            "outside my scope", "I don't know", "cannot help"
+        ]
+        return any(indicator in answer_text.lower() for indicator in refusal_indicators)
+    
+    def _analyze_bad_case_confidence(self, case: Dict, answer) -> bool:
+        """Check if confidence is appropriate for bad case."""
+        expected_range = case.get('expected_confidence_range', (0.0, 0.3))
+        actual_confidence = answer.confidence
+        return expected_range[0] <= actual_confidence <= expected_range[1]
+    
+    def _analyze_citation_format_issues(self, answer_text: str) -> Dict[str, Any]:
+        """Analyze citation format issues in answers."""
+        return {
+            "has_broken_citations": "Page unknown from unknown" in answer_text,
+            "repetitive_citation_text": answer_text.count("the documentation") > 5,
+            "citation_count": answer_text.count("[")
+        }
+    
+    def _analyze_content_repetition(self, answer_text: str) -> Dict[str, Any]:
+        """Analyze content repetition in answers."""
+        doc_count = answer_text.count("the documentation")
+        return {
+            "has_repetitive_patterns": doc_count > 5,
+            "documentation_count": doc_count,
+            "repetitive_phrases": []
+        }
+    
+    def _analyze_answer_structure(self, answer_text: str) -> Dict[str, Any]:
+        """Analyze answer structure and formatting."""
+        template_patterns = ["1. Primary definition:", "2. Technical details:", "3. Related concepts:"]
+        template_count = sum(1 for pattern in template_patterns if pattern in answer_text)
+        
+        return {
+            "has_template_structure": template_count > 1,
+            "template_pattern_count": template_count,
+            "professional_formatting": template_count <= 1
+        }
+    
+    def _analyze_confidence_appropriateness(self, case: Dict, answer) -> Dict[str, Any]:
+        """Analyze if confidence is appropriate for the case."""
+        expected_range = case.get('expected_confidence_range', (0.0, 1.0))
+        actual_confidence = answer.confidence
+        
+        return {
+            "expected_range": expected_range,
+            "actual_confidence": actual_confidence,
+            "inappropriate_confidence": not (expected_range[0] <= actual_confidence <= expected_range[1])
+        }
     
     def _test_known_good_cases_validation(self) -> tuple:
         """Test known good cases validation."""
@@ -310,9 +432,9 @@ class EndToEndQualityForensics(DiagnosticTestBase):
         }
         
         analysis_results = {
-            "success_rate": success_rate,
-            "good_cases_quality": success_rate > 0.8,
-            "summary": f"Good cases success rate: {success_rate:.1%}"
+            "data_collection_rate": collection_rate,
+            "scoring_disabled": True,
+            "summary": f"Data collected for {len(collected_data)}/{len(good_case_results)} good cases - manual analysis required"
         }
         
         return (
@@ -398,9 +520,9 @@ class EndToEndQualityForensics(DiagnosticTestBase):
         }
         
         analysis_results = {
-            "refusal_rate": refusal_rate,
-            "bad_cases_handling_good": refusal_rate > 0.8,
-            "summary": f"Bad cases refusal rate: {refusal_rate:.1%}"
+            "data_collection_rate": collection_rate,
+            "scoring_disabled": True,
+            "summary": f"Data collected for {len(collected_data)}/{len(bad_case_results)} bad cases - manual analysis required"
         }
         
         return (
@@ -850,64 +972,58 @@ class EndToEndQualityForensics(DiagnosticTestBase):
         }
     
     def _assess_portfolio_readiness(self) -> Dict[str, Any]:
-        """Assess overall portfolio readiness."""
-        # Collect metrics from all previous tests
+        """DISABLED: Portfolio readiness assessment uses placeholder values.
+        
+        This method has been disabled because it was using hardcoded placeholder
+        values instead of actual test measurements, leading to misleading scores.
+        
+        Real metrics collection needs to be implemented before meaningful
+        portfolio assessment can be performed.
+        """
+        # Return empty metrics to disable scoring
         metrics = {
-            'system_functional': True,
-            'answer_quality': 0.8,  # Placeholder - should be from good cases
-            'confidence_calibration': 0.7,  # Placeholder - should be from calibration test
-            'edge_case_handling': 0.8,  # Placeholder - should be from edge cases
-            'system_coherence': 0.9,  # Placeholder - should be from coherence test
-            'technical_demonstration_ready': True,
-            'swiss_market_standards': True
+            'system_functional': None,  # Unknown - needs real validation
+            'answer_quality': None,     # Unknown - needs real measurement
+            'confidence_calibration': None,  # Unknown - needs real measurement
+            'edge_case_handling': None,      # Unknown - needs real measurement
+            'system_coherence': None,        # Unknown - needs real measurement
+            'technical_demonstration_ready': None,  # Unknown - needs assessment
+            'swiss_market_standards': None          # Unknown - needs assessment
         }
         
         return metrics
     
     def _analyze_portfolio_readiness(self, metrics: Dict) -> Dict[str, Any]:
-        """Analyze portfolio readiness metrics."""
-        issues = []
-        recommendations = []
+        """DISABLED: Portfolio readiness analysis was using fake metrics.
         
-        # Calculate portfolio score
-        score_factors = [
-            metrics.get('answer_quality', 0) * 0.3,
-            metrics.get('confidence_calibration', 0) * 0.2,
-            metrics.get('edge_case_handling', 0) * 0.2,
-            metrics.get('system_coherence', 0) * 0.2,
-            (1.0 if metrics.get('system_functional', False) else 0.0) * 0.1
+        This analysis has been disabled because it was calculating scores from
+        hardcoded placeholder values, giving misleading results.
+        """
+        issues = ["Portfolio scoring disabled - was using placeholder values"]
+        recommendations = [
+            "Implement real metrics collection before enabling portfolio assessment",
+            "Use data collection mode for manual analysis instead"
         ]
         
-        portfolio_score = sum(score_factors)
+        # Disable scoring calculation
+        # score_factors = [...]  # DISABLED - was using fake values
         
-        # Determine readiness level
-        if portfolio_score >= 0.9:
-            readiness_level = "PORTFOLIO_READY"
-            portfolio_ready = True
-        elif portfolio_score >= 0.7:
-            readiness_level = "STAGING_READY"
-            portfolio_ready = True
-        elif portfolio_score >= 0.5:
-            readiness_level = "DEVELOPMENT_READY"
-            portfolio_ready = False
-        else:
-            readiness_level = "NOT_READY"
-            portfolio_ready = False
+        # DISABLED: Portfolio scoring was using fake values
+        portfolio_score = 0.0  # Disabled
+        readiness_level = "ASSESSMENT_DISABLED"
+        portfolio_ready = False
         
-        # Generate recommendations
-        if portfolio_score < 0.9:
-            recommendations.append("Continue optimization for full portfolio readiness")
-        
-        if not metrics.get('system_functional', True):
-            issues.append("System not functional")
-            recommendations.append("Fix critical system issues")
+        # Add warning about disabled assessment
+        issues.append("Portfolio assessment disabled due to placeholder values")
+        recommendations.append("Enable data collection mode for manual analysis")
         
         return {
             'portfolio_score': portfolio_score,
             'readiness_level': readiness_level,
             'portfolio_ready': portfolio_ready,
             'issues': issues,
-            'recommendations': recommendations
+            'recommendations': recommendations,
+            'warning': 'Portfolio assessment disabled - was using hardcoded values'
         }
     
     def _generate_good_cases_recommendations(self, results: List[Dict]) -> List[str]:
@@ -1007,7 +1123,8 @@ class EndToEndQualityForensics(DiagnosticTestBase):
                 system_coherence = result.analysis_results.get('coherence_score', 0)
             
             elif result.test_name == "Portfolio_Readiness_Final":
-                portfolio_readiness = result.analysis_results.get('portfolio_score', 0)
+                # DISABLED: Portfolio scoring was using fake values
+                portfolio_readiness = 0.0  # Disabled
         
         # Identify strengths and priorities
         if good_cases_success > 0.8:
@@ -1029,8 +1146,8 @@ class EndToEndQualityForensics(DiagnosticTestBase):
         if good_cases_success < 0.5:
             critical_failures.append("Critical failure in good cases handling")
         
-        if portfolio_readiness < 0.5:
-            critical_failures.append("System not ready for portfolio use")
+        # DISABLED: Portfolio readiness check was using fake values
+        critical_failures.append("Portfolio assessment disabled - was using hardcoded values")
         
         return EndToEndQualityAnalysis(
             total_test_cases=total_test_cases,
@@ -1039,7 +1156,7 @@ class EndToEndQualityForensics(DiagnosticTestBase):
             edge_cases_handling_rate=edge_cases_handling,
             confidence_calibration_quality=confidence_calibration,
             system_coherence_score=system_coherence,
-            portfolio_readiness_score=portfolio_readiness,
+            portfolio_readiness_score=0.0,  # DISABLED - was using fake values
             critical_failures=critical_failures,
             quality_issues=quality_issues,
             system_strengths=system_strengths,

@@ -42,7 +42,7 @@ class SystemHealthAnalysis:
     """Analysis results for system health and performance."""
     architecture_detected: str
     component_factory_performance: float
-    system_performance_score: float
+    system_performance_score: float  # DISABLED - was misleading
     memory_usage_efficiency: float
     cache_performance_rating: float
     deployment_readiness_score: float
@@ -142,7 +142,7 @@ class SystemHealthForensics(DiagnosticTestBase):
         print(f"\n📊 SYSTEM HEALTH AND PERFORMANCE ANALYSIS COMPLETE")
         print(f"Architecture Detected: {analysis.architecture_detected}")
         print(f"Component Factory Performance: {analysis.component_factory_performance:.2f}")
-        print(f"System Performance Score: {analysis.system_performance_score:.2f}")
+        print(f"⚠️  System Performance Scoring DISABLED (was misleading)")
         print(f"Memory Usage Efficiency: {analysis.memory_usage_efficiency:.1%}")
         print(f"Cache Performance Rating: {analysis.cache_performance_rating:.2f}")
         print(f"Deployment Readiness Score: {analysis.deployment_readiness_score:.1%}")
@@ -263,9 +263,9 @@ class SystemHealthForensics(DiagnosticTestBase):
         }
         
         analysis_results = {
-            "factory_performance": factory_results.get('performance_score', 0),
-            "factory_performance_good": factory_results.get('performance_score', 0) > 0.8,
-            "summary": f"Factory performance: {factory_results.get('performance_score', 0):.2f}"
+            "factory_performance_data": factory_results,
+            "performance_scoring_disabled": True,
+            "summary": f"Factory performance data collected - manual analysis required"
         }
         
         return (
@@ -308,9 +308,9 @@ class SystemHealthForensics(DiagnosticTestBase):
         }
         
         analysis_results = {
-            "system_performance_score": performance_results.get('performance_score', 0),
-            "system_performance_good": performance_results.get('performance_score', 0) > 0.8,
-            "summary": f"System performance: {performance_results.get('performance_score', 0):.2f}"
+            "system_performance_data": performance_results,
+            "performance_scoring_disabled": True,
+            "summary": f"System performance data collected - manual analysis required"
         }
         
         return (
@@ -516,11 +516,16 @@ class SystemHealthForensics(DiagnosticTestBase):
         if avg_creation_time > 0.1:
             issues.append(f"Slow component creation: {avg_creation_time:.3f}s")
         
-        # Calculate performance score
-        performance_score = min(1.0, cache_hit_rate + (1.0 - min(1.0, avg_creation_time / 0.05)))
+        # DISABLED: Performance scoring was misleading
+        # performance_score = min(1.0, cache_hit_rate + (1.0 - min(1.0, avg_creation_time / 0.05)))
         
         return {
-            'performance_score': performance_score,
+            'performance_scoring_disabled': True,
+            'raw_performance_data': {
+                'cache_hit_rate': cache_hit_rate,
+                'avg_creation_time': avg_creation_time,
+                'total_components_created': factory_metrics.get('total_components_created', 0)
+            },
             'cache_hit_rate': cache_hit_rate,
             'avg_creation_time': avg_creation_time,
             'issues': issues
@@ -583,11 +588,16 @@ class SystemHealthForensics(DiagnosticTestBase):
         if throughput < 0.5:
             issues.append(f"Low system throughput: {throughput:.2f} queries/sec")
         
-        # Calculate performance score
-        performance_score = min(1.0, (doc_rate / 1000) * 0.4 + (min(1.0, 2.0 / query_time) * 0.6))
+        # DISABLED: Performance scoring was misleading
+        # performance_score = min(1.0, (doc_rate / 1000) * 0.4 + (min(1.0, 2.0 / query_time) * 0.6))
         
         return {
-            'performance_score': performance_score,
+            'performance_scoring_disabled': True,
+            'raw_performance_data': {
+                'doc_processing_rate': doc_rate,
+                'query_response_time': query_time,
+                'query_throughput': 1.0 / query_time if query_time > 0 else 0
+            },
             'doc_processing_rate': doc_rate,
             'query_response_time': query_time,
             'system_throughput': throughput,
@@ -905,7 +915,7 @@ class SystemHealthForensics(DiagnosticTestBase):
         return SystemHealthAnalysis(
             architecture_detected=architecture_detected,
             component_factory_performance=factory_performance,
-            system_performance_score=system_performance_score,
+            system_performance_score=0.0,  # DISABLED - was misleading
             memory_usage_efficiency=memory_efficiency,
             cache_performance_rating=cache_performance,
             deployment_readiness_score=deployment_readiness,

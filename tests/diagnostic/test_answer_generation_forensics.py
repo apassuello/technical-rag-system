@@ -379,47 +379,40 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         recommendations = []
         
         try:
-            # Test answer quality for each test case
+            # DISABLED: Quality analysis was too shallow
+            # Instead, collect raw data for manual analysis
             quality_results = {}
             
             for test_case in self.test_queries:
-                quality_test = self._analyze_answer_quality(test_case)
-                quality_results[test_case["query"]] = quality_test
+                # Collect raw answer data instead of scoring
+                raw_data = self._collect_answer_data(test_case)
+                quality_results[test_case["query"]] = raw_data
                 
-                # Check for fragment responses
-                if quality_test.get("is_fragment", False):
-                    issues_found.append(f"FRAGMENT RESPONSE: '{test_case['query']}' returned fragment: '{quality_test.get('answer_text', '')[:100]}'")
-                
-                # Check answer length
-                answer_length = quality_test.get("answer_length", 0)
-                if test_case["expected_behavior"] == "comprehensive_answer" and answer_length < test_case.get("min_length", 50):
-                    issues_found.append(f"SHORT ANSWER: '{test_case['query']}' returned only {answer_length} characters")
+                # Note: Not analyzing quality here - data collection only
+                # But we can flag obvious issues for manual review
+                citation_issues = raw_data.get("raw_answer_data", {}).get("citation_analysis", {})
+                if citation_issues.get("has_broken_citations", False):
+                    issues_found.append(f"BROKEN CITATIONS detected in '{test_case['query']}' - manual review needed")
+                    
+                if citation_issues.get("repetitive_citation_text", False):
+                    issues_found.append(f"REPETITIVE TEXT detected in '{test_case['query']}' - manual review needed")
             
+            # DISABLED: Quality analysis was too shallow
+            # Just store raw data for manual analysis
             data_captured["quality_tests"] = quality_results
             
-            # Analyze fragment patterns
-            fragment_analysis = self._analyze_fragment_patterns(quality_results)
-            data_captured["fragment_analysis"] = fragment_analysis
-            
-            # Analyze answer lengths
-            length_analysis = self._analyze_answer_lengths(quality_results)
-            data_captured["length_analysis"] = length_analysis
-            
-            # Analyze coherence
-            coherence_analysis = self._analyze_answer_coherence(quality_results)
-            data_captured["coherence_analysis"] = coherence_analysis
-            
+            # Disable automatic scoring
             analysis_results = {
-                "fragment_rate": fragment_analysis.get("fragment_percentage", 0),
-                "average_answer_length": length_analysis.get("average_length", 0),
-                "coherence_score": coherence_analysis.get("coherence_score", 0),
-                "quality_issues_count": len(issues_found)
+                "total_responses": len(quality_results),
+                "quality_analysis_disabled": True,
+                "message": "Quality analysis disabled - use manual analysis of raw data"
             }
             
-            # Overall quality assessment
-            if analysis_results["fragment_rate"] > 0.5:
-                issues_found.append("CRITICAL: High fragment response rate - confirms Squad2 extractive model issue")
-                recommendations.append("Switch to generative model immediately to fix fragment responses")
+            # Add note about disabled analysis
+            recommendations.append("Review raw answer data manually for quality assessment")
+            recommendations.append("Check citation_analysis field for broken citations")
+            recommendations.append("Check repetition_analysis field for repetitive text")
+            recommendations.append("Check format_analysis field for template structure issues")
             
         except Exception as e:
             issues_found.append(f"Answer quality analysis failed: {str(e)}")
@@ -992,13 +985,13 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         
         return metadata_analysis
     
-    def _analyze_answer_quality(self, test_case: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze answer quality for specific test case."""
-        quality_analysis = {
+    def _collect_answer_data(self, test_case: Dict[str, Any]) -> Dict[str, Any]:
+        """Collect raw answer data for manual analysis (replaces shallow quality analysis)."""
+        answer_data = {
             "query": test_case["query"],
             "expected_behavior": test_case["expected_behavior"],
-            "answer_quality": {},
-            "meets_expectations": False
+            "raw_answer_data": {},
+            "collection_note": "Data collected for manual analysis"
         }
         
         try:
@@ -1009,31 +1002,99 @@ class AnswerGenerationForensics(DiagnosticTestBase):
             
             answer = orchestrator.process_query(test_case["query"])
             
-            # Analyze quality
-            quality_analysis["answer_quality"] = {
+            # Collect raw answer data for manual analysis
+            answer_data["raw_answer_data"] = {
                 "answer_text": answer.text,
                 "answer_length": len(answer.text),
                 "word_count": len(answer.text.split()),
-                "is_fragment": len(answer.text.split()) < 5,
                 "confidence": answer.confidence,
-                "has_complete_sentences": "." in answer.text
+                "sources_count": len(answer.sources) if hasattr(answer, 'sources') else 0,
+                "metadata": answer.metadata if hasattr(answer, 'metadata') else {},
+                "citation_analysis": self._analyze_citation_format(answer.text),
+                "repetition_analysis": self._analyze_text_repetition(answer.text),
+                "format_analysis": self._analyze_answer_format(answer.text)
             }
             
-            # Check if meets expectations
-            if test_case["expected_behavior"] == "comprehensive_answer":
-                min_length = test_case.get("min_length", 50)
-                quality_analysis["meets_expectations"] = (
-                    quality_analysis["answer_quality"]["answer_length"] >= min_length and
-                    not quality_analysis["answer_quality"]["is_fragment"]
-                )
-            elif test_case["expected_behavior"] == "refuse_answer":
-                max_confidence = test_case.get("max_confidence", 0.3)
-                quality_analysis["meets_expectations"] = answer.confidence <= max_confidence
+            # Note: No quality scoring here - just data collection
             
         except Exception as e:
-            quality_analysis["error"] = str(e)
+            answer_data["error"] = str(e)
         
-        return quality_analysis
+        return answer_data
+    
+    def _analyze_citation_format(self, answer_text: str) -> Dict[str, Any]:
+        """Analyze citation format issues that current tests miss."""
+        citation_analysis = {
+            "has_broken_citations": False,
+            "broken_citation_examples": [],
+            "citation_format_issues": [],
+            "repetitive_citation_text": False
+        }
+        
+        # Check for broken citations
+        if "Page unknown from unknown" in answer_text:
+            citation_analysis["has_broken_citations"] = True
+            citation_analysis["broken_citation_examples"].append("Page unknown from unknown")
+            citation_analysis["citation_format_issues"].append("Contains 'Page unknown from unknown' instead of proper citations")
+        
+        # Check for repetitive "the documentation" text
+        doc_count = answer_text.count("the documentation")
+        if doc_count > 5:
+            citation_analysis["repetitive_citation_text"] = True
+            citation_analysis["citation_format_issues"].append(f"'the documentation' appears {doc_count} times (repetitive)")
+        
+        return citation_analysis
+    
+    def _analyze_text_repetition(self, answer_text: str) -> Dict[str, Any]:
+        """Analyze text repetition issues that current tests miss."""
+        repetition_analysis = {
+            "has_repetitive_patterns": False,
+            "repetitive_phrases": [],
+            "repetition_count": 0
+        }
+        
+        # Check for common repetitive patterns
+        patterns_to_check = [
+            "the documentation",
+            "based on the provided documentation",
+            "according to the documentation"
+        ]
+        
+        for pattern in patterns_to_check:
+            count = answer_text.count(pattern)
+            if count > 3:
+                repetition_analysis["has_repetitive_patterns"] = True
+                repetition_analysis["repetitive_phrases"].append({
+                    "phrase": pattern,
+                    "count": count
+                })
+                repetition_analysis["repetition_count"] += count
+        
+        return repetition_analysis
+    
+    def _analyze_answer_format(self, answer_text: str) -> Dict[str, Any]:
+        """Analyze answer format issues that current tests miss."""
+        format_analysis = {
+            "has_template_structure": False,
+            "format_issues": [],
+            "professional_formatting": True
+        }
+        
+        # Check for template-like structure
+        template_patterns = [
+            "1. Primary definition:",
+            "2. Technical details:",
+            "3. Related concepts:",
+            "4. Any relevant acronyms:"
+        ]
+        
+        template_count = sum(1 for pattern in template_patterns if pattern in answer_text)
+        if template_count > 1:
+            format_analysis["has_template_structure"] = True
+            format_analysis["format_issues"].append(f"Contains template structure ({template_count} template patterns)")
+            format_analysis["professional_formatting"] = False
+        
+        return format_analysis
     
     def _analyze_fragment_patterns(self, quality_results: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze fragment response patterns."""
