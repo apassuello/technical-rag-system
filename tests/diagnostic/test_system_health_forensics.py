@@ -177,7 +177,8 @@ class SystemHealthForensics(DiagnosticTestBase):
         self.baseline_memory = psutil.Process().memory_info().rss / 1024 / 1024  # MB
         
         # Initialize orchestrator
-        self.orchestrator = PlatformOrchestrator("config/default.yaml")
+        config_path = project_root / "config" / "default.yaml"
+        self.orchestrator = PlatformOrchestrator(config_path)
         
         print("  ✅ System monitoring initialized")
     

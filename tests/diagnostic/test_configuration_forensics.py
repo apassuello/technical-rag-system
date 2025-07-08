@@ -171,7 +171,8 @@ class ConfigurationForensics(DiagnosticTestBase):
         
         try:
             # Initialize platform orchestrator with default config
-            orchestrator = PlatformOrchestrator("config/default.yaml")
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
             
             # Capture system health information
             system_health = orchestrator.get_system_health()
@@ -532,7 +533,8 @@ class ConfigurationForensics(DiagnosticTestBase):
             config_path = project_root / config_file
             if config_path.exists():
                 try:
-                    test_orchestrator = PlatformOrchestrator(config_file)
+                    config_path = self.get_absolute_config_path(config_file)
+                    test_orchestrator = PlatformOrchestrator(config_path)
                     health = test_orchestrator.get_system_health()
                     tests[config_file] = {
                         "success": True,
@@ -608,7 +610,8 @@ class ConfigurationForensics(DiagnosticTestBase):
         
         try:
             # Try to create component via orchestrator
-            orchestrator = PlatformOrchestrator("config/default.yaml")
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
             
             if component_type == "embedder" and hasattr(orchestrator, 'embedder'):
                 component = orchestrator.embedder

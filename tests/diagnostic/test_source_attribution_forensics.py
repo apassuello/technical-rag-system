@@ -166,7 +166,8 @@ class SourceAttributionForensics(DiagnosticTestBase):
         print("  Initializing source attribution components...")
         
         # Initialize orchestrator
-        self.orchestrator = PlatformOrchestrator("config/default.yaml")
+        config_path = project_root / "config" / "default.yaml"
+        self.orchestrator = PlatformOrchestrator(config_path)
         
         # Get components from orchestrator to ensure they share the same indexed documents
         self.embedder = SentenceTransformerEmbedder()

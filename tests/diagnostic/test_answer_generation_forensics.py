@@ -95,11 +95,12 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         
         try:
             # Initialize generator through orchestrator
-            orchestrator = PlatformOrchestrator("config/default.yaml")
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
             
             # Analyze generator configuration
-            if hasattr(orchestrator, 'generator'):
-                generator = orchestrator.generator
+            generator = orchestrator.get_component('answer_generator')
+            if generator:
                 generator_config = self._analyze_generator_configuration(generator)
                 data_captured["generator_configuration"] = generator_config
                 
@@ -556,8 +557,9 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         
         try:
             # Try to get the generator
-            orchestrator = PlatformOrchestrator("config/default.yaml")
-            generator = orchestrator.generator
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
+            generator = orchestrator.get_component('answer_generator')
             
             if hasattr(generator, '_documents_to_chunks'):
                 # Convert documents to chunks format
@@ -614,8 +616,9 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         
         try:
             # Get generator and test formatting
-            orchestrator = PlatformOrchestrator("config/default.yaml")
-            generator = orchestrator.generator
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
+            generator = orchestrator.get_component('answer_generator')
             
             if hasattr(generator, 'generator') and hasattr(generator.generator, 'model_name'):
                 model_name = generator.generator.model_name
@@ -647,7 +650,8 @@ class AnswerGenerationForensics(DiagnosticTestBase):
             start_time = time.time()
             
             # Get answer through orchestrator
-            orchestrator = PlatformOrchestrator("config/default.yaml")
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
             
             # Process documents first
             orchestrator.process_documents(documents)
@@ -742,7 +746,8 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         
         try:
             # Get answer and trace confidence
-            orchestrator = PlatformOrchestrator("config/default.yaml")
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
             documents = self._create_test_documents()
             orchestrator.process_documents(documents)
             
@@ -807,7 +812,8 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         confidence_values = []
         
         try:
-            orchestrator = PlatformOrchestrator("config/default.yaml")
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
             documents = self._create_test_documents()
             orchestrator.process_documents(documents)
             
@@ -852,7 +858,8 @@ class AnswerGenerationForensics(DiagnosticTestBase):
             ]
             
             confidences = []
-            orchestrator = PlatformOrchestrator("config/default.yaml")
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
             documents = self._create_test_documents()
             orchestrator.process_documents(documents)
             
@@ -907,7 +914,8 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         
         try:
             # Process through orchestrator
-            orchestrator = PlatformOrchestrator("config/default.yaml")
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
             orchestrator.process_documents(documents)
             
             answer = orchestrator.process_query(query)
@@ -996,7 +1004,8 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         
         try:
             # Get answer
-            orchestrator = PlatformOrchestrator("config/default.yaml")
+            config_path = self.get_absolute_config_path("config/default.yaml")
+            orchestrator = PlatformOrchestrator(config_path)
             documents = self._create_test_documents()
             orchestrator.process_documents(documents)
             

@@ -48,7 +48,7 @@ class TechnicalPromptTemplates:
         """Get the base system prompt for technical documentation."""
         return """You are an expert technical documentation assistant specializing in embedded systems, 
 RISC-V architecture, RTOS, and embedded AI/ML. Your role is to provide accurate, detailed 
-technical answers based strictly on the provided documentation context.
+technical answers based strictly on the provided context.
 
 Key responsibilities:
 1. Answer questions using ONLY information from the provided context
@@ -58,7 +58,7 @@ Key responsibilities:
 5. Clearly state when information is not available in the context
 6. Consider hardware constraints and embedded system limitations when relevant
 
-Never make up information. If the context doesn't contain the answer, say so explicitly."""
+Write naturally and conversationally. Avoid repetitive phrases and numbered lists unless specifically requested. Never make up information. If the context doesn't contain the answer, say so explicitly."""
 
     @staticmethod
     def get_definition_template() -> PromptTemplate:
@@ -79,11 +79,7 @@ For definition queries, focus on:
 
 Provide a comprehensive technical definition with proper citations.""",
             
-            answer_guidelines="""Structure your answer as:
-1. Primary definition [chunk_X]
-2. Technical details and specifications [chunk_Y]
-3. Related concepts or applications [chunk_Z]
-4. Any relevant acronyms or abbreviations""",
+            answer_guidelines="""Provide a clear, comprehensive answer that directly addresses the question. Include relevant technical details and cite your sources using [chunk_X] notation. Make your response natural and conversational while maintaining technical accuracy.""",
             
             few_shot_examples=[
                 """Q: What is RISC-V?
@@ -114,17 +110,7 @@ For implementation queries, focus on:
 
 Provide detailed implementation guidance with code examples where available.""",
             
-            answer_guidelines="""Structure your answer as:
-1. Overview of the implementation approach [chunk_X]
-2. Prerequisites and requirements [chunk_Y]
-3. Step-by-step implementation:
-   - Step 1: Description [chunk_Z]
-   - Step 2: Description [chunk_W]
-4. Code example (if available):
-```language
-// Code here
-```
-5. Important considerations or warnings""",
+            answer_guidelines="""Provide a practical implementation guide that includes the approach, prerequisites, step-by-step instructions, and code examples when available. Use clear explanations and cite your sources with [chunk_X] notation. Include any important considerations or warnings.""",
             
             few_shot_examples=[
                 """Q: How do I configure GPIO pins for output in RISC-V?
@@ -205,14 +191,7 @@ For comparison queries, focus on:
 
 Provide a detailed technical comparison with clear distinctions.""",
             
-            answer_guidelines="""Structure your answer as:
-1. Overview of items being compared [chunk_X]
-2. Key differences:
-   - Feature A: Item1 vs Item2 [chunk_Y]
-   - Feature B: Item1 vs Item2 [chunk_Z]
-3. Technical specifications comparison
-4. Use case recommendations
-5. Performance/resource considerations"""
+            answer_guidelines="""Provide a clear comparison that highlights the key differences, technical specifications, and use cases. Make practical recommendations based on different scenarios. Cite your sources using [chunk_X] notation."""
         )
     
     @staticmethod
@@ -235,14 +214,7 @@ For specification queries, focus on:
 
 Provide precise technical specifications with all relevant parameters.""",
             
-            answer_guidelines="""Structure your answer as:
-1. Specification overview [chunk_X]
-2. Detailed parameters:
-   - Parameter 1: value (unit) [chunk_Y]
-   - Parameter 2: value (unit) [chunk_Z]
-3. Operating conditions or constraints
-4. Compliance/standards information
-5. Version or variant notes"""
+            answer_guidelines="""Provide precise technical specifications including parameter values, units, operating conditions, and compliance information. Cite sources using [chunk_X] notation and note any version-specific details."""
         )
     
     @staticmethod
@@ -265,18 +237,7 @@ For code example queries, focus on:
 
 Provide working code examples with explanations.""",
             
-            answer_guidelines="""Structure your answer as:
-1. Purpose and overview [chunk_X]
-2. Required includes/imports [chunk_Y]
-3. Complete code example:
-```c
-// Or appropriate language
-#include <necessary_headers.h>
-
-// Function or code implementation
-```
-4. Key points explained [chunk_Z]
-5. Common variations or modifications"""
+            answer_guidelines="""Provide complete, runnable code examples with explanations. Include necessary headers, clear comments, and explanations of key concepts. Cite sources using [chunk_X] notation and mention common variations when applicable."""
         )
     
     @staticmethod
@@ -300,15 +261,7 @@ For hardware constraint queries, focus on:
 
 Analyze feasibility and constraints for embedded deployment.""",
             
-            answer_guidelines="""Structure your answer as:
-1. Hardware requirements summary [chunk_X]
-2. Detailed constraints:
-   - Memory: RAM/Flash requirements [chunk_Y]
-   - Processing: CPU/frequency needs [chunk_Z]
-   - Power: Consumption estimates [chunk_W]
-3. Feasibility assessment
-4. Optimization suggestions
-5. Alternative approaches if constraints are exceeded"""
+            answer_guidelines="""Analyze hardware requirements and constraints including memory, processing, and power needs. Provide feasibility assessment and optimization suggestions. Cite sources using [chunk_X] notation and suggest alternatives when needed."""
         )
     
     @staticmethod
@@ -331,16 +284,7 @@ For troubleshooting queries, focus on:
 
 Provide diagnostic steps and solutions.""",
             
-            answer_guidelines="""Structure your answer as:
-1. Problem identification [chunk_X]
-2. Common causes:
-   - Cause 1: Description [chunk_Y]
-   - Cause 2: Description [chunk_Z]
-3. Diagnostic steps:
-   - Step 1: Check... [chunk_W]
-   - Step 2: Verify... [chunk_V]
-4. Solutions for each cause
-5. Prevention recommendations"""
+            answer_guidelines="""Identify the problem, common causes, diagnostic steps, and solutions. Include prevention recommendations and cite sources using [chunk_X] notation. Provide practical troubleshooting guidance."""
         )
     
     @staticmethod

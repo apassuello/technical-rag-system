@@ -59,7 +59,8 @@ class DiagnosticTestBase:
         Args:
             output_dir: Directory to store diagnostic results
         """
-        self.output_dir = output_dir or Path("tests/diagnostic/results")
+        # Use absolute path from project root
+        self.output_dir = output_dir or (project_root / "tests" / "diagnostic" / "results")
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         self.results: List[DiagnosticResult] = []
@@ -168,10 +169,17 @@ class DiagnosticTestBase:
         self.results.append(result)
         return result
     
+    def get_absolute_config_path(self, config_path: str) -> Path:
+        """Get absolute path to configuration file from project root."""
+        if Path(config_path).is_absolute():
+            return Path(config_path)
+        else:
+            return project_root / config_path
+    
     def load_config(self, config_path: str) -> Dict[str, Any]:
         """Load and parse configuration file with error handling."""
         try:
-            config_file = project_root / config_path
+            config_file = self.get_absolute_config_path(config_path)
             self.logger.debug(f"Loading config from: {config_file}")
             
             if not config_file.exists():

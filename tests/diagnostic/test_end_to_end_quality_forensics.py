@@ -180,7 +180,8 @@ class EndToEndQualityForensics(DiagnosticTestBase):
         print("  Initializing end-to-end quality testing...")
         
         # Initialize orchestrator
-        self.orchestrator = PlatformOrchestrator("config/default.yaml")
+        config_path = project_root / "config" / "default.yaml"
+        self.orchestrator = PlatformOrchestrator(config_path)
         
         # Index comprehensive test corpus
         test_documents = self._create_comprehensive_test_corpus()
