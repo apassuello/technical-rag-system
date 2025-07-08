@@ -15,11 +15,9 @@ project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.core.interfaces import Embedder
-from src.core.registry import register_component
 from shared_utils.embeddings.generator import generate_embeddings
 
 
-@register_component("embedder", "sentence_transformer")
 class SentenceTransformerEmbedder(Embedder):
     """
     Adapter for existing sentence transformer embedding generator.

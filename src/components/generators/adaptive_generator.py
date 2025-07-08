@@ -18,7 +18,6 @@ project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.core.interfaces import Document, Answer, AnswerGenerator
-from src.core.registry import register_component
 
 # Import generation components
 from shared_utils.generation.hf_answer_generator import (
@@ -43,7 +42,6 @@ except ImportError as e:
     ChainOfThoughtEngine = None
 
 
-@register_component("generator", "adaptive")
 class AdaptiveAnswerGenerator(AnswerGenerator):
     """
     Adapter for existing adaptive answer generation system.

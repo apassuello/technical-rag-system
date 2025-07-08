@@ -1,0 +1,89 @@
+# Phase 3 Legacy Architecture Configuration Example
+# ComponentFactory-based direct wiring with separate vector store + hybrid retriever
+
+# Document processing configuration
+document_processor:
+  type: "hybrid_pdf"  # Factory maps to HybridPDFProcessor
+  config:
+    chunk_size: 1000
+    chunk_overlap: 200
+    enable_toc_navigation: true
+    min_chunk_length: 100
+    max_chunk_length: 2000
+
+# Embedding generation configuration
+embedder:
+  type: "sentence_transformer"  # Factory maps to SentenceTransformerEmbedder
+  config:
+    model_name: "sentence-transformers/all-MiniLM-L6-v2"
+    use_mps: true  # Enable Apple Silicon acceleration
+    cache_size: 1000
+    batch_size: 32
+
+# Vector storage configuration (required for legacy architecture)
+vector_store:
+  type: "faiss"  # Factory maps to FAISSVectorStore
+  config:
+    embedding_dim: 384
+    index_type: "IndexFlatIP"  # Options: IndexFlatIP, IndexFlatL2, IndexIVFFlat
+    normalize_embeddings: true
+    metric: "cosine"
+    
+    # FAISS-specific parameters
+    nlist: 100  # For IndexIVFFlat
+    nprobe: 10  # For IndexIVFFlat search
+
+# Legacy hybrid retriever configuration (Phase 1 architecture)
+retriever:
+  type: "hybrid"  # Factory maps to HybridRetriever
+  config:
+    # Hybrid search parameters
+    dense_weight: 0.7  # 70% semantic, 30% keyword
+    sparse_weight: 0.3  # Derived from dense_weight
+    
+    # BM25 parameters
+    bm25_k1: 1.2
+    bm25_b: 0.75
+    
+    # Fusion parameters
+    rrf_k: 10  # Reciprocal Rank Fusion constant
+    top_k: 5   # Number of results to return
+    
+    # Advanced retrieval features
+    enable_source_diversity: true
+    diversity_threshold: 0.8
+
+# Answer generation configuration
+answer_generator:
+  type: "adaptive"  # Factory maps to AdaptiveAnswerGenerator
+  config:
+    model_type: "local"  # Options: local, api, ollama
+    model_name: "sshleifer/distilbart-cnn-12-6"
+    max_length: 512
+    temperature: 0.3
+    
+    # Advanced features
+    enable_adaptive_prompts: true
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
+    
+    # API configuration (if using external APIs)
+    api_token: null  # Set via environment variable RAG_ANSWER_GENERATOR__CONFIG__API_TOKEN
+    api_timeout: 30
+
+# Global settings
+global_settings:
+  platform: "phase3_legacy"
+  log_level: "INFO"
+  
+  # Performance settings
+  max_workers: 4
+  timeout_seconds: 300
+  
+  # Apple Silicon optimizations
+  use_mps: true
+  mps_fallback: true
+  
+  # Legacy-specific settings
+  enable_vector_store_caching: true
+  vector_store_cache_size: 1000

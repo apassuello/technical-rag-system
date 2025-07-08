@@ -12,7 +12,7 @@ from pathlib import Path
 
 from .interfaces import Document, Answer, RetrievalResult
 from .config import ConfigManager, PipelineConfig
-from .registry import ComponentRegistry
+from .component_factory import ComponentFactory
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +29,8 @@ class PlatformOrchestrator:
     - Resource management
     - API exposure and routing
     
-    This class reuses all existing component implementations through the
-    ComponentRegistry during Phase 1 to maintain backward compatibility.
+    This class uses the ComponentFactory for direct component instantiation
+    during Phase 3, providing improved performance while maintaining backward compatibility.
     """
     
     def __init__(self, config_path: Path):
@@ -69,40 +69,40 @@ class PlatformOrchestrator:
     
     def _initialize_system(self) -> None:
         """
-        Initialize all system components with Phase 2 unified retriever support.
+        Initialize all system components with Phase 3 direct wiring.
         
-        This method supports both Phase 1 (registry-based) and Phase 2 (unified)
-        architectures for seamless migration and backward compatibility.
+        This method uses ComponentFactory for direct component instantiation,
+        supporting both legacy and unified architectures with improved performance.
         """
         logger.info("Initializing RAG system components...")
         
         try:
-            # Create document processor using existing registry
+            # Create document processor using factory
             proc_config = self.config.document_processor
-            self._components['document_processor'] = ComponentRegistry.create_processor(
+            self._components['document_processor'] = ComponentFactory.create_processor(
                 proc_config.type,
                 **proc_config.config
             )
             logger.debug(f"Document processor initialized: {proc_config.type}")
             
-            # Create embedder using existing registry
+            # Create embedder using factory
             emb_config = self.config.embedder
-            self._components['embedder'] = ComponentRegistry.create_embedder(
+            self._components['embedder'] = ComponentFactory.create_embedder(
                 emb_config.type,
                 **emb_config.config
             )
             logger.debug(f"Embedder initialized: {emb_config.type}")
             
-            # Phase 2: Check if unified retriever is configured
+            # Phase 3: Architecture detection with factory-based instantiation
             ret_config = self.config.retriever
             if ret_config.type == "unified":
                 # Phase 2: Use unified retriever (no separate vector store needed)
-                self._components['retriever'] = ComponentRegistry.create_retriever(
+                self._components['retriever'] = ComponentFactory.create_retriever(
                     ret_config.type,
                     embedder=self._components['embedder'],
                     **ret_config.config
                 )
-                logger.info(f"Phase 2: Unified retriever initialized: {ret_config.type}")
+                logger.info(f"Phase 3: Unified retriever initialized: {ret_config.type}")
                 
                 # Mark that we're using unified architecture
                 self._using_unified_retriever = True
@@ -113,13 +113,13 @@ class PlatformOrchestrator:
                 if vs_config is None:
                     raise RuntimeError("Legacy architecture requires vector_store configuration")
                 
-                self._components['vector_store'] = ComponentRegistry.create_vector_store(
+                self._components['vector_store'] = ComponentFactory.create_vector_store(
                     vs_config.type,
                     **vs_config.config
                 )
                 logger.debug(f"Vector store initialized: {vs_config.type}")
                 
-                self._components['retriever'] = ComponentRegistry.create_retriever(
+                self._components['retriever'] = ComponentFactory.create_retriever(
                     ret_config.type,
                     vector_store=self._components['vector_store'],
                     embedder=self._components['embedder'],
@@ -130,9 +130,9 @@ class PlatformOrchestrator:
                 # Mark that we're using legacy architecture
                 self._using_unified_retriever = False
             
-            # Create answer generator using existing registry
+            # Create answer generator using factory
             gen_config = self.config.answer_generator
-            self._components['answer_generator'] = ComponentRegistry.create_generator(
+            self._components['answer_generator'] = ComponentFactory.create_generator(
                 gen_config.type,
                 **gen_config.config
             )
@@ -347,13 +347,21 @@ class PlatformOrchestrator:
             "platform": self.config.global_settings.get("platform", {})
         }
         
+        # Add factory information for Phase 3
+        try:
+            from .component_factory import ComponentFactory
+            health["factory_info"] = ComponentFactory.get_available_components()
+        except ImportError:
+            pass  # Factory not available
+        
         if self._initialized:
             # Get component status
             for name, component in self._components.items():
                 component_info = {
                     "type": type(component).__name__,
                     "module": type(component).__module__,
-                    "healthy": True  # Basic health check
+                    "healthy": True,  # Basic health check
+                    "factory_managed": True  # Phase 3: All components now factory-managed
                 }
                 
                 # Add component-specific health info if available
@@ -443,18 +451,35 @@ class PlatformOrchestrator:
         errors = []
         
         try:
-            # Validate that all component types are registered
-            component_types = {
-                'processor': self.config.document_processor.type,
-                'embedder': self.config.embedder.type,
-                'vector_store': self.config.vector_store.type,
-                'retriever': self.config.retriever.type,
-                'generator': self.config.answer_generator.type
+            # Create configuration dict for factory validation
+            config_dict = {
+                'document_processor': {
+                    'type': self.config.document_processor.type,
+                    'config': self.config.document_processor.config
+                },
+                'embedder': {
+                    'type': self.config.embedder.type,
+                    'config': self.config.embedder.config
+                },
+                'retriever': {
+                    'type': self.config.retriever.type,
+                    'config': self.config.retriever.config
+                },
+                'answer_generator': {
+                    'type': self.config.answer_generator.type,
+                    'config': self.config.answer_generator.config
+                }
             }
             
-            for comp_type, comp_name in component_types.items():
-                if not ComponentRegistry.is_registered(comp_type, comp_name):
-                    errors.append(f"Component '{comp_name}' not registered for type '{comp_type}'")
+            # Add vector_store if present (optional for unified architecture)
+            if self.config.vector_store is not None:
+                config_dict['vector_store'] = {
+                    'type': self.config.vector_store.type,
+                    'config': self.config.vector_store.config
+                }
+            
+            # Use factory validation
+            errors = ComponentFactory.validate_configuration(config_dict)
             
         except Exception as e:
             errors.append(f"Configuration validation error: {str(e)}")

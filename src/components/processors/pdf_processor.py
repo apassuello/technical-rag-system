@@ -15,7 +15,6 @@ project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.core.interfaces import Document, DocumentProcessor
-from src.core.registry import register_component
 
 # Import from correct shared_utils location
 sys.path.append(str(project_root / "hf_deployment" / "src"))
@@ -23,7 +22,6 @@ from shared_utils.document_processing.hybrid_parser import HybridParser
 from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
 
 
-@register_component("processor", "hybrid_pdf")
 class HybridPDFProcessor(DocumentProcessor):
     """
     Adapter for existing hybrid PDF parser.

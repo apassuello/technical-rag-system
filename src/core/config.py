@@ -2,14 +2,14 @@
 Configuration management system for the modular RAG pipeline.
 
 This module provides a type-safe configuration system using Pydantic
-for validation and YAML for storage. It supports multiple environments
-and configuration inheritance.
+for validation and YAML for storage. It supports multiple environments,
+configuration inheritance, and ComponentFactory validation.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import yaml
 from pathlib import Path
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, model_validator
 import os
 
 
@@ -37,6 +37,7 @@ class PipelineConfig(BaseModel):
     
     Defines all components needed for a functional RAG pipeline.
     Supports both legacy (Phase 1) and unified (Phase 2) architectures.
+    Includes ComponentFactory validation for Phase 3.
     """
     document_processor: ComponentConfig
     embedder: ComponentConfig
@@ -48,6 +49,80 @@ class PipelineConfig(BaseModel):
     global_settings: Dict[str, Any] = Field(default_factory=dict)
     
     model_config = ConfigDict(extra='forbid')  # Prevent unknown fields
+    
+    @model_validator(mode='after')
+    def validate_component_types(self):
+        """Validate component types using ComponentFactory."""
+        # Import here to avoid circular imports
+        try:
+            from .component_factory import ComponentFactory
+            
+            # Create configuration dict for factory validation
+            config_dict = {
+                'document_processor': {
+                    'type': self.document_processor.type,
+                    'config': self.document_processor.config
+                },
+                'embedder': {
+                    'type': self.embedder.type,
+                    'config': self.embedder.config
+                },
+                'retriever': {
+                    'type': self.retriever.type,
+                    'config': self.retriever.config
+                },
+                'answer_generator': {
+                    'type': self.answer_generator.type,
+                    'config': self.answer_generator.config
+                }
+            }
+            
+            # Add vector_store if present (optional for unified architecture)
+            if self.vector_store is not None:
+                config_dict['vector_store'] = {
+                    'type': self.vector_store.type,
+                    'config': self.vector_store.config
+                }
+            
+            # Use factory validation
+            errors = ComponentFactory.validate_configuration(config_dict)
+            
+            if errors:
+                error_message = "Component validation failed:\n" + "\n".join(f"  - {error}" for error in errors)
+                raise ValueError(error_message)
+                
+        except ImportError:
+            # ComponentFactory not available - skip validation
+            # This allows config to work during early development
+            pass
+        
+        return self
+    
+    @model_validator(mode='after')
+    def validate_architecture_consistency(self):
+        """Validate architecture consistency (legacy vs unified)."""
+        
+        retriever_type = self.retriever.type
+        has_vector_store = self.vector_store is not None
+        
+        if retriever_type == "unified":
+            # Unified architecture - vector_store should be None
+            if has_vector_store:
+                raise ValueError(
+                    "Unified retriever architecture detected, but vector_store is configured. "
+                    "For unified architecture, remove the vector_store section - "
+                    "the retriever handles vector storage internally."
+                )
+        elif retriever_type == "hybrid":
+            # Legacy architecture - vector_store is required
+            if not has_vector_store:
+                raise ValueError(
+                    "Legacy hybrid retriever architecture detected, but vector_store is missing. "
+                    "For legacy architecture, configure a vector_store section, "
+                    "or switch to 'unified' retriever type."
+                )
+        
+        return self
 
 
 class ConfigManager:

@@ -17,7 +17,6 @@ project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.core.interfaces import Document, RetrievalResult, Retriever, Embedder
-from src.core.registry import register_component
 from shared_utils.retrieval.hybrid_search import HybridRetriever as OriginalHybridRetriever
 
 # Import FAISS functionality directly
@@ -26,7 +25,6 @@ import faiss
 logger = logging.getLogger(__name__)
 
 
-@register_component("retriever", "unified")
 class UnifiedRetriever(Retriever):
     """
     Unified retriever combining vector storage and hybrid search capabilities.

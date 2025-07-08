@@ -1,0 +1,69 @@
+# Phase 3 Unified Architecture Configuration Example
+# ComponentFactory-based direct wiring with unified retriever
+
+# Document processing configuration
+document_processor:
+  type: "hybrid_pdf"  # Factory maps to HybridPDFProcessor
+  config:
+    chunk_size: 1000
+    chunk_overlap: 200
+    enable_toc_navigation: true
+    min_chunk_length: 100
+    max_chunk_length: 2000
+
+# Embedding generation configuration  
+embedder:
+  type: "sentence_transformer"  # Factory maps to SentenceTransformerEmbedder
+  config:
+    model_name: "sentence-transformers/all-MiniLM-L6-v2"
+    use_mps: true  # Enable Apple Silicon acceleration
+    cache_size: 1000
+    batch_size: 32
+
+# No vector_store section needed - unified retriever handles storage internally
+
+# Unified retriever configuration (Phase 2 architecture)
+retriever:
+  type: "unified"  # Factory maps to UnifiedRetriever
+  config:
+    # Vector storage parameters (moved from vector_store)
+    embedding_dim: 384
+    index_type: "IndexFlatIP"  # Options: IndexFlatIP, IndexFlatL2, IndexIVFFlat
+    normalize_embeddings: true
+    
+    # Hybrid search parameters
+    dense_weight: 0.7  # 70% semantic, 30% keyword
+    bm25_k1: 1.2
+    bm25_b: 0.75
+    rrf_k: 10  # Reciprocal Rank Fusion constant
+    
+    # Performance parameters
+    metric: "cosine"
+    embedding_model: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+
+# Answer generation configuration
+answer_generator:
+  type: "adaptive"  # Factory maps to AdaptiveAnswerGenerator
+  config:
+    model_type: "local"  # Options: local, api, ollama
+    model_name: "sshleifer/distilbart-cnn-12-6"
+    max_length: 512
+    temperature: 0.3
+    
+    # Advanced features
+    enable_adaptive_prompts: true
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
+
+# Global settings
+global_settings:
+  platform: "phase3_unified"
+  log_level: "INFO"
+  
+  # Performance settings
+  max_workers: 4
+  timeout_seconds: 300
+  
+  # Apple Silicon optimizations
+  use_mps: true
+  mps_fallback: true

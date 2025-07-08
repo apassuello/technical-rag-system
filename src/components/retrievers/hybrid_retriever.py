@@ -15,11 +15,9 @@ project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.core.interfaces import Document, RetrievalResult, Retriever, VectorStore, Embedder
-from src.core.registry import register_component
 from shared_utils.retrieval.hybrid_search import HybridRetriever as OriginalHybridRetriever
 
 
-@register_component("retriever", "hybrid")
 class HybridRetriever(Retriever):
     """
     Adapter for existing hybrid retrieval system.
