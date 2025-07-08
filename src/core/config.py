@@ -36,10 +36,11 @@ class PipelineConfig(BaseModel):
     """Complete pipeline configuration.
     
     Defines all components needed for a functional RAG pipeline.
+    Supports both legacy (Phase 1) and unified (Phase 2) architectures.
     """
     document_processor: ComponentConfig
     embedder: ComponentConfig
-    vector_store: ComponentConfig
+    vector_store: Optional[ComponentConfig] = None  # Optional in Phase 2 unified architecture
     retriever: ComponentConfig
     answer_generator: ComponentConfig
     

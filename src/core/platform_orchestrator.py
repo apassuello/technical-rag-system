@@ -59,6 +59,9 @@ class PlatformOrchestrator:
         self._components: Dict[str, Any] = {}
         self._initialized = False
         
+        # Phase 2: Track architecture type for compatibility
+        self._using_unified_retriever = False
+        
         # Initialize system
         self._initialize_system()
         
@@ -66,10 +69,10 @@ class PlatformOrchestrator:
     
     def _initialize_system(self) -> None:
         """
-        Initialize all system components using existing implementations.
+        Initialize all system components with Phase 2 unified retriever support.
         
-        During Phase 1, this method uses the ComponentRegistry to create
-        components, maintaining full backward compatibility.
+        This method supports both Phase 1 (registry-based) and Phase 2 (unified)
+        architectures for seamless migration and backward compatibility.
         """
         logger.info("Initializing RAG system components...")
         
@@ -90,23 +93,42 @@ class PlatformOrchestrator:
             )
             logger.debug(f"Embedder initialized: {emb_config.type}")
             
-            # Create vector store using existing registry
-            vs_config = self.config.vector_store
-            self._components['vector_store'] = ComponentRegistry.create_vector_store(
-                vs_config.type,
-                **vs_config.config
-            )
-            logger.debug(f"Vector store initialized: {vs_config.type}")
-            
-            # Create retriever using existing registry
+            # Phase 2: Check if unified retriever is configured
             ret_config = self.config.retriever
-            self._components['retriever'] = ComponentRegistry.create_retriever(
-                ret_config.type,
-                vector_store=self._components['vector_store'],
-                embedder=self._components['embedder'],
-                **ret_config.config
-            )
-            logger.debug(f"Retriever initialized: {ret_config.type}")
+            if ret_config.type == "unified":
+                # Phase 2: Use unified retriever (no separate vector store needed)
+                self._components['retriever'] = ComponentRegistry.create_retriever(
+                    ret_config.type,
+                    embedder=self._components['embedder'],
+                    **ret_config.config
+                )
+                logger.info(f"Phase 2: Unified retriever initialized: {ret_config.type}")
+                
+                # Mark that we're using unified architecture
+                self._using_unified_retriever = True
+                
+            else:
+                # Phase 1: Legacy architecture with separate vector store and retriever
+                vs_config = self.config.vector_store
+                if vs_config is None:
+                    raise RuntimeError("Legacy architecture requires vector_store configuration")
+                
+                self._components['vector_store'] = ComponentRegistry.create_vector_store(
+                    vs_config.type,
+                    **vs_config.config
+                )
+                logger.debug(f"Vector store initialized: {vs_config.type}")
+                
+                self._components['retriever'] = ComponentRegistry.create_retriever(
+                    ret_config.type,
+                    vector_store=self._components['vector_store'],
+                    embedder=self._components['embedder'],
+                    **ret_config.config
+                )
+                logger.debug(f"Retriever initialized: {ret_config.type}")
+                
+                # Mark that we're using legacy architecture
+                self._using_unified_retriever = False
             
             # Create answer generator using existing registry
             gen_config = self.config.answer_generator
@@ -173,14 +195,23 @@ class PlatformOrchestrator:
             for doc, embedding in zip(documents, embeddings):
                 doc.embedding = embedding
             
-            # Store in vector store using existing component
-            vector_store = self._components['vector_store']
-            vector_store.add(documents)
-            
-            # Also index in retriever if it supports it
+            # Phase 2: Handle unified vs legacy architecture
             retriever = self._components['retriever']
-            if hasattr(retriever, 'index_documents'):
+            
+            if self._using_unified_retriever:
+                # Phase 2: Direct indexing in unified retriever
                 retriever.index_documents(documents)
+                logger.debug(f"Indexed documents in unified retriever")
+            else:
+                # Phase 1: Legacy architecture - store in vector store first
+                vector_store = self._components['vector_store']
+                vector_store.add(documents)
+                
+                # Then index in retriever if it supports it
+                if hasattr(retriever, 'index_documents'):
+                    retriever.index_documents(documents)
+                
+                logger.debug(f"Indexed documents in legacy vector store + retriever")
             
             logger.info(f"Successfully indexed {len(documents)} chunks from {file_path}")
             return len(documents)
@@ -308,7 +339,9 @@ class PlatformOrchestrator:
             Dictionary with system health metrics and component status
         """
         health = {
+            "status": "healthy" if self._initialized else "unhealthy",
             "initialized": self._initialized,
+            "architecture": "unified" if self._using_unified_retriever else "legacy",
             "config_path": str(self.config_path),
             "components": {},
             "platform": self.config.global_settings.get("platform", {})
