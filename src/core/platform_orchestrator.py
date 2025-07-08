@@ -2,8 +2,8 @@
 Platform Orchestrator - System lifecycle and platform integration.
 
 This component manages the system lifecycle, component initialization,
-and platform-specific adaptations while maintaining backward compatibility.
-It reuses all existing component implementations through the ComponentRegistry.
+and platform-specific adaptations with factory-based architecture.
+It uses ComponentFactory for direct component instantiation with optimal performance.
 """
 
 import logging
@@ -347,10 +347,12 @@ class PlatformOrchestrator:
             "platform": self.config.global_settings.get("platform", {})
         }
         
-        # Add factory information for Phase 3
+        # Phase 4: Enhanced factory and performance monitoring
         try:
             from .component_factory import ComponentFactory
             health["factory_info"] = ComponentFactory.get_available_components()
+            health["performance_metrics"] = ComponentFactory.get_performance_metrics()
+            health["cache_stats"] = ComponentFactory.get_cache_stats()
         except ImportError:
             pass  # Factory not available
         
@@ -360,9 +362,15 @@ class PlatformOrchestrator:
                 component_info = {
                     "type": type(component).__name__,
                     "module": type(component).__module__,
-                    "healthy": True,  # Basic health check
-                    "factory_managed": True  # Phase 3: All components now factory-managed
+                    "healthy": True,  # Will be updated by health checks
+                    "factory_managed": True,  # Phase 3: All components now factory-managed
+                    "created_at": getattr(component, '_created_at', None),
+                    "last_used": getattr(component, '_last_used', None),
+                    "health_checks": {}
                 }
+                
+                # Phase 4: Enhanced component health validation
+                component_info["healthy"] = self._validate_component_health(component, component_info["health_checks"])
                 
                 # Add component-specific health info if available
                 if hasattr(component, 'get_stats'):
@@ -378,7 +386,234 @@ class PlatformOrchestrator:
                 
                 health["components"][name] = component_info
         
+        # Phase 4: Add deployment readiness check
+        health["deployment_readiness"] = self._check_deployment_readiness()
+        
         return health
+    
+    def _validate_component_health(self, component: Any, health_checks: Dict[str, Any]) -> bool:
+        """
+        Validate component health with comprehensive checks.
+        
+        Args:
+            component: Component to validate
+            health_checks: Dictionary to store health check results
+            
+        Returns:
+            True if component is healthy, False otherwise
+        """
+        overall_healthy = True
+        
+        # Check 1: Required methods exist
+        required_methods = {
+            "DocumentProcessor": ["process"],
+            "Embedder": ["embed", "embedding_dim"],
+            "VectorStore": ["add", "search"],
+            "Retriever": ["retrieve"],
+            "AnswerGenerator": ["generate"]
+        }
+        
+        component_type = type(component).__name__
+        if component_type in required_methods:
+            missing_methods = []
+            for method in required_methods[component_type]:
+                if not hasattr(component, method):
+                    missing_methods.append(method)
+                    overall_healthy = False
+            
+            health_checks["required_methods"] = {
+                "passed": len(missing_methods) == 0,
+                "missing": missing_methods
+            }
+        
+        # Check 2: Component-specific health validation
+        if hasattr(component, 'health_check'):
+            try:
+                component_health = component.health_check()
+                health_checks["component_specific"] = {
+                    "passed": component_health.get("healthy", True),
+                    "details": component_health
+                }
+                if not component_health.get("healthy", True):
+                    overall_healthy = False
+            except Exception as e:
+                health_checks["component_specific"] = {
+                    "passed": False,
+                    "error": str(e)
+                }
+                overall_healthy = False
+        
+        # Check 3: Memory usage validation (if available)
+        try:
+            import psutil
+            import os
+            process = psutil.Process(os.getpid())
+            memory_mb = process.memory_info().rss / 1024 / 1024
+            health_checks["memory"] = {
+                "current_mb": round(memory_mb, 1),
+                "within_limits": memory_mb < 2048  # 2GB limit
+            }
+            if memory_mb > 2048:
+                overall_healthy = False
+        except ImportError:
+            health_checks["memory"] = {"available": False}
+        
+        # Check 4: Configuration validation
+        if hasattr(component, 'get_configuration'):
+            try:
+                config = component.get_configuration()
+                health_checks["configuration"] = {
+                    "passed": isinstance(config, dict),
+                    "config_size": len(config) if isinstance(config, dict) else 0
+                }
+            except Exception as e:
+                health_checks["configuration"] = {
+                    "passed": False,
+                    "error": str(e)
+                }
+                overall_healthy = False
+        
+        return overall_healthy
+    
+    def _check_deployment_readiness(self) -> Dict[str, Any]:
+        """
+        Check system readiness for cloud deployment.
+        
+        Returns:
+            Dictionary with deployment readiness assessment
+        """
+        readiness = {
+            "ready": True,
+            "score": 100,
+            "checks": {},
+            "recommendations": []
+        }
+        
+        # Check 1: All components initialized
+        if not self._initialized:
+            readiness["ready"] = False
+            readiness["score"] -= 50
+            readiness["checks"]["initialization"] = {
+                "passed": False,
+                "message": "System not initialized"
+            }
+        else:
+            readiness["checks"]["initialization"] = {
+                "passed": True,
+                "message": "System fully initialized"
+            }
+        
+        # Check 2: Memory usage within limits
+        try:
+            import psutil
+            import os
+            process = psutil.Process(os.getpid())
+            memory_mb = process.memory_info().rss / 1024 / 1024
+            
+            if memory_mb > 1024:  # 1GB warning threshold
+                readiness["score"] -= 20
+                readiness["recommendations"].append("Memory usage high - consider optimization")
+            
+            readiness["checks"]["memory"] = {
+                "passed": memory_mb < 2048,  # 2GB hard limit
+                "current_mb": round(memory_mb, 1),
+                "limit_mb": 2048
+            }
+            
+            if memory_mb >= 2048:
+                readiness["ready"] = False
+                readiness["score"] -= 30
+                
+        except ImportError:
+            readiness["checks"]["memory"] = {
+                "passed": False,
+                "message": "Memory monitoring not available"
+            }
+            readiness["score"] -= 10
+        
+        # Check 3: Configuration validation
+        try:
+            errors = self.validate_configuration()
+            if errors:
+                readiness["ready"] = False
+                readiness["score"] -= 40
+                readiness["checks"]["configuration"] = {
+                    "passed": False,
+                    "errors": errors
+                }
+            else:
+                readiness["checks"]["configuration"] = {
+                    "passed": True,
+                    "message": "Configuration valid"
+                }
+        except Exception as e:
+            readiness["ready"] = False
+            readiness["score"] -= 40
+            readiness["checks"]["configuration"] = {
+                "passed": False,
+                "error": str(e)
+            }
+        
+        # Check 4: Performance metrics
+        try:
+            from .component_factory import ComponentFactory
+            metrics = ComponentFactory.get_performance_metrics()
+            cache_stats = ComponentFactory.get_cache_stats()
+            
+            # Check if we have reasonable performance
+            slow_components = []
+            for comp_type, stats in metrics.items():
+                if stats.get("average_time", 0) > 5.0:  # 5 second threshold
+                    slow_components.append(comp_type)
+            
+            if slow_components:
+                readiness["score"] -= 15
+                readiness["recommendations"].append(f"Slow components detected: {slow_components}")
+            
+            readiness["checks"]["performance"] = {
+                "passed": len(slow_components) == 0,
+                "metrics": {
+                    "tracked_components": len(metrics),
+                    "cache_usage": f"{cache_stats['cache_size']}/{cache_stats['max_size']}",
+                    "slow_components": slow_components
+                }
+            }
+            
+        except ImportError:
+            readiness["checks"]["performance"] = {
+                "passed": False,
+                "message": "Performance monitoring not available"
+            }
+            readiness["score"] -= 10
+        
+        # Check 5: Environment variables for production
+        prod_env_vars = ["RAG_ENV", "RAG_LOG_LEVEL"]
+        missing_env_vars = [var for var in prod_env_vars if not os.getenv(var)]
+        
+        if missing_env_vars:
+            readiness["score"] -= 5
+            readiness["recommendations"].append(f"Consider setting: {missing_env_vars}")
+        
+        readiness["checks"]["environment"] = {
+            "passed": len(missing_env_vars) == 0,
+            "missing_vars": missing_env_vars,
+            "current_env": self.config.global_settings.get("platform", "unknown")
+        }
+        
+        # Final score adjustment
+        readiness["score"] = max(0, readiness["score"])
+        
+        # Add readiness level
+        if readiness["score"] >= 90:
+            readiness["level"] = "production_ready"
+        elif readiness["score"] >= 70:
+            readiness["level"] = "staging_ready"
+        elif readiness["score"] >= 50:
+            readiness["level"] = "development_ready"
+        else:
+            readiness["level"] = "not_ready"
+        
+        return readiness
     
     def get_component(self, name: str) -> Optional[Any]:
         """

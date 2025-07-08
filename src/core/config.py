@@ -8,8 +8,11 @@ configuration inheritance, and ComponentFactory validation.
 
 from typing import Dict, Any, Optional, List
 import yaml
+import time
+import hashlib
 from pathlib import Path
 from pydantic import BaseModel, Field, field_validator, ConfigDict, model_validator
+from collections import OrderedDict
 import os
 
 
@@ -146,6 +149,11 @@ class ConfigManager:
         self.env = env or os.getenv('RAG_ENV', 'default')
         self._config: Optional[PipelineConfig] = None
         self._raw_config: Optional[Dict[str, Any]] = None
+        
+        # Phase 4: Configuration caching
+        self._config_cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        self._cache_max_size: int = 5  # Max cached configurations
+        self._file_timestamps: Dict[str, float] = {}  # Track file modifications
     
     def load(self) -> PipelineConfig:
         """Load and validate configuration.
@@ -176,7 +184,7 @@ class ConfigManager:
         return self._get_default_config()
     
     def _load_from_file(self, path: Path) -> PipelineConfig:
-        """Load configuration from YAML file.
+        """Load configuration from YAML file with caching.
         
         Args:
             path: Path to YAML file
@@ -184,10 +192,23 @@ class ConfigManager:
         Returns:
             Validated configuration
         """
+        # Phase 4: Check cache first
+        cache_key = self._get_cache_key(path)
+        if self._is_cache_valid(path, cache_key):
+            cached_data = self._config_cache[cache_key]
+            self._raw_config = cached_data.copy()
+            # Apply environment variable overrides (not cached due to dynamic nature)
+            data = self._apply_env_overrides(cached_data.copy())
+            return PipelineConfig(**data)
+        
+        # Load from file
         with open(path, 'r') as f:
             data = yaml.safe_load(f)
         
         self._raw_config = data
+        
+        # Cache the raw data
+        self._add_to_cache(path, cache_key, data.copy())
         
         # Apply environment variable overrides
         data = self._apply_env_overrides(data)
@@ -309,6 +330,71 @@ class ConfigManager:
         
         with open(path, 'w') as f:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
+    
+    def _get_cache_key(self, file_path: Path) -> str:
+        """Generate cache key for configuration file.
+        
+        Args:
+            file_path: Path to configuration file
+            
+        Returns:
+            Cache key string
+        """
+        key_material = f"{file_path}:{self.env}"
+        return hashlib.md5(key_material.encode()).hexdigest()[:16]
+    
+    def _is_cache_valid(self, file_path: Path, cache_key: str) -> bool:
+        """Check if cached configuration is still valid.
+        
+        Args:
+            file_path: Path to configuration file
+            cache_key: Cache key
+            
+        Returns:
+            True if cache is valid
+        """
+        if cache_key not in self._config_cache:
+            return False
+        
+        try:
+            current_mtime = file_path.stat().st_mtime
+            cached_mtime = self._file_timestamps.get(str(file_path), 0)
+            return current_mtime <= cached_mtime
+        except OSError:
+            return False
+    
+    def _add_to_cache(self, file_path: Path, cache_key: str, data: Dict[str, Any]) -> None:
+        """Add configuration to cache.
+        
+        Args:
+            file_path: Path to configuration file
+            cache_key: Cache key
+            data: Configuration data
+        """
+        # Remove oldest if at capacity
+        if len(self._config_cache) >= self._cache_max_size:
+            oldest_key = next(iter(self._config_cache))
+            del self._config_cache[oldest_key]
+        
+        self._config_cache[cache_key] = data
+        self._file_timestamps[str(file_path)] = file_path.stat().st_mtime
+    
+    def clear_cache(self) -> None:
+        """Clear configuration cache."""
+        self._config_cache.clear()
+        self._file_timestamps.clear()
+    
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get configuration cache statistics.
+        
+        Returns:
+            Dictionary with cache statistics
+        """
+        return {
+            "cache_size": len(self._config_cache),
+            "max_size": self._cache_max_size,
+            "cached_files": list(self._file_timestamps.keys())
+        }
     
     def get_component_config(self, component_name: str) -> ComponentConfig:
         """Get configuration for a specific component.

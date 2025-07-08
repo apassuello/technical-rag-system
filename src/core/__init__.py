@@ -11,18 +11,10 @@ from .interfaces import (
     AnswerGenerator
 )
 
-from .registry import (
-    ComponentRegistry,
-    register_component,
-    get_available_components
-)
-
-# New architecture components
+# Phase 4: Clean architecture components
 from .platform_orchestrator import PlatformOrchestrator
 from .query_processor import QueryProcessor
-
-# Legacy compatibility
-from .pipeline import RAGPipeline
+from .component_factory import ComponentFactory
 
 __all__ = [
     # Data types
@@ -35,13 +27,8 @@ __all__ = [
     'VectorStore',
     'Retriever',
     'AnswerGenerator',
-    # Registry (Phase 1 - will be removed in Phase 4)
-    'ComponentRegistry',
-    'register_component',
-    'get_available_components',
-    # New architecture
+    # Phase 4: Clean architecture
     'PlatformOrchestrator',
     'QueryProcessor',
-    # Legacy compatibility
-    'RAGPipeline'
+    'ComponentFactory'
 ]

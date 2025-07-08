@@ -7,8 +7,11 @@ It supports both legacy and unified architectures with type-safe component creat
 """
 
 import logging
+import time
+import hashlib
 from typing import Dict, Type, Any, Optional, Union
 from pathlib import Path
+from collections import defaultdict, OrderedDict
 
 from .interfaces import (
     DocumentProcessor, 
@@ -78,6 +81,164 @@ class ComponentFactory:
         "adaptive_generator": AdaptiveAnswerGenerator,  # Alias for compatibility
     }
     
+    # Phase 4: Performance monitoring and caching
+    _performance_metrics: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+        "creation_count": 0,
+        "total_time": 0.0,
+        "average_time": 0.0,
+        "min_time": float('inf'),
+        "max_time": 0.0,
+        "last_created": None
+    })
+    
+    # Component cache for reusable instances (LRU with max size)
+    _component_cache: OrderedDict[str, Any] = OrderedDict()
+    _cache_max_size: int = 10  # Max cached components
+    _cacheable_types = {"embedder"}  # Only cache expensive components
+    
+    @classmethod
+    def get_performance_metrics(cls) -> Dict[str, Dict[str, Any]]:
+        """
+        Get performance metrics for component creation.
+        
+        Returns:
+            Dictionary with creation metrics by component type
+        """
+        return dict(cls._performance_metrics)
+    
+    @classmethod
+    def reset_performance_metrics(cls) -> None:
+        """Reset all performance metrics."""
+        cls._performance_metrics.clear()
+    
+    @classmethod
+    def get_cache_stats(cls) -> Dict[str, Any]:
+        """
+        Get component cache statistics.
+        
+        Returns:
+            Dictionary with cache size, hit rate, etc.
+        """
+        return {
+            "cache_size": len(cls._component_cache),
+            "max_size": cls._cache_max_size,
+            "cached_components": list(cls._component_cache.keys()),
+            "cacheable_types": cls._cacheable_types
+        }
+    
+    @classmethod
+    def clear_cache(cls) -> None:
+        """Clear the component cache."""
+        cls._component_cache.clear()
+    
+    @classmethod
+    def _get_cache_key(cls, component_type: str, **kwargs) -> str:
+        """
+        Generate cache key for component configuration.
+        
+        Args:
+            component_type: Type of component
+            **kwargs: Component configuration
+            
+        Returns:
+            Cache key string
+        """
+        # Create deterministic key from component type and config
+        config_str = str(sorted(kwargs.items()))
+        key_material = f"{component_type}:{config_str}"
+        return hashlib.md5(key_material.encode()).hexdigest()[:16]
+    
+    @classmethod
+    def _get_from_cache(cls, cache_key: str) -> Optional[Any]:
+        """
+        Get component from cache (LRU update).
+        
+        Args:
+            cache_key: Cache key
+            
+        Returns:
+            Cached component or None
+        """
+        if cache_key in cls._component_cache:
+            # Move to end (most recently used)
+            component = cls._component_cache.pop(cache_key)
+            cls._component_cache[cache_key] = component
+            return component
+        return None
+    
+    @classmethod
+    def _add_to_cache(cls, cache_key: str, component: Any) -> None:
+        """
+        Add component to cache with LRU eviction.
+        
+        Args:
+            cache_key: Cache key
+            component: Component to cache
+        """
+        # Remove oldest if at capacity
+        if len(cls._component_cache) >= cls._cache_max_size:
+            cls._component_cache.popitem(last=False)  # Remove oldest
+        
+        cls._component_cache[cache_key] = component
+    
+    @classmethod
+    def _track_performance(cls, component_type: str, creation_time: float) -> None:
+        """
+        Track performance metrics for component creation.
+        
+        Args:
+            component_type: Type of component created
+            creation_time: Time taken to create component in seconds
+        """
+        metrics = cls._performance_metrics[component_type]
+        metrics["creation_count"] += 1
+        metrics["total_time"] += creation_time
+        metrics["average_time"] = metrics["total_time"] / metrics["creation_count"]
+        metrics["min_time"] = min(metrics["min_time"], creation_time)
+        metrics["max_time"] = max(metrics["max_time"], creation_time)
+        metrics["last_created"] = time.time()
+    
+    @classmethod
+    def _create_with_tracking(cls, component_class: Type, component_type: str, use_cache: bool = False, **kwargs) -> Any:
+        """
+        Create component with performance tracking and optional caching.
+        
+        Args:
+            component_class: Class to instantiate
+            component_type: Type identifier for tracking
+            use_cache: Whether to use component caching
+            **kwargs: Constructor arguments
+            
+        Returns:
+            Instantiated component
+        """
+        # Check cache first if caching is enabled
+        cache_key = None
+        if use_cache:
+            cache_key = cls._get_cache_key(component_type, **kwargs)
+            cached_component = cls._get_from_cache(cache_key)
+            if cached_component is not None:
+                logger.debug(f"Cache hit for {component_type}")
+                cls._track_performance(f"{component_type}_cached", 0.0)
+                return cached_component
+        
+        start_time = time.time()
+        try:
+            logger.debug(f"Creating {component_type} with args: {kwargs}")
+            component = component_class(**kwargs)
+            creation_time = time.time() - start_time
+            
+            # Add to cache if caching is enabled
+            if use_cache and cache_key:
+                cls._add_to_cache(cache_key, component)
+            
+            cls._track_performance(component_type, creation_time)
+            return component
+        except Exception as e:
+            creation_time = time.time() - start_time
+            cls._track_performance(f"{component_type}_failed", creation_time)
+            raise
+    
     @classmethod
     def create_processor(cls, processor_type: str, **kwargs) -> DocumentProcessor:
         """
@@ -104,8 +265,11 @@ class ComponentFactory:
         processor_class = cls._PROCESSORS[processor_type]
         
         try:
-            logger.debug(f"Creating {processor_type} processor with args: {kwargs}")
-            return processor_class(**kwargs)
+            return cls._create_with_tracking(
+                processor_class, 
+                f"processor_{processor_type}", 
+                **kwargs
+            )
         except Exception as e:
             raise TypeError(
                 f"Failed to create processor '{processor_type}': {e}. "
@@ -138,8 +302,13 @@ class ComponentFactory:
         embedder_class = cls._EMBEDDERS[embedder_type]
         
         try:
-            logger.debug(f"Creating {embedder_type} embedder with args: {kwargs}")
-            return embedder_class(**kwargs)
+            # Use caching for embedders (expensive to create)
+            return cls._create_with_tracking(
+                embedder_class, 
+                f"embedder_{embedder_type}", 
+                use_cache=True,  # Enable caching for embedders
+                **kwargs
+            )
         except Exception as e:
             raise TypeError(
                 f"Failed to create embedder '{embedder_type}': {e}. "
