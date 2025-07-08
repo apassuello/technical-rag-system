@@ -145,7 +145,7 @@ class ConfigurationForensics(DiagnosticTestBase):
             "existing_config_files": sum(1 for f in data_captured["config_files_analysis"].values() if f["exists"]),
             "parsing_success_rate": sum(1 for f in data_captured["config_files_analysis"].values() 
                                       if f.get("parsing_success", False)) / len(self.config_files),
-            "architecture_consistency": self._analyze_architecture_consistency(data_captured["config_files_analysis"])
+            "architecture_consistency": self._analyze_architecture_config_logic(data_captured["config_files_analysis"])
         }
         
         # Generate recommendations

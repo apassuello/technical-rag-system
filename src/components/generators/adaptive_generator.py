@@ -219,11 +219,16 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         chunks = []
         for i, doc in enumerate(documents):
             chunk = {
-                "text": doc.content,
+                "id": f"chunk_{i+1}",
+                "content": doc.content,  # Use "content" not "text" for Ollama generator
+                "text": doc.content,    # Keep "text" for backward compatibility
                 "chunk_id": i,
-                "source": doc.metadata.get("source", "unknown"),
-                "page": doc.metadata.get("start_page", 1),
-                **doc.metadata
+                "score": 1.0,  # Default relevance score
+                "metadata": {
+                    "source": doc.metadata.get("source", "unknown"),
+                    "page_number": doc.metadata.get("start_page", 1),
+                    **doc.metadata
+                }
             }
             chunks.append(chunk)
         return chunks
