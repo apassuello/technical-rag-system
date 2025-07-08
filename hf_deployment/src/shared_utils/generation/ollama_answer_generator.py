@@ -382,7 +382,7 @@ Answer:"""
 
         Args:
             query: User's question
-            chunks: Retrieved document chunks
+            chunks: Retrieved document chunks (as dictionaries)
 
         Returns:
             GeneratedAnswer object with answer, citations, and metadata
@@ -402,7 +402,7 @@ Answer:"""
                 context_used=chunks,
             )
 
-        # Format context
+        # Format context - chunks are already in dictionary format
         context = self._format_context(chunks)
 
         # Create prompt

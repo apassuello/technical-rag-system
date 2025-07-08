@@ -151,16 +151,23 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             raise ValueError("Context documents cannot be empty")
         
         try:
-            # Convert context documents to the format expected by generators
-            context_chunks = self._documents_to_chunks(context)
-            
             # Generate answer using adaptive prompts if enabled
             if self.enable_adaptive_prompts and self.adaptive_engine:
-                response = self._generate_with_adaptive_prompts(query, context_chunks)
+                # For adaptive prompts, may still need chunks for analysis
+                context_chunks = self._documents_to_chunks(context)
+                response = self._generate_with_adaptive_prompts(query, context, context_chunks)
             else:
-                response = self._generate_standard(query, context_chunks)
+                # Use standard interface directly
+                response = self._generate_standard(query, context)
             
-            # Extract answer information
+            # If response is already an Answer object, enhance it with adapter metadata
+            if isinstance(response, Answer):
+                if not response.metadata:
+                    response.metadata = {}
+                response.metadata.update(self._get_adapter_metadata(query))
+                return response
+            
+            # Legacy path: Extract answer information from dict response
             answer_text = self._extract_answer_text(response)
             confidence = self._extract_confidence(response)
             metadata = self._extract_metadata(response, query)
@@ -233,16 +240,17 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             chunks.append(chunk)
         return chunks
     
-    def _generate_with_adaptive_prompts(self, query: str, chunks: List[Dict]) -> Dict:
+    def _generate_with_adaptive_prompts(self, query: str, context: List[Document], chunks: List[Dict]) -> Answer:
         """
         Generate answer using adaptive prompts.
         
         Args:
             query: User query
-            chunks: Context chunks
+            context: Context documents
+            chunks: Context chunks for analysis
             
         Returns:
-            Generation response dictionary
+            Generated Answer object
         """
         # Analyze context quality for adaptive prompting
         context_quality = self._analyze_context_quality(chunks)
@@ -254,35 +262,82 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             quality_score=context_quality
         )
         
-        # Generate with custom prompt
+        # Generate with custom prompt if available
         if hasattr(self.generator, 'generate_with_custom_prompt'):
+            # Convert back to chunks for custom prompt generation
             response = self.generator.generate_with_custom_prompt(
                 query=query,
-                context_chunks=chunks,
+                chunks=chunks,
                 custom_prompt=prompt_info["prompt"]
             )
+            # Convert response to Answer if needed
+            if isinstance(response, Answer):
+                response.metadata["adaptive_prompt_info"] = prompt_info
+                return response
+            elif hasattr(response, 'answer'):  # GeneratedAnswer object
+                return Answer(
+                    text=response.answer,
+                    sources=context,
+                    confidence=response.confidence_score,
+                    metadata={
+                        **self._get_adapter_metadata(query),
+                        "model_used": getattr(response, 'model_used', self.model_name),
+                        "generation_time": getattr(response, 'generation_time', 0.0),
+                        "provider": self._get_provider_name(),
+                        "adaptive_prompt_info": prompt_info
+                    }
+                )
+            else:
+                return Answer(
+                    text=self._extract_answer_text(response),
+                    sources=context,
+                    confidence=self._extract_confidence(response),
+                    metadata={
+                        **self._extract_metadata(response, query),
+                        "adaptive_prompt_info": prompt_info
+                    }
+                )
         else:
             # Fallback to standard generation
-            response = self.generator.generate(query, chunks)
-        
-        # Add adaptive prompt metadata
-        if isinstance(response, dict):
-            response["adaptive_prompt_info"] = prompt_info
-        
-        return response
+            return self._generate_standard(query, context)
     
-    def _generate_standard(self, query: str, chunks: List[Dict]) -> Dict:
+    def _generate_standard(self, query: str, context_docs: List[Document]) -> Answer:
         """
         Generate answer using standard prompts.
         
         Args:
             query: User query
-            chunks: Context chunks
+            context_docs: Context documents
             
         Returns:
-            Generation response dictionary
+            Generated Answer object
         """
-        return self.generator.generate(query, chunks)
+        # Generate using the underlying generator with Documents (adapter pattern)
+        response = self.generator.generate(query, context_docs)
+        
+        # Convert response to Answer object if needed
+        if isinstance(response, Answer):
+            return response
+        elif hasattr(response, 'answer'):  # GeneratedAnswer object
+            return Answer(
+                text=response.answer,
+                sources=context_docs,
+                confidence=response.confidence_score,
+                metadata={
+                    **self._get_adapter_metadata(query),
+                    "model_used": getattr(response, 'model_used', self.model_name),
+                    "generation_time": getattr(response, 'generation_time', 0.0),
+                    "provider": self._get_provider_name()
+                }
+            )
+        else:
+            # Fallback for other response types
+            return Answer(
+                text=str(response),
+                sources=context_docs,
+                confidence=0.8,
+                metadata=self._get_adapter_metadata(query)
+            )
     
     def _analyze_context_quality(self, chunks: List[Dict]) -> float:
         """
@@ -357,6 +412,17 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             return "inference_providers"
         else:
             return "huggingface"
+    
+    def _get_adapter_metadata(self, query: str) -> Dict[str, Any]:
+        """Get metadata about the adapter configuration."""
+        return {
+            "adaptive_generator_version": "2.0",
+            "provider": self._get_provider_name(),
+            "adaptive_prompts_enabled": self.enable_adaptive_prompts,
+            "chain_of_thought_enabled": self.enable_chain_of_thought,
+            "query_length": len(query),
+            "adapter_pattern": "unified_interface"
+        }
     
     def get_generator_info(self) -> Dict[str, Any]:
         """
