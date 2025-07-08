@@ -255,6 +255,70 @@ class PlatformOrchestrator:
         
         return results
     
+    def index_documents(self, documents: List[Document]) -> int:
+        """
+        Directly index pre-created Document objects into the retrieval system.
+        
+        This method allows bypassing file processing when you already have
+        Document objects (e.g., from testing, external processing, etc.).
+        
+        Args:
+            documents: List of Document objects to index
+            
+        Returns:
+            Number of documents successfully indexed
+            
+        Raises:
+            RuntimeError: If system not initialized or indexing fails
+        """
+        if not self._initialized:
+            raise RuntimeError("System not initialized")
+        
+        if not documents:
+            logger.warning("No documents provided for indexing")
+            return 0
+        
+        logger.info(f"Indexing {len(documents)} pre-created documents...")
+        
+        try:
+            # Generate embeddings for documents that don't have them
+            embedder = self._components['embedder']
+            documents_needing_embeddings = [doc for doc in documents if doc.embedding is None]
+            
+            if documents_needing_embeddings:
+                logger.debug(f"Generating embeddings for {len(documents_needing_embeddings)} documents")
+                texts = [doc.content for doc in documents_needing_embeddings]
+                embeddings = embedder.embed(texts)
+                
+                # Add embeddings to documents
+                for doc, embedding in zip(documents_needing_embeddings, embeddings):
+                    doc.embedding = embedding
+            
+            # Index documents based on architecture
+            retriever = self._components['retriever']
+            
+            if self._using_unified_retriever:
+                # Phase 4: Direct indexing in unified retriever
+                retriever.index_documents(documents)
+                logger.debug(f"Indexed documents in unified retriever")
+            else:
+                # Legacy architecture - store in vector store first
+                vector_store = self._components['vector_store']
+                vector_store.add(documents)
+                
+                # Then index in retriever if it supports it
+                if hasattr(retriever, 'index_documents'):
+                    retriever.index_documents(documents)
+                
+                logger.debug(f"Indexed documents in legacy vector store + retriever")
+            
+            logger.info(f"Successfully indexed {len(documents)} documents")
+            return len(documents)
+            
+        except Exception as e:
+            logger.error(f"Failed to index documents: {str(e)}")
+            raise RuntimeError(f"Document indexing failed: {str(e)}") from e
+    
     def process_query(self, query: str, k: int = 5) -> Answer:
         """
         Process a query and return an answer.

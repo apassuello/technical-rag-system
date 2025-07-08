@@ -180,7 +180,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         if self.use_ollama and OllamaAnswerGenerator:
             self.generator = OllamaAnswerGenerator(
                 model_name=self.model_name,
-                ollama_url=self.ollama_url,
+                base_url=self.ollama_url,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens
             )
