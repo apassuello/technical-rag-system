@@ -841,4 +841,133 @@ claude code
 # "Provide final portfolio readiness assessment and demonstration suitability"
 ```
 
-This comprehensive guide enables thorough manual analysis of all generated data using Claude Code, ensuring complete validation of the RAG system's performance, quality, and portfolio readiness.
+## 🔍 Citation Validation Framework
+
+### Overview
+The comprehensive testing framework now includes advanced citation validation to detect and prevent LLM hallucination of non-existent chunk references. This ensures answer quality and prevents invalid citations from being overlooked.
+
+### Citation Validation Features
+
+#### 1. **Automatic Citation Detection**
+- **Pattern Recognition**: Uses regex `\[chunk_\d+\]` to identify all citations in answer text
+- **Unique Counting**: Counts only unique citations to avoid duplicates
+- **Validation Logic**: Compares cited chunk numbers against actually retrieved chunks
+
+#### 2. **Failure Criteria Implementation**
+Citation validation is now integrated as a **failure criterion** in all test suites:
+
+**Test Suite 1 (System Validation)**:
+- Invalid citations cause `overall_success = False`
+- Added to quality checks as `citations_valid`
+- Triggers full answer display with detailed failure message
+
+**Test Suite 2 (Integration Testing)**:
+- Invalid citations trigger full answer display
+- Clear distinction between citation failures and fallback detection
+- Comprehensive failure messaging
+
+**Test Suite 3 (Component Testing)**:
+- Invalid citations trigger full answer display
+- Integrated with existing fallback detection
+- Detailed citation failure analysis
+
+#### 3. **Enhanced Test Output**
+
+**Valid Citations Example**:
+```
+📊 Retrieved chunks: 2, Cited sources: 2
+📋 Citations found: ['[chunk_1]', '[chunk_2]']
+✅ Citation validation: All citations valid
+📝 Answer preview: RISC-V is an open-source instruction set architecture...
+```
+
+**Invalid Citations Example**:
+```
+📊 Retrieved chunks: 2, Cited sources: 7
+📋 Citations found: ['[chunk_1]', '[chunk_2]', '[chunk_3]', '[chunk_4]', '[chunk_5]', '[chunk_6]', '[chunk_7]']
+⚠️ CITATION VALIDATION: INVALID: Found citations to chunks [3, 4, 5, 6, 7] but only 2 chunks retrieved
+⚠️ INVALID CITATIONS - Showing full answer:
+💥 CITATION FAILURE: INVALID: Found citations to chunks [3, 4, 5, 6, 7] but only 2 chunks retrieved
+📝 Full Answer: [Complete answer text for analysis]
+```
+
+### Citation Analysis Procedures
+
+#### Step 1: Identify Citation Issues
+```
+When reviewing test results, look for:
+1. ⚠️ CITATION VALIDATION messages
+2. Mismatch between "Retrieved chunks" and "Cited sources" counts
+3. Citations to chunk numbers > retrieved chunks count
+4. Full answer displays triggered by citation failures
+```
+
+#### Step 2: Analyze Citation Patterns
+```
+For invalid citations, examine:
+1. Which specific chunks are being hallucinated
+2. Whether citation numbers are sequential or random
+3. If certain queries trigger more hallucinations
+4. Whether the issue is consistent across different test runs
+```
+
+#### Step 3: Root Cause Analysis
+```
+Citation hallucination typically indicates:
+1. **Prompt Engineering Issues**: LLM examples include more chunks than available
+2. **Model Behavior**: LLM generates plausible-looking but non-existent citations
+3. **Context Confusion**: Model doesn't track actual chunk availability
+4. **Template Problems**: Answer generation templates suggest more chunks exist
+```
+
+#### Step 4: Validation Metrics
+```
+Use these metrics to assess citation quality:
+- **Citation Validity Rate**: Percentage of queries with valid citations only
+- **Hallucination Rate**: Percentage of queries citing non-existent chunks
+- **Max Citation Spread**: Highest chunk number cited vs. available chunks
+- **Consistency Score**: Whether citation behavior is consistent across queries
+```
+
+### Implementation Details
+
+The citation validation framework includes:
+
+```python
+def _count_actual_citations(self, answer) -> int:
+    """Count actual chunk citations in answer text."""
+    import re
+    pattern = r'\[chunk_\d+\]'
+    citations = re.findall(pattern, answer.text)
+    return len(set(citations))  # Count unique citations
+
+def _validate_citations(self, answer, retrieved_chunks_count) -> Dict[str, Any]:
+    """Validate that citations don't exceed available chunks."""
+    import re
+    cited_chunks = re.findall(r'\[chunk_(\d+)\]', answer.text)
+    cited_numbers = [int(num) for num in cited_chunks]
+    
+    max_cited = max(cited_numbers) if cited_numbers else 0
+    invalid_citations = [num for num in cited_numbers if num > retrieved_chunks_count]
+    
+    return {
+        'total_citations': len(cited_numbers),
+        'unique_citations': len(set(cited_numbers)), 
+        'max_chunk_cited': max_cited,
+        'retrieved_chunks': retrieved_chunks_count,
+        'invalid_citations': invalid_citations,
+        'citation_valid': len(invalid_citations) == 0,
+        'validation_message': f"Citations valid: {len(invalid_citations) == 0}" if len(invalid_citations) == 0 else f"INVALID: Found citations to chunks {invalid_citations} but only {retrieved_chunks_count} chunks retrieved"
+    }
+```
+
+### Quality Assurance Impact
+
+This citation validation framework ensures:
+- **Professional Quality**: Prevents invalid citations from being overlooked
+- **Debugging Visibility**: Full answer display for citation failures enables thorough analysis
+- **Systematic Detection**: Automatic identification of LLM hallucination issues
+- **Quality Gates**: Citation validity now required for test success
+- **Swiss Market Standards**: Enterprise-grade validation suitable for professional demonstrations
+
+This comprehensive guide enables thorough manual analysis of all generated data using Claude Code, ensuring complete validation of the RAG system's performance, quality, and portfolio readiness with robust citation validation.

@@ -72,6 +72,32 @@ class SystemValidator:
         
         return False
     
+    def _count_actual_citations(self, answer) -> int:
+        """Count actual chunk citations in answer text."""
+        import re
+        pattern = r'\[chunk_\d+\]'
+        citations = re.findall(pattern, answer.text)
+        return len(set(citations))  # Count unique citations
+    
+    def _validate_citations(self, answer, retrieved_chunks_count) -> Dict[str, Any]:
+        """Validate that citations don't exceed available chunks."""
+        import re
+        cited_chunks = re.findall(r'\[chunk_(\d+)\]', answer.text)
+        cited_numbers = [int(num) for num in cited_chunks]
+        
+        max_cited = max(cited_numbers) if cited_numbers else 0
+        invalid_citations = [num for num in cited_numbers if num > retrieved_chunks_count]
+        
+        return {
+            'total_citations': len(cited_numbers),
+            'unique_citations': len(set(cited_numbers)), 
+            'max_chunk_cited': max_cited,
+            'retrieved_chunks': retrieved_chunks_count,
+            'invalid_citations': invalid_citations,
+            'citation_valid': len(invalid_citations) == 0,
+            'validation_message': f"Citations valid: {len(invalid_citations) == 0}" if len(invalid_citations) == 0 else f"INVALID: Found citations to chunks {invalid_citations} but only {retrieved_chunks_count} chunks retrieved"
+        }
+    
     def run_all_validations(self) -> Dict[str, Any]:
         """Run all validation tests and return comprehensive results."""
         print("=" * 80)
@@ -293,6 +319,10 @@ class SystemValidator:
                             for term in test['should_contain']
                         )
                     
+                    # Citation validation check
+                    citation_validation = self._validate_citations(answer, retrieved_chunks_count)
+                    citation_check = citation_validation['citation_valid']
+                    
                     result = {
                         'query': query,
                         'expected_type': test['expected_type'],
@@ -304,16 +334,33 @@ class SystemValidator:
                         'quality_checks': {
                             'length_adequate': length_check,
                             'confidence_appropriate': confidence_check,
-                            'content_relevant': content_check
+                            'content_relevant': content_check,
+                            'citations_valid': citation_check
                         },
-                        'overall_success': length_check and confidence_check and content_check
+                        'overall_success': length_check and confidence_check and content_check and citation_check
                     }
                     
                     query_results.append(result)
                     
                     status = "✅" if result['overall_success'] else "⚠️"
                     print(f"    {status} Length: {len(answer.text)}, Confidence: {answer.confidence:.3f}")
-                    print(f"    📊 Retrieved chunks: {retrieved_chunks_count}, Cited sources: {len(answer.sources)}")
+                    actual_citations_count = self._count_actual_citations(answer)
+                    print(f"    📊 Retrieved chunks: {retrieved_chunks_count}, Cited sources: {actual_citations_count}")
+                    
+                    # Show which chunks were cited
+                    import re
+                    cited_chunks = re.findall(r'\[chunk_\d+\]', answer.text)
+                    if cited_chunks:
+                        print(f"    📋 Citations found: {list(set(cited_chunks))}")
+                    else:
+                        print(f"    📋 Citations found: []")
+                    
+                    # Validate citations
+                    citation_validation = self._validate_citations(answer, retrieved_chunks_count)
+                    if not citation_validation['citation_valid']:
+                        print(f"    ⚠️ CITATION VALIDATION: {citation_validation['validation_message']}")
+                    else:
+                        print(f"    ✅ Citation validation: All citations valid")
                     
                     # Show full answer if test failed OR fallback was used
                     fallback_used = self._check_if_fallback_used(answer)
@@ -321,6 +368,9 @@ class SystemValidator:
                     if not result['overall_success'] or fallback_used:
                         if not result['overall_success']:
                             print(f"    ⚠️ TEST FAILED - Showing full answer:")
+                            # Show specific failure reasons
+                            if not citation_check:
+                                print(f"    💥 CITATION FAILURE: {citation_validation['validation_message']}")
                         if fallback_used:
                             print(f"    ⚠️ FALLBACK DETECTED - Showing full answer:")
                         print(f"    📝 Full Answer: {answer.text}")

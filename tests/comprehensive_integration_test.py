@@ -69,6 +69,32 @@ class ComprehensiveIntegrationTest:
         self.retrieval_results = []
         self.generation_results = []
     
+    def _count_actual_citations(self, answer) -> int:
+        """Count actual chunk citations in answer text."""
+        import re
+        pattern = r'\[chunk_\d+\]'
+        citations = re.findall(pattern, answer.text)
+        return len(set(citations))  # Count unique citations
+    
+    def _validate_citations(self, answer, retrieved_chunks_count) -> Dict[str, Any]:
+        """Validate that citations don't exceed available chunks."""
+        import re
+        cited_chunks = re.findall(r'\[chunk_(\d+)\]', answer.text)
+        cited_numbers = [int(num) for num in cited_chunks]
+        
+        max_cited = max(cited_numbers) if cited_numbers else 0
+        invalid_citations = [num for num in cited_numbers if num > retrieved_chunks_count]
+        
+        return {
+            'total_citations': len(cited_numbers),
+            'unique_citations': len(set(cited_numbers)), 
+            'max_chunk_cited': max_cited,
+            'retrieved_chunks': retrieved_chunks_count,
+            'invalid_citations': invalid_citations,
+            'citation_valid': len(invalid_citations) == 0,
+            'validation_message': f"Citations valid: {len(invalid_citations) == 0}" if len(invalid_citations) == 0 else f"INVALID: Found citations to chunks {invalid_citations} but only {retrieved_chunks_count} chunks retrieved"
+        }
+    
     def run_comprehensive_test(self) -> Dict[str, Any]:
         """
         Run comprehensive integration test with full data capture.
@@ -447,15 +473,37 @@ class ComprehensiveIntegrationTest:
             print(f"      ✅ Generated answer in {generation_time:.3f}s")
             print(f"      ✅ Answer length: {len(answer.text)} chars")
             print(f"      ✅ Confidence: {answer.confidence:.3f}")
-            print(f"      📊 Retrieved chunks: {retrieved_chunks_count}, Cited sources: {len(answer.sources)}")
+            actual_citations_count = self._count_actual_citations(answer)
+            print(f"      📊 Retrieved chunks: {retrieved_chunks_count}, Cited sources: {actual_citations_count}")
+            
+            # Show which chunks were cited
+            import re
+            cited_chunks = re.findall(r'\[chunk_\d+\]', answer.text)
+            if cited_chunks:
+                print(f"      📋 Citations found: {list(set(cited_chunks))}")
+            else:
+                print(f"      📋 Citations found: []")
+            
+            # Validate citations
+            citation_validation = self._validate_citations(answer, retrieved_chunks_count)
+            if not citation_validation['citation_valid']:
+                print(f"      ⚠️ CITATION VALIDATION: {citation_validation['validation_message']}")
+            else:
+                print(f"      ✅ Citation validation: All citations valid")
             
             # Check if fallback was used and show appropriate display
             fallback_used = self._check_if_fallback_used(answer)
+            citations_invalid = not citation_validation['citation_valid']
             
-            if fallback_used:
-                print(f"      ⚠️ FALLBACK DETECTED - Showing full answer:")
+            if fallback_used or citations_invalid:
+                if citations_invalid:
+                    print(f"      ⚠️ INVALID CITATIONS - Showing full answer:")
+                    print(f"      💥 CITATION FAILURE: {citation_validation['validation_message']}")
+                if fallback_used:
+                    print(f"      ⚠️ FALLBACK DETECTED - Showing full answer:")
                 print(f"      📝 Full Answer: {answer.text}")
-                print(f"      🔍 Fallback reason: {fallback_used}")
+                if fallback_used:
+                    print(f"      🔍 Fallback reason: {fallback_used}")
             else:
                 print(f"      📝 Answer preview: {answer.text[:200]}...")
                 if len(answer.text) > 200:
