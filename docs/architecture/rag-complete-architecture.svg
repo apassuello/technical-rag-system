@@ -1,0 +1,231 @@
+<svg viewBox="0 0 1600 1200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1600" height="1200" fill="#f5f7fa"/>
+  
+  <!-- Title -->
+  <text x="800" y="30" text-anchor="middle" font-size="26" font-weight="bold" fill="#1a202c">RAG System Complete Sub-Component Architecture</text>
+  <text x="800" y="55" text-anchor="middle" font-size="18" fill="#4a5568">Generic Sub-Components with Consistent Interfaces</text>
+  
+  <!-- Platform Orchestrator -->
+  <g transform="translate(50, 90)">
+    <rect x="0" y="0" width="700" height="220" fill="#fff5f5" stroke="#e53e3e" stroke-width="2" rx="10"/>
+    <text x="350" y="25" text-anchor="middle" font-size="20" font-weight="bold" fill="#c53030">Platform Orchestrator</text>
+    
+    <!-- Sub-components -->
+    <rect x="20" y="50" width="210" height="60" fill="#feb2b2" stroke="#fc8181" rx="5"/>
+    <text x="125" y="75" text-anchor="middle" font-size="14" font-weight="bold">Configuration Manager</text>
+    <text x="125" y="95" text-anchor="middle" font-size="11" fill="#742a2a">YAML | Env | Remote</text>
+    
+    <rect x="245" y="50" width="210" height="60" fill="#feb2b2" stroke="#fc8181" rx="5"/>
+    <text x="350" y="75" text-anchor="middle" font-size="14" font-weight="bold">Lifecycle Manager</text>
+    <text x="350" y="95" text-anchor="middle" font-size="11" fill="#742a2a">Sequential | Parallel | Resilient</text>
+    
+    <rect x="470" y="50" width="210" height="60" fill="#feb2b2" stroke="#fc8181" rx="5"/>
+    <text x="575" y="75" text-anchor="middle" font-size="14" font-weight="bold">Monitoring Collector</text>
+    <text x="575" y="95" text-anchor="middle" font-size="11" fill="#742a2a">Prometheus | CloudWatch | Custom</text>
+    
+    <!-- Interface box -->
+    <rect x="20" y="130" width="660" height="70" fill="#fff" stroke="#e53e3e" stroke-dasharray="3,3" rx="5"/>
+    <text x="30" y="150" font-size="12" font-weight="bold" fill="#c53030">Common Interface Pattern:</text>
+    <text x="30" y="170" font-size="11" fill="#4a5568" font-family="monospace">initialize() → validate() → execute() → get_status()</text>
+    <text x="30" y="190" font-size="11" fill="#718096">All sub-components implement consistent lifecycle and monitoring hooks</text>
+  </g>
+  
+  <!-- Document Processor -->
+  <g transform="translate(780, 90)">
+    <rect x="0" y="0" width="770" height="220" fill="#f0fff4" stroke="#38a169" stroke-width="2" rx="10"/>
+    <text x="385" y="25" text-anchor="middle" font-size="20" font-weight="bold" fill="#22543d">Document Processor</text>
+    
+    <!-- Sub-components -->
+    <rect x="20" y="50" width="230" height="60" fill="#c6f6d5" stroke="#9ae6b4" rx="5"/>
+    <text x="135" y="75" text-anchor="middle" font-size="14" font-weight="bold">Document Parser</text>
+    <text x="135" y="95" text-anchor="middle" font-size="11" fill="#22543d">PDF | DOCX | HTML | Markdown</text>
+    
+    <rect x="270" y="50" width="230" height="60" fill="#c6f6d5" stroke="#9ae6b4" rx="5"/>
+    <text x="385" y="75" text-anchor="middle" font-size="14" font-weight="bold">Text Chunker</text>
+    <text x="385" y="95" text-anchor="middle" font-size="11" fill="#22543d">Sentence | Semantic | Structural | Fixed</text>
+    
+    <rect x="520" y="50" width="230" height="60" fill="#c6f6d5" stroke="#9ae6b4" rx="5"/>
+    <text x="635" y="75" text-anchor="middle" font-size="14" font-weight="bold">Content Cleaner</text>
+    <text x="635" y="95" text-anchor="middle" font-size="11" fill="#22543d">Technical | Language | PII</text>
+    
+    <!-- Interface box -->
+    <rect x="20" y="130" width="730" height="70" fill="#fff" stroke="#38a169" stroke-dasharray="3,3" rx="5"/>
+    <text x="30" y="150" font-size="12" font-weight="bold" fill="#22543d">Common Interface Pattern:</text>
+    <text x="30" y="170" font-size="11" fill="#4a5568" font-family="monospace">process(input) → validate(output) → get_metadata() → supported_types()</text>
+    <text x="30" y="190" font-size="11" fill="#718096">Each parser/chunker/cleaner follows the same processing pipeline</text>
+  </g>
+  
+  <!-- Embedder -->
+  <g transform="translate(50, 340)">
+    <rect x="0" y="0" width="700" height="220" fill="#fffaf0" stroke="#ed8936" stroke-width="2" rx="10"/>
+    <text x="350" y="25" text-anchor="middle" font-size="20" font-weight="bold" fill="#c05621">Embedder</text>
+    
+    <!-- Sub-components -->
+    <rect x="20" y="50" width="210" height="60" fill="#fed7aa" stroke="#fbd38d" rx="5"/>
+    <text x="125" y="75" text-anchor="middle" font-size="14" font-weight="bold">Embedding Model</text>
+    <text x="125" y="95" text-anchor="middle" font-size="11" fill="#7b341e">SBERT | OpenAI | Custom | Multilingual</text>
+    
+    <rect x="245" y="50" width="210" height="60" fill="#fed7aa" stroke="#fbd38d" rx="5"/>
+    <text x="350" y="75" text-anchor="middle" font-size="14" font-weight="bold">Batch Processor</text>
+    <text x="350" y="95" text-anchor="middle" font-size="11" fill="#7b341e">Dynamic | Streaming | Parallel</text>
+    
+    <rect x="470" y="50" width="210" height="60" fill="#fed7aa" stroke="#fbd38d" rx="5"/>
+    <text x="575" y="75" text-anchor="middle" font-size="14" font-weight="bold">Embedding Cache</text>
+    <text x="575" y="95" text-anchor="middle" font-size="11" fill="#7b341e">InMemory | Redis | Disk</text>
+    
+    <!-- Interface box -->
+    <rect x="20" y="130" width="660" height="70" fill="#fff" stroke="#ed8936" stroke-dasharray="3,3" rx="5"/>
+    <text x="30" y="150" font-size="12" font-weight="bold" fill="#c05621">Common Interface Pattern:</text>
+    <text x="30" y="170" font-size="11" fill="#4a5568" font-family="monospace">encode(texts) → get_dimension() → batch_encode() → get_model_info()</text>
+    <text x="30" y="190" font-size="11" fill="#718096">Consistent vector operations regardless of underlying model</text>
+  </g>
+  
+  <!-- Retriever -->
+  <g transform="translate(780, 340)">
+    <rect x="0" y="0" width="770" height="220" fill="#ebf8ff" stroke="#3182ce" stroke-width="2" rx="10"/>
+    <text x="385" y="25" text-anchor="middle" font-size="20" font-weight="bold" fill="#2c5282">Unified Retriever</text>
+    
+    <!-- Sub-components -->
+    <rect x="20" y="50" width="170" height="60" fill="#bee3f8" stroke="#90cdf4" rx="5"/>
+    <text x="105" y="75" text-anchor="middle" font-size="14" font-weight="bold">Vector Index</text>
+    <text x="105" y="95" text-anchor="middle" font-size="10" fill="#2c5282">FAISS | HNSW | Annoy | Pinecone</text>
+    
+    <rect x="210" y="50" width="170" height="60" fill="#bee3f8" stroke="#90cdf4" rx="5"/>
+    <text x="295" y="75" text-anchor="middle" font-size="14" font-weight="bold">Sparse Retriever</text>
+    <text x="295" y="95" text-anchor="middle" font-size="10" fill="#2c5282">BM25 | TFIDF | Elasticsearch</text>
+    
+    <rect x="400" y="50" width="170" height="60" fill="#bee3f8" stroke="#90cdf4" rx="5"/>
+    <text x="485" y="75" text-anchor="middle" font-size="14" font-weight="bold">Fusion Strategy</text>
+    <text x="485" y="95" text-anchor="middle" font-size="10" fill="#2c5282">RRF | Weighted | ML-based</text>
+    
+    <rect x="590" y="50" width="160" height="60" fill="#bee3f8" stroke="#90cdf4" rx="5"/>
+    <text x="670" y="75" text-anchor="middle" font-size="14" font-weight="bold">Reranker</text>
+    <text x="670" y="95" text-anchor="middle" font-size="10" fill="#2c5282">CrossEncoder | ColBERT | LLM</text>
+    
+    <!-- Interface box -->
+    <rect x="20" y="130" width="730" height="70" fill="#fff" stroke="#3182ce" stroke-dasharray="3,3" rx="5"/>
+    <text x="30" y="150" font-size="12" font-weight="bold" fill="#2c5282">Common Interface Pattern:</text>
+    <text x="30" y="170" font-size="11" fill="#4a5568" font-family="monospace">search(query, k) → add(items) → delete(ids) → get_stats()</text>
+    <text x="30" y="190" font-size="11" fill="#718096">Unified search interface across dense, sparse, and hybrid methods</text>
+  </g>
+  
+  <!-- Query Processor -->
+  <g transform="translate(50, 590)">
+    <rect x="0" y="0" width="700" height="220" fill="#fef5e7" stroke="#d35400" stroke-width="2" rx="10"/>
+    <text x="350" y="25" text-anchor="middle" font-size="20" font-weight="bold" fill="#873600">Query Processor</text>
+    
+    <!-- Sub-components -->
+    <rect x="20" y="50" width="210" height="60" fill="#fad7a0" stroke="#f8c471" rx="5"/>
+    <text x="125" y="75" text-anchor="middle" font-size="14" font-weight="bold">Query Analyzer</text>
+    <text x="125" y="95" text-anchor="middle" font-size="11" fill="#873600">NLP | LLM | Rule-based</text>
+    
+    <rect x="245" y="50" width="210" height="60" fill="#fad7a0" stroke="#f8c471" rx="5"/>
+    <text x="350" y="75" text-anchor="middle" font-size="14" font-weight="bold">Context Selector</text>
+    <text x="350" y="95" text-anchor="middle" font-size="11" fill="#873600">MMR | Diversity | TokenLimit</text>
+    
+    <rect x="470" y="50" width="210" height="60" fill="#fad7a0" stroke="#f8c471" rx="5"/>
+    <text x="575" y="75" text-anchor="middle" font-size="14" font-weight="bold">Response Assembler</text>
+    <text x="575" y="95" text-anchor="middle" font-size="11" fill="#873600">Standard | Rich | Streaming</text>
+    
+    <!-- Interface box -->
+    <rect x="20" y="130" width="660" height="70" fill="#fff" stroke="#d35400" stroke-dasharray="3,3" rx="5"/>
+    <text x="30" y="150" font-size="12" font-weight="bold" fill="#873600">Common Interface Pattern:</text>
+    <text x="30" y="170" font-size="11" fill="#4a5568" font-family="monospace">analyze(input) → process(data) → format(output) → validate(result)</text>
+    <text x="30" y="190" font-size="11" fill="#718096">Consistent query processing pipeline with pluggable strategies</text>
+  </g>
+  
+  <!-- Answer Generator -->
+  <g transform="translate(780, 590)">
+    <rect x="0" y="0" width="770" height="220" fill="#e6fffa" stroke="#38b2ac" stroke-width="2" rx="10"/>
+    <text x="385" y="25" text-anchor="middle" font-size="20" font-weight="bold" fill="#234e52">Answer Generator (Adapter Pattern)</text>
+    
+    <!-- Sub-components -->
+    <rect x="20" y="50" width="170" height="60" fill="#b2f5ea" stroke="#81e6d9" rx="5"/>
+    <text x="105" y="75" text-anchor="middle" font-size="14" font-weight="bold">Prompt Builder</text>
+    <text x="105" y="95" text-anchor="middle" font-size="10" fill="#234e52">Simple | CoT | FewShot | Adaptive</text>
+    
+    <rect x="210" y="50" width="170" height="60" fill="#b2f5ea" stroke="#81e6d9" rx="5"/>
+    <text x="295" y="75" text-anchor="middle" font-size="14" font-weight="bold">LLM Client</text>
+    <text x="295" y="95" text-anchor="middle" font-size="10" fill="#234e52">Ollama | OpenAI | HF | Custom</text>
+    
+    <rect x="400" y="50" width="170" height="60" fill="#b2f5ea" stroke="#81e6d9" rx="5"/>
+    <text x="485" y="75" text-anchor="middle" font-size="14" font-weight="bold">Response Parser</text>
+    <text x="485" y="95" text-anchor="middle" font-size="10" fill="#234e52">Markdown | JSON | Citation</text>
+    
+    <rect x="590" y="50" width="160" height="60" fill="#b2f5ea" stroke="#81e6d9" rx="5"/>
+    <text x="670" y="75" text-anchor="middle" font-size="14" font-weight="bold">Confidence Scorer</text>
+    <text x="670" y="95" text-anchor="middle" font-size="10" fill="#234e52">Perplexity | Semantic | Coverage</text>
+    
+    <!-- Interface box -->
+    <rect x="20" y="130" width="730" height="70" fill="#fff" stroke="#38b2ac" stroke-dasharray="3,3" rx="5"/>
+    <text x="30" y="150" font-size="12" font-weight="bold" fill="#234e52">Common Interface Pattern:</text>
+    <text x="30" y="170" font-size="11" fill="#4a5568" font-family="monospace">generate(query, context) → parse(response) → score(confidence) → format(answer)</text>
+    <text x="30" y="190" font-size="11" fill="#718096">Adapter pattern ensures unified interface across all LLM providers</text>
+  </g>
+  
+  <!-- Data Flow Connections -->
+  <g stroke="#718096" stroke-width="2" fill="none">
+    <!-- Vertical flows -->
+    <path d="M 400 310 L 400 340" marker-end="url(#arrowhead)"/>
+    <path d="M 1165 310 L 1165 340" marker-end="url(#arrowhead)"/>
+    <path d="M 400 560 L 400 590" marker-end="url(#arrowhead)"/>
+    <path d="M 1165 560 L 1165 590" marker-end="url(#arrowhead)"/>
+    
+    <!-- Horizontal flows -->
+    <path d="M 750 450 L 780 450" marker-end="url(#arrowhead)"/>
+    <path d="M 750 700 L 780 700" marker-end="url(#arrowhead)"/>
+  </g>
+  
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#718096"/>
+    </marker>
+  </defs>
+  
+  <!-- Key Design Principles -->
+  <g transform="translate(50, 850)">
+    <rect x="0" y="0" width="1500" height="320" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" rx="10"/>
+    <text x="750" y="30" text-anchor="middle" font-size="20" font-weight="bold" fill="#2d3748">Key Design Principles</text>
+    
+    <!-- Principles columns -->
+    <g transform="translate(30, 60)">
+      <!-- Column 1 -->
+      <text x="0" y="0" font-size="16" font-weight="bold" fill="#4a5568">Interface Consistency</text>
+      <text x="0" y="25" font-size="13" fill="#718096">• Each sub-component type shares a common interface</text>
+      <text x="0" y="45" font-size="13" fill="#718096">• Implementations differ but interfaces remain stable</text>
+      <text x="0" y="65" font-size="13" fill="#718096">• Enables easy swapping of implementations</text>
+      <text x="0" y="85" font-size="13" fill="#718096">• Simplifies testing with mock implementations</text>
+      
+      <!-- Column 2 -->
+      <text x="380" y="0" font-size="16" font-weight="bold" fill="#4a5568">Implementation Flexibility</text>
+      <text x="380" y="25" font-size="13" fill="#718096">• Multiple implementations per sub-component</text>
+      <text x="380" y="45" font-size="13" fill="#718096">• Choose based on scale, performance, cost</text>
+      <text x="380" y="65" font-size="13" fill="#718096">• Mix and match for optimal configuration</text>
+      <text x="380" y="85" font-size="13" fill="#718096">• Support for cloud, on-premise, hybrid</text>
+      
+      <!-- Column 3 -->
+      <text x="760" y="0" font-size="16" font-weight="bold" fill="#4a5568">Swiss Engineering Standards</text>
+      <text x="760" y="25" font-size="13" fill="#718096">• Production-ready with comprehensive testing</text>
+      <text x="760" y="45" font-size="13" fill="#718096">• Built-in monitoring and observability</text>
+      <text x="760" y="65" font-size="13" fill="#718096">• Graceful degradation and error handling</text>
+      <text x="760" y="85" font-size="13" fill="#718096">• Configuration-driven behavior</text>
+      
+      <!-- Column 4 -->
+      <text x="1140" y="0" font-size="16" font-weight="bold" fill="#4a5568">Performance Optimization</text>
+      <text x="1140" y="25" font-size="13" fill="#718096">• Each implementation optimized for use case</text>
+      <text x="1140" y="45" font-size="13" fill="#718096">• Caching at multiple levels</text>
+      <text x="1140" y="65" font-size="13" fill="#718096">• Batch processing where beneficial</text>
+      <text x="1140" y="85" font-size="13" fill="#718096">• Hardware acceleration support</text>
+    </g>
+    
+    <!-- Example Configuration -->
+    <rect x="30" y="180" width="1440" height="120" fill="#f7fafc" stroke="#e2e8f0" rx="5"/>
+    <text x="750" y="205" text-anchor="middle" font-size="16" font-weight="bold" fill="#2d3748">Example Configuration Flexibility</text>
+    
+    <text x="50" y="230" font-size="12" fill="#4a5568" font-family="monospace">Small Scale: InMemoryCache + FAISSIndex + SimplePromptBuilder + OllamaClient</text>
+    <text x="50" y="250" font-size="12" fill="#4a5568" font-family="monospace">Medium Scale: RedisCache + HNSWIndex + AdaptivePromptBuilder + OpenAIClient</text>
+    <text x="50" y="270" font-size="12" fill="#4a5568" font-family="monospace">Large Scale: DiskCache + PineconeIndex + FewShotPromptBuilder + CustomModelClient</text>
+  </g>
+</svg>
