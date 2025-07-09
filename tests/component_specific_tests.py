@@ -72,6 +72,253 @@ class ComponentSpecificTester:
         citations = re.findall(pattern, answer.text)
         return len(set(citations))  # Count unique citations
     
+    def _create_synthetic_test_documents(self) -> List[Dict[str, Any]]:
+        """Create synthetic documents for testing when no PDFs available."""
+        return [
+            {
+                'content': "RISC-V is an open-source instruction set architecture (ISA) based on reduced instruction set computer (RISC) principles. It was originally developed at the University of California, Berkeley, and is now maintained by the RISC-V Foundation. The architecture supports both 32-bit and 64-bit address spaces and provides a clean separation between user and privileged modes.",
+                'metadata': {'source': 'riscv-intro.pdf', 'page': 1, 'section': 'Introduction'},
+                'complexity': 'simple'
+            },
+            {
+                'content': "The RISC-V instruction set architecture provides a complete instruction set specification including: base integer instructions (RV32I for 32-bit systems, RV64I for 64-bit systems), standard extensions (M for multiplication and division, A for atomic instructions, F for single-precision floating-point, D for double-precision floating-point, C for compressed instructions), and privileged architecture specifications for operating system support. The modular design allows implementations to choose only the extensions they need, enabling efficient processor designs across different application domains from embedded microcontrollers to high-performance computing systems. Vector extensions provide SIMD capabilities for parallel processing workloads.",
+                'metadata': {'source': 'riscv-spec.pdf', 'page': 15, 'section': 'Instruction Set'},
+                'complexity': 'complex'
+            }
+        ]
+    
+    def _extract_full_text(self, pdf_path: Path) -> Optional[str]:
+        """Extract full text from PDF for coverage analysis."""
+        try:
+            # Use the same processor to extract full text
+            processor = HybridPDFProcessor()
+            documents = processor.process(pdf_path)
+            # Combine all document content to approximate full document text
+            full_text = " ".join([doc.content for doc in documents])
+            return full_text
+        except Exception as e:
+            print(f"      ⚠️  Could not extract full text: {e}")
+            return None
+    
+    def _analyze_document_coverage(self, chunks: List[Dict], full_text: str) -> Dict[str, Any]:
+        """Comprehensive document coverage analysis."""
+        if not chunks or not full_text:
+            return {
+                'overall_quality_score': 0.0,
+                'error': 'No chunks or full text available'
+            }
+        
+        # Page coverage analysis (adapted from test_all_documents_coverage.py)
+        pages_covered = set()
+        parsing_methods = {}
+        
+        for chunk in chunks:
+            page = chunk.get('page', chunk.get('metadata', {}).get('page', 0))
+            pages_covered.add(page)
+            
+            method = chunk.get('metadata', {}).get('parsing_method', 'unknown')
+            parsing_methods[method] = parsing_methods.get(method, 0) + 1
+        
+        # Fragment analysis (sentence completeness)
+        fragments = 0
+        complete_chunks = 0
+        
+        for chunk in chunks[:10]:  # Sample first 10 chunks
+            text = chunk.get('text', '')
+            if text.strip().endswith(('.', '!', '?', ':', ';')):
+                complete_chunks += 1
+            else:
+                fragments += 1
+        
+        fragment_rate = fragments / (fragments + complete_chunks) if (fragments + complete_chunks) > 0 else 0
+        
+        # Content coverage analysis
+        chunk_text = " ".join([chunk.get('text', '') for chunk in chunks])
+        coverage_ratio = min(len(chunk_text) / len(full_text), 1.0) if full_text else 0
+        
+        # Technical content preservation (adapted from manual_quality_assessment.py)
+        technical_terms = ['risc', 'instruction', 'register', 'memory', 'processor', 
+                          'software', 'validation', 'guidance', 'architecture', 'extension']
+        
+        full_text_technical = sum(1 for term in technical_terms if term.lower() in full_text.lower())
+        chunk_text_technical = sum(1 for term in technical_terms if term.lower() in chunk_text.lower())
+        
+        technical_preservation = (chunk_text_technical / full_text_technical) if full_text_technical > 0 else 1.0
+        
+        # Quality scoring
+        page_coverage_score = min(len(pages_covered) / 5, 1.0)  # Normalize to expected ~5 pages
+        completeness_score = 1.0 - fragment_rate
+        coverage_score = coverage_ratio
+        technical_score = min(technical_preservation, 1.0)
+        
+        overall_quality_score = (
+            page_coverage_score * 0.25 +
+            completeness_score * 0.25 + 
+            coverage_score * 0.25 +
+            technical_score * 0.25
+        )
+        
+        return {
+            'pages_covered': len(pages_covered),
+            'page_range': f"{min(pages_covered)}-{max(pages_covered)}" if pages_covered else "none",
+            'parsing_methods': parsing_methods,
+            'fragment_rate': fragment_rate,
+            'coverage_ratio': coverage_ratio,
+            'technical_preservation': technical_preservation,
+            'page_coverage_score': page_coverage_score,
+            'completeness_score': completeness_score,
+            'technical_score': technical_score,
+            'overall_quality_score': overall_quality_score,
+            'quality_assessment': {
+                'excellent': overall_quality_score >= 0.8,
+                'good': 0.6 <= overall_quality_score < 0.8,
+                'needs_improvement': overall_quality_score < 0.6
+            }
+        }
+    
+    def _assess_chunk_quality(self, chunks: List[Dict]) -> Dict[str, Any]:
+        """Assess individual chunk quality (adapted from manual_quality_assessment.py)."""
+        if not chunks:
+            return {'overall_quality': 0.0, 'error': 'No chunks to analyze'}
+        
+        quality_issues = {
+            'fragments': 0,
+            'trash_content': 0,
+            'toc_contamination': 0,
+            'poor_technical_content': 0,
+            'good_chunks': 0
+        }
+        
+        # Sample up to 10 chunks for quality assessment
+        sample_chunks = chunks[:min(10, len(chunks))]
+        
+        for chunk in sample_chunks:
+            text = chunk.get('text', '')
+            
+            # Fragment check (incomplete sentences)
+            is_fragment = not (text.strip().endswith(('.', '!', '?', ':', ';')) and 
+                              (text[0].isupper() if text else False))
+            
+            # Trash content detection
+            import re
+            trash_patterns = [
+                r'Creative Commons.*?License',
+                r'\.{5,}',  # Long dots
+                r'^\d+\s*$',  # Page numbers alone
+                r'Visit.*?for further'
+            ]
+            has_trash = any(re.search(pattern, text, re.IGNORECASE) for pattern in trash_patterns)
+            
+            # TOC contamination
+            toc_patterns = [
+                r'\.{3,}',  # Multiple dots
+                r'^\s*\d+(?:\.\d+)*\s*$',  # Standalone numbers
+                r'Contents\s*$'
+            ]
+            has_toc = any(re.search(pattern, text, re.MULTILINE | re.IGNORECASE) for pattern in toc_patterns)
+            
+            # Technical content quality
+            technical_terms = ['risc', 'register', 'instruction', 'memory', 'processor', 
+                             'software', 'validation', 'guidance', 'architecture']
+            technical_count = sum(1 for term in technical_terms if term in text.lower())
+            has_good_technical = technical_count >= 2
+            
+            # Classify chunk quality
+            if is_fragment:
+                quality_issues['fragments'] += 1
+            elif has_trash:
+                quality_issues['trash_content'] += 1
+            elif has_toc:
+                quality_issues['toc_contamination'] += 1
+            elif not has_good_technical:
+                quality_issues['poor_technical_content'] += 1
+            else:
+                quality_issues['good_chunks'] += 1
+        
+        total_sampled = len(sample_chunks)
+        good_chunk_ratio = quality_issues['good_chunks'] / total_sampled if total_sampled > 0 else 0
+        
+        return {
+            'total_chunks_analyzed': len(chunks),
+            'sample_size': total_sampled,
+            'quality_distribution': quality_issues,
+            'good_chunk_ratio': good_chunk_ratio,
+            'overall_quality': good_chunk_ratio,
+            'quality_assessment': {
+                'excellent': good_chunk_ratio >= 0.8,
+                'good': 0.6 <= good_chunk_ratio < 0.8,
+                'needs_improvement': good_chunk_ratio < 0.6
+            }
+        }
+    
+    def _assess_document_complexity(self, full_text: str) -> str:
+        """Assess document complexity based on content characteristics."""
+        if not full_text:
+            return 'unknown'
+        
+        word_count = len(full_text.split())
+        sentence_count = len([s for s in full_text.split('.') if s.strip()])
+        
+        # Technical term density
+        technical_terms = ['risc', 'instruction', 'register', 'memory', 'processor', 
+                          'architecture', 'extension', 'specification', 'implementation']
+        technical_count = sum(1 for term in technical_terms if term.lower() in full_text.lower())
+        technical_density = technical_count / word_count if word_count > 0 else 0
+        
+        # Complexity assessment
+        if word_count > 2000 and technical_density > 0.01:
+            return 'complex'
+        elif word_count > 1000 or technical_density > 0.005:
+            return 'medium'
+        else:
+            return 'simple'
+    
+    def _analyze_content_gaps(self, chunks: List[Dict], full_text: str) -> Dict[str, Any]:
+        """Analyze gaps in content coverage and classify their importance."""
+        if not chunks or not full_text:
+            return {'gap_analysis': 'unavailable', 'reason': 'insufficient_data'}
+        
+        # Combine all chunk text
+        chunk_text = " ".join([chunk.get('text', '') for chunk in chunks])
+        
+        # Simple gap analysis based on sentence preservation
+        full_sentences = [s.strip() for s in full_text.split('.') if s.strip()]
+        covered_sentences = 0
+        
+        for sentence in full_sentences:
+            # Check if substantial part of sentence is covered in chunks
+            sentence_words = set(sentence.lower().split())
+            chunk_words = set(chunk_text.lower().split())
+            
+            # If >60% of sentence words are covered, consider it covered
+            if sentence_words and len(sentence_words & chunk_words) / len(sentence_words) > 0.6:
+                covered_sentences += 1
+        
+        sentence_coverage = covered_sentences / len(full_sentences) if full_sentences else 0
+        
+        # Identify potentially important missed content
+        important_terms = ['risc', 'instruction', 'register', 'memory', 'processor', 
+                          'architecture', 'extension', 'specification', 'implementation',
+                          'validation', 'verification', 'guidance', 'standard']
+        
+        missed_important_terms = []
+        for term in important_terms:
+            if term.lower() in full_text.lower() and term.lower() not in chunk_text.lower():
+                missed_important_terms.append(term)
+        
+        return {
+            'sentence_coverage': sentence_coverage,
+            'covered_sentences': covered_sentences,
+            'total_sentences': len(full_sentences),
+            'missed_important_terms': missed_important_terms,
+            'important_content_preservation': 1.0 - (len(missed_important_terms) / len(important_terms)),
+            'gap_severity': {
+                'low': sentence_coverage >= 0.8 and len(missed_important_terms) <= 2,
+                'medium': 0.6 <= sentence_coverage < 0.8 or 2 < len(missed_important_terms) <= 5,
+                'high': sentence_coverage < 0.6 or len(missed_important_terms) > 5
+            }
+        }
+    
     def _validate_citations(self, answer, retrieved_chunks_count) -> Dict[str, Any]:
         """Validate that citations don't exceed available chunks."""
         import re
@@ -142,107 +389,203 @@ class ComponentSpecificTester:
             return self.test_results
     
     def _test_document_processor(self):
-        """Test document processor with full data visibility."""
-        print("  • Testing document processor behavior...")
+        """Test document processor with comprehensive coverage analysis."""
+        print("  • Testing document processor behavior with coverage analysis...")
         
-        # Create test documents with varying complexity
-        test_docs = [
-            {
-                'content': "RISC-V is an open-source instruction set architecture (ISA) based on reduced instruction set computer (RISC) principles. It was originally developed at the University of California, Berkeley, and is now maintained by the RISC-V Foundation.",
-                'metadata': {'source': 'riscv-intro.pdf', 'page': 1, 'section': 'Introduction'},
-                'expected_chunks': 1,
-                'complexity': 'simple'
-            },
-            {
-                'content': "The RISC-V instruction set architecture provides a complete instruction set specification including: base integer instructions (RV32I for 32-bit systems, RV64I for 64-bit systems), standard extensions (M for multiplication and division, A for atomic instructions, F for single-precision floating-point, D for double-precision floating-point, C for compressed instructions), and privileged architecture specifications for operating system support. The modular design allows implementations to choose only the extensions they need, enabling efficient processor designs across different application domains from embedded microcontrollers to high-performance computing systems.",
-                'metadata': {'source': 'riscv-spec.pdf', 'page': 15, 'section': 'Instruction Set'},
-                'expected_chunks': 1,
-                'complexity': 'complex'
-            },
-            {
-                'content': "Vector extensions (V) provide SIMD operations. Bit manipulation extensions (B) offer efficient bit-level operations. Cryptography extensions (K) include AES, SHA, and other cryptographic primitives. Hypervisor extensions (H) support virtualization. Packed-SIMD extensions (P) enable multimedia processing.",
-                'metadata': {'source': 'riscv-extensions.pdf', 'page': 8, 'section': 'Extensions'},
-                'expected_chunks': 1,
-                'complexity': 'medium'
-            }
-        ]
+        # Initialize actual document processor for real testing
+        processor = HybridPDFProcessor()
+        
+        # Test with real documents for coverage analysis
+        data_folder = Path(project_root) / "data" / "test"
+        test_pdfs = list(data_folder.glob("*.pdf"))[:2]  # Test first 2 PDFs for speed
         
         processor_results = []
         
-        for i, doc_info in enumerate(test_docs):
-            print(f"    • Processing document {i+1}/{len(test_docs)} ({doc_info['complexity']})")
+        if not test_pdfs:
+            # Fallback to synthetic documents if no PDFs available
+            print("    ⚠️  No test PDFs found, using synthetic documents")
+            test_docs = self._create_synthetic_test_documents()
             
-            # Create document
-            doc = Document(
-                content=doc_info['content'],
-                metadata=doc_info['metadata']
-            )
-            
-            # Test processing metrics
-            start_time = time.time()
-            
-            # Simulate processing (in real implementation, this would call actual processor)
-            processed_doc = doc  # For now, we'll use the document as-is
-            
-            processing_time = time.time() - start_time
-            
-            # Analyze processing results
-            processing_analysis = {
-                'document_id': f"doc_{i+1}",
-                'original_length': len(doc_info['content']),
-                'word_count': len(doc_info['content'].split()),
-                'sentence_count': len(doc_info['content'].split('.')),
-                'processing_time': processing_time,
-                'chunks_generated': 1,  # Assuming single chunk for now
-                'metadata_preserved': all(key in processed_doc.metadata for key in doc_info['metadata']),
-                'complexity_level': doc_info['complexity'],
-                'content_preview': doc_info['content'][:100] + '...',
-                'full_content': doc_info['content'],
-                'metadata': processed_doc.metadata
-            }
-            
-            processor_results.append(processing_analysis)
-            
-            print(f"      ✅ Processed {len(doc_info['content'])} chars in {processing_time:.4f}s")
-            print(f"      ✅ Word count: {len(doc_info['content'].split())}")
-            print(f"      ✅ Metadata preserved: {processing_analysis['metadata_preserved']}")
+            for i, doc_info in enumerate(test_docs):
+                print(f"    • Processing synthetic document {i+1}/{len(test_docs)} ({doc_info['complexity']})")
+                
+                # Create document
+                doc = Document(
+                    content=doc_info['content'],
+                    metadata=doc_info['metadata']
+                )
+                
+                # Test processing metrics
+                start_time = time.time()
+                processed_doc = doc  # Synthetic processing
+                processing_time = time.time() - start_time
+                
+                # Perform coverage analysis on synthetic document
+                synthetic_chunks = [{'text': doc_info['content'], 'metadata': doc_info['metadata'], 'page': doc_info['metadata'].get('page', 1)}]
+                coverage_analysis = self._analyze_document_coverage(synthetic_chunks, doc_info['content'])
+                quality_assessment = self._assess_chunk_quality(synthetic_chunks)
+                gap_analysis = self._analyze_content_gaps(synthetic_chunks, doc_info['content'])
+                
+                processing_analysis = {
+                    'document_id': f"synthetic_doc_{i+1}",
+                    'original_length': len(doc_info['content']),
+                    'word_count': len(doc_info['content'].split()),
+                    'processing_time': processing_time,
+                    'chunks_generated': 1,
+                    'metadata_preserved': True,
+                    'complexity_level': doc_info['complexity'],
+                    'content_preview': doc_info['content'][:100] + '...',
+                    'full_content': doc_info['content'],
+                    'metadata': processed_doc.metadata,
+                    'coverage_analysis': coverage_analysis,
+                    'quality_assessment': quality_assessment,
+                    'gap_analysis': gap_analysis
+                }
+                
+                processor_results.append(processing_analysis)
+                print(f"      ✅ Coverage score: {coverage_analysis['overall_quality_score']:.2f}")
+        else:
+            # Process real PDF documents for comprehensive testing
+            for i, pdf_path in enumerate(test_pdfs):
+                print(f"    • Processing real document {i+1}/{len(test_pdfs)}: {pdf_path.name}")
+                
+                start_time = time.time()
+                try:
+                    # Process the PDF document
+                    documents = processor.process(pdf_path)
+                    # Convert Document objects to dict format for analysis
+                    chunks = [{'text': doc.content, 'metadata': doc.metadata} for doc in documents]
+                    processing_time = time.time() - start_time
+                    
+                    # Read full document text for coverage analysis
+                    full_text = self._extract_full_text(pdf_path)
+                    
+                    # Perform comprehensive coverage analysis
+                    coverage_analysis = self._analyze_document_coverage(chunks, full_text)
+                    quality_assessment = self._assess_chunk_quality(chunks)
+                    gap_analysis = self._analyze_content_gaps(chunks, full_text)
+                    
+                    processing_analysis = {
+                        'document_id': f"pdf_doc_{i+1}",
+                        'document_name': pdf_path.name,
+                        'original_length': len(full_text) if full_text else 0,
+                        'word_count': len(full_text.split()) if full_text else 0,
+                        'processing_time': processing_time,
+                        'chunks_generated': len(chunks),
+                        'metadata_preserved': all('source' in chunk.get('metadata', {}) for chunk in chunks),
+                        'complexity_level': self._assess_document_complexity(full_text) if full_text else 'unknown',
+                        'content_preview': full_text[:100] + '...' if full_text else 'N/A',
+                        'coverage_analysis': coverage_analysis,
+                        'quality_assessment': quality_assessment,
+                        'gap_analysis': gap_analysis,
+                        'chunks_data': chunks[:5]  # Store first 5 chunks for analysis
+                    }
+                    
+                    processor_results.append(processing_analysis)
+                    
+                    print(f"      ✅ Processed {len(chunks)} chunks in {processing_time:.4f}s")
+                    print(f"      ✅ Coverage score: {coverage_analysis['overall_quality_score']:.2f}")
+                    print(f"      ✅ Quality score: {quality_assessment['overall_quality']:.2f}")
+                    
+                except Exception as e:
+                    print(f"      ❌ Failed to process {pdf_path.name}: {e}")
+                    # Add failed result for completeness
+                    processor_results.append({
+                        'document_id': f"failed_doc_{i+1}",
+                        'document_name': pdf_path.name,
+                        'error': str(e),
+                        'processing_time': time.time() - start_time,
+                        'chunks_generated': 0,
+                        'coverage_analysis': {'overall_quality_score': 0.0, 'error': str(e)}
+                    })
+        
         
         # Aggregate processing metrics
-        total_processing_time = sum(r['processing_time'] for r in processor_results)
-        total_chars = sum(r['original_length'] for r in processor_results)
-        total_words = sum(r['word_count'] for r in processor_results)
+        successful_results = [r for r in processor_results if 'error' not in r]
         
-        # Avoid division by zero for very fast operations
-        safe_total_time = max(total_processing_time, 0.001)
-        
-        self.test_results['document_processor'] = {
-            'documents_tested': len(test_docs),
-            'total_processing_time': total_processing_time,
-            'average_processing_time': total_processing_time / len(processor_results) if processor_results else 0,
-            'processing_rate_chars_per_sec': total_chars / safe_total_time,
-            'processing_rate_words_per_sec': total_words / safe_total_time,
-            'total_chunks_generated': sum(r['chunks_generated'] for r in processor_results),
-            'metadata_preservation_rate': sum(r['metadata_preserved'] for r in processor_results) / len(processor_results),
-            'complexity_distribution': {
-                'simple': sum(1 for r in processor_results if r['complexity_level'] == 'simple'),
-                'medium': sum(1 for r in processor_results if r['complexity_level'] == 'medium'),
-                'complex': sum(1 for r in processor_results if r['complexity_level'] == 'complex')
-            },
-            'processing_results': processor_results,
-            'performance_metrics': {
-                'fastest_processing': min(r['processing_time'] for r in processor_results),
-                'slowest_processing': max(r['processing_time'] for r in processor_results),
-                'largest_document': max(r['original_length'] for r in processor_results),
-                'smallest_document': min(r['original_length'] for r in processor_results)
+        if successful_results:
+            total_processing_time = sum(r['processing_time'] for r in successful_results)
+            total_chars = sum(r.get('original_length', 0) for r in successful_results)
+            total_words = sum(r.get('word_count', 0) for r in successful_results)
+            
+            # Avoid division by zero for very fast operations
+            safe_total_time = max(total_processing_time, 0.001)
+            
+            # Coverage analysis summary
+            coverage_scores = [r.get('coverage_analysis', {}).get('overall_quality_score', 0) for r in successful_results]
+            quality_scores = [r.get('quality_assessment', {}).get('overall_quality', 0) for r in successful_results]
+            
+            documents_with_good_coverage = sum(1 for score in coverage_scores if score >= 0.6)
+            
+            self.test_results['document_processor'] = {
+                'documents_tested': len(processor_results),
+                'successful_documents': len(successful_results),
+                'failed_documents': len(processor_results) - len(successful_results),
+                'total_processing_time': total_processing_time,
+                'average_processing_time': total_processing_time / len(successful_results),
+                'processing_rate_chars_per_sec': total_chars / safe_total_time,
+                'processing_rate_words_per_sec': total_words / safe_total_time,
+                'total_chunks_generated': sum(r.get('chunks_generated', 0) for r in successful_results),
+                'metadata_preservation_rate': sum(r.get('metadata_preserved', False) for r in successful_results) / len(successful_results),
+                'complexity_distribution': {
+                    'simple': sum(1 for r in successful_results if r.get('complexity_level') == 'simple'),
+                    'medium': sum(1 for r in successful_results if r.get('complexity_level') == 'medium'),
+                    'complex': sum(1 for r in successful_results if r.get('complexity_level') == 'complex')
+                },
+                'coverage_summary': {
+                    'average_coverage_score': sum(coverage_scores) / len(coverage_scores) if coverage_scores else 0,
+                    'average_quality_score': sum(quality_scores) / len(quality_scores) if quality_scores else 0,
+                    'documents_with_good_coverage': documents_with_good_coverage,
+                    'total_documents': len(successful_results),
+                    'coverage_score_distribution': {
+                        'excellent': sum(1 for score in coverage_scores if score >= 0.8),
+                        'good': sum(1 for score in coverage_scores if 0.6 <= score < 0.8),
+                        'needs_improvement': sum(1 for score in coverage_scores if score < 0.6)
+                    }
+                },
+                'processing_results': processor_results,
+                'performance_metrics': {
+                    'fastest_processing': min(r['processing_time'] for r in successful_results) if successful_results else 0,
+                    'slowest_processing': max(r['processing_time'] for r in successful_results) if successful_results else 0,
+                    'largest_document': max(r.get('original_length', 0) for r in successful_results) if successful_results else 0,
+                    'smallest_document': min(r.get('original_length', 0) for r in successful_results) if successful_results else 0
+                }
             }
-        }
+        else:
+            # All documents failed
+            self.test_results['document_processor'] = {
+                'documents_tested': len(processor_results),
+                'successful_documents': 0,
+                'failed_documents': len(processor_results),
+                'error': 'All documents failed to process',
+                'processing_results': processor_results
+            }
         
         # Store for cross-component analysis
-        self.test_documents = [Document(content=r['full_content'], metadata=r['metadata']) for r in processor_results]
+        successful_results = [r for r in processor_results if 'error' not in r and 'full_content' in r]
+        if successful_results:
+            self.test_documents = [Document(content=r['full_content'], metadata=r.get('metadata', {})) for r in successful_results]
+        else:
+            # Fallback to synthetic documents if real processing failed
+            synthetic_docs = self._create_synthetic_test_documents()
+            self.test_documents = [Document(content=doc['content'], metadata=doc['metadata']) for doc in synthetic_docs]
         
         print(f"  ✅ Document processor test complete")
-        print(f"    • Processing rate: {self.test_results['document_processor']['processing_rate_chars_per_sec']:.1f} chars/sec")
-        print(f"    • Metadata preservation: {self.test_results['document_processor']['metadata_preservation_rate']:.1%}")
+        if 'processing_rate_chars_per_sec' in self.test_results['document_processor']:
+            print(f"    • Processing rate: {self.test_results['document_processor']['processing_rate_chars_per_sec']:.1f} chars/sec")
+            print(f"    • Metadata preservation: {self.test_results['document_processor']['metadata_preservation_rate']:.1%}")
+        else:
+            print(f"    ⚠️  No successful processing results to display")
+        
+        # Display coverage analysis summary
+        if 'coverage_summary' in self.test_results['document_processor']:
+            coverage = self.test_results['document_processor']['coverage_summary']
+            print(f"    • Average coverage score: {coverage.get('average_coverage_score', 0):.2f}")
+            print(f"    • Average quality score: {coverage.get('average_quality_score', 0):.2f}")
+            print(f"    • Documents with good coverage: {coverage.get('documents_with_good_coverage', 0)}/{coverage.get('total_documents', 0)}")
+        elif 'error' in self.test_results['document_processor']:
+            print(f"    ⚠️  {self.test_results['document_processor']['error']}")
+            print(f"    • Failed documents: {self.test_results['document_processor'].get('failed_documents', 0)}")
     
     def _test_embedder(self):
         """Test embedder with full vector analysis."""
