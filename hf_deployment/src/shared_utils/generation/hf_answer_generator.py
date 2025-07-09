@@ -19,6 +19,15 @@ import sys
 # Import technical prompt templates
 from .prompt_templates import TechnicalPromptTemplates
 
+# Import standard interfaces for adapter pattern
+try:
+    from src.core.interfaces import Document, Answer, AnswerGenerator
+except ImportError:
+    # Fallback if interfaces not available
+    Document = None
+    Answer = None
+    AnswerGenerator = object
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,7 +52,7 @@ class GeneratedAnswer:
     context_used: List[Dict[str, Any]]
 
 
-class HuggingFaceAnswerGenerator:
+class HuggingFaceAnswerGenerator(AnswerGenerator if AnswerGenerator != object else object):
     """
     Generates answers using HuggingFace Inference API with hybrid reliability.
     
@@ -491,20 +500,23 @@ Be direct, confident, and accurate. If the context answers the question, provide
         
         return min(confidence, 0.9)  # Cap at 90%
     
-    def generate(
+    def _generate_internal(
         self,
         query: str,
         chunks: List[Dict[str, Any]]
     ) -> GeneratedAnswer:
         """
-        Generate an answer based on the query and retrieved chunks.
+        Generate an answer based on the query and retrieved chunks (internal method).
+        
+        This method contains the original HuggingFace-specific logic and is called
+        by the adapter pattern interface.
         
         Args:
             query: User's question
             chunks: Retrieved document chunks
             
         Returns:
-            GeneratedAnswer object with answer, citations, and metadata
+            GeneratedAnswer object with HuggingFace-specific format
         """
         start_time = datetime.now()
         
@@ -717,6 +729,107 @@ Answer:"""
         
         return formatted
 
+    # ===============================================
+    # ADAPTER PATTERN IMPLEMENTATION
+    # ===============================================
+    
+    def generate(self, query: str, context: List[Document]) -> Answer:
+        """
+        Generate an answer from query and context documents (standard interface).
+        
+        This is the public interface that conforms to the AnswerGenerator protocol.
+        It handles the conversion between standard Document objects and HuggingFace's
+        internal chunk format.
+        
+        Args:
+            query: User's question
+            context: List of relevant Document objects
+            
+        Returns:
+            Answer object conforming to standard interface
+            
+        Raises:
+            ValueError: If query is empty or context is None
+        """
+        if Document is None or Answer is None:
+            raise ImportError("Standard interfaces not available - falling back to chunk-based interface")
+            
+        if not query.strip():
+            raise ValueError("Query cannot be empty")
+        
+        if context is None:
+            raise ValueError("Context cannot be None")
+        
+        # Internal adapter: Convert Documents to HuggingFace chunk format
+        hf_chunks = self._documents_to_hf_chunks(context)
+        
+        # Use existing HuggingFace-specific generation logic
+        hf_result = self._generate_internal(query, hf_chunks)
+        
+        # Internal adapter: Convert HuggingFace result to standard Answer
+        return self._hf_result_to_answer(hf_result, context)
+    
+    def _documents_to_hf_chunks(self, documents: List[Document]) -> List[Dict[str, Any]]:
+        """
+        Convert Document objects to HuggingFace's internal chunk format.
+        
+        Args:
+            documents: List of Document objects
+            
+        Returns:
+            List of chunk dictionaries in HuggingFace format
+        """
+        chunks = []
+        for i, doc in enumerate(documents):
+            chunk = {
+                "id": f"chunk_{i+1}",
+                "content": doc.content,  # HuggingFace expects "content" field
+                "text": doc.content,    # Fallback field for compatibility
+                "score": 1.0,           # Default relevance score
+                "metadata": {
+                    "source": doc.metadata.get("source", "unknown"),
+                    "page_number": doc.metadata.get("start_page", 1),
+                    **doc.metadata  # Include all original metadata
+                }
+            }
+            chunks.append(chunk)
+        
+        return chunks
+    
+    def _hf_result_to_answer(self, hf_result: GeneratedAnswer, original_context: List[Document]) -> Answer:
+        """
+        Convert HuggingFace's GeneratedAnswer to the standard Answer format.
+        
+        Args:
+            hf_result: The GeneratedAnswer from HuggingFace generation
+            original_context: Original Document objects for source attribution
+            
+        Returns:
+            Answer object conforming to standard interface
+        """
+        return Answer(
+            text=hf_result.answer,
+            sources=original_context,
+            confidence=hf_result.confidence_score,
+            metadata={
+                "model_used": hf_result.model_used,
+                "generation_time": hf_result.generation_time,
+                "citations": [
+                    {
+                        "chunk_id": citation.chunk_id,
+                        "page_number": citation.page_number,
+                        "source_file": citation.source_file,
+                        "relevance_score": citation.relevance_score,
+                        "text_snippet": citation.text_snippet
+                    }
+                    for citation in hf_result.citations
+                ],
+                "context_chunks_used": len(hf_result.context_used),
+                "provider": "huggingface",
+                "adapter_pattern": "unified_interface"
+            }
+        )
+    
 
 if __name__ == "__main__":
     # Example usage

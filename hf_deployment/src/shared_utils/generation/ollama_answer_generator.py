@@ -211,22 +211,17 @@ class OllamaAnswerGenerator:
 
         # Format for different model types
         if "llama" in self.model_name.lower():
-            # Llama-3.2 format with technical prompt templates
+            # Llama-3.2 format with simplified citation instructions
             return f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 {prompt_data['system']}
-
-MANDATORY CITATION RULES:
-- Use [chunk_1], [chunk_2] etc. for ALL factual statements
-- Every technical claim MUST have a citation
-- Example: "RISC-V is an open-source ISA [chunk_1] that supports multiple data widths [chunk_2]."
 
 <|eot_id|><|start_header_id|>user<|end_header_id|>
 {prompt_data['user']}
 
-CRITICAL: You MUST cite sources with [chunk_X] format for every fact you state.<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
 
         elif "mistral" in self.model_name.lower():
-            # Mistral format with technical templates
+            # Mistral format with simplified instructions
             return f"""[INST] {prompt_data['system']}
 
 Context:
@@ -234,18 +229,16 @@ Context:
 
 Question: {query}
 
-MANDATORY: Use [chunk_1], [chunk_2] etc. for ALL factual statements. [/INST]"""
+[/INST]"""
 
         else:
-            # Generic format with technical templates
+            # Generic format with simplified instructions
             return f"""{prompt_data['system']}
 
 Context:
 {context}
 
 Question: {query}
-
-MANDATORY CITATIONS: Use [chunk_1], [chunk_2] etc. for every fact.
 
 Answer:"""
 
@@ -345,36 +338,183 @@ Answer:"""
         return natural_answer, citations
 
     def _calculate_confidence(
-        self, answer: str, citations: List[Citation], chunks: List[Dict[str, Any]]
+        self, answer: str, citations: List[Citation], chunks: List[Dict[str, Any]], query: str = None
     ) -> float:
-        """Calculate confidence score."""
+        """
+        Calculate confidence score with enhanced context awareness.
+        
+        Args:
+            answer: Generated answer text
+            citations: List of citations found in answer
+            chunks: Retrieved context chunks
+            query: Original query for semantic relevance checking
+            
+        Returns:
+            Confidence score between 0.0 and 1.0
+        """
         if not answer or len(answer.strip()) < 10:
             return 0.1
 
-        # Base confidence from content quality
-        if len(chunks) >= 3:
-            confidence = 0.8
-        elif len(chunks) >= 2:
-            confidence = 0.7
-        else:
-            confidence = 0.6
-
-        # Citation bonus
-        if citations and chunks:
-            citation_ratio = len(citations) / min(len(chunks), 3)
-            confidence += 0.15 * citation_ratio
-
-        # Uncertainty penalty
+        # Start with base confidence based on content quality
+        base_confidence = 0.5  # Lower starting point for better calibration
+        
+        # Context quality assessment
+        context_quality = self._assess_context_quality(chunks)
+        base_confidence += context_quality * 0.3  # Max +0.3 for excellent context
+        
+        # Citation quality assessment
+        citation_quality = self._assess_citation_quality(citations, chunks)
+        base_confidence += citation_quality * 0.2  # Max +0.2 for excellent citations
+        
+        # Semantic relevance check (if query provided)
+        if query:
+            relevance_score = self._assess_semantic_relevance(query, answer, chunks)
+            base_confidence += relevance_score * 0.2  # Max +0.2 for highly relevant
+        
+        # Answer quality indicators
+        answer_quality = self._assess_answer_quality(answer)
+        base_confidence += answer_quality * 0.15  # Max +0.15 for high quality
+        
+        # Uncertainty penalty (stronger than before)
         uncertainty_phrases = [
             "insufficient information",
-            "cannot determine",
+            "cannot determine", 
             "not available in the provided documents",
+            "I don't have enough information",
+            "unable to answer",
+            "not clear from the context"
         ]
-
+        
         if any(phrase in answer.lower() for phrase in uncertainty_phrases):
-            confidence *= 0.3
+            base_confidence *= 0.3  # Heavy penalty for uncertainty
+        
+        # Off-topic detection penalty
+        if self._is_off_topic(query, chunks) if query else False:
+            base_confidence *= 0.4  # Penalty for off-topic queries
+        
+        # Ensure reasonable range: 0.2 to 0.9 (more realistic than 0.1 to 0.95)
+        return max(0.2, min(base_confidence, 0.9))
 
-        return min(confidence, 0.95)  # Cap at 95%
+    def _assess_context_quality(self, chunks: List[Dict[str, Any]]) -> float:
+        """Assess the quality of retrieved context chunks."""
+        if not chunks:
+            return 0.0
+        
+        # Consider chunk count, content length, and relevance scores
+        chunk_count_score = min(len(chunks) / 3.0, 1.0)  # Normalize to 1.0 for 3+ chunks
+        
+        # Average relevance score from retrieval
+        avg_relevance = sum(chunk.get('score', 0.0) for chunk in chunks) / len(chunks)
+        
+        # Content richness (average chunk length)
+        avg_length = sum(len(chunk.get('content', chunk.get('text', ''))) for chunk in chunks) / len(chunks)
+        length_score = min(avg_length / 500.0, 1.0)  # Normalize to 1.0 for 500+ char chunks
+        
+        return (chunk_count_score + avg_relevance + length_score) / 3.0
+
+    def _assess_citation_quality(self, citations: List[Citation], chunks: List[Dict[str, Any]]) -> float:
+        """Assess the quality of citations in the answer."""
+        if not citations or not chunks:
+            return 0.0
+        
+        # Citation coverage (how many chunks are cited)
+        citation_coverage = len(citations) / min(len(chunks), 3)
+        
+        # Citation relevance (based on chunk scores)
+        citation_relevance = sum(chunk.get('score', 0.0) for chunk in chunks[:len(citations)]) / len(citations)
+        
+        return min((citation_coverage + citation_relevance) / 2.0, 1.0)
+
+    def _assess_semantic_relevance(self, query: str, answer: str, chunks: List[Dict[str, Any]]) -> float:
+        """Assess semantic relevance between query, answer, and context."""
+        if not query or not answer:
+            return 0.5  # Neutral if we can't assess
+        
+        # Simple keyword overlap assessment (could be enhanced with embeddings)
+        import re
+        
+        # Clean and tokenize with better word boundary detection
+        query_clean = re.sub(r'[^\w\s-]', ' ', query.lower())
+        answer_clean = re.sub(r'[^\w\s-]', ' ', answer.lower())
+        
+        query_words = set(query_clean.split())
+        answer_words = set(answer_clean.split())
+        context_words = set()
+        
+        for chunk in chunks:
+            content = chunk.get('content', chunk.get('text', ''))
+            content_clean = re.sub(r'[^\w\s-]', ' ', content.lower())
+            context_words.update(content_clean.split())
+        
+        # Query-answer overlap
+        query_answer_overlap = len(query_words & answer_words) / max(len(query_words), 1)
+        
+        # Query-context overlap
+        query_context_overlap = len(query_words & context_words) / max(len(query_words), 1)
+        
+        # Combine overlaps
+        relevance_score = (query_answer_overlap + query_context_overlap) / 2.0
+        
+        return min(relevance_score, 1.0)
+
+    def _assess_answer_quality(self, answer: str) -> float:
+        """Assess the quality of the generated answer."""
+        if not answer:
+            return 0.0
+        
+        # Length appropriateness (not too short, not too long)
+        length = len(answer)
+        if length < 50:
+            length_score = 0.0
+        elif length < 200:
+            length_score = 0.5
+        elif length < 2000:
+            length_score = 1.0
+        else:
+            length_score = 0.7  # Penalize overly long answers
+        
+        # Technical vocabulary presence (indicates domain expertise)
+        technical_terms = ['architecture', 'instruction', 'processor', 'system', 'implementation', 
+                          'specification', 'protocol', 'interface', 'module', 'framework']
+        tech_score = sum(1 for term in technical_terms if term in answer.lower()) / len(technical_terms)
+        
+        # Sentence structure (rough assessment)
+        sentence_count = answer.count('.') + answer.count('!') + answer.count('?')
+        structure_score = min(sentence_count / 5.0, 1.0)  # Normalize to 1.0 for 5+ sentences
+        
+        return (length_score + tech_score + structure_score) / 3.0
+
+    def _is_off_topic(self, query: str, chunks: List[Dict[str, Any]]) -> bool:
+        """Detect if query is off-topic relative to available context."""
+        if not query or not chunks:
+            return False
+        
+        # Simple keyword-based off-topic detection with better tokenization
+        import re
+        
+        # Clean and tokenize query and context
+        query_clean = re.sub(r'[^\w\s-]', ' ', query.lower())  # Keep hyphens for terms like "risc-v"
+        query_words = set(query_clean.split())
+        context_words = set()
+        
+        for chunk in chunks:
+            content = chunk.get('content', chunk.get('text', ''))
+            content_clean = re.sub(r'[^\w\s-]', ' ', content.lower())
+            context_words.update(content_clean.split())
+        
+        # If query has very little overlap with context, it might be off-topic
+        overlap_ratio = len(query_words & context_words) / max(len(query_words), 1)
+        
+        # Filter out common stop words that don't indicate relevance
+        stop_words = {'is', 'what', 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
+        meaningful_query_words = query_words - stop_words
+        meaningful_context_words = context_words - stop_words
+        
+        if meaningful_query_words:
+            meaningful_overlap = len(meaningful_query_words & meaningful_context_words) / len(meaningful_query_words)
+            return meaningful_overlap < 0.2  # Less than 20% meaningful overlap suggests off-topic
+        
+        return overlap_ratio < 0.15  # Fallback: less than 15% overlap suggests off-topic
 
     def generate(self, query: str, chunks: List[Dict[str, Any]]) -> GeneratedAnswer:
         """
@@ -421,8 +561,8 @@ Answer:"""
             answer_with_citations, chunks
         )
 
-        # Calculate confidence
-        confidence = self._calculate_confidence(natural_answer, citations, chunks)
+        # Calculate confidence with enhanced context awareness
+        confidence = self._calculate_confidence(natural_answer, citations, chunks, query)
 
         return GeneratedAnswer(
             answer=natural_answer,
@@ -494,8 +634,8 @@ Answer:"""
         # Extract citations and create natural answer
         natural_answer, citations = self._extract_citations(answer_with_citations, chunks)
         
-        # Calculate confidence
-        confidence = self._calculate_confidence(natural_answer, citations, chunks)
+        # Calculate confidence with enhanced context awareness
+        confidence = self._calculate_confidence(natural_answer, citations, chunks, query)
         
         return GeneratedAnswer(
             answer=natural_answer,
