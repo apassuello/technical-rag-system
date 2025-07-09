@@ -39,6 +39,39 @@ class SystemValidator:
         }
         self.orchestrator = None
     
+    def _check_if_fallback_used(self, answer) -> str:
+        """Check if fallback citation was used in the answer."""
+        # Check metadata for fallback indicators
+        if hasattr(answer, 'metadata') and answer.metadata:
+            if answer.metadata.get('fallback_used', False):
+                return "Metadata indicates fallback used"
+            if answer.metadata.get('fallback_reason'):
+                return f"Fallback reason: {answer.metadata.get('fallback_reason')}"
+        
+        # Check answer text for fallback patterns
+        fallback_patterns = [
+            "fallback: creating",
+            "creating 2 citations",
+            "unable to find relevant",
+            "no relevant information",
+            "based on the provided context, I cannot",
+            "I don't have specific information"
+        ]
+        
+        answer_text_lower = answer.text.lower()
+        for pattern in fallback_patterns:
+            if pattern in answer_text_lower:
+                return f"Text pattern detected: {pattern}"
+        
+        # Check sources for fallback indicators
+        if hasattr(answer, 'sources') and answer.sources:
+            for source in answer.sources:
+                if hasattr(source, 'metadata') and source.metadata:
+                    if source.metadata.get('fallback_source', False):
+                        return "Fallback source detected"
+        
+        return False
+    
     def run_all_validations(self) -> Dict[str, Any]:
         """Run all validation tests and return comprehensive results."""
         print("=" * 80)
@@ -243,6 +276,9 @@ class SystemValidator:
                     answer = self.orchestrator.process_query(query)
                     response_time = time.time() - start_time
                     
+                    # Get retrieval information from answer metadata
+                    retrieved_chunks_count = answer.metadata.get('retrieved_docs', 0)
+                    
                     # Quality assessment
                     length_check = len(answer.text) >= test.get('min_length', 0)
                     confidence_check = (
@@ -277,6 +313,23 @@ class SystemValidator:
                     
                     status = "✅" if result['overall_success'] else "⚠️"
                     print(f"    {status} Length: {len(answer.text)}, Confidence: {answer.confidence:.3f}")
+                    print(f"    📊 Retrieved chunks: {retrieved_chunks_count}, Cited sources: {len(answer.sources)}")
+                    
+                    # Show full answer if test failed OR fallback was used
+                    fallback_used = self._check_if_fallback_used(answer)
+                    
+                    if not result['overall_success'] or fallback_used:
+                        if not result['overall_success']:
+                            print(f"    ⚠️ TEST FAILED - Showing full answer:")
+                        if fallback_used:
+                            print(f"    ⚠️ FALLBACK DETECTED - Showing full answer:")
+                        print(f"    📝 Full Answer: {answer.text}")
+                        if fallback_used:
+                            print(f"    🔍 Fallback reason: {fallback_used}")
+                    else:
+                        print(f"    📝 Answer preview: {answer.text[:200]}...")
+                        if len(answer.text) > 200:
+                            print(f"    📊 Full answer length: {len(answer.text)} characters")
                     
                 except Exception as e:
                     query_results.append({

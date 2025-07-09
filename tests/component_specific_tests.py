@@ -460,6 +460,16 @@ class ComponentSpecificTester:
                 print(f"      ✅ Top score: {results[0].score:.4f}" if results else "      ❌ No results")
                 print(f"      ✅ Ranking quality: {retrieval_analysis['ranking_quality']:.2f}")
                 
+                # Display retrieval preview for each chunk
+                print(f"      📄 Retrieval preview ({len(results)} chunks):")
+                for j, result in enumerate(results):
+                    chunk_preview = result.document.content[:100]
+                    if len(result.document.content) > 100:
+                        chunk_preview += "..."
+                    print(f"        {j+1}. {chunk_preview}")
+                    print(f"           Score: {result.score:.3f}, Method: {result.retrieval_method}")
+                    print(f"           Source: {result.document.metadata.get('source', 'unknown')}")
+                
             except Exception as e:
                 print(f"      ❌ Retrieval failed: {str(e)}")
                 retriever_results.append({
@@ -569,6 +579,8 @@ class ComponentSpecificTester:
             print(f"    • Testing query {i+1}/{len(test_queries)} ({query_info['complexity']})")
             
             query = query_info['query']
+            print(f"      🔍 Query preview: Category={query_info['query_category']}, Expected length={query_info['expected_length']}, Expected confidence={query_info['expected_confidence']:.1f}")
+            print(f"      📝 Query content: '{query}'")
             
             # Prepare context documents
             context_docs = self.test_documents[:query_info['context_size']] if self.test_documents else []
@@ -580,6 +592,9 @@ class ComponentSpecificTester:
                 generation_time = time.time() - start_time
                 
                 # Analyze answer quality
+                # Check if fallback was used
+                fallback_used = self._check_if_fallback_used(answer)
+                
                 answer_analysis = {
                     'query_id': f"query_{i+1}",
                     'query': query,
@@ -597,6 +612,7 @@ class ComponentSpecificTester:
                     'sources_count': len(answer.sources),
                     'answer_text': answer.text,
                     'answer_metadata': answer.metadata,
+                    'fallback_used': fallback_used,
                     'length_appropriate': self._assess_length_appropriateness(len(answer.text), query_info['expected_length']),
                     'confidence_appropriate': self._assess_confidence_appropriateness(answer.confidence, query_info['expected_confidence']),
                     'answer_quality': self._assess_answer_quality(answer.text, query_info),
@@ -611,6 +627,19 @@ class ComponentSpecificTester:
                 print(f"      ✅ Answer length: {len(answer.text)} chars")
                 print(f"      ✅ Confidence: {answer.confidence:.4f}")
                 print(f"      ✅ Answer quality: {answer_analysis['answer_quality']:.2f}")
+                print(f"      📊 Retrieved chunks: {len(context_docs)}, Cited sources: {len(answer.sources)}")
+                
+                # Check if fallback was used by examining metadata or answer characteristics
+                fallback_used = self._check_if_fallback_used(answer)
+                
+                if fallback_used:
+                    print(f"      ⚠️ FALLBACK DETECTED - Showing full answer:")
+                    print(f"      📝 Full Answer: {answer.text}")
+                    print(f"      🔍 Fallback reason: {fallback_used}")
+                else:
+                    print(f"      📝 Answer preview: {answer.text[:200]}...")
+                    if len(answer.text) > 200:
+                        print(f"      📊 Full answer length: {len(answer.text)} characters")
                 
             except Exception as e:
                 print(f"      ❌ Generation failed: {str(e)}")
@@ -1081,6 +1110,46 @@ class ComponentSpecificTester:
             return min(terms_found / 2, 1.0)
         else:
             return min(terms_found / 2, 1.0)
+    
+    def _check_if_fallback_used(self, answer):
+        """Check if fallback citations were used in the answer."""
+        # Check metadata for fallback indicators
+        if hasattr(answer, 'metadata') and answer.metadata:
+            if 'fallback_used' in answer.metadata:
+                return answer.metadata['fallback_used']
+            if 'citation_method' in answer.metadata and answer.metadata['citation_method'] == 'fallback':
+                return 'Fallback citations created (no chunk references found)'
+        
+        # Check answer text for fallback patterns
+        answer_text = answer.text.lower()
+        
+        # Look for fallback citation patterns
+        fallback_patterns = [
+            'fallback: creating',
+            'creating 2 citations',
+            'no explicit [chunk_',
+            'fallback citations'
+        ]
+        
+        for pattern in fallback_patterns:
+            if pattern in answer_text:
+                return f'Fallback detected: {pattern}'
+        
+        # Check if citations look like fallback format
+        if len(answer.sources) > 0:
+            # Check if all sources have generic metadata (typical of fallback)
+            fallback_indicators = 0
+            for source in answer.sources:
+                if hasattr(source, 'metadata') and source.metadata:
+                    # Generic chunk IDs or source names indicate fallback
+                    if (source.metadata.get('chunk_id', '').startswith('fallback_') or 
+                        source.metadata.get('source', '') == 'fallback'):
+                        fallback_indicators += 1
+            
+            if fallback_indicators > 0:
+                return f'Fallback sources detected ({fallback_indicators}/{len(answer.sources)})'
+        
+        return False
     
     def _analyze_complexity_performance(self, successful_generations):
         """Analyze performance vs complexity."""

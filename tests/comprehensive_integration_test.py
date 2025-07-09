@@ -347,6 +347,16 @@ class ComprehensiveIntegrationTest:
             retrieval_results.append(query_result)
             print(f"      ✅ Retrieved {len(results)} results in {retrieval_time:.3f}s")
             print(f"      ✅ Top score: {results[0].score:.3f}" if results else "      ❌ No results")
+            
+            # Display retrieval preview for each chunk
+            print(f"      📄 Retrieval preview ({len(results)} chunks):")
+            for i, result in enumerate(results):
+                chunk_preview = result.document.content[:100]
+                if len(result.document.content) > 100:
+                    chunk_preview += "..."
+                print(f"        {i+1}. {chunk_preview}")
+                print(f"           Score: {result.score:.3f}, Method: {result.retrieval_method}")
+                print(f"           Source: {result.document.metadata.get('source', 'unknown')}")
         
         self.test_results['retrieval_system'] = {
             'queries_tested': len(test_queries),
@@ -393,14 +403,21 @@ class ComprehensiveIntegrationTest:
         for query_info in test_queries:
             query = query_info['query']
             print(f"    • Testing query: '{query}'")
+            print(f"      🔍 Query preview: Category={query_info['query_category']}, Expected length={query_info['expected_length']}, Expected confidence={query_info['expected_confidence']:.1f}")
             
             # Process query with full timing
             start_time = time.time()
             answer = self.orchestrator.process_query(query)
             generation_time = time.time() - start_time
             
+            # Get retrieval information from answer metadata
+            retrieved_chunks_count = answer.metadata.get('retrieved_docs', 0)
+            
             # Analyze answer quality
             answer_analysis = self._analyze_answer_quality(answer, query_info)
+            
+            # Check if fallback was used
+            fallback_used = self._check_if_fallback_used(answer)
             
             query_result = {
                 'query': query,
@@ -414,6 +431,7 @@ class ComprehensiveIntegrationTest:
                 'answer_analysis': answer_analysis,
                 'answer_text': answer.text,
                 'answer_metadata': answer.metadata,
+                'fallback_used': fallback_used,
                 'sources': [
                     {
                         'source': src.metadata.get('source'),
@@ -429,7 +447,19 @@ class ComprehensiveIntegrationTest:
             print(f"      ✅ Generated answer in {generation_time:.3f}s")
             print(f"      ✅ Answer length: {len(answer.text)} chars")
             print(f"      ✅ Confidence: {answer.confidence:.3f}")
-            print(f"      ✅ Sources: {len(answer.sources)}")
+            print(f"      📊 Retrieved chunks: {retrieved_chunks_count}, Cited sources: {len(answer.sources)}")
+            
+            # Check if fallback was used and show appropriate display
+            fallback_used = self._check_if_fallback_used(answer)
+            
+            if fallback_used:
+                print(f"      ⚠️ FALLBACK DETECTED - Showing full answer:")
+                print(f"      📝 Full Answer: {answer.text}")
+                print(f"      🔍 Fallback reason: {fallback_used}")
+            else:
+                print(f"      📝 Answer preview: {answer.text[:200]}...")
+                if len(answer.text) > 200:
+                    print(f"      📊 Full answer length: {len(answer.text)} characters")
         
         self.test_results['answer_generation'] = {
             'queries_tested': len(test_queries),
@@ -897,6 +927,46 @@ class ComprehensiveIntegrationTest:
         
         print(f"\n💾 Comprehensive test results saved to: {filename}")
         return filename
+    
+    def _check_if_fallback_used(self, answer):
+        """Check if fallback citations were used in the answer."""
+        # Check metadata for fallback indicators
+        if hasattr(answer, 'metadata') and answer.metadata:
+            if 'fallback_used' in answer.metadata:
+                return answer.metadata['fallback_used']
+            if 'citation_method' in answer.metadata and answer.metadata['citation_method'] == 'fallback':
+                return 'Fallback citations created (no chunk references found)'
+        
+        # Check answer text for fallback patterns
+        answer_text = answer.text.lower()
+        
+        # Look for fallback citation patterns
+        fallback_patterns = [
+            'fallback: creating',
+            'creating 2 citations',
+            'no explicit [chunk_',
+            'fallback citations'
+        ]
+        
+        for pattern in fallback_patterns:
+            if pattern in answer_text:
+                return f'Fallback detected: {pattern}'
+        
+        # Check if citations look like fallback format
+        if len(answer.sources) > 0:
+            # Check if all sources have generic metadata (typical of fallback)
+            fallback_indicators = 0
+            for source in answer.sources:
+                if hasattr(source, 'metadata') and source.metadata:
+                    # Generic chunk IDs or source names indicate fallback
+                    if (source.metadata.get('chunk_id', '').startswith('fallback_') or 
+                        source.metadata.get('source', '') == 'fallback'):
+                        fallback_indicators += 1
+            
+            if fallback_indicators > 0:
+                return f'Fallback sources detected ({fallback_indicators}/{len(answer.sources)})'
+        
+        return False
 
 
 def main():
