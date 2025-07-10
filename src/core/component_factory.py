@@ -261,9 +261,26 @@ class ComponentFactory:
         
         start_time = time.time()
         try:
-            logger.debug(f"Creating {component_type} with args: {kwargs}")
+            # Log component creation with essential information (INFO level for visibility)
             component = component_class(**kwargs)
             creation_time = time.time() - start_time
+            
+            # Enhanced logging with component details
+            component_name = component.__class__.__name__
+            component_module = component.__class__.__module__
+            logger.info(f"🏭 ComponentFactory created: {component_name} "
+                       f"(type={component_type}, module={component_module}, "
+                       f"time={creation_time:.3f}s)")
+            
+            # Log component-specific info if available
+            if hasattr(component, 'get_component_info'):
+                try:
+                    info = component.get_component_info()
+                    if isinstance(info, dict) and len(info) > 0:
+                        sub_components = [f"{k}:{v.get('class', 'Unknown')}" for k, v in info.items()]
+                        logger.info(f"  └─ Sub-components: {', '.join(sub_components)}")
+                except Exception:
+                    pass  # Don't fail component creation on logging issues
             
             # Add to cache if caching is enabled
             if use_cache and cache_key:

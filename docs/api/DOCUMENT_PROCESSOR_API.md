@@ -1016,6 +1016,46 @@ def test_processor_configuration(config):
 
 This comprehensive API documentation provides complete coverage of the Document Processor API with examples, best practices, and detailed parameter descriptions for production use.
 
+## ComponentFactory Enhanced Logging (2025-07-10)
+
+The ComponentFactory now provides comprehensive logging for all component creation operations, making debugging and validation significantly easier.
+
+### Logging Output Format
+
+When creating components, the factory now logs detailed information:
+
+```python
+# Example creation
+processor = ComponentFactory.create_processor("hybrid_pdf")
+
+# Logs produced:
+[src.core.component_factory] INFO: 🏭 ComponentFactory created: ModularDocumentProcessor (type=processor_hybrid_pdf, module=src.components.processors.document_processor, time=0.000s)
+[src.core.component_factory] INFO:   └─ Sub-components: parser:PyMuPDFAdapter, chunker:SentenceBoundaryChunker, cleaner:TechnicalContentCleaner, pipeline:DocumentProcessingPipeline
+```
+
+### Enabling Logging in Tests
+
+To see ComponentFactory logs in test environments, add this configuration:
+
+```python
+import logging
+logging.basicConfig(level=logging.INFO, format='[%(name)s] %(levelname)s: %(message)s')
+```
+
+### Log Information Included
+
+- **🏭 Factory Icon**: Easy identification in log streams
+- **Component Class**: Exact class name instantiated
+- **Request Type**: Original request type (hybrid_pdf, legacy_pdf, etc.)
+- **Module Path**: Source module for debugging
+- **Creation Time**: Performance monitoring
+- **Sub-components**: Automatic detection for modular processors
+
+This enhancement provides immediate visibility into which components are being created, eliminating uncertainty in test validation and system debugging.
+
+---
+
 **Last Updated**: 2025-07-10  
 **API Version**: 1.0  
+**Enhancement**: ComponentFactory Logging Integration
 **Next Review**: 2025-08-10

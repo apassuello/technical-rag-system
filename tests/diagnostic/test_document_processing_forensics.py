@@ -28,6 +28,9 @@ from tests.diagnostic.base_diagnostic import DiagnosticTestBase, DiagnosticResul
 from src.core.interfaces import Document
 from src.core.component_factory import ComponentFactory
 
+# Configure logging to see ComponentFactory logs
+logging.basicConfig(level=logging.INFO, format='[%(name)s] %(levelname)s: %(message)s')
+
 logger = logging.getLogger(__name__)
 
 

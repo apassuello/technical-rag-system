@@ -9,8 +9,12 @@ import os
 import sys
 import json
 import time
+import logging
 from pathlib import Path
 from datetime import datetime
+
+# Configure logging to see ComponentFactory logs
+logging.basicConfig(level=logging.INFO, format='[%(name)s] %(levelname)s: %(message)s')
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
