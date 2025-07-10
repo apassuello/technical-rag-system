@@ -26,7 +26,10 @@ sys.path.append(str(project_root))
 
 from tests.diagnostic.base_diagnostic import DiagnosticTestBase, DiagnosticResult
 from src.core.interfaces import Document
-from src.components.processors.pdf_processor import HybridPDFProcessor
+from src.core.component_factory import ComponentFactory
+
+# Configure logging to see ComponentFactory logs
+logging.basicConfig(level=logging.INFO, format='[%(name)s] %(levelname)s: %(message)s')
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +76,8 @@ class DocumentProcessingForensics(DiagnosticTestBase):
         print("TEST SUITE 2: DOCUMENT PROCESSING DATA CHAIN ANALYSIS")
         print("=" * 80)
         
-        # Initialize processor
-        self.processor = HybridPDFProcessor()
+        # Initialize processor using ComponentFactory (gets ModularDocumentProcessor)
+        self.processor = ComponentFactory.create_processor("hybrid_pdf")
         
         # Test 1: PDF Metadata Extraction Validation
         print("\n📄 Test 2.1: PDF Metadata Extraction Validation")

@@ -21,13 +21,15 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 
+# Configure logging to see ComponentFactory logs
+logging.basicConfig(level=logging.INFO, format='[%(name)s] %(levelname)s: %(message)s')
+
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Document, Answer
-from src.components.processors.pdf_processor import HybridPDFProcessor
 from src.components.embedders.sentence_transformer_embedder import SentenceTransformerEmbedder
 from src.components.retrievers.unified_retriever import UnifiedRetriever
 from src.components.generators.adaptive_generator import AdaptiveAnswerGenerator

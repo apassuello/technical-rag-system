@@ -517,9 +517,9 @@ class EmbeddingVectorForensics(DiagnosticTestBase):
     
     def _create_test_documents_with_embeddings(self) -> List[Document]:
         """Create test documents with embeddings from real PDF processing."""
-        from src.components.processors.pdf_processor import HybridPDFProcessor
+        from src.core.component_factory import ComponentFactory
         
-        processor = HybridPDFProcessor()
+        processor = ComponentFactory.create_processor("hybrid_pdf")
         
         # Process real PDFs
         test_files = [

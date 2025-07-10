@@ -27,7 +27,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from src.core.interfaces import Document, Answer
-from src.components.processors.pdf_processor import HybridPDFProcessor
+from src.core.component_factory import ComponentFactory
 from src.components.embedders.sentence_transformer_embedder import SentenceTransformerEmbedder
 from src.components.retrievers.unified_retriever import UnifiedRetriever
 from src.components.generators.adaptive_generator import AdaptiveAnswerGenerator
@@ -91,7 +91,7 @@ class ComponentSpecificTester:
         """Extract full text from PDF for coverage analysis."""
         try:
             # Use the same processor to extract full text
-            processor = HybridPDFProcessor()
+            processor = ComponentFactory.create_processor("hybrid_pdf")
             documents = processor.process(pdf_path)
             # Combine all document content to approximate full document text
             full_text = " ".join([doc.content for doc in documents])
@@ -393,7 +393,7 @@ class ComponentSpecificTester:
         print("  • Testing document processor behavior with coverage analysis...")
         
         # Initialize actual document processor for real testing
-        processor = HybridPDFProcessor()
+        processor = ComponentFactory.create_processor("hybrid_pdf")
         
         # Test with real documents for coverage analysis
         data_folder = Path(project_root) / "data" / "test"

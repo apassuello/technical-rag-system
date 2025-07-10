@@ -192,9 +192,9 @@ class EndToEndQualityForensics(DiagnosticTestBase):
     
     def _create_comprehensive_test_corpus(self) -> List[Document]:
         """Create comprehensive test corpus from real PDF processing."""
-        from src.components.processors.pdf_processor import HybridPDFProcessor
+        from src.core.component_factory import ComponentFactory
         
-        processor = HybridPDFProcessor()
+        processor = ComponentFactory.create_processor("hybrid_pdf")
         
         # Process real PDFs to create comprehensive test corpus
         test_files = [
