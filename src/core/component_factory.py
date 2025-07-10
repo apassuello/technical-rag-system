@@ -78,6 +78,7 @@ class ComponentFactory:
     _GENERATORS: Dict[str, str] = {
         "adaptive": "src.components.generators.adaptive_generator.AdaptiveAnswerGenerator",
         "adaptive_generator": "src.components.generators.adaptive_generator.AdaptiveAnswerGenerator",  # Alias for compatibility
+        "adaptive_modular": "src.components.generators.answer_generator.AnswerGenerator",  # New modular implementation
     }
     
     # Phase 4: Performance monitoring and caching
@@ -469,7 +470,11 @@ class ComponentFactory:
         
         try:
             logger.debug(f"Creating {generator_type} generator with args: {kwargs}")
-            return generator_class(**kwargs)
+            return cls._create_with_tracking(
+                generator_class, 
+                f"generator_{generator_type}", 
+                **kwargs
+            )
         except Exception as e:
             raise TypeError(
                 f"Failed to create generator '{generator_type}': {e}. "
