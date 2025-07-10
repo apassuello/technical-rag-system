@@ -177,9 +177,9 @@ class RetrievalSystemForensics(DiagnosticTestBase):
     
     def _create_test_corpus(self) -> List[Document]:
         """Create a comprehensive test corpus from real PDF processing."""
-        from src.components.processors.pdf_processor import HybridPDFProcessor
+        from src.core.component_factory import ComponentFactory
         
-        processor = HybridPDFProcessor()
+        processor = ComponentFactory.create_processor("hybrid_pdf")
         
         # Process real PDFs to create test corpus
         test_files = [
