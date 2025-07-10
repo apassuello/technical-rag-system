@@ -62,12 +62,15 @@ class ModularDocumentProcessor(DocumentProcessorInterface, ConfigurableComponent
     }
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, chunk_size: int = None, chunk_overlap: int = None, **kwargs):
         """
         Initialize the modular document processor.
         
         Args:
             config: Configuration dictionary for all sub-components
+            chunk_size: Legacy parameter for chunk size (backwards compatibility)
+            chunk_overlap: Legacy parameter for chunk overlap (backwards compatibility)
+            **kwargs: Additional legacy parameters for backwards compatibility
         """
         # Default configuration
         self.config = {
@@ -100,6 +103,37 @@ class ModularDocumentProcessor(DocumentProcessorInterface, ConfigurableComponent
                 'fail_fast': False
             }
         }
+        
+        # Handle legacy parameters for backwards compatibility
+        if chunk_size is not None or chunk_overlap is not None or kwargs:
+            # Convert legacy parameters to config format
+            legacy_config = {}
+            
+            if chunk_size is not None:
+                legacy_config['chunker'] = {'config': {'chunk_size': chunk_size}}
+            
+            if chunk_overlap is not None:
+                if 'chunker' not in legacy_config:
+                    legacy_config['chunker'] = {'config': {}}
+                legacy_config['chunker']['config']['overlap'] = chunk_overlap
+            
+            # Handle other legacy parameters
+            for key, value in kwargs.items():
+                if key in ['min_chunk_size', 'enable_quality_filtering', 'quality_threshold']:
+                    if 'chunker' not in legacy_config:
+                        legacy_config['chunker'] = {'config': {}}
+                    legacy_config['chunker']['config'][key] = value
+                elif key in ['preserve_layout', 'max_file_size_mb', 'extract_images']:
+                    if 'parser' not in legacy_config:
+                        legacy_config['parser'] = {'config': {}}
+                    legacy_config['parser']['config'][key] = value
+                elif key in ['normalize_whitespace', 'remove_artifacts', 'preserve_code_blocks']:
+                    if 'cleaner' not in legacy_config:
+                        legacy_config['cleaner'] = {'config': {}}
+                    legacy_config['cleaner']['config'][key] = value
+            
+            # Merge legacy config first
+            self._merge_config(self.config, legacy_config)
         
         # Apply provided configuration
         if config:

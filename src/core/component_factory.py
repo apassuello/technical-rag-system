@@ -53,8 +53,10 @@ class ComponentFactory:
     
     # Component type mappings - module paths for lazy loading
     _PROCESSORS: Dict[str, str] = {
-        "hybrid_pdf": "src.components.processors.pdf_processor.HybridPDFProcessor",
-        "pdf_processor": "src.components.processors.pdf_processor.HybridPDFProcessor",  # Alias for compatibility
+        "hybrid_pdf": "src.components.processors.document_processor.ModularDocumentProcessor",
+        "modular": "src.components.processors.document_processor.ModularDocumentProcessor",
+        "pdf_processor": "src.components.processors.pdf_processor.HybridPDFProcessor",  # Legacy processor
+        "legacy_pdf": "src.components.processors.pdf_processor.HybridPDFProcessor",  # Alias for legacy
     }
     
     _EMBEDDERS: Dict[str, str] = {
