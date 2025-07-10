@@ -896,11 +896,10 @@ class ComponentSpecificTester:
         """Test answer generator with confidence analysis."""
         print("  • Testing answer generator behavior...")
         
-        # Initialize answer generator
-        generator = AdaptiveAnswerGenerator(
+        # Initialize answer generator using ComponentFactory
+        generator = ComponentFactory.create_generator(
+            "adaptive_modular",  # Use new modular implementation
             model_name="llama3.2:3b",
-            use_ollama=True,
-            ollama_url="http://localhost:11434",
             temperature=0.3,
             max_tokens=512,
             enable_adaptive_prompts=False  # Disable adaptive prompts to avoid errors

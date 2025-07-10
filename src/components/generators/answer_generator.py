@@ -147,14 +147,18 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
             if not config:
                 config = default_config.copy()
             
+            # Ensure proper nested structure
+            config.setdefault('llm_client', {})
+            config['llm_client'].setdefault('config', {})
+            
             if model_name:
-                config.setdefault('llm_client', {}).setdefault('config', {})['model_name'] = model_name
+                config['llm_client']['config']['model_name'] = model_name
             if temperature is not None:
-                config.setdefault('llm_client', {}).setdefault('config', {})['temperature'] = temperature
+                config['llm_client']['config']['temperature'] = temperature
             if max_tokens is not None:
-                config.setdefault('llm_client', {}).setdefault('config', {})['max_tokens'] = max_tokens
+                config['llm_client']['config']['max_tokens'] = max_tokens
             if ollama_url:
-                config.setdefault('llm_client', {}).setdefault('config', {})['base_url'] = ollama_url
+                config['llm_client']['config']['base_url'] = ollama_url
         
         # Merge with defaults
         self.config = self._merge_configs(default_config, config or {})
@@ -341,7 +345,23 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
         llm_type = self.config['llm_client']['type']
         llm_config = self.config['llm_client'].get('config', {})
         adapter_class = get_adapter_class(llm_type)
-        self.llm_client = adapter_class(**llm_config)
+        
+        # Separate adapter constructor args from generation config
+        # OllamaAdapter expects: model_name, base_url, timeout, auto_pull, config
+        adapter_args = {}
+        generation_config = {}
+        
+        for key, value in llm_config.items():
+            if key in ['model_name', 'base_url', 'timeout', 'auto_pull']:
+                adapter_args[key] = value
+            else:
+                generation_config[key] = value
+        
+        # Pass generation config (temperature, max_tokens, etc.) as config parameter
+        if generation_config:
+            adapter_args['config'] = generation_config
+            
+        self.llm_client = adapter_class(**adapter_args)
         
         # Initialize response parser
         parser_type = self.config['response_parser']['type']

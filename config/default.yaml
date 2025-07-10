@@ -33,7 +33,7 @@ retriever:
 
 # Answer generation strategy (Local Ollama)
 answer_generator:
-  type: "adaptive"  # Options: adaptive, simple, chain_of_thought
+  type: "adaptive_modular"  # Options: adaptive, adaptive_modular, simple, chain_of_thought
   config:
     model_name: "llama3.2:3b"  # Local Ollama model
     api_token: null
