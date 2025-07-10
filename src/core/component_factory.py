@@ -21,14 +21,8 @@ from .interfaces import (
     AnswerGenerator
 )
 
-# Direct imports for component classes
-from ..components.processors.pdf_processor import HybridPDFProcessor
-from ..components.embedders.sentence_transformer_embedder import SentenceTransformerEmbedder
-# Legacy components moved to archive
-# from ..components.vector_stores.faiss_store import FAISSVectorStore
-# from ..components.retrievers.hybrid_retriever import HybridRetriever
-from ..components.retrievers.unified_retriever import UnifiedRetriever
-from ..components.generators.adaptive_generator import AdaptiveAnswerGenerator
+# Component classes will be imported lazily to avoid circular imports
+# See _get_component_class() method for lazy loading implementation
 
 logger = logging.getLogger(__name__)
 
@@ -57,31 +51,31 @@ class ComponentFactory:
         retriever = factory.create_retriever("unified", embedder=embedder, dense_weight=0.7)
     """
     
-    # Component type mappings - direct class references
-    _PROCESSORS: Dict[str, Type[DocumentProcessor]] = {
-        "hybrid_pdf": HybridPDFProcessor,
-        "pdf_processor": HybridPDFProcessor,  # Alias for compatibility
+    # Component type mappings - module paths for lazy loading
+    _PROCESSORS: Dict[str, str] = {
+        "hybrid_pdf": "src.components.processors.pdf_processor.HybridPDFProcessor",
+        "pdf_processor": "src.components.processors.pdf_processor.HybridPDFProcessor",  # Alias for compatibility
     }
     
-    _EMBEDDERS: Dict[str, Type[Embedder]] = {
-        "sentence_transformer": SentenceTransformerEmbedder,
-        "sentence_transformers": SentenceTransformerEmbedder,  # Alias for compatibility
+    _EMBEDDERS: Dict[str, str] = {
+        "sentence_transformer": "src.components.embedders.sentence_transformer_embedder.SentenceTransformerEmbedder",
+        "sentence_transformers": "src.components.embedders.sentence_transformer_embedder.SentenceTransformerEmbedder",  # Alias for compatibility
     }
     
-    _VECTOR_STORES: Dict[str, Type[VectorStore]] = {
+    _VECTOR_STORES: Dict[str, str] = {
         # Legacy vector stores removed - functionality moved to UnifiedRetriever
-        # "faiss": FAISSVectorStore,
+        # "faiss": "src.components.vector_stores.faiss_store.FAISSVectorStore",
     }
     
-    _RETRIEVERS: Dict[str, Type[Retriever]] = {
+    _RETRIEVERS: Dict[str, str] = {
         # Legacy Phase 1 architecture moved to archive
-        # "hybrid": HybridRetriever,
-        "unified": UnifiedRetriever,
+        # "hybrid": "src.components.retrievers.hybrid_retriever.HybridRetriever",
+        "unified": "src.components.retrievers.unified_retriever.UnifiedRetriever",
     }
     
-    _GENERATORS: Dict[str, Type[AnswerGenerator]] = {
-        "adaptive": AdaptiveAnswerGenerator,
-        "adaptive_generator": AdaptiveAnswerGenerator,  # Alias for compatibility
+    _GENERATORS: Dict[str, str] = {
+        "adaptive": "src.components.generators.adaptive_generator.AdaptiveAnswerGenerator",
+        "adaptive_generator": "src.components.generators.adaptive_generator.AdaptiveAnswerGenerator",  # Alias for compatibility
     }
     
     # Phase 4: Performance monitoring and caching
@@ -98,6 +92,44 @@ class ComponentFactory:
     _component_cache: OrderedDict[str, Any] = OrderedDict()
     _cache_max_size: int = 10  # Max cached components
     _cacheable_types = {"embedder"}  # Only cache expensive components
+    
+    # Class cache for lazy loading
+    _class_cache: Dict[str, Type] = {}
+    
+    @classmethod
+    def _get_component_class(cls, module_path: str) -> Type:
+        """
+        Lazily import and cache component class.
+        
+        Args:
+            module_path: Module path in format "src.package.module.ClassName"
+            
+        Returns:
+            Component class
+        """
+        if module_path in cls._class_cache:
+            return cls._class_cache[module_path]
+        
+        try:
+            # Split module path and class name
+            parts = module_path.split('.')
+            class_name = parts[-1]
+            module_path_only = '.'.join(parts[:-1])
+            
+            # Import module using absolute import
+            from importlib import import_module
+            module = import_module(module_path_only)
+            
+            # Get class from module
+            component_class = getattr(module, class_name)
+            
+            # Cache for future use
+            cls._class_cache[module_path] = component_class
+            
+            return component_class
+            
+        except (ImportError, AttributeError) as e:
+            raise ImportError(f"Failed to import {module_path}: {e}") from e
     
     @classmethod
     def get_performance_metrics(cls) -> Dict[str, Dict[str, Any]]:
@@ -265,7 +297,8 @@ class ComponentFactory:
                 f"Available processors: {available}"
             )
         
-        processor_class = cls._PROCESSORS[processor_type]
+        processor_module_path = cls._PROCESSORS[processor_type]
+        processor_class = cls._get_component_class(processor_module_path)
         
         try:
             return cls._create_with_tracking(
@@ -302,7 +335,8 @@ class ComponentFactory:
                 f"Available embedders: {available}"
             )
         
-        embedder_class = cls._EMBEDDERS[embedder_type]
+        embedder_module_path = cls._EMBEDDERS[embedder_type]
+        embedder_class = cls._get_component_class(embedder_module_path)
         
         try:
             # Use caching for embedders (expensive to create)
@@ -341,7 +375,8 @@ class ComponentFactory:
                 f"Available vector stores: {available}"
             )
         
-        store_class = cls._VECTOR_STORES[store_type]
+        store_module_path = cls._VECTOR_STORES[store_type]
+        store_class = cls._get_component_class(store_module_path)
         
         try:
             logger.debug(f"Creating {store_type} vector store with args: {kwargs}")
@@ -375,7 +410,8 @@ class ComponentFactory:
                 f"Available retrievers: {available}"
             )
         
-        retriever_class = cls._RETRIEVERS[retriever_type]
+        retriever_module_path = cls._RETRIEVERS[retriever_type]
+        retriever_class = cls._get_component_class(retriever_module_path)
         
         try:
             logger.debug(f"Creating {retriever_type} retriever with args: {kwargs}")
@@ -409,7 +445,8 @@ class ComponentFactory:
                 f"Available generators: {available}"
             )
         
-        generator_class = cls._GENERATORS[generator_type]
+        generator_module_path = cls._GENERATORS[generator_type]
+        generator_class = cls._get_component_class(generator_module_path)
         
         try:
             logger.debug(f"Creating {generator_type} generator with args: {kwargs}")
