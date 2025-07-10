@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Union, Generator
 import sys
 
 # Import from same directory
-from src.core.pipeline import RAGPipeline
+from src.core.platform_orchestrator import PlatformOrchestrator
 
 # Import from shared utils - Support HF API, Ollama, and Inference Providers
 from shared_utils.generation.hf_answer_generator import (
@@ -28,7 +28,7 @@ from shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
 from shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
 
 
-class RAGWithGeneration(BasicRAG):
+class RAGWithGeneration:
     """
     Extended RAG system with answer generation capabilities.
 
@@ -62,7 +62,8 @@ class RAGWithGeneration(BasicRAG):
             enable_adaptive_prompts: If True, use context-aware prompt adaptation
             enable_chain_of_thought: If True, enable multi-step reasoning for complex queries
         """
-        super().__init__()
+        # Initialize platform orchestrator for document processing and retrieval
+        self.orchestrator = PlatformOrchestrator("config/default.yaml")
 
         # Choose generator based on configuration with fallback chain
         if use_inference_providers:

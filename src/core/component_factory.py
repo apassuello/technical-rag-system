@@ -24,8 +24,9 @@ from .interfaces import (
 # Direct imports for component classes
 from ..components.processors.pdf_processor import HybridPDFProcessor
 from ..components.embedders.sentence_transformer_embedder import SentenceTransformerEmbedder
-from ..components.vector_stores.faiss_store import FAISSVectorStore
-from ..components.retrievers.hybrid_retriever import HybridRetriever
+# Legacy components moved to archive
+# from ..components.vector_stores.faiss_store import FAISSVectorStore
+# from ..components.retrievers.hybrid_retriever import HybridRetriever
 from ..components.retrievers.unified_retriever import UnifiedRetriever
 from ..components.generators.adaptive_generator import AdaptiveAnswerGenerator
 
@@ -68,11 +69,13 @@ class ComponentFactory:
     }
     
     _VECTOR_STORES: Dict[str, Type[VectorStore]] = {
-        "faiss": FAISSVectorStore,
+        # Legacy vector stores removed - functionality moved to UnifiedRetriever
+        # "faiss": FAISSVectorStore,
     }
     
     _RETRIEVERS: Dict[str, Type[Retriever]] = {
-        "hybrid": HybridRetriever,
+        # Legacy Phase 1 architecture moved to archive
+        # "hybrid": HybridRetriever,
         "unified": UnifiedRetriever,
     }
     

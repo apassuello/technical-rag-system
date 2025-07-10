@@ -4,16 +4,9 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
-# Add parent directory to Python path to access shared_utils
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
-from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
-from shared_utils.document_processing.hybrid_parser import (
-    parse_pdf_with_hybrid_approach,
-)
-from shared_utils.embeddings.generator import generate_embeddings
-from shared_utils.retrieval.hybrid_search import HybridRetriever
-from shared_utils.retrieval.vocabulary_index import VocabularyIndex
+# Use local components instead of external shared_utils
+from src.core.platform_orchestrator import PlatformOrchestrator
+from src.core.interfaces import Document
 
 
 class BasicRAG:
@@ -21,12 +14,13 @@ class BasicRAG:
 
     def __init__(self):
         """
-        Initialize FAISS index and document storage.
+        Initialize BasicRAG with platform orchestrator.
 
         Recommended Usage:
         - For production: Use hybrid_query() method (best performance + quality)
         - For research: enhanced_hybrid_query() available but not recommended
         """
+        self.orchestrator = PlatformOrchestrator("config/default.yaml")
         self.index = None
         self.chunks = []  # Store chunk text and metadata
         self.embedding_dim = 384  # multi-qa-MiniLM-L6-cos-v1 dimension
