@@ -43,7 +43,12 @@ class ComprehensiveTestRunner:
     
     def __init__(self, config_path: str = "config/default.yaml"):
         """Initialize comprehensive test runner."""
-        self.config_path = config_path
+        # Ensure config path is relative to project root
+        project_root = Path(__file__).parent.parent
+        if not Path(config_path).is_absolute():
+            self.config_path = str(project_root / config_path)
+        else:
+            self.config_path = config_path
         self.test_results = {
             'timestamp': datetime.now().isoformat(),
             'test_session_id': f"comprehensive_test_{int(time.time())}",
@@ -493,9 +498,15 @@ class ComprehensiveTestRunner:
     
     def _calculate_cross_validation_score(self, consistency_analysis, performance_comparison, quality_consistency):
         """Calculate cross-validation score."""
-        consistency_score = consistency_analysis.get('overall_consistency', 0)
-        alignment_score = performance_comparison.get('alignment_score', 0)
-        quality_score = quality_consistency.get('consistency_score', 0)
+        # Safe extraction with type checking
+        consistency_score = consistency_analysis.get('overall_consistency', 0) if isinstance(consistency_analysis, dict) else 0
+        alignment_score = performance_comparison.get('alignment_score', 0) if isinstance(performance_comparison, dict) else 0
+        quality_score = quality_consistency.get('consistency_score', 0) if isinstance(quality_consistency, dict) else 0
+        
+        # Ensure all scores are numeric
+        consistency_score = float(consistency_score) if isinstance(consistency_score, (int, float)) else 0.0
+        alignment_score = float(alignment_score) if isinstance(alignment_score, (int, float)) else 0.0
+        quality_score = float(quality_score) if isinstance(quality_score, (int, float)) else 0.0
         
         return (consistency_score + alignment_score + quality_score) / 3
     

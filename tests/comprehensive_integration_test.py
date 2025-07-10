@@ -51,7 +51,12 @@ class ComprehensiveIntegrationTest:
     
     def __init__(self, config_path: str = "config/default.yaml"):
         """Initialize comprehensive integration test."""
-        self.config_path = config_path
+        # Ensure config path is relative to project root
+        project_root = Path(__file__).parent.parent
+        if not Path(config_path).is_absolute():
+            self.config_path = str(project_root / config_path)
+        else:
+            self.config_path = config_path
         self.orchestrator = None
         self.test_results = {
             'timestamp': datetime.now().isoformat(),

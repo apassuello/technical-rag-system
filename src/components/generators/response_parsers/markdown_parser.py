@@ -43,6 +43,7 @@ class MarkdownParser(ResponseParser, ConfigurableComponent):
     DEFAULT_CITATION_PATTERNS = [
         r'\[(\d+)\]',                    # [1], [2], etc.
         r'\[Document\s+(\d+)\]',          # [Document 1], [Document 2]
+        r'\[Document\s+(\d+),\s*Page\s+\d+\]',  # [Document 1, Page 1], [Document 2, Page 15]
         r'\[Doc\s+(\d+)\]',               # [Doc 1], [Doc 2]
         r'\[\^(\d+)\]',                   # Footnote style [^1]
         r'¹²³⁴⁵⁶⁷⁸⁹⁰',                   # Unicode superscripts
@@ -75,7 +76,7 @@ class MarkdownParser(ResponseParser, ConfigurableComponent):
         
         super().__init__(parser_config)
         
-        self.extract_citations = parser_config['extract_citations']
+        self.extract_citations_enabled = parser_config['extract_citations']
         self.preserve_formatting = parser_config['preserve_formatting']
         self.extract_sections = parser_config['extract_sections']
         
@@ -144,7 +145,7 @@ class MarkdownParser(ResponseParser, ConfigurableComponent):
         Returns:
             List of extracted citations
         """
-        if not self.extract_citations:
+        if not self.extract_citations_enabled:
             return []
         
         answer_text = response.get('answer', '')
@@ -186,7 +187,7 @@ class MarkdownParser(ResponseParser, ConfigurableComponent):
         return {
             'type': 'markdown',
             'parser_class': self.__class__.__name__,
-            'extract_citations': self.extract_citations,
+            'extract_citations': self.extract_citations_enabled,
             'preserve_formatting': self.preserve_formatting,
             'extract_sections': self.extract_sections,
             'citation_patterns': len(self.citation_patterns),
