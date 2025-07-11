@@ -60,4 +60,6 @@ answer_generator:
     confidence_threshold: 0.85
 
 # Global settings (optional)
-global_settings: {}
+global_settings:
+  environment: "production"
+  log_level: "info"
