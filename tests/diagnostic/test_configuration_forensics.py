@@ -126,7 +126,7 @@ class ConfigurationForensics(DiagnosticTestBase):
         
         # Test configuration loading mechanism
         try:
-            default_config = load_config("config/default.yaml")
+            default_config = load_config(Path("config/default.yaml"))
             data_captured["config_loading_test"] = {
                 "success": True,
                 "loaded_config": default_config,
@@ -516,10 +516,10 @@ class ConfigurationForensics(DiagnosticTestBase):
         if hasattr(orchestrator, 'config'):
             config = orchestrator.config
             logic["configuration_analysis"] = {
-                "has_vector_store": "vector_store" in config,
-                "has_retriever": "retriever" in config,
-                "retriever_type": config.get("retriever", {}).get("type", "unknown"),
-                "components_configured": list(config.keys())
+                "has_vector_store": hasattr(config, 'vector_store') and config.vector_store is not None,
+                "has_retriever": hasattr(config, 'retriever') and config.retriever is not None,
+                "retriever_type": config.retriever.type if hasattr(config, 'retriever') and config.retriever else "unknown",
+                "components_configured": [field for field in config.model_fields.keys() if hasattr(config, field) and getattr(config, field) is not None]
             }
         
         return logic

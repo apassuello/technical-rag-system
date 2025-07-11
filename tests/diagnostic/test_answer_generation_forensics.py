@@ -135,10 +135,19 @@ class AnswerGenerationForensics(DiagnosticTestBase):
                 if "sub_components" in data_captured:
                     sub_components = data_captured["sub_components"]
                     expected_components = ['prompt_builder', 'llm_client', 'response_parser', 'confidence_scorer']
-                    missing_components = [comp for comp in expected_components if comp not in sub_components]
-                    if missing_components:
-                        issues_found.append(f"Missing sub-components: {missing_components}")
-                        recommendations.append("Ensure all required sub-components are present in modular AnswerGenerator")
+                    # Check if components are present in the components dict
+                    if "components" in sub_components:
+                        components_dict = sub_components["components"]
+                        missing_components = [comp for comp in expected_components if comp not in components_dict]
+                        if missing_components:
+                            issues_found.append(f"Missing sub-components: {missing_components}")
+                            recommendations.append("Ensure all required sub-components are present in modular AnswerGenerator")
+                    else:
+                        # Fall back to checking directly in sub_components for backward compatibility
+                        missing_components = [comp for comp in expected_components if comp not in sub_components]
+                        if missing_components:
+                            issues_found.append(f"Missing sub-components: {missing_components}")
+                            recommendations.append("Ensure all required sub-components are present in modular AnswerGenerator")
                 
             else:
                 issues_found.append("CRITICAL: Unable to access generator from orchestrator")
