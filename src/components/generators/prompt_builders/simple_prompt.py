@@ -48,7 +48,9 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
     - Answer based ONLY on the provided context
     - Be concise and direct
     - If the answer is not in the context, say so
-    - Include citations to support your answer
+    - ALWAYS include citations in your answer using the format [Document X] where X is the document number
+    - Every factual claim must be followed by a citation like [Document 1] or [Document 2]
+    - Multiple citations can be combined like [Document 1, Document 2]
     
     Answer:
     """).strip()
@@ -204,7 +206,7 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
             Prompt with citation instructions
         """
         citation_instructions = {
-            "inline": "\nWhen referencing information, include inline citations like [Document 1].",
+            "inline": "\nIMPORTANT: You MUST include citations in the format [Document X] after every factual claim. For example: 'RISC-V is an open-source ISA [Document 1].'",
             "footnote": "\nInclude footnote-style citations at the end of your answer.",
             "none": ""
         }
