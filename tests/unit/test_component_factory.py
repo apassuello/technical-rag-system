@@ -290,6 +290,31 @@ class TestGeneratorCreation:
         
         assert isinstance(generator, AnswerGenerator)
     
+    def test_create_modular_generator_success(self):
+        """Test successful modular generator creation."""
+        
+        generator = ComponentFactory.create_generator(
+            "adaptive_modular",  # New modular implementation
+            model_name="llama3.2",
+            temperature=0.5,
+            max_tokens=512
+        )
+        
+        assert isinstance(generator, AnswerGenerator)
+        assert hasattr(generator, 'generate')
+        assert hasattr(generator, 'get_component_info')
+        
+        # Test that sub-components are visible
+        info = generator.get_component_info()
+        assert 'prompt_builder' in info
+        assert 'llm_client' in info
+        assert 'response_parser' in info
+        assert 'confidence_scorer' in info
+        
+        # Verify it's the modular implementation
+        assert info['llm_client']['class'] == 'OllamaAdapter'
+        assert info['prompt_builder']['class'] == 'SimplePromptBuilder'
+    
     def test_create_generator_invalid_type(self):
         """Test generator creation with invalid type."""
         

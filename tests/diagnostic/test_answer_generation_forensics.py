@@ -104,34 +104,41 @@ class AnswerGenerationForensics(DiagnosticTestBase):
                 generator_config = self._analyze_generator_configuration(generator)
                 data_captured["generator_configuration"] = generator_config
                 
-                # Deep analysis of underlying model
-                model_analysis = self._analyze_underlying_model(generator)
-                data_captured["model_analysis"] = model_analysis
+                # Deep analysis of modular sub-components
+                sub_component_analysis = self._analyze_modular_subcomponents(generator)
+                data_captured["sub_components"] = sub_component_analysis
                 
-                # Analyze adapter layer (AdaptiveAnswerGenerator)
-                adapter_analysis = self._analyze_adapter_layer(generator)
-                data_captured["adapter_analysis"] = adapter_analysis
+                # Analyze LLM adapter (OllamaAdapter for current setup)
+                llm_adapter_analysis = self._analyze_llm_adapter(generator)
+                data_captured["llm_adapter_analysis"] = llm_adapter_analysis
                 
-                # Analyze the actual HuggingFace generator
-                hf_generator_analysis = self._analyze_hf_generator(generator)
-                data_captured["underlying_model_details"] = hf_generator_analysis
+                # Analyze prompt builder and response parser
+                prompt_parser_analysis = self._analyze_prompt_and_parser(generator)
+                data_captured["prompt_parser_analysis"] = prompt_parser_analysis
                 
                 analysis_results = {
                     "model_name": generator_config.get("model_name", "unknown"),
-                    "model_type": model_analysis.get("model_type", "unknown"),
-                    "is_extractive_qa": model_analysis.get("is_squad2", False),
-                    "is_generative": model_analysis.get("is_generative", False),
-                    "expected_output_format": model_analysis.get("expected_output_format", "unknown")
+                    "model_type": llm_adapter_analysis.get("adapter_type", "unknown"),
+                    "is_modular": sub_component_analysis.get("is_modular", False),
+                    "architecture_compliant": sub_component_analysis.get("architecture_compliant", False),
+                    "sub_component_count": len(sub_component_analysis.get("components", {})),
+                    "expected_output_format": "generated_text"
                 }
                 
-                # Critical issue detection
-                if analysis_results["is_extractive_qa"]:
-                    issues_found.append("CRITICAL: Using Squad2 extractive QA model instead of generative model")
-                    issues_found.append("Squad2 model returns fragments, not complete answers")
-                    recommendations.append("Replace Squad2 model with generative model (e.g., distilbart-cnn-12-6)")
+                # Critical issue detection for modular AnswerGenerator
+                if analysis_results["model_type"] == "ollama":
+                    print("    ✅ Using Ollama adapter for local LLM generation")
+                elif analysis_results["model_type"] == "unknown":
+                    issues_found.append("WARNING: Unknown model type - verify LLM adapter configuration")
                 
-                if analysis_results["model_name"] == "deepset/roberta-base-squad2":
-                    issues_found.append("CONFIRMED: Configuration using Squad2 model - this explains fragment responses")
+                # Check for modular architecture compliance
+                if "sub_components" in data_captured:
+                    sub_components = data_captured["sub_components"]
+                    expected_components = ['prompt_builder', 'llm_client', 'response_parser', 'confidence_scorer']
+                    missing_components = [comp for comp in expected_components if comp not in sub_components]
+                    if missing_components:
+                        issues_found.append(f"Missing sub-components: {missing_components}")
+                        recommendations.append("Ensure all required sub-components are present in modular AnswerGenerator")
                 
             else:
                 issues_found.append("CRITICAL: Unable to access generator from orchestrator")
@@ -446,84 +453,126 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         
         return config
     
-    def _analyze_underlying_model(self, generator) -> Dict[str, Any]:
-        """Analyze the underlying model being used."""
-        model_analysis = {
-            "model_detection": {},
-            "model_type_analysis": {},
-            "expected_behavior": {}
+    def _analyze_modular_subcomponents(self, generator) -> Dict[str, Any]:
+        """Analyze modular sub-components of the AnswerGenerator."""
+        sub_component_analysis = {
+            "is_modular": False,
+            "architecture_compliant": False,
+            "components": {},
+            "missing_components": []
         }
         
-        # Get model name
-        model_name = getattr(generator, 'model_name', 'unknown')
-        model_analysis["model_detection"]["model_name"] = model_name
+        # Check if generator has get_component_info method (indicates modular architecture)
+        if hasattr(generator, 'get_component_info'):
+            try:
+                component_info = generator.get_component_info()
+                sub_component_analysis["is_modular"] = True
+                sub_component_analysis["components"] = component_info
+                
+                # Expected components for modular AnswerGenerator
+                expected_components = ['prompt_builder', 'llm_client', 'response_parser', 'confidence_scorer']
+                present_components = [comp for comp in expected_components if comp in component_info]
+                missing_components = [comp for comp in expected_components if comp not in component_info]
+                
+                sub_component_analysis["missing_components"] = missing_components
+                sub_component_analysis["architecture_compliant"] = len(missing_components) == 0
+                
+                print(f"    Sub-components found: {list(component_info.keys())}")
+                
+            except Exception as e:
+                sub_component_analysis["error"] = str(e)
         
-        # Analyze model type based on name
-        if "squad" in model_name.lower():
-            model_analysis["model_type_analysis"] = {
-                "is_squad2": True,
-                "is_extractive_qa": True,
-                "is_generative": False,
-                "expected_output_format": "extractive_span"
-            }
-        elif "bart" in model_name.lower():
-            model_analysis["model_type_analysis"] = {
-                "is_squad2": False,
-                "is_extractive_qa": False,
-                "is_generative": True,
-                "expected_output_format": "generated_text"
-            }
-        else:
-            model_analysis["model_type_analysis"] = {
-                "is_squad2": False,
-                "is_extractive_qa": False,
-                "is_generative": "unknown",
-                "expected_output_format": "unknown"
-            }
-        
-        return model_analysis
+        return sub_component_analysis
     
-    def _analyze_adapter_layer(self, generator) -> Dict[str, Any]:
-        """Analyze the adapter layer (AdaptiveAnswerGenerator)."""
+    def _analyze_llm_adapter(self, generator) -> Dict[str, Any]:
+        """Analyze the LLM adapter (OllamaAdapter for current setup)."""
         adapter_analysis = {
-            "adapter_present": isinstance(generator, AdaptiveAnswerGenerator),
-            "adapter_configuration": {},
-            "underlying_generator": {}
+            "adapter_type": "unknown",
+            "adapter_present": False,
+            "adapter_configuration": {}
         }
         
-        if adapter_analysis["adapter_present"]:
-            # Analyze adapter configuration
-            if hasattr(generator, 'generator'):
-                adapter_analysis["underlying_generator"] = {
-                    "generator_class": type(generator.generator).__name__,
-                    "generator_module": type(generator.generator).__module__
-                }
+        # Check for LLM client adapter
+        if hasattr(generator, 'llm_client'):
+            llm_client = generator.llm_client
+            adapter_analysis["adapter_present"] = True
+            adapter_analysis["adapter_type"] = type(llm_client).__name__
+            
+            # Get adapter info if available
+            if hasattr(llm_client, 'get_adapter_info'):
+                try:
+                    adapter_info = llm_client.get_adapter_info()
+                    adapter_analysis["adapter_configuration"] = adapter_info
+                except Exception as e:
+                    adapter_analysis["adapter_configuration"] = {"error": str(e)}
+            
+            # Check for Ollama-specific attributes
+            if hasattr(llm_client, 'model_name') and hasattr(llm_client, 'ollama_url'):
+                adapter_analysis["adapter_type"] = "ollama"
+                adapter_analysis["adapter_configuration"].update({
+                    "model_name": getattr(llm_client, 'model_name', 'unknown'),
+                    "ollama_url": getattr(llm_client, 'ollama_url', 'unknown')
+                })
         
         return adapter_analysis
     
-    def _analyze_hf_generator(self, generator) -> Dict[str, Any]:
-        """Analyze the HuggingFace generator details."""
-        hf_analysis = {
-            "hf_generator_found": False,
-            "model_configuration": {},
-            "api_configuration": {}
+    def _analyze_prompt_and_parser(self, generator) -> Dict[str, Any]:
+        """Analyze prompt builder and response parser components."""
+        prompt_parser_analysis = {
+            "prompt_builder": {"present": False, "type": "unknown"},
+            "response_parser": {"present": False, "type": "unknown"},
+            "confidence_scorer": {"present": False, "type": "unknown"}
         }
         
-        # Try to access underlying HF generator
-        if hasattr(generator, 'generator'):
-            hf_gen = generator.generator
-            if isinstance(hf_gen, HuggingFaceAnswerGenerator):
-                hf_analysis["hf_generator_found"] = True
-                
-                # Capture HF generator configuration
-                for attr in ["model_name", "api_token", "temperature", "max_tokens", "api_url"]:
-                    if hasattr(hf_gen, attr):
-                        value = getattr(hf_gen, attr)
-                        if attr == "api_token" and value:
-                            value = "***REDACTED***"
-                        hf_analysis["model_configuration"][attr] = value
+        # Check prompt builder
+        if hasattr(generator, 'prompt_builder'):
+            prompt_builder = generator.prompt_builder
+            prompt_parser_analysis["prompt_builder"] = {
+                "present": True,
+                "type": type(prompt_builder).__name__
+            }
+            
+            # Get builder info if available
+            if hasattr(prompt_builder, 'get_builder_info'):
+                try:
+                    builder_info = prompt_builder.get_builder_info()
+                    prompt_parser_analysis["prompt_builder"]["info"] = builder_info
+                except Exception as e:
+                    prompt_parser_analysis["prompt_builder"]["info"] = {"error": str(e)}
         
-        return hf_analysis
+        # Check response parser
+        if hasattr(generator, 'response_parser'):
+            response_parser = generator.response_parser
+            prompt_parser_analysis["response_parser"] = {
+                "present": True,
+                "type": type(response_parser).__name__
+            }
+            
+            # Get parser info if available
+            if hasattr(response_parser, 'get_parser_info'):
+                try:
+                    parser_info = response_parser.get_parser_info()
+                    prompt_parser_analysis["response_parser"]["info"] = parser_info
+                except Exception as e:
+                    prompt_parser_analysis["response_parser"]["info"] = {"error": str(e)}
+        
+        # Check confidence scorer
+        if hasattr(generator, 'confidence_scorer'):
+            confidence_scorer = generator.confidence_scorer
+            prompt_parser_analysis["confidence_scorer"] = {
+                "present": True,
+                "type": type(confidence_scorer).__name__
+            }
+            
+            # Get scorer info if available
+            if hasattr(confidence_scorer, 'get_scorer_info'):
+                try:
+                    scorer_info = confidence_scorer.get_scorer_info()
+                    prompt_parser_analysis["confidence_scorer"]["info"] = scorer_info
+                except Exception as e:
+                    prompt_parser_analysis["confidence_scorer"]["info"] = {"error": str(e)}
+        
+        return prompt_parser_analysis
     
     def _create_test_documents(self) -> List[Document]:
         """Create test documents for analysis."""
