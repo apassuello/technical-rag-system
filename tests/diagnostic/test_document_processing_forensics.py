@@ -79,6 +79,10 @@ class DocumentProcessingForensics(DiagnosticTestBase):
         # Initialize processor using ComponentFactory (gets ModularDocumentProcessor)
         self.processor = ComponentFactory.create_processor("hybrid_pdf")
         
+        # Validate we got the correct processor type
+        if not hasattr(self.processor, 'get_component_info'):
+            raise RuntimeError(f"Expected ModularDocumentProcessor, got {type(self.processor)}")
+        
         # Test 1: PDF Metadata Extraction Validation
         print("\n📄 Test 2.1: PDF Metadata Extraction Validation")
         metadata_results = self.safe_execute(
@@ -111,8 +115,16 @@ class DocumentProcessingForensics(DiagnosticTestBase):
             "pdf_processor"
         )
         
-        # Test 5: Processing Performance Analysis
-        print("\n⚡ Test 2.5: Processing Performance Analysis")
+        # Test 5: Modular Sub-Component Analysis
+        print("\n🔧 Test 2.5: Modular Sub-Component Analysis")
+        subcomponent_results = self.safe_execute(
+            self._test_modular_subcomponents,
+            "Modular_SubComponent_Analysis",
+            "pdf_processor"
+        )
+        
+        # Test 6: Processing Performance Analysis
+        print("\n⚡ Test 2.6: Processing Performance Analysis")
         performance_results = self.safe_execute(
             self._test_processing_performance,
             "Processing_Performance",
@@ -122,7 +134,7 @@ class DocumentProcessingForensics(DiagnosticTestBase):
         # Aggregate results
         analysis = self._aggregate_processing_analysis([
             metadata_results, chunking_results, compliance_results,
-            attribution_results, performance_results
+            attribution_results, subcomponent_results, performance_results
         ])
         
         print(f"\n📊 DOCUMENT PROCESSING ANALYSIS COMPLETE")
@@ -326,6 +338,92 @@ class DocumentProcessingForensics(DiagnosticTestBase):
             self._generate_attribution_recommendations(attribution_results)
         )
     
+    def _test_modular_subcomponents(self) -> tuple:
+        """Test modular sub-component analysis for ModularDocumentProcessor."""
+        print("  Testing modular sub-component architecture...")
+        
+        # Get component info from ModularDocumentProcessor
+        try:
+            component_info = self.processor.get_component_info()
+            print(f"    Component info: {component_info}")
+            
+            # Expected components for ModularDocumentProcessor
+            expected_components = ['parser', 'chunker', 'cleaner', 'pipeline']
+            
+            # Analyze sub-component presence
+            present_components = [comp for comp in expected_components if comp in component_info]
+            missing_components = [comp for comp in expected_components if comp not in component_info]
+            
+            # Check component types
+            component_types = {}
+            for comp_name, comp_info in component_info.items():
+                if isinstance(comp_info, dict) and 'type' in comp_info:
+                    component_types[comp_name] = comp_info['type']
+                else:
+                    component_types[comp_name] = str(type(comp_info))
+            
+            # Expected component types for ModularDocumentProcessor
+            expected_types = {
+                'parser': 'pymupdf',  # Component info uses short type names
+                'chunker': 'sentence_boundary', 
+                'cleaner': 'technical',
+                'pipeline': 'pipeline'  # Special case for pipeline
+            }
+            
+            type_matches = {}
+            for comp_name in expected_components:
+                if comp_name in component_types:
+                    expected_type = expected_types[comp_name]
+                    actual_type = component_types[comp_name]
+                    type_matches[comp_name] = expected_type in actual_type
+                else:
+                    type_matches[comp_name] = False
+                    
+            issues_found = []
+            if missing_components:
+                issues_found.append(f"Missing sub-components: {missing_components}")
+            
+            for comp_name, matches in type_matches.items():
+                if not matches:
+                    expected_type = expected_types[comp_name]
+                    actual_type = component_types.get(comp_name, 'missing')
+                    issues_found.append(f"{comp_name} type mismatch: expected {expected_type}, got {actual_type}")
+            
+            data_captured = {
+                "component_info": component_info,
+                "present_components": present_components,
+                "missing_components": missing_components,
+                "component_types": component_types,
+                "expected_types": expected_types,
+                "type_matches": type_matches
+            }
+            
+            analysis_results = {
+                "modular_architecture": len(missing_components) == 0,
+                "component_types_correct": all(type_matches.values()),
+                "architecture_compliance": len(missing_components) == 0 and all(type_matches.values()),
+                "summary": f"Components: {len(present_components)}/{len(expected_components)}"
+            }
+            
+            recommendations = []
+            if missing_components:
+                recommendations.append(f"Ensure all required sub-components are present: {missing_components}")
+            if not all(type_matches.values()):
+                recommendations.append("Verify sub-component types match expected ModularDocumentProcessor architecture")
+            
+        except Exception as e:
+            issues_found = [f"Sub-component analysis failed: {str(e)}"]
+            data_captured = {"error": str(e)}
+            analysis_results = {"modular_architecture": False, "error": str(e)}
+            recommendations = ["Fix sub-component access in ModularDocumentProcessor"]
+        
+        return (
+            data_captured,
+            analysis_results,
+            issues_found,
+            recommendations
+        )
+    
     def _test_processing_performance(self) -> tuple:
         """Test processing performance metrics."""
         print("  Testing processing performance...")
@@ -402,12 +500,20 @@ class DocumentProcessingForensics(DiagnosticTestBase):
         """Analyze metadata extraction quality."""
         metadata = document.metadata
         
-        # Check required fields
-        required_fields = ['source', 'page', 'section', 'document_type']
+        # Check required fields for ModularDocumentProcessor
+        required_fields = ['source', 'page', 'section', 'document_type', 'chunk_id']
         missing_fields = [field for field in required_fields if field not in metadata]
         
-        # Check for "unknown" values
+        # Check for "unknown" values (ModularDocumentProcessor should avoid these)
         unknown_values = [field for field in required_fields if metadata.get(field) == 'unknown']
+        
+        # Check for component-specific metadata (from ModularDocumentProcessor)
+        component_metadata = {
+            'has_parser_info': 'parser_used' in metadata,
+            'has_chunker_info': 'chunker_used' in metadata,
+            'has_cleaner_info': 'cleaner_used' in metadata,
+            'has_processing_stats': 'processing_time' in metadata
+        }
         
         # Check source accuracy
         source_accurate = expected_source in str(metadata.get('source', ''))
@@ -425,6 +531,7 @@ class DocumentProcessingForensics(DiagnosticTestBase):
             'missing_fields': missing_fields,
             'unknown_values': unknown_values,
             'source_accurate': source_accurate,
+            'component_metadata': component_metadata,
             'issues': issues,
             'metadata': metadata
         }
@@ -443,9 +550,13 @@ class DocumentProcessingForensics(DiagnosticTestBase):
         # Check for empty content
         not_empty = len(content.strip()) > 0
         
-        # Check for technical terms preservation
+        # Check for technical terms preservation (SentenceBoundaryChunker should preserve these)
         technical_terms = ['RISC-V', 'instruction', 'architecture', 'processor', 'extension']
         preserves_technical_terms = any(term in content for term in technical_terms)
+        
+        # Check for sentence boundary preservation (specific to SentenceBoundaryChunker)
+        sentence_endings = ['.', '!', '?']
+        proper_sentence_boundaries = any(content.strip().endswith(ending) for ending in sentence_endings)
         
         issues = []
         if not has_complete_sentences:
@@ -463,6 +574,7 @@ class DocumentProcessingForensics(DiagnosticTestBase):
             'appropriate_size': appropriate_size,
             'word_count': word_count,
             'preserves_technical_terms': preserves_technical_terms,
+            'proper_sentence_boundaries': proper_sentence_boundaries,
             'issues': issues,
             'content_preview': content[:100] + "..." if len(content) > 100 else content
         }
