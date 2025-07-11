@@ -61,6 +61,7 @@ class PlatformOrchestrator:
         
         # Phase 2: Track architecture type for compatibility
         self._using_unified_retriever = False
+        self._retriever_type = None
         
         # Initialize system
         self._initialize_system()
@@ -106,6 +107,7 @@ class PlatformOrchestrator:
                 
                 # Mark that we're using unified architecture
                 self._using_unified_retriever = True
+                self._retriever_type = ret_config.type
                 
             else:
                 # Phase 1: Legacy architecture with separate vector store and retriever
@@ -129,6 +131,7 @@ class PlatformOrchestrator:
                 
                 # Mark that we're using legacy architecture
                 self._using_unified_retriever = False
+                self._retriever_type = ret_config.type
             
             # Create answer generator using factory
             gen_config = self.config.answer_generator
@@ -405,7 +408,7 @@ class PlatformOrchestrator:
         health = {
             "status": "healthy" if self._initialized else "unhealthy",
             "initialized": self._initialized,
-            "architecture": "unified" if self._using_unified_retriever else "legacy",
+            "architecture": self._retriever_type if self._retriever_type else ("unified" if self._using_unified_retriever else "legacy"),
             "config_path": str(self.config_path),
             "components": {},
             "platform": self.config.global_settings.get("platform", {})

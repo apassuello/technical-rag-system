@@ -414,9 +414,12 @@ class ComprehensiveTestRunner:
             system_results, integration_results, component_results
         )
         
-        overall_consistency = (
-            architecture_consistency + performance_consistency + quality_consistency
-        ) / 3
+        # Ensure all consistency scores are numeric
+        arch_score = float(architecture_consistency) if isinstance(architecture_consistency, (int, float)) else 0.0
+        perf_score = float(performance_consistency.get('consistency', 0)) if isinstance(performance_consistency, dict) else float(performance_consistency) if isinstance(performance_consistency, (int, float)) else 0.0
+        qual_score = float(quality_consistency) if isinstance(quality_consistency, (int, float)) else 0.0
+        
+        overall_consistency = (arch_score + perf_score + qual_score) / 3
         
         return {
             'architecture_consistency': architecture_consistency,
@@ -609,7 +612,18 @@ class ComprehensiveTestRunner:
         component_contributions = {}
         
         for component_name, component_data in scoring_components.items():
-            contribution = component_data['score'] * component_data['weight']
+            score = component_data['score']
+            weight = component_data['weight']
+            
+            # Ensure score is numeric
+            if isinstance(score, dict):
+                score = 0.0  # Default if dict is returned
+            elif not isinstance(score, (int, float)):
+                score = 0.0  # Default if non-numeric
+            else:
+                score = float(score)
+            
+            contribution = score * weight
             total_score += contribution
             component_contributions[component_name] = {
                 'raw_score': component_data['score'],
@@ -1233,6 +1247,11 @@ class ComprehensiveTestRunner:
         system_quality = self._extract_system_quality_score()
         integration_quality = self._extract_integration_quality_score()
         component_quality = self._extract_component_quality_score()
+        
+        # Ensure all scores are numeric
+        system_quality = float(system_quality) if isinstance(system_quality, (int, float)) else 0.0
+        integration_quality = float(integration_quality) if isinstance(integration_quality, (int, float)) else 0.0
+        component_quality = float(component_quality) if isinstance(component_quality, (int, float)) else 0.0
         
         quality_scores = [score for score in [system_quality, integration_quality, component_quality] if score > 0]
         
@@ -1942,8 +1961,16 @@ class ComprehensiveTestRunner:
             integration_readiness.get('confidence_appropriateness', 0)
         ]
         
+        # Ensure all metrics are numeric
+        numeric_metrics = []
+        for metric in quality_metrics:
+            if isinstance(metric, (int, float)):
+                numeric_metrics.append(float(metric))
+            else:
+                numeric_metrics.append(0.0)
+        
         # Filter out zero values
-        valid_metrics = [m for m in quality_metrics if m > 0]
+        valid_metrics = [m for m in numeric_metrics if m > 0]
         
         if not valid_metrics:
             return 0.5  # Default neutral score

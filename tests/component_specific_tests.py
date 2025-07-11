@@ -598,8 +598,9 @@ class ComponentSpecificTester:
         """Test embedder with full vector analysis."""
         print("  • Testing embedder behavior...")
         
-        # Initialize embedder
-        embedder = SentenceTransformerEmbedder(
+        # Initialize embedder using ComponentFactory
+        embedder = ComponentFactory.create_embedder(
+            "sentence_transformer",
             model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1",
             use_mps=True
         )
