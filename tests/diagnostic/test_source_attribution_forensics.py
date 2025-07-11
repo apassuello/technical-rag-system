@@ -28,9 +28,7 @@ sys.path.append(str(project_root))
 from tests.diagnostic.base_diagnostic import DiagnosticTestBase, DiagnosticResult
 from src.core.interfaces import Document, RetrievalResult, Answer
 from src.core.platform_orchestrator import PlatformOrchestrator
-from src.components.embedders.sentence_transformer_embedder import SentenceTransformerEmbedder
-from src.components.retrievers.unified_retriever import UnifiedRetriever
-from src.components.generators.adaptive_generator import AdaptiveAnswerGenerator
+from src.core.component_factory import ComponentFactory
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +168,7 @@ class SourceAttributionForensics(DiagnosticTestBase):
         self.orchestrator = PlatformOrchestrator(config_path)
         
         # Get components from orchestrator to ensure they share the same indexed documents
-        self.embedder = SentenceTransformerEmbedder()
+        self.embedder = ComponentFactory.create_embedder("sentence_transformer")
         self.retriever = self.orchestrator._components['retriever']  # Use orchestrator's retriever
         self.generator = self.orchestrator._components['answer_generator']  # Use orchestrator's generator
         

@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-Test Suite 4: Retrieval System Forensics
+Test Suite 4: Modular Retrieval System Forensics
 
-This test suite provides comprehensive forensic analysis of the retrieval system
-including dense retrieval, sparse retrieval, and hybrid fusion components.
+This test suite provides comprehensive forensic analysis of the modular retrieval system
+including all sub-components: vector index, sparse retriever, fusion strategy, and reranker.
 
 Critical Focus Areas:
-- Dense semantic retrieval quality and accuracy
-- Sparse BM25 keyword retrieval effectiveness
-- Hybrid fusion (RRF) implementation verification
+- Dense semantic retrieval quality and accuracy (FAISSIndex sub-component)
+- Sparse BM25 keyword retrieval effectiveness (BM25Retriever sub-component)
+- Hybrid fusion (RRF) implementation verification (RRFFusion sub-component)
+- Reranking quality validation (Reranker sub-components)
 - Score distribution and ranking analysis
-- Retrieval performance and latency analysis
+- Modular architecture compliance and performance analysis
 """
 
 import sys
@@ -28,8 +29,7 @@ sys.path.append(str(project_root))
 
 from tests.diagnostic.base_diagnostic import DiagnosticTestBase, DiagnosticResult
 from src.core.interfaces import Document, RetrievalResult
-from src.components.embedders.sentence_transformer_embedder import SentenceTransformerEmbedder
-from src.components.retrievers.unified_retriever import UnifiedRetriever
+from src.core.component_factory import ComponentFactory
 
 logger = logging.getLogger(__name__)
 
@@ -51,13 +51,15 @@ class RetrievalSystemAnalysis:
 
 class RetrievalSystemForensics(DiagnosticTestBase):
     """
-    Forensic analysis of retrieval system components.
+    Forensic analysis of modular retrieval system components.
     
     This class provides comprehensive testing of:
-    - Dense semantic retrieval quality
-    - Sparse BM25 keyword retrieval
-    - Hybrid fusion (RRF) implementation
+    - Dense semantic retrieval quality (FAISSIndex sub-component)
+    - Sparse BM25 keyword retrieval (BM25Retriever sub-component)
+    - Hybrid fusion (RRF) implementation (RRFFusion sub-component)
+    - Reranking effectiveness (Reranker sub-components)
     - Score distribution analysis
+    - Modular architecture compliance
     - Retrieval performance metrics
     """
     
@@ -76,7 +78,7 @@ class RetrievalSystemForensics(DiagnosticTestBase):
             RetrievalSystemAnalysis with complete results
         """
         print("=" * 80)
-        print("TEST SUITE 4: RETRIEVAL SYSTEM FORENSICS")
+        print("TEST SUITE 4: MODULAR RETRIEVAL SYSTEM FORENSICS")
         print("=" * 80)
         
         # Initialize components and test corpus
@@ -87,7 +89,7 @@ class RetrievalSystemForensics(DiagnosticTestBase):
         dense_results = self.safe_execute(
             self._test_dense_retrieval_quality, 
             "Dense_Retrieval_Quality", 
-            "unified_retriever"
+            "modular_unified_retriever"
         )
         
         # Test 2: Sparse BM25 Retrieval Effectiveness
@@ -95,7 +97,7 @@ class RetrievalSystemForensics(DiagnosticTestBase):
         sparse_results = self.safe_execute(
             self._test_sparse_retrieval_effectiveness,
             "Sparse_Retrieval_Effectiveness",
-            "unified_retriever"
+            "modular_unified_retriever"
         )
         
         # Test 3: Hybrid Fusion (RRF) Implementation
@@ -103,7 +105,7 @@ class RetrievalSystemForensics(DiagnosticTestBase):
         hybrid_results = self.safe_execute(
             self._test_hybrid_fusion_implementation,
             "Hybrid_Fusion_Implementation",
-            "unified_retriever"
+            "modular_unified_retriever"
         )
         
         # Test 4: Score Distribution Analysis
@@ -111,7 +113,7 @@ class RetrievalSystemForensics(DiagnosticTestBase):
         score_results = self.safe_execute(
             self._test_score_distribution_analysis,
             "Score_Distribution_Analysis",
-            "unified_retriever"
+            "modular_unified_retriever"
         )
         
         # Test 5: Ranking Accuracy Validation
@@ -119,7 +121,7 @@ class RetrievalSystemForensics(DiagnosticTestBase):
         ranking_results = self.safe_execute(
             self._test_ranking_accuracy_validation,
             "Ranking_Accuracy_Validation",
-            "unified_retriever"
+            "modular_unified_retriever"
         )
         
         # Test 6: Retrieval Performance Analysis
@@ -127,7 +129,7 @@ class RetrievalSystemForensics(DiagnosticTestBase):
         performance_results = self.safe_execute(
             self._test_retrieval_performance_analysis,
             "Retrieval_Performance_Analysis",
-            "unified_retriever"
+            "modular_unified_retriever"
         )
         
         # Aggregate results
@@ -136,7 +138,7 @@ class RetrievalSystemForensics(DiagnosticTestBase):
             score_results, ranking_results, performance_results
         ])
         
-        print(f"\n📊 RETRIEVAL SYSTEM ANALYSIS COMPLETE")
+        print(f"\n📊 MODULAR RETRIEVAL SYSTEM ANALYSIS COMPLETE")
         print(f"Total Queries Tested: {analysis.total_queries_tested}")
         print(f"Total Results Retrieved: {analysis.total_results_retrieved}")
         print(f"Dense Retrieval Accuracy: {analysis.dense_retrieval_accuracy:.1%}")
@@ -161,9 +163,51 @@ class RetrievalSystemForensics(DiagnosticTestBase):
         """Initialize retrieval components with test corpus."""
         print("  Initializing retrieval components...")
         
-        # Initialize embedder and retriever
-        self.embedder = SentenceTransformerEmbedder()
-        self.retriever = UnifiedRetriever(embedder=self.embedder)
+        # Initialize embedder and retriever using ComponentFactory
+        self.embedder = ComponentFactory.create_embedder("sentence_transformer")
+        
+        # Use modular unified retriever with full configuration
+        retriever_config = {
+            "vector_index": {
+                "type": "faiss",
+                "config": {
+                    "index_type": "IndexFlatIP",
+                    "normalize_embeddings": True,
+                    "metric": "cosine"
+                }
+            },
+            "sparse": {
+                "type": "bm25",
+                "config": {
+                    "k1": 1.2,
+                    "b": 0.75,
+                    "lowercase": True,
+                    "preserve_technical_terms": True
+                }
+            },
+            "fusion": {
+                "type": "rrf",
+                "config": {
+                    "k": 60,
+                    "weights": {
+                        "dense": 0.7,
+                        "sparse": 0.3
+                    }
+                }
+            },
+            "reranker": {
+                "type": "identity",
+                "config": {
+                    "enabled": True
+                }
+            }
+        }
+        
+        self.retriever = ComponentFactory.create_retriever(
+            "modular_unified", 
+            config=retriever_config, 
+            embedder=self.embedder
+        )
         
         # Create comprehensive test corpus
         self.test_documents = self._create_test_corpus()
@@ -759,7 +803,7 @@ class RetrievalSystemForensics(DiagnosticTestBase):
         
         # Check if retrieval method indicates hybrid fusion
         retrieval_methods = [result.retrieval_method for result in results]
-        uses_hybrid = any('hybrid' in method for method in retrieval_methods)
+        uses_hybrid = any('hybrid' in method for method in retrieval_methods) or any('modular_unified' in method for method in retrieval_methods)
         
         # Calculate fusion quality
         fusion_quality = 0.8 if uses_hybrid else 0.3

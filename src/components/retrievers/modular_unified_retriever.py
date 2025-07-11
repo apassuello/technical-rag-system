@@ -172,7 +172,7 @@ class ModularUnifiedRetriever(Retriever):
                 raise RuntimeError("No documents have been indexed")
             
             # Step 1: Generate query embeddings
-            query_embedding = self.embedder.embed_query(query)
+            query_embedding = np.array(self.embedder.embed([query])[0])
             
             # Step 2: Dense vector search
             dense_results = self.vector_index.search(query_embedding, k=k*2)  # Get more for fusion

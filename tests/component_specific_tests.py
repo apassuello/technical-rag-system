@@ -28,9 +28,7 @@ sys.path.append(str(project_root))
 
 from src.core.interfaces import Document, Answer
 from src.core.component_factory import ComponentFactory
-from src.components.embedders.sentence_transformer_embedder import SentenceTransformerEmbedder
-from src.components.retrievers.unified_retriever import UnifiedRetriever
-# Removed direct import - using ComponentFactory instead
+# Using ComponentFactory for all component creation
 
 logger = logging.getLogger(__name__)
 
@@ -732,23 +730,53 @@ class ComponentSpecificTester:
         """Test retriever with ranking analysis."""
         print("  • Testing retriever behavior...")
         
-        # Initialize retriever with test documents
-        retriever = UnifiedRetriever(
-            embedder=SentenceTransformerEmbedder(
-                model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1",
-                use_mps=True
-            ),
-            dense_weight=0.7,
-            embedding_dim=384
+        # Initialize retriever with test documents using ComponentFactory
+        embedder = ComponentFactory.create_embedder("sentence_transformer")
+        
+        retriever_config = {
+            "vector_index": {
+                "type": "faiss",
+                "config": {
+                    "index_type": "IndexFlatIP",
+                    "normalize_embeddings": True,
+                    "metric": "cosine"
+                }
+            },
+            "sparse": {
+                "type": "bm25",
+                "config": {
+                    "k1": 1.2,
+                    "b": 0.75,
+                    "lowercase": True,
+                    "preserve_technical_terms": True
+                }
+            },
+            "fusion": {
+                "type": "rrf",
+                "config": {
+                    "k": 60,
+                    "weights": {
+                        "dense": 0.7,
+                        "sparse": 0.3
+                    }
+                }
+            },
+            "reranker": {
+                "type": "identity",
+                "config": {
+                    "enabled": True
+                }
+            }
+        }
+        
+        retriever = ComponentFactory.create_retriever(
+            "modular_unified", 
+            config=retriever_config, 
+            embedder=embedder
         )
         
         # Index test documents - first ensure they have embeddings
         if self.test_documents:
-            embedder = SentenceTransformerEmbedder(
-                model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1",
-                use_mps=True
-            )
-            
             # Generate embeddings for documents that don't have them
             for doc in self.test_documents:
                 if doc.embedding is None:

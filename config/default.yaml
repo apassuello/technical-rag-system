@@ -15,21 +15,34 @@ embedder:
     model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
     use_mps: true
 
-# Retrieval strategy (Phase 4 Unified Architecture)
+# Retrieval strategy (Modular Architecture)
 retriever:
-  type: "unified"  # Phase 4: unified retriever with integrated vector storage
+  type: "modular_unified"  # Modular: decomposed into sub-components for better architecture compliance
   config:
-    dense_weight: 0.7
-    embedding_model: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-    use_mps: true
-    bm25_k1: 1.2
-    bm25_b: 0.75
-    rrf_k: 10
-    # Integrated vector storage configuration
-    embedding_dim: 384
-    index_type: "IndexFlatIP"
-    normalize_embeddings: true
-    metric: "cosine"
+    vector_index:
+      type: "faiss"
+      config:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+        metric: "cosine"
+    sparse:
+      type: "bm25"
+      config:
+        k1: 1.2
+        b: 0.75
+        lowercase: true
+        preserve_technical_terms: true
+    fusion:
+      type: "rrf"
+      config:
+        k: 60
+        weights:
+          dense: 0.7
+          sparse: 0.3
+    reranker:
+      type: "identity"
+      config:
+        enabled: true
 
 # Answer generation strategy (Local Ollama)
 answer_generator:

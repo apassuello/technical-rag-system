@@ -436,11 +436,29 @@ class ComponentFactory:
         
         try:
             logger.debug(f"Creating {retriever_type} retriever with args: {kwargs}")
-            return cls._create_with_tracking(
-                retriever_class, 
-                f"retriever_{retriever_type}", 
-                **kwargs
-            )
+            
+            # Special handling for modular_unified retriever
+            if retriever_type == "modular_unified":
+                # Extract embedder and config from kwargs
+                embedder = kwargs.pop("embedder", None)
+                if embedder is None:
+                    raise ValueError("ModularUnifiedRetriever requires 'embedder' parameter")
+                
+                # All remaining kwargs become the config
+                config = kwargs
+                
+                return cls._create_with_tracking(
+                    retriever_class, 
+                    f"retriever_{retriever_type}", 
+                    config=config,
+                    embedder=embedder
+                )
+            else:
+                return cls._create_with_tracking(
+                    retriever_class, 
+                    f"retriever_{retriever_type}", 
+                    **kwargs
+                )
         except Exception as e:
             raise TypeError(
                 f"Failed to create retriever '{retriever_type}': {e}. "

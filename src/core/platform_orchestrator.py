@@ -95,7 +95,7 @@ class PlatformOrchestrator:
             
             # Phase 3: Architecture detection with factory-based instantiation
             ret_config = self.config.retriever
-            if ret_config.type == "unified":
+            if ret_config.type in ["unified", "modular_unified"]:
                 # Phase 2: Use unified retriever (no separate vector store needed)
                 self._components['retriever'] = ComponentFactory.create_retriever(
                     ret_config.type,
