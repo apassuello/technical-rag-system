@@ -73,6 +73,7 @@ class ComponentFactory:
         # Legacy Phase 1 architecture moved to archive
         # "hybrid": "src.components.retrievers.hybrid_retriever.HybridRetriever",
         "unified": "src.components.retrievers.unified_retriever.UnifiedRetriever",
+        "modular_unified": "src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever",
     }
     
     _GENERATORS: Dict[str, str] = {
@@ -413,7 +414,7 @@ class ComponentFactory:
         Create a retriever instance.
         
         Args:
-            retriever_type: Type of retriever ("hybrid" or "unified")
+            retriever_type: Type of retriever ("unified" or "modular_unified")
             **kwargs: Arguments to pass to the retriever constructor
             
         Returns:
@@ -435,7 +436,11 @@ class ComponentFactory:
         
         try:
             logger.debug(f"Creating {retriever_type} retriever with args: {kwargs}")
-            return retriever_class(**kwargs)
+            return cls._create_with_tracking(
+                retriever_class, 
+                f"retriever_{retriever_type}", 
+                **kwargs
+            )
         except Exception as e:
             raise TypeError(
                 f"Failed to create retriever '{retriever_type}': {e}. "
