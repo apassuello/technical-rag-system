@@ -203,14 +203,14 @@ class ConfigurationForensics(DiagnosticTestBase):
             
             analysis_results = {
                 "detected_architecture": architecture_info["claimed_architecture"],
-                "expected_architecture": "unified",  # Phase 4 should show unified
-                "architecture_match": architecture_info["claimed_architecture"] == "unified",
+                "expected_architecture": "modular",  # Phase 4 should show modular (all components are modular)
+                "architecture_match": architecture_info["claimed_architecture"] == "modular",
                 "phase_analysis": phase_indicators
             }
             
             # Check for issues
             if analysis_results["detected_architecture"] == "legacy":
-                issues_found.append("System showing 'legacy' architecture instead of expected 'unified' for Phase 4")
+                issues_found.append("System showing 'legacy' architecture instead of expected 'modular' for Phase 4")
             
             if analysis_results["detected_architecture"] == "unknown":
                 issues_found.append("Architecture detection returning 'unknown' - logic may be broken")
@@ -220,7 +220,7 @@ class ConfigurationForensics(DiagnosticTestBase):
             data_captured["error"] = str(e)
         
         if issues_found:
-            recommendations.append("Fix architecture detection logic to correctly identify Phase 4 unified architecture")
+            recommendations.append("Fix architecture detection logic to correctly identify Phase 4 modular architecture")
             recommendations.append("Verify configuration triggers for architecture classification")
         
         return data_captured, analysis_results, issues_found, recommendations
@@ -553,7 +553,7 @@ class ConfigurationForensics(DiagnosticTestBase):
         """Analyze indicators of which phase the system is in."""
         indicators = {
             "system_health_architecture": system_health.get("architecture", "unknown"),
-            "expected_phase4_architecture": "unified",
+            "expected_phase4_architecture": "modular",
             "component_analysis": {},
             "factory_usage": {}
         }

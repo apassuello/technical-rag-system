@@ -8,27 +8,12 @@ document_processor:
     chunk_size: 1024
     chunk_overlap: 128
 
-# Embedding generator for converting text to vectors  
+# Embedding generator for converting text to vectors
 embedder:
-  type: "modular"  # Options: modular, sentence_transformer, openai
+  type: "sentence_transformer"  # Options: sentence_transformer, openai
   config:
-    model:
-      type: "sentence_transformer"
-      config:
-        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        device: "auto"
-        normalize_embeddings: true
-    batch_processor:
-      type: "dynamic"
-      config:
-        initial_batch_size: 32
-        max_batch_size: 128
-        optimize_for_memory: true
-    cache:
-      type: "memory"
-      config:
-        max_entries: 100000
-        max_memory_mb: 1024
+    model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    use_mps: true
 
 # Retrieval strategy (Modular Architecture)
 retriever:

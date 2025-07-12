@@ -408,7 +408,7 @@ class PlatformOrchestrator:
         health = {
             "status": "healthy" if self._initialized else "unhealthy",
             "initialized": self._initialized,
-            "architecture": self._retriever_type if self._retriever_type else ("unified" if self._using_unified_retriever else "legacy"),
+            "architecture": self._determine_system_architecture(),
             "config_path": str(self.config_path),
             "components": {},
             "platform": self.config.global_settings.get("platform", {})
@@ -681,6 +681,63 @@ class PlatformOrchestrator:
             readiness["level"] = "not_ready"
         
         return readiness
+    
+    def _determine_system_architecture(self) -> str:
+        """
+        Determine the overall system architecture based on component types.
+        
+        Returns:
+            String describing the current system architecture
+        """
+        if not self._initialized:
+            return "uninitialized"
+        
+        # Check component types to determine architecture level
+        component_types = {}
+        for name, component in self._components.items():
+            component_types[name] = type(component).__name__
+        
+        # Determine architecture based on modular component usage
+        modular_components = 0
+        total_components = 0
+        
+        # Check each major component for modular architecture
+        if 'document_processor' in component_types:
+            total_components += 1
+            if component_types['document_processor'] == 'ModularDocumentProcessor':
+                modular_components += 1
+        
+        if 'embedder' in component_types:
+            total_components += 1
+            if component_types['embedder'] == 'ModularEmbedder':
+                modular_components += 1
+        
+        if 'retriever' in component_types:
+            total_components += 1
+            if component_types['retriever'] == 'ModularUnifiedRetriever':
+                modular_components += 1
+        
+        if 'answer_generator' in component_types:
+            total_components += 1
+            if component_types['answer_generator'] == 'AnswerGenerator':  # This is already modular
+                modular_components += 1
+        
+        # Determine architecture level
+        if total_components == 0:
+            return "no_components"
+        
+        modular_percentage = modular_components / total_components
+        
+        if modular_percentage >= 1.0:
+            return "modular"  # All components are modular
+        elif modular_percentage >= 0.75:
+            return "mostly_modular"  # 3/4 or more components are modular
+        elif modular_percentage >= 0.5:
+            return "hybrid"  # Half of components are modular
+        elif self._using_unified_retriever:
+            return "unified"  # Using unified retriever but not fully modular
+        else:
+            return "legacy"  # Legacy architecture
     
     def get_component(self, name: str) -> Optional[Any]:
         """

@@ -60,6 +60,7 @@ class ComponentFactory:
     }
     
     _EMBEDDERS: Dict[str, str] = {
+        "modular": "src.components.embedders.modular_embedder.ModularEmbedder",
         "sentence_transformer": "src.components.embedders.sentence_transformer_embedder.SentenceTransformerEmbedder",
         "sentence_transformers": "src.components.embedders.sentence_transformer_embedder.SentenceTransformerEmbedder",  # Alias for compatibility
     }
@@ -275,7 +276,22 @@ class ComponentFactory:
                        f"time={creation_time:.3f}s)")
             
             # Log component-specific info if available
-            if hasattr(component, 'get_component_info'):
+            sub_components_logged = False
+            
+            # Check for ModularEmbedder and ModularDocumentProcessor sub-components
+            if hasattr(component, 'get_sub_components'):
+                try:
+                    sub_info = component.get_sub_components()
+                    if isinstance(sub_info, dict) and 'components' in sub_info:
+                        components = sub_info['components']
+                        sub_components = [f"{k}:{v.get('class', 'Unknown')}" for k, v in components.items()]
+                        logger.info(f"  └─ Sub-components: {', '.join(sub_components)}")
+                        sub_components_logged = True
+                except Exception:
+                    pass  # Don't fail component creation on logging issues
+            
+            # Fallback to legacy get_component_info for backward compatibility
+            if not sub_components_logged and hasattr(component, 'get_component_info'):
                 try:
                     info = component.get_component_info()
                     if isinstance(info, dict) and len(info) > 0:

@@ -216,7 +216,7 @@ class ComprehensiveDiagnosticRunner:
         if any("legacy" in issue.lower() for issue in self.critical_issues):
             root_causes["secondary_causes"].append({
                 "cause": "Configuration Architecture Mismatch",
-                "description": "System using legacy architecture configuration instead of Phase 4 unified",
+                "description": "System using legacy architecture configuration instead of Phase 4 modular",
                 "affected_areas": ["architecture_display", "component_usage", "performance_metrics"],
                 "evidence": [issue for issue in self.critical_issues if "legacy" in issue.lower()]
             })
@@ -258,7 +258,7 @@ class ComprehensiveDiagnosticRunner:
                     "priority": "HIGH",
                     "estimated_effort": "Low",
                     "expected_impact": "Medium",
-                    "implementation_notes": "Update configuration to use Phase 4 unified architecture"
+                    "implementation_notes": "Update configuration to use Phase 4 modular architecture"
                 })
             else:
                 recommendations["medium_priority_fixes"].append({
@@ -272,7 +272,7 @@ class ComprehensiveDiagnosticRunner:
         recommendations["implementation_order"] = [
             "1. Replace Squad2 model with generative model (CRITICAL)",
             "2. Fix hardcoded confidence calculation (CRITICAL)",
-            "3. Update configuration to Phase 4 unified architecture (HIGH)",
+            "3. Update configuration to Phase 4 modular architecture (HIGH)",
             "4. Fix source attribution metadata propagation (HIGH)",
             "5. Validate all fixes with comprehensive testing (HIGH)"
         ]
@@ -339,7 +339,7 @@ class ComprehensiveDiagnosticRunner:
             "✅ Answer quality: Coherent, complete responses (not fragments)",
             "✅ Confidence calibration: Dynamic scoring based on actual uncertainty",
             "✅ Source attribution: Proper page/section references (not 'unknown')",
-            "✅ Architecture display: Correct Phase 4 'unified' architecture",
+            "✅ Architecture display: Correct Phase 4 'modular' architecture",
             "✅ Professional responses: Suitable for technical interviews"
         ]
         
