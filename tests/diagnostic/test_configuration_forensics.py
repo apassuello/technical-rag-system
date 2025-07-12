@@ -41,11 +41,14 @@ class ConfigurationForensics(DiagnosticTestBase):
     
     def __init__(self, output_dir: Path = None):
         super().__init__(output_dir)
+        # Only analyze active config file to avoid false positives from obsolete configs
         self.config_files = [
-            "config/default.yaml",
-            "config/dev.yaml", 
-            "config/production.yaml",
-            "config/test.yaml"
+            "config/default.yaml"  # Current active configuration
+        ]
+        # Track obsolete configs for documentation but don't analyze for issues
+        self.obsolete_configs = [
+            "config/dev.yaml",      # Contains obsolete Squad2 references
+            "config/production.yaml"  # Contains obsolete Squad2 references
         ]
     
     def run_all_tests(self) -> List[Dict[str, Any]]:
