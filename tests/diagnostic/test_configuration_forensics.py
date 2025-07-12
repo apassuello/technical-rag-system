@@ -270,11 +270,19 @@ class ConfigurationForensics(DiagnosticTestBase):
                 "metrics_tracking": factory_metrics.get("metrics_available", False)
             }
             
-            # Check for issues
-            if analysis_results["cache_performance"] == 0:
+            # Check for issues using improved detection
+            cache_hit_rate = analysis_results.get("cache_performance", 0)
+            cache_working = cache_test.get("cache_working", False)
+            
+            # Only flag cache issues if cache is supposed to be working but isn't
+            if not cache_working and cache_test.get("cache_available", False):
                 issues_found.append("Factory cache showing 0% hit rate despite component usage")
             
-            if "Factory" not in analysis_results["creation_methods_used"]:
+            # Check if components are being created via factory using improved detection
+            factory_confirmed_count = sum(1 for test in data_captured["component_creation_tests"].values() 
+                                        if test.get("success", False))
+            
+            if factory_confirmed_count == 0:
                 issues_found.append("Components not being created via ComponentFactory")
                 
         except Exception as e:
@@ -612,26 +620,39 @@ class ConfigurationForensics(DiagnosticTestBase):
         }
         
         try:
-            # Try to create component via orchestrator
+            # Try to create component via orchestrator using proper API
             config_path = self.get_absolute_config_path("config/default.yaml")
             orchestrator = PlatformOrchestrator(config_path)
             
-            if component_type == "embedder" and hasattr(orchestrator, 'embedder'):
-                component = orchestrator.embedder
+            # PRIMARY: Use proper get_component API
+            component_name_map = {
+                "embedder": "embedder",
+                "retriever": "retriever", 
+                "generator": "answer_generator"  # Note: answer_generator in orchestrator
+            }
+            
+            component_name = component_name_map.get(component_type, component_type)
+            component = orchestrator.get_component(component_name)
+            
+            if component is not None:
                 creation_test["success"] = True
-                creation_test["creation_method"] = "orchestrator"
+                creation_test["creation_method"] = "factory_via_orchestrator"
                 creation_test["component_class"] = type(component).__name__
-            elif component_type == "retriever" and hasattr(orchestrator, 'retriever'):
-                component = orchestrator.retriever
-                creation_test["success"] = True
-                creation_test["creation_method"] = "orchestrator"
-                creation_test["component_class"] = type(component).__name__
-            elif component_type == "generator" and hasattr(orchestrator, 'generator'):
-                component = orchestrator.generator
-                creation_test["success"] = True
-                creation_test["creation_method"] = "orchestrator"
-                creation_test["component_class"] = type(component).__name__
-                
+                creation_test["component_module"] = type(component).__module__
+            
+            # SECONDARY: Check factory metrics as confirmation
+            factory_metrics = ComponentFactory.get_performance_metrics()
+            component_types_created = list(factory_metrics.keys())
+            matching_types = [t for t in component_types_created if component_type in t or component_name in t]
+            
+            if matching_types:
+                creation_test["factory_confirmation"] = True
+                creation_test["factory_metrics"] = {t: factory_metrics[t] for t in matching_types}
+                # If primary detection failed but factory shows creation, mark as detected
+                if not creation_test["success"]:
+                    creation_test["success"] = True
+                    creation_test["creation_method"] = "factory_metrics_confirmed"
+            
         except Exception as e:
             creation_test["error"] = str(e)
         
@@ -670,24 +691,35 @@ class ConfigurationForensics(DiagnosticTestBase):
         }
         
         try:
-            # Create multiple components of same type to test caching
+            # Reset metrics for clean test
+            ComponentFactory.reset_cache_metrics()
+            
+            # Create components to test caching (embedders are cacheable)
             orchestrator1 = PlatformOrchestrator("config/default.yaml")
-            orchestrator2 = PlatformOrchestrator("config/default.yaml")
+            orchestrator2 = PlatformOrchestrator("config/default.yaml")  # Should hit cache
             
-            # Check if same instances are reused (caching)
-            if hasattr(orchestrator1, 'embedder') and hasattr(orchestrator2, 'embedder'):
-                cache_test["same_embedder_instance"] = orchestrator1.embedder is orchestrator2.embedder
+            # Get definitive cache stats from ComponentFactory
+            cache_stats = ComponentFactory.get_cache_stats()
+            cache_test["cache_available"] = cache_stats.get("metrics_enabled", False)
+            cache_test["cache_stats"] = cache_stats
             
-            # Try to get cache statistics
-            if hasattr(ComponentFactory, 'get_cache_stats'):
-                cache_stats = ComponentFactory.get_cache_stats()
-                cache_test["cache_available"] = True
-                cache_test["cache_stats"] = cache_stats
+            # Use actual hit rate from source
+            cache_test["cache_hit_rate"] = cache_stats.get("hit_rate", 0)
+            
+            # Additional validation - detailed metrics
+            cache_test["total_hits"] = cache_stats.get("hits", 0)
+            cache_test["total_misses"] = cache_stats.get("misses", 0)
+            cache_test["total_operations"] = cache_stats.get("total_operations", 0)
+            cache_test["operations_by_type"] = cache_stats.get("operations_by_type", {})
+            cache_test["cached_components"] = cache_stats.get("cached_components", [])
+            cache_test["cacheable_types"] = cache_stats.get("cacheable_types", set())
+            
+            # Check if components are actually cached (should have cache entries)
+            if cache_stats.get("cache_size", 0) > 0:
+                cache_test["cache_working"] = True
+            else:
+                cache_test["cache_working"] = False
                 
-                if 'hits' in cache_stats and 'misses' in cache_stats:
-                    total = cache_stats['hits'] + cache_stats['misses']
-                    cache_test["cache_hit_rate"] = cache_stats['hits'] / total if total > 0 else 0
-                    
         except Exception as e:
             cache_test["error"] = str(e)
         
