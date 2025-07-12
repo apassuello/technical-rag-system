@@ -98,6 +98,12 @@ class ComponentFactory:
     _cache_max_size: int = 10  # Max cached components
     _cacheable_types = {"embedder"}  # Only cache expensive components
     
+    # Cache metrics tracking (configurable for production)
+    _cache_metrics_enabled: bool = True  # Can be disabled for production
+    _cache_hits: int = 0
+    _cache_misses: int = 0
+    _cache_operations: Dict[str, int] = defaultdict(int)
+    
     # Class cache for lazy loading
     _class_cache: Dict[str, Type] = {}
     
@@ -159,17 +165,43 @@ class ComponentFactory:
         Returns:
             Dictionary with cache size, hit rate, etc.
         """
+        total_operations = cls._cache_hits + cls._cache_misses
+        hit_rate = cls._cache_hits / total_operations if total_operations > 0 else 0.0
+        
         return {
             "cache_size": len(cls._component_cache),
             "max_size": cls._cache_max_size,
             "cached_components": list(cls._component_cache.keys()),
-            "cacheable_types": cls._cacheable_types
+            "cacheable_types": cls._cacheable_types,
+            "metrics_enabled": cls._cache_metrics_enabled,
+            "hits": cls._cache_hits,
+            "misses": cls._cache_misses,
+            "total_operations": total_operations,
+            "hit_rate": hit_rate,
+            "operations_by_type": dict(cls._cache_operations)
         }
     
     @classmethod
     def clear_cache(cls) -> None:
         """Clear the component cache."""
         cls._component_cache.clear()
+    
+    @classmethod
+    def enable_cache_metrics(cls, enabled: bool = True) -> None:
+        """
+        Enable/disable cache metrics tracking.
+        
+        Args:
+            enabled: Whether to enable metrics tracking
+        """
+        cls._cache_metrics_enabled = enabled
+    
+    @classmethod
+    def reset_cache_metrics(cls) -> None:
+        """Reset cache metrics counters."""
+        cls._cache_hits = 0
+        cls._cache_misses = 0
+        cls._cache_operations.clear()
     
     @classmethod
     def _get_cache_key(cls, component_type: str, **kwargs) -> str:
@@ -200,10 +232,23 @@ class ComponentFactory:
             Cached component or None
         """
         if cache_key in cls._component_cache:
+            # Track cache hit
+            if cls._cache_metrics_enabled:
+                cls._cache_hits += 1
+                component_type = cache_key.split('_')[0]  # Extract component type from key
+                cls._cache_operations[f"hit_{component_type}"] += 1
+            
             # Move to end (most recently used)
             component = cls._component_cache.pop(cache_key)
             cls._component_cache[cache_key] = component
             return component
+        else:
+            # Track cache miss
+            if cls._cache_metrics_enabled:
+                cls._cache_misses += 1
+                component_type = cache_key.split('_')[0]  # Extract component type from key
+                cls._cache_operations[f"miss_{component_type}"] += 1
+        
         return None
     
     @classmethod
