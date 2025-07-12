@@ -28,8 +28,7 @@ sys.path.append(str(project_root))
 
 from tests.diagnostic.base_diagnostic import DiagnosticTestBase, DiagnosticResult
 from src.core.interfaces import Document
-from src.components.embedders.sentence_transformer_embedder import SentenceTransformerEmbedder
-from src.components.retrievers.unified_retriever import UnifiedRetriever
+from src.core.component_factory import ComponentFactory
 
 logger = logging.getLogger(__name__)
 
@@ -78,9 +77,50 @@ class EmbeddingVectorForensics(DiagnosticTestBase):
         print("TEST SUITE 3: EMBEDDING AND VECTOR STORAGE ANALYSIS")
         print("=" * 80)
         
-        # Initialize components
-        self.embedder = SentenceTransformerEmbedder()
-        self.retriever = UnifiedRetriever(embedder=self.embedder)
+        # Initialize components using ComponentFactory
+        self.embedder = ComponentFactory.create_embedder("sentence_transformer")
+        
+        retriever_config = {
+            "vector_index": {
+                "type": "faiss",
+                "config": {
+                    "index_type": "IndexFlatIP",
+                    "normalize_embeddings": True,
+                    "metric": "cosine"
+                }
+            },
+            "sparse": {
+                "type": "bm25",
+                "config": {
+                    "k1": 1.2,
+                    "b": 0.75,
+                    "lowercase": True,
+                    "preserve_technical_terms": True
+                }
+            },
+            "fusion": {
+                "type": "rrf",
+                "config": {
+                    "k": 60,
+                    "weights": {
+                        "dense": 0.7,
+                        "sparse": 0.3
+                    }
+                }
+            },
+            "reranker": {
+                "type": "identity",
+                "config": {
+                    "enabled": True
+                }
+            }
+        }
+        
+        self.retriever = ComponentFactory.create_retriever(
+            "modular_unified", 
+            config=retriever_config, 
+            embedder=self.embedder
+        )
         
         # Test 1: Embedding Generation Quality Validation
         print("\n🔢 Test 3.1: Embedding Generation Quality Validation")

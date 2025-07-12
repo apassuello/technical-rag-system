@@ -180,11 +180,12 @@ class SystemValidator:
                 'ollama_url_configured': generator_config.get('ollama_url') == 'http://localhost:11434'
             }
             
-            # Check Fix 2: Phase 4 architecture
+            # Check Fix 2: Phase 4 modular architecture
             architecture_checks = {
                 'vector_store_removed': 'vector_store' not in config,
-                'retriever_is_unified': config.get('retriever', {}).get('type') == 'unified',
-                'unified_config_present': 'embedding_dim' in config.get('retriever', {}).get('config', {})
+                'retriever_is_modular_unified': config.get('retriever', {}).get('type') == 'modular_unified',
+                'embedder_is_modular': config.get('embedder', {}).get('type') == 'modular',
+                'modular_config_present': 'vector_index' in config.get('retriever', {}).get('config', {})
             }
             
             self.results['configuration_validation'] = {
@@ -211,7 +212,7 @@ class SystemValidator:
             health = self.orchestrator.get_system_health()
             
             # Validate architecture detection
-            architecture_correct = health.get('architecture') == 'unified'
+            architecture_correct = health.get('architecture') == 'modular'
             
             # Check component access
             has_retriever = hasattr(self.orchestrator, '_components') and 'retriever' in self.orchestrator._components

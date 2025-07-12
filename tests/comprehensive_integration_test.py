@@ -30,9 +30,7 @@ sys.path.append(str(project_root))
 
 from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Document, Answer
-from src.components.embedders.sentence_transformer_embedder import SentenceTransformerEmbedder
-from src.components.retrievers.unified_retriever import UnifiedRetriever
-from src.components.generators.adaptive_generator import AdaptiveAnswerGenerator
+from src.core.component_factory import ComponentFactory
 
 logger = logging.getLogger(__name__)
 

@@ -60,6 +60,7 @@ class ComponentFactory:
     }
     
     _EMBEDDERS: Dict[str, str] = {
+        "modular": "src.components.embedders.modular_embedder.ModularEmbedder",
         "sentence_transformer": "src.components.embedders.sentence_transformer_embedder.SentenceTransformerEmbedder",
         "sentence_transformers": "src.components.embedders.sentence_transformer_embedder.SentenceTransformerEmbedder",  # Alias for compatibility
     }
@@ -73,6 +74,7 @@ class ComponentFactory:
         # Legacy Phase 1 architecture moved to archive
         # "hybrid": "src.components.retrievers.hybrid_retriever.HybridRetriever",
         "unified": "src.components.retrievers.unified_retriever.UnifiedRetriever",
+        "modular_unified": "src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever",
     }
     
     _GENERATORS: Dict[str, str] = {
@@ -274,7 +276,22 @@ class ComponentFactory:
                        f"time={creation_time:.3f}s)")
             
             # Log component-specific info if available
-            if hasattr(component, 'get_component_info'):
+            sub_components_logged = False
+            
+            # Check for ModularEmbedder and ModularDocumentProcessor sub-components
+            if hasattr(component, 'get_sub_components'):
+                try:
+                    sub_info = component.get_sub_components()
+                    if isinstance(sub_info, dict) and 'components' in sub_info:
+                        components = sub_info['components']
+                        sub_components = [f"{k}:{v.get('class', 'Unknown')}" for k, v in components.items()]
+                        logger.info(f"  └─ Sub-components: {', '.join(sub_components)}")
+                        sub_components_logged = True
+                except Exception:
+                    pass  # Don't fail component creation on logging issues
+            
+            # Fallback to legacy get_component_info for backward compatibility
+            if not sub_components_logged and hasattr(component, 'get_component_info'):
                 try:
                     info = component.get_component_info()
                     if isinstance(info, dict) and len(info) > 0:
@@ -413,7 +430,7 @@ class ComponentFactory:
         Create a retriever instance.
         
         Args:
-            retriever_type: Type of retriever ("hybrid" or "unified")
+            retriever_type: Type of retriever ("unified" or "modular_unified")
             **kwargs: Arguments to pass to the retriever constructor
             
         Returns:
@@ -435,7 +452,29 @@ class ComponentFactory:
         
         try:
             logger.debug(f"Creating {retriever_type} retriever with args: {kwargs}")
-            return retriever_class(**kwargs)
+            
+            # Special handling for modular_unified retriever
+            if retriever_type == "modular_unified":
+                # Extract embedder and config from kwargs
+                embedder = kwargs.pop("embedder", None)
+                if embedder is None:
+                    raise ValueError("ModularUnifiedRetriever requires 'embedder' parameter")
+                
+                # All remaining kwargs become the config
+                config = kwargs
+                
+                return cls._create_with_tracking(
+                    retriever_class, 
+                    f"retriever_{retriever_type}", 
+                    config=config,
+                    embedder=embedder
+                )
+            else:
+                return cls._create_with_tracking(
+                    retriever_class, 
+                    f"retriever_{retriever_type}", 
+                    **kwargs
+                )
         except Exception as e:
             raise TypeError(
                 f"Failed to create retriever '{retriever_type}': {e}. "
