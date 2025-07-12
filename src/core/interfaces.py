@@ -243,3 +243,58 @@ class AnswerGenerator(ABC):
             ValueError: If query is empty or context is None
         """
         pass
+
+
+@dataclass
+class QueryOptions:
+    """Query processing options.
+    
+    Attributes:
+        k: Number of documents to retrieve
+        rerank: Whether to apply reranking
+        max_tokens: Maximum tokens for context
+        temperature: LLM temperature setting
+        stream: Whether to stream responses
+    """
+    k: int = 5
+    rerank: bool = True
+    max_tokens: int = 2048
+    temperature: float = 0.7
+    stream: bool = False
+
+
+class QueryProcessor(ABC):
+    """Interface for query processing workflow.
+    
+    Implementations orchestrate the complete query workflow:
+    analyze → retrieve → select → generate → assemble.
+    """
+    
+    @abstractmethod
+    def process(self, query: str, options: Optional[QueryOptions] = None) -> Answer:
+        """Process a query end-to-end and return a complete answer.
+        
+        Args:
+            query: User query string
+            options: Optional query processing options
+            
+        Returns:
+            Complete Answer object with text, sources, and metadata
+            
+        Raises:
+            ValueError: If query is empty or options are invalid
+            RuntimeError: If processing pipeline fails
+        """
+        pass
+    
+    @abstractmethod
+    def analyze_query(self, query: str) -> Dict[str, Any]:
+        """Analyze query characteristics without full processing.
+        
+        Args:
+            query: User query string
+            
+        Returns:
+            Dictionary with query analysis results
+        """
+        pass
