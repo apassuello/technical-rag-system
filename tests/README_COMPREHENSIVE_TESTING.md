@@ -268,7 +268,7 @@ test_queries = [
 The testing framework provides a comprehensive portfolio readiness assessment:
 
 ### Readiness Levels
-- **PORTFOLIO_READY** (90%+): Ready for job interviews and demos
+- **VALIDATION_COMPLETE** (90%+): Development validation complete
 - **STAGING_READY** (70-89%): Minor issues, mostly functional
 - **DEVELOPMENT_READY** (50-69%): Major issues, needs work
 - **NOT_READY** (<50%): Significant problems
