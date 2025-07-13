@@ -18,7 +18,8 @@ from .interfaces import (
     Embedder, 
     VectorStore, 
     Retriever, 
-    AnswerGenerator
+    AnswerGenerator,
+    QueryProcessor
 )
 
 # Component classes will be imported lazily to avoid circular imports
@@ -81,6 +82,11 @@ class ComponentFactory:
         "adaptive": "src.components.generators.adaptive_generator.AdaptiveAnswerGenerator",
         "adaptive_generator": "src.components.generators.adaptive_generator.AdaptiveAnswerGenerator",  # Alias for compatibility
         "adaptive_modular": "src.components.generators.answer_generator.AnswerGenerator",  # New modular implementation
+    }
+    
+    _QUERY_PROCESSORS: Dict[str, str] = {
+        "modular": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",
+        "modular_query_processor": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",  # Alias for compatibility
     }
     
     # Phase 4: Performance monitoring and caching
@@ -566,6 +572,45 @@ class ComponentFactory:
             ) from e
     
     @classmethod
+    def create_query_processor(cls, processor_type: str, **kwargs) -> QueryProcessor:
+        """
+        Create a query processor instance.
+        
+        Args:
+            processor_type: Type of query processor ("modular")
+            **kwargs: Arguments to pass to the processor constructor
+            
+        Returns:
+            Instantiated QueryProcessor
+            
+        Raises:
+            ValueError: If processor type is not supported
+            TypeError: If constructor arguments are invalid
+        """
+        if processor_type not in cls._QUERY_PROCESSORS:
+            available = list(cls._QUERY_PROCESSORS.keys())
+            raise ValueError(
+                f"Unknown query processor type '{processor_type}'. "
+                f"Available query processors: {available}"
+            )
+        
+        processor_module_path = cls._QUERY_PROCESSORS[processor_type]
+        processor_class = cls._get_component_class(processor_module_path)
+        
+        try:
+            logger.debug(f"Creating {processor_type} query processor with args: {kwargs}")
+            return cls._create_with_tracking(
+                processor_class, 
+                f"query_processor_{processor_type}", 
+                **kwargs
+            )
+        except Exception as e:
+            raise TypeError(
+                f"Failed to create query processor '{processor_type}': {e}. "
+                f"Check constructor arguments: {kwargs}"
+            ) from e
+    
+    @classmethod
     def is_supported(cls, component_type: str, name: str) -> bool:
         """
         Check if a component type and name are supported.
@@ -583,7 +628,8 @@ class ComponentFactory:
             'embedder': cls._EMBEDDERS,
             'vector_store': cls._VECTOR_STORES,
             'retriever': cls._RETRIEVERS,
-            'generator': cls._GENERATORS
+            'generator': cls._GENERATORS,
+            'query_processor': cls._QUERY_PROCESSORS
         }
         
         mapping = type_mappings.get(component_type)
@@ -591,6 +637,11 @@ class ComponentFactory:
             return False
         
         return name in mapping
+    
+    @classmethod
+    def get_all_supported_components(cls) -> Dict[str, list[str]]:
+        """Get all supported components organized by type (alias for get_available_components)."""
+        return cls.get_available_components()
     
     @classmethod
     def get_available_components(cls) -> Dict[str, list[str]]:
@@ -606,6 +657,7 @@ class ComponentFactory:
             "vector_stores": list(cls._VECTOR_STORES.keys()),
             "retrievers": list(cls._RETRIEVERS.keys()),
             "generators": list(cls._GENERATORS.keys()),
+            "query_processors": list(cls._QUERY_PROCESSORS.keys()),
         }
     
     @classmethod
