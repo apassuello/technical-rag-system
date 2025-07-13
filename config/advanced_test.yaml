@@ -1,0 +1,198 @@
+# Advanced Retriever Test Configuration
+# This configuration tests the Epic 2 Advanced Retriever with FAISS backend
+# for comprehensive validation without requiring external services
+
+# Document processor for handling input files
+document_processor:
+  type: "hybrid_pdf"  # Use proven document processor
+  config:
+    chunk_size: 1024
+    chunk_overlap: 128
+
+# Embedding generator for converting text to vectors  
+embedder:
+  type: "modular"  # Use proven modular embedder
+  config:
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        device: "auto"
+        normalize_embeddings: true
+    batch_processor:
+      type: "dynamic"
+      config:
+        initial_batch_size: 32
+        max_batch_size: 128
+        optimize_for_memory: true
+    cache:
+      type: "memory"
+      config:
+        max_entries: 100000
+        max_memory_mb: 1024
+
+# EPIC 2 ADVANCED RETRIEVER CONFIGURATION
+retriever:
+  type: "advanced"  # Use new Epic 2 Advanced Retriever
+  config:
+    # Backend Configuration
+    backends:
+      primary_backend: "faiss"  # Use FAISS for testing (no Weaviate server required)
+      fallback_enabled: true
+      fallback_backend: null  # Only FAISS available for testing
+      
+      # Hot-swapping configuration (test framework)
+      enable_hot_swap: false  # Disable for testing
+      health_check_interval_seconds: 30
+      switch_threshold_error_rate: 0.1
+      
+      # FAISS backend settings
+      faiss:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+        metric: "cosine"
+      
+      # Weaviate backend settings (disabled for testing)
+      weaviate: null
+
+    # Hybrid Search Configuration
+    hybrid_search:
+      enabled: true
+      
+      # Strategy weights (must sum to 1.0)
+      dense_weight: 0.7
+      sparse_weight: 0.3
+      graph_weight: 0.0  # Reserved for future graph-based retrieval
+      
+      # Fusion method
+      fusion_method: "rrf"  # "rrf", "weighted", "learned"
+      rrf_k: 60
+      
+      # Advanced fusion parameters
+      adaptive_weights: false
+      query_dependent_weighting: false
+      normalization_method: "min_max"  # "min_max", "z_score", "softmax"
+      
+      # Performance optimization
+      max_candidates_per_strategy: 100
+      early_termination_threshold: 0.95
+
+    # Neural Reranking Configuration (Framework testing only)
+    neural_reranking:
+      enabled: false  # Disabled for baseline testing
+      
+      # Model configuration
+      model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
+      model_type: "cross_encoder"
+      device: "auto"
+      
+      # Reranking parameters
+      max_candidates: 50
+      batch_size: 32
+      max_length: 512
+      
+      # Performance thresholds
+      max_latency_ms: 200
+      fallback_to_fast_reranker: true
+      fast_reranker_threshold: 100
+
+    # Graph Retrieval Configuration (Framework testing only)
+    graph_retrieval:
+      enabled: false  # Disabled for baseline testing
+      
+      # Graph construction
+      enable_entity_linking: true
+      enable_cross_references: true
+      similarity_threshold: 0.8
+      max_connections_per_document: 10
+      
+      # Graph algorithms
+      use_pagerank: true
+      pagerank_damping: 0.85
+      use_community_detection: false
+      community_algorithm: "louvain"
+      
+      # Retrieval strategies
+      max_graph_hops: 2
+      graph_weight_decay: 0.5
+      combine_with_vector_search: true
+
+    # Analytics Configuration (Enabled for testing)
+    analytics:
+      enabled: true  # Enable analytics collection for testing
+      
+      # Metrics collection
+      collect_query_metrics: true
+      collect_performance_metrics: true
+      collect_quality_metrics: true
+      
+      # Dashboard configuration (for future Plotly dashboard)
+      dashboard_enabled: false  # Dashboard not implemented yet
+      dashboard_port: 8050
+      dashboard_host: "localhost"
+      auto_refresh_seconds: 5
+      
+      # Data retention
+      metrics_retention_days: 30
+      detailed_logs_retention_days: 7
+      
+      # Visualization options
+      enable_real_time_plots: true
+      enable_query_analysis: true
+      enable_performance_heatmaps: true
+
+    # A/B Testing Configuration (Framework testing only)
+    experiments:
+      enabled: false  # Disabled for baseline testing
+      
+      # Assignment strategy
+      assignment_method: "deterministic"  # "random", "deterministic", "contextual"
+      assignment_key_field: "query_hash"
+      
+      # Statistical parameters
+      min_sample_size: 100
+      confidence_level: 0.95
+      effect_size_threshold: 0.05
+      
+      # Monitoring
+      auto_winner_detection: true
+      max_experiment_duration_days: 30
+      early_stopping_enabled: true
+
+    # Legacy and Compatibility
+    legacy_mode: false
+    legacy_fallback: true
+
+    # Performance Settings
+    max_total_latency_ms: 700  # P95 latency target including all processing
+    enable_caching: true
+    cache_size: 1000
+
+    # Feature Flags (Test framework readiness)
+    enable_all_features: false
+    feature_flags:
+      weaviate_backend: false    # Disabled - no Weaviate server
+      neural_reranking: false    # Framework test only
+      graph_retrieval: false     # Framework test only
+      analytics_dashboard: false # Framework test only
+      ab_testing: false          # Framework test only
+
+# Answer generation strategy (Same as baseline)
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    model_name: "llama3.2:3b"
+    api_token: null
+    temperature: 0.3
+    max_tokens: 512
+    use_ollama: true
+    ollama_url: "http://localhost:11434"
+    use_inference_providers: false
+    enable_adaptive_prompts: false
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
+
+# Global settings
+global_settings:
+  environment: "testing"  # Mark as testing environment
+  log_level: "info"
