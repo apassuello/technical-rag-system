@@ -1,6 +1,6 @@
 # RAG System Validation Scripts
 
-This directory contains comprehensive validation scripts to verify system fixes and portfolio readiness.
+This directory contains comprehensive validation scripts to verify system fixes and development validation.
 
 ## 🔧 Validation Scripts
 
@@ -44,7 +44,7 @@ python tests/validate_system_fixes.py
 
 | Score | Level | Description |
 |-------|-------|-------------|
-| 90%+ | `PORTFOLIO_READY` | Ready for job interviews and demos |
+| 90%+ | `VALIDATION_COMPLETE` | Development validation complete |
 | 70-89% | `STAGING_READY` | Minor issues, mostly functional |
 | 50-69% | `DEVELOPMENT_READY` | Major issues, needs work |
 | <50% | `NOT_READY` | Significant problems |
@@ -120,7 +120,7 @@ print(f"Score: {results['portfolio_readiness']['readiness_score']:.1f}%")
 
 ## 🎯 Success Criteria
 
-For portfolio readiness, the system should achieve:
+For development validation, the system should achieve:
 - ✅ All quality gates passed (5/5)
 - ✅ 90%+ readiness score  
 - ✅ Unified architecture display

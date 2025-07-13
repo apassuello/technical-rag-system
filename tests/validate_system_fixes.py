@@ -7,7 +7,7 @@ This script validates all the fixes implemented for the RAG system:
 - Fix 2: Phase 4 unified architecture  
 - Fix 3: Component integration repair
 
-Run this script to verify the system is portfolio-ready.
+Run this script to verify the system validation is complete.
 """
 
 import sys
@@ -26,7 +26,7 @@ from src.core.interfaces import Document
 
 
 class SystemValidator:
-    """Comprehensive system validation for portfolio readiness."""
+    """Comprehensive system validation for development readiness."""
     
     def __init__(self):
         self.results = {
@@ -457,7 +457,7 @@ class SystemValidator:
             print(f"  ❌ End-to-end validation failed: {str(e)}")
     
     def assess_portfolio_readiness(self):
-        """Assess overall portfolio readiness based on all tests."""
+        """Assess overall development validation based on all tests."""
         try:
             # Quality gates
             config_valid = self.results.get('configuration_validation', {}).get('all_ollama_checks_passed', False) and \
@@ -486,7 +486,7 @@ class SystemValidator:
             
             # Determine readiness level
             if readiness_score >= 90:
-                readiness_level = "PORTFOLIO_READY"
+                readiness_level = "VALIDATION_COMPLETE"
             elif readiness_score >= 70:
                 readiness_level = "STAGING_READY"
             elif readiness_score >= 50:
@@ -500,7 +500,7 @@ class SystemValidator:
                 'total_gates': len(quality_gates),
                 'readiness_score': readiness_score,
                 'readiness_level': readiness_level,
-                'ready_for_portfolio': readiness_level == "PORTFOLIO_READY"
+                'validation_complete': readiness_level == "VALIDATION_COMPLETE"
             }
             
             print(f"  Readiness score: {readiness_score:.1f}%")
