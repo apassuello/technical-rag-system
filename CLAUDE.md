@@ -1,100 +1,145 @@
-# RAG Portfolio Project 1: Technical Documentation System
+# RAG Portfolio Development Context - Epic 2
 
-## Current System Status: Development Complete
+## Project Overview
+Building a 3-project RAG portfolio for ML Engineer positions in Swiss tech market.
+Currently working on **Project 1: Technical Documentation RAG System - Epic 2: Advanced Hybrid Retriever**.
 
-**Latest Status**: 90.2% internal validation score with 0 test failures (as of 2025-07-12)
-- **All 6 Components**: Implemented with modular sub-component architecture
-- **Performance Measurements**: 565K chars/sec processing, 1.12s answer generation
-- **Testing Framework**: 122 test cases with defined acceptance criteria
-- **Local Environment**: Functional system validation and monitoring
+## Developer Background
+- Arthur Passuello, transitioning from Embedded Systems to AI/ML
+- 2.5 years medical device firmware experience
+- Recent 7-week ML intensive (transformers from scratch, multimodal systems)
+- Strong optimization and production mindset from embedded background
+- Using M4-Pro Apple Silicon Mac with MPS acceleration
 
-## Enhanced Multi-Layer Context System
+## Current Development Environment
+- Python 3.11 in conda environment `rag-portfolio`
+- PyTorch with Metal/MPS support
+- Key libraries: transformers, sentence-transformers, langchain, faiss-cpu
+- **New for Epic 2**: weaviate-client, networkx, plotly, keras/tensorflow
+- IDE: Cursor with AI assistant
+- Git: SSH-based workflow
 
-### Quick Context Mode Switching
-Access specialized context modes for different development activities:
+## Project 1 Technical Stack
+- **Embeddings**: sentence-transformers/all-MiniLM-L6-v2 (local inference)
+- **Vector Store**: FAISS (local) + **Weaviate** (Epic 2 addition)
+- **LLM**: Ollama with llama3.2:3b model
+- **Deployment Target**: Streamlit on HuggingFace Spaces
+- **Evaluation**: RAGAS framework
+- **Analytics**: Plotly Dash (Epic 2 addition)
 
-```bash
-# Architecture and design decisions
-.claude/context-templates/ARCHITECT_MODE.md
+## Current Development Status
 
-# Implementation and coding tasks
-.claude/context-templates/IMPLEMENTER_MODE.md
+### System Foundation (Complete)
+- **6-Component Architecture**: All components implemented with modular design
+- **Validation Score**: 90.2% internal testing metric
+- **Performance**: 565K chars/sec processing, <10ms retrieval latency
+- **Testing**: 122 test cases with defined acceptance criteria
 
-# Performance optimization work
-.claude/context-templates/OPTIMIZER_MODE.md
+### Epic 2: Advanced Hybrid Retriever (In Progress)
+**Started**: [Current Date]
+**Duration**: 4-5 weeks (160-200 hours)
+**Current Week**: Week 1 - Weaviate Backend Implementation
 
-# Testing and quality assurance
-.claude/context-templates/VALIDATOR_MODE.md
+#### Epic 2 Objectives
+1. **Weaviate Integration**: Alternative vector store with advanced features
+2. **Knowledge Graph**: Document relationship analysis with NetworkX
+3. **Hybrid Search**: Dense + Sparse + Graph-based retrieval
+4. **Neural Reranking**: Cross-encoder with Keras/TensorFlow
+5. **Analytics Dashboard**: Real-time Plotly visualization
+6. **A/B Testing**: Production-grade experimentation
 
-# Portfolio demonstration readiness
-.claude/context-templates/PORTFOLIO_CURATOR_MODE.md
+#### Current Task: Weaviate Backend (Task 2.1)
+- Implementing Weaviate adapter following existing patterns
+- Creating migration tools from FAISS
+- Maintaining backward compatibility
+- Target: 25 hours for complete implementation
+
+## Development Philosophy
+- **Production-first**: Every component deployment-ready
+- **Modular design**: Small, testable, single-purpose functions
+- **Swiss market aligned**: Quality, reliability, thorough documentation
+- **Optimization mindset**: Leverage embedded systems background
+- **Incremental enhancement**: Build on solid foundation
+
+## Architecture Guidelines for Epic 2
+
+### Component Structure
+```
+src/components/retrievers/
+├── advanced_retriever.py      # New main retriever
+├── backends/                  # Multi-backend support
+│   ├── weaviate_backend.py   # Current implementation focus
+│   └── faiss_backend.py      # Existing, to be wrapped
+├── graph/                     # Document relationships
+├── hybrid/                    # Search strategies
+├── reranking/                # Neural models
+├── analytics/                 # Dashboard
+└── experiments/               # A/B testing
 ```
 
-### Memory Bank Knowledge Base
-Comprehensive project knowledge preserved in:
-- `.claude/memory-bank/swiss-engineering-standards.md` - Quality standards and evidence
-- `.claude/memory-bank/architecture-patterns.md` - Design decisions and patterns
-- `.claude/memory-bank/performance-optimizations.md` - Optimization achievements
-- `.claude/memory-bank/portfolio-insights.md` - Swiss market positioning
+### Design Patterns
+- **Adapter Pattern**: For Weaviate (external service)
+- **Strategy Pattern**: For retrieval backends
+- **Factory Pattern**: Integration with ComponentFactory
+- **Observer Pattern**: For metrics collection
 
-### Session Templates
-- `.claude/session-templates/SESSION_BOOTSTRAP.md` - Quick session startup
-- `.claude/session-templates/SESSION_HANDOFF.md` - Comprehensive session reports
-- `.claude/session-templates/PROGRESS_CHECKPOINT.md` - Progress tracking
+### Integration Requirements
+- Extend ModularUnifiedRetriever, don't replace
+- Register in ComponentFactory as "advanced" type
+- Support configuration-driven feature toggles
+- Maintain <700ms P95 latency target
 
-## Quick System Validation
+## Key Implementation Files
 
-```bash
-# Comprehensive system validation
-python tests/validate_system_fixes.py
+### Existing (Reference)
+- `src/components/retrievers/modular_unified_retriever.py` - Base implementation
+- `src/core/interfaces.py` - Retriever interface
+- `src/core/component_factory.py` - Component registration
+- `src/components/generators/answer_generator.py` - Adapter pattern example
 
-# Diagnostic test suite
-python tests/diagnostic/run_all_diagnostics.py
+### New (Epic 2)
+- `src/components/retrievers/backends/weaviate_backend.py` - Current focus
+- `src/components/retrievers/backends/weaviate_config.py` - Configuration
+- `src/components/retrievers/backends/migration/faiss_to_weaviate.py` - Migration tools
 
-# Full portfolio assessment
-python tests/run_comprehensive_tests.py
-```
+## Quality Standards
+- **Code**: Type hints, docstrings, error handling
+- **Performance**: Instrumentation on all operations
+- **Testing**: Unit + Integration + Performance tests
+- **Documentation**: API docs + Usage examples
+- **Monitoring**: Metrics collection built-in
 
-**Expected Results**: System validation results and test execution status
+## Current Session Guidelines
+1. Focus on Weaviate backend implementation
+2. Follow adapter pattern from OllamaAdapter
+3. Ensure backward compatibility
+4. Add comprehensive error handling
+5. Include migration capabilities
+6. Benchmark against FAISS baseline
 
-## Key Architecture Files
+## Performance Targets (Epic 2)
+- Retrieval latency: <500ms P95 (base)
+- With reranking: <700ms P95 (total)
+- Retrieval recall: >85%
+- Precision improvement: >15% with reranking
+- Dashboard refresh: <1 second
 
-### System Architecture
-- `/docs/architecture/MASTER-ARCHITECTURE.md` - Complete system specification
-- `/docs/CACHE_METRICS_FIX_SUCCESS_REPORT_2025-07-12.md` - Latest validation results
-- `/src/core/component_factory.py` - Component creation and management
+## Next Steps Queue
+1. Complete Weaviate adapter implementation
+2. Test migration script with RISC-V documents
+3. Benchmark Weaviate vs FAISS performance
+4. Begin graph construction module
+5. Design hybrid fusion strategies
 
-### Component Implementations
-- `/src/components/` - All 6 modular component implementations
-- `/src/core/platform_orchestrator.py` - Main system orchestrator
-- `/config/default.yaml` - Production configuration
+## Important Notes
+- Maintain all existing functionality
+- Epic 2 enhances, doesn't replace
+- Performance is critical (embedded mindset)
+- Quality over speed in implementation
+- Document all design decisions
 
-## Swiss Engineering Standards Evidence
-
-### Technical Implementation
-- **6-Component Modular Architecture**: System decomposition implemented
-- **Performance Optimization**: 48.7x improvement with Apple Silicon MPS acceleration
-- **Testing Framework**: 122 test cases with defined criteria
-- **Local Development**: Monitoring and validation capabilities
-
-### System Metrics
-- **Validation Score**: 90.2% (internal testing metric)
-- **Performance**: Document processing (565K chars/sec), Answer generation (1.12s)
-- **Test Results**: Current test suite passing, error handling implemented
-- **Documentation**: Specifications and implementation guides available
-
-## Developer Background Context
-
-**Arthur Passuello** - Embedded Systems Engineer transitioning to AI/ML
-- **Experience**: 2.5 years medical device firmware development
-- **Optimization Mindset**: Applied embedded efficiency principles to RAG systems
-- **Swiss Market Focus**: Quality-first approach with comprehensive validation
-- **Technical Stack**: Python 3.11, PyTorch MPS, Apple Silicon optimization
-
-## Planning and Documentation Guidelines
-
-- **Context System**: Use mode templates for specialized development activities
-- **Memory Bank**: Reference knowledge base for project background and decisions
-- **Session Templates**: Use structured templates for consistent progress tracking
-- **Validation**: Run system validation commands before major changes
-- **Development Standards**: Maintain measured performance and structured testing
+## Session Memory
+- Epic 2 started on: [Current Date]
+- Last component worked on: Weaviate Backend
+- Current blocker: None
+- Next milestone: Working Weaviate adapter with migration

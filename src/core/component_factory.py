@@ -76,6 +76,7 @@ class ComponentFactory:
         # "hybrid": "src.components.retrievers.hybrid_retriever.HybridRetriever",
         "unified": "src.components.retrievers.unified_retriever.UnifiedRetriever",
         "modular_unified": "src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever",
+        "advanced": "src.components.retrievers.advanced_retriever.AdvancedRetriever",  # Epic 2 implementation
     }
     
     _GENERATORS: Dict[str, str] = {
