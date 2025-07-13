@@ -59,10 +59,10 @@ retriever:
     hybrid_search:
       enabled: true
       
-      # Strategy weights (must sum to 1.0)
-      dense_weight: 0.7
-      sparse_weight: 0.3
-      graph_weight: 0.0  # Reserved for future graph-based retrieval
+      # Strategy weights (must sum to 1.0) - Updated for Epic 2 Week 2
+      dense_weight: 0.4   # Reduced to accommodate graph
+      sparse_weight: 0.3  # Maintained
+      graph_weight: 0.3   # NEW: Graph-based retrieval
       
       # Fusion method
       fusion_method: "rrf"  # "rrf", "weighted", "learned"
@@ -96,26 +96,65 @@ retriever:
       fallback_to_fast_reranker: true
       fast_reranker_threshold: 100
 
-    # Graph Retrieval Configuration (Framework testing only)
+    # Graph Retrieval Configuration (Epic 2 Week 2)
     graph_retrieval:
-      enabled: false  # Disabled for baseline testing
+      enabled: true  # Enable graph-based retrieval
       
       # Graph construction
-      enable_entity_linking: true
-      enable_cross_references: true
-      similarity_threshold: 0.8
-      max_connections_per_document: 10
+      builder:
+        implementation: "networkx"
+        config:
+          node_types: ["concept", "protocol", "architecture", "extension"]
+          relationship_types: ["implements", "extends", "requires", "conflicts"]
+          max_graph_size: 10000
+          update_strategy: "incremental"
+          enable_pruning: true
+          pruning_threshold: 0.1
       
-      # Graph algorithms
-      use_pagerank: true
-      pagerank_damping: 0.85
-      use_community_detection: false
-      community_algorithm: "louvain"
+      # Entity extraction
+      entity_extraction:
+        implementation: "spacy"
+        config:
+          model: "en_core_web_sm"
+          entity_types: ["TECH", "PROTOCOL", "ARCH"]
+          confidence_threshold: 0.8
+          batch_size: 32
+          custom_patterns: {}
+          enable_custom_entities: true
       
-      # Retrieval strategies
-      max_graph_hops: 2
-      graph_weight_decay: 0.5
-      combine_with_vector_search: true
+      # Relationship detection
+      relationship_detection:
+        implementation: "semantic"
+        config:
+          similarity_threshold: 0.7
+          relationship_model: "sentence_transformer"
+          max_relationships_per_node: 20
+          enable_bidirectional: true
+          weight_decay_factor: 0.9
+      
+      # Graph retrieval algorithms
+      retrieval:
+        algorithms: ["shortest_path", "random_walk", "subgraph_expansion"]
+        max_graph_results: 10
+        max_path_length: 3
+        random_walk_steps: 10
+        subgraph_radius: 2
+        score_aggregation: "weighted_average"
+        enable_path_scoring: true
+      
+      # Graph analytics
+      analytics:
+        enabled: true
+        collect_graph_metrics: true
+        collect_retrieval_metrics: true
+        enable_visualization: false  # Disabled for performance
+        visualization_max_nodes: 100
+        metrics_retention_hours: 24
+      
+      # Performance settings
+      max_memory_mb: 500
+      enable_caching: true
+      cache_size: 1000
 
     # Analytics Configuration (Enabled for testing)
     analytics:

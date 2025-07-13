@@ -29,5 +29,14 @@ python-dotenv>=1.0.0
 pathlib
 typing-extensions>=4.4.0
 
+# Graph Processing for Epic 2 Week 2
+networkx>=3.0
+spacy>=3.7
+en-core-web-sm>=3.7
+python-igraph>=0.10
+
+# Visualization for Graph Analytics (Epic 2)
+plotly>=5.17
+
 # Optional: Evaluation
 # ragas>=0.1.0  # Uncomment when implementing RAGAS

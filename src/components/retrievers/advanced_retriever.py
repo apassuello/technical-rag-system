@@ -18,6 +18,14 @@ from .backends.weaviate_backend import WeaviateBackend
 from .config.advanced_config import AdvancedRetrieverConfig
 from .backends.migration.faiss_to_weaviate import FAISSToWeaviateMigrator
 
+# Graph components (Epic 2 Week 2)
+from .graph.config.graph_config import GraphConfig
+from .graph.entity_extraction import EntityExtractor
+from .graph.document_graph_builder import DocumentGraphBuilder
+from .graph.relationship_mapper import RelationshipMapper
+from .graph.graph_retriever import GraphRetriever
+from .graph.graph_analytics import GraphAnalytics
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,8 +42,8 @@ class AdvancedRetriever(ModularUnifiedRetriever):
     - Multiple vector database backends (FAISS, Weaviate)
     - Hot-swapping between backends with health monitoring
     - Advanced hybrid search strategies
+    - Knowledge graph integration (Epic 2 Week 2)
     - Neural reranking capabilities (future)
-    - Knowledge graph integration (future)
     - Real-time analytics and monitoring
     - A/B testing framework (future)
     
@@ -47,10 +55,10 @@ class AdvancedRetriever(ModularUnifiedRetriever):
     - ✅ Multi-backend support (FAISS + Weaviate)
     - ✅ Backend health monitoring and fallbacks
     - ✅ Migration tools between backends
-    - ✅ Enhanced hybrid search
+    - ✅ Enhanced hybrid search (dense + sparse + graph)
+    - ✅ Graph-based retrieval (Epic 2 Week 2)
     - 🔄 Neural reranking (framework ready)
-    - 🔄 Graph-based retrieval (framework ready)
-    - ✅ Performance analytics
+    - ✅ Performance analytics with graph metrics
     - 🔄 A/B testing (framework ready)
     """
     
@@ -91,7 +99,15 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         self.analytics_enabled = self.advanced_config.analytics.enabled
         self.query_analytics: List[Dict[str, Any]] = []
         
-        # Initialize backends
+        # Graph components (Epic 2 Week 2)
+        self.graph_config = None
+        self.entity_extractor = None
+        self.graph_builder = None
+        self.relationship_mapper = None
+        self.graph_retriever = None
+        self.graph_analytics = None
+        
+        # Initialize backends (including graph if enabled)
         self._initialize_backends()
         
         # Set up health monitoring
@@ -155,6 +171,61 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         # Validate active backend
         if self.active_backend_name not in self.backends:
             raise AdvancedRetrievalError(f"Active backend '{self.active_backend_name}' not available")
+        
+        # Initialize graph components if enabled
+        self._initialize_graph_components()
+    
+    def _initialize_graph_components(self) -> None:
+        """Initialize graph-based retrieval components."""
+        try:
+            # Check if graph retrieval is enabled
+            graph_enabled = (
+                hasattr(self.advanced_config, 'graph_retrieval') and
+                getattr(self.advanced_config.graph_retrieval, 'enabled', False)
+            )
+            
+            if not graph_enabled:
+                logger.info("Graph retrieval disabled in configuration")
+                return
+            
+            # Get graph configuration
+            graph_config_dict = getattr(self.advanced_config, 'graph_retrieval', {})
+            if isinstance(graph_config_dict, dict):
+                self.graph_config = GraphConfig.from_dict(graph_config_dict)
+            else:
+                self.graph_config = graph_config_dict
+            
+            # Initialize entity extractor
+            self.entity_extractor = EntityExtractor(self.graph_config.entity_extraction)
+            
+            # Initialize graph builder
+            self.graph_builder = DocumentGraphBuilder(
+                self.graph_config.builder, 
+                self.entity_extractor
+            )
+            
+            # Initialize relationship mapper
+            self.relationship_mapper = RelationshipMapper(self.graph_config.relationship_detection)
+            
+            # Initialize graph retriever
+            self.graph_retriever = GraphRetriever(
+                self.graph_config.retrieval,
+                self.graph_builder,
+                self.embedder
+            )
+            
+            # Initialize graph analytics if enabled
+            if self.graph_config.analytics.enabled:
+                self.graph_analytics = GraphAnalytics(self.graph_config.analytics)
+            
+            # Add graph as a backend
+            self.backends["graph"] = self.graph_retriever
+            
+            logger.info("Graph retrieval components initialized successfully")
+            
+        except Exception as e:
+            logger.warning(f"Failed to initialize graph components: {str(e)}")
+            logger.info("Continuing without graph functionality")
     
     def _setup_health_monitoring(self) -> None:
         """Set up backend health monitoring."""
@@ -275,6 +346,10 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             # Use Weaviate backend with enhanced search
             return self._retrieve_with_weaviate(query, k, backend)
         
+        elif backend_name == "graph":
+            # Use graph-based retrieval (Epic 2 Week 2)
+            return self._retrieve_with_graph(query, k, backend)
+        
         else:
             raise ValueError(f"Unknown backend: {backend_name}")
     
@@ -314,6 +389,50 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         
         return retrieval_results
     
+    def _retrieve_with_graph(self, query: str, k: int, backend: GraphRetriever) -> List[RetrievalResult]:
+        """
+        Perform retrieval using graph-based search.
+        
+        Args:
+            query: Search query
+            k: Number of results
+            backend: Graph retriever instance
+            
+        Returns:
+            List of retrieval results
+        """
+        try:
+            # Use graph retriever directly
+            results = backend.retrieve(query, k)
+            
+            # Track query for analytics if enabled
+            if self.graph_analytics:
+                self.graph_analytics.track_query(
+                    query=query,
+                    results_count=len(results),
+                    latency_ms=0.0,  # Latency will be tracked by the graph retriever
+                    algorithm_used="graph_hybrid",
+                    success=True
+                )
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Graph retrieval failed: {str(e)}")
+            
+            # Track failed query
+            if self.graph_analytics:
+                self.graph_analytics.track_query(
+                    query=query,
+                    results_count=0,
+                    latency_ms=0.0,
+                    algorithm_used="graph_hybrid",
+                    success=False
+                )
+            
+            # Return empty results on failure
+            return []
+    
     def index_documents(self, documents: List[Document]) -> None:
         """
         Index documents in all active backends.
@@ -331,6 +450,8 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         for backend_name, backend in self.backends.items():
             if backend_name == "faiss":
                 continue  # Already handled by parent
+            elif backend_name == "graph":
+                continue  # Graph handled separately below
             
             try:
                 logger.info(f"Indexing {len(documents)} documents in {backend_name} backend")
@@ -348,6 +469,32 @@ class AdvancedRetriever(ModularUnifiedRetriever):
                 logger.error(f"Failed to index documents in {backend_name} backend: {str(e)}")
                 if backend_name == self.active_backend_name:
                     raise RuntimeError(f"Failed to index in active backend {backend_name}") from e
+        
+        # Build knowledge graph if graph components are available
+        if self.graph_builder:
+            try:
+                logger.info(f"Building knowledge graph from {len(documents)} documents")
+                start_time = time.time()
+                
+                # Build or update the graph
+                self.graph_builder.build_graph(documents)
+                
+                # Detect relationships if relationship mapper is available
+                if self.relationship_mapper:
+                    document_entities = self.entity_extractor.extract_entities(documents)
+                    relationships = self.relationship_mapper.detect_relationships(documents, document_entities)
+                    logger.info(f"Detected {sum(len(rels) for rels in relationships.values())} relationships")
+                
+                graph_time = time.time() - start_time
+                logger.info(f"Knowledge graph construction completed in {graph_time:.3f}s")
+                
+                # Create analytics snapshot if analytics are enabled
+                if self.graph_analytics:
+                    self.graph_analytics.create_snapshot(self.graph_builder, self.graph_retriever)
+                
+            except Exception as e:
+                logger.error(f"Failed to build knowledge graph: {str(e)}")
+                logger.info("Continuing without graph functionality")
     
     def migrate_backend(self, target_backend: str) -> Dict[str, Any]:
         """
@@ -441,7 +588,7 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         """
         base_stats = super().get_retrieval_stats()
         
-        return {
+        stats = {
             **base_stats,
             "advanced_stats": self.advanced_stats.copy(),
             "backend_status": self.get_backend_status(),
@@ -452,6 +599,19 @@ class AdvancedRetriever(ModularUnifiedRetriever):
                 "latest_queries": self.query_analytics[-5:] if self.query_analytics else []
             }
         }
+        
+        # Add graph statistics if available
+        if self.graph_builder:
+            stats["graph_stats"] = self.graph_builder.get_graph_statistics()
+        
+        if self.graph_retriever:
+            stats["graph_retrieval_stats"] = self.graph_retriever.get_statistics()
+        
+        if self.graph_analytics:
+            stats["graph_analytics_stats"] = self.graph_analytics.get_statistics()
+            stats["graph_report"] = self.graph_analytics.generate_report()
+        
+        return stats
     
     def _check_and_switch_backend(self) -> None:
         """Check backend health and switch if necessary."""
