@@ -8,16 +8,16 @@
 **Constraints**: Maintain functionality while improving performance
 
 ## Current Optimization Context
-### Performance Baseline: [Current metrics]
-### Optimization Targets: [Specific improvement goals]
-### Resource Constraints: [Memory, compute, latency limits]
-### Embedded Systems Insights: [Apply embedded optimization principles]
+### Performance Baseline: Document processing (565K chars/sec), Answer generation (1.12s), 48.7x batch speedup
+### Optimization Targets: ACHIEVED - focus on deployment optimization and fine-tuning
+### Resource Constraints: Apple Silicon MPS optimized, <2GB memory usage, sub-second response
+### Embedded Systems Insights: Applied cache optimization, batch processing, memory management
 
 ## Key Files for Optimization:
-- Performance benchmarking suites
-- Current implementation to be optimized
-- Profiling and diagnostic tools
-- Apple Silicon optimization guidelines
+- `/tests/run_comprehensive_tests.py` - Performance validation suite
+- `/src/core/component_factory.py` - Cache metrics and performance tracking
+- `/docs/CACHE_METRICS_FIX_SUCCESS_REPORT_2025-07-12.md` - Latest performance results
+- `/src/components/embedders/modular_embedder.py` - MPS optimization implementation
 
 ## Optimization Principles:
 - Quantified improvements with before/after metrics
