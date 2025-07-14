@@ -13,10 +13,7 @@ import numpy as np
 
 from src.core.interfaces import Retriever, Document, RetrievalResult, Embedder
 from .modular_unified_retriever import ModularUnifiedRetriever
-from .backends.faiss_backend import FAISSBackend
-from .backends.weaviate_backend import WeaviateBackend
 from .config.advanced_config import AdvancedRetrieverConfig
-from .backends.migration.faiss_to_weaviate import FAISSToWeaviateMigrator
 
 # Note: Graph enhancement now properly integrated via fusion sub-component
 # Note: Neural reranking now properly integrated via reranker sub-component
@@ -74,14 +71,13 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         else:
             self.advanced_config = config
 
-        # Initialize parent with base configuration
-        base_config = self._extract_base_config()
-        super().__init__(base_config, embedder)
-
-        # Advanced components
-        self.backends: Dict[str, Any] = {}
+        # Backend configuration
         self.active_backend_name = self.advanced_config.backends.primary_backend
         self.fallback_backend_name = self.advanced_config.backends.fallback_backend
+        
+        # Initialize parent with base configuration (includes backend selection)
+        base_config = self._extract_base_config()
+        super().__init__(base_config, embedder)
 
         # Performance tracking
         self.advanced_stats = {
@@ -153,11 +149,11 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             }
             reranker_config = {"type": "neural", "config": neural_config}
         
+        # Configure vector index based on active backend
+        vector_index_config = self._get_vector_index_config()
+        
         return {
-            "vector_index": {
-                "type": "faiss",
-                "config": self.advanced_config.backends.faiss,
-            },
+            "vector_index": vector_index_config,
             "sparse": {
                 "type": "bm25",
                 "config": {
@@ -170,6 +166,28 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             "fusion": self._get_fusion_config(),
             "reranker": reranker_config,
         }
+    
+    def _get_vector_index_config(self) -> Dict[str, Any]:
+        """Get vector index configuration based on active backend."""
+        if self.active_backend_name == "weaviate":
+            # Configure Weaviate vector index
+            if hasattr(self.advanced_config.backends, 'weaviate') and self.advanced_config.backends.weaviate:
+                return {
+                    "type": "weaviate",
+                    "config": self.advanced_config.backends.weaviate.to_dict() if hasattr(self.advanced_config.backends.weaviate, 'to_dict') else self.advanced_config.backends.weaviate
+                }
+            else:
+                logger.warning("Weaviate backend selected but no weaviate config found, falling back to FAISS")
+                return {
+                    "type": "faiss",
+                    "config": self.advanced_config.backends.faiss
+                }
+        else:
+            # Default to FAISS vector index
+            return {
+                "type": "faiss",
+                "config": self.advanced_config.backends.faiss
+            }
     
     def _get_fusion_config(self) -> Dict[str, Any]:
         """Get fusion configuration with graph enhancement if enabled."""
@@ -210,34 +228,24 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             }
 
     def _initialize_backends(self) -> None:
-        """Initialize all configured backends."""
-        # Initialize FAISS backend (wraps existing functionality)
-        faiss_config = {"faiss": self.advanced_config.backends.faiss}
-        self.backends["faiss"] = FAISSBackend(faiss_config)
-
-        # Initialize Weaviate backend if enabled
-        if (
-            self.advanced_config.feature_flags.get("weaviate_backend", False)
-            and self.advanced_config.backends.weaviate
-        ):
-
-            try:
-                self.backends["weaviate"] = WeaviateBackend(
-                    self.advanced_config.backends.weaviate
-                )
-                logger.info("Weaviate backend initialized successfully")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Weaviate backend: {str(e)}")
-                if self.active_backend_name == "weaviate":
-                    logger.info("Falling back to FAISS backend")
-                    self.active_backend_name = "faiss"
-
-        # Validate active backend
-        if self.active_backend_name not in self.backends:
-            raise AdvancedRetrievalError(
-                f"Active backend '{self.active_backend_name}' not available"
-            )
-
+        """Validate backend configuration."""
+        # Validate that the active backend is supported and configured
+        if self.active_backend_name == "weaviate":
+            if not (
+                self.advanced_config.feature_flags.get("weaviate_backend", False)
+                and self.advanced_config.backends.weaviate
+            ):
+                logger.warning("Weaviate backend selected but not available, falling back to FAISS")
+                self.active_backend_name = "faiss"
+        
+        # Validate fallback backend if configured
+        if self.fallback_backend_name and self.fallback_backend_name not in ["faiss", "weaviate"]:
+            logger.warning(f"Invalid fallback backend '{self.fallback_backend_name}', clearing fallback")
+            self.fallback_backend_name = None
+        
+        logger.info(f"Backend configuration validated: active={self.active_backend_name}, fallback={self.fallback_backend_name}")
+        
+        # Note: Actual backend initialization happens through parent's vector_index configuration
         # Note: Graph enhancement now configured via parent's fusion sub-component
         # Note: Neural reranking now configured via parent's reranker sub-component
 
@@ -309,8 +317,13 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             return
 
         try:
-            active_backend = self.backends[self.active_backend_name]
-            health = active_backend.health_check()
+            # Check health of current vector index
+            health = {"is_healthy": True, "issues": []}
+            
+            if hasattr(self.vector_index, 'health_check'):
+                health = self.vector_index.health_check()
+            elif hasattr(self.vector_index, 'is_trained') and not self.vector_index.is_trained():
+                health = {"is_healthy": False, "issues": ["Vector index not trained"]}
 
             if not health.get("is_healthy", True):
                 logger.warning(
@@ -326,32 +339,77 @@ class AdvancedRetriever(ModularUnifiedRetriever):
 
     def _consider_backend_switch(self, error: Optional[Exception]) -> None:
         """Consider switching to fallback backend."""
-        if (
-            not self.fallback_backend_name
-            or self.fallback_backend_name not in self.backends
-        ):
+        if not self.fallback_backend_name or self.fallback_backend_name == self.active_backend_name:
             return
 
         try:
-            fallback_backend = self.backends[self.fallback_backend_name]
-            fallback_health = fallback_backend.health_check()
+            logger.info(
+                f"Attempting to switch from {self.active_backend_name} to {self.fallback_backend_name}"
+            )
 
-            if fallback_health.get("is_healthy", False):
-                logger.info(
-                    f"Switching from {self.active_backend_name} to {self.fallback_backend_name}"
-                )
+            # Try to switch to fallback backend
+            self._switch_to_backend(self.fallback_backend_name)
+            
+            # If successful, swap active and fallback
+            self.active_backend_name, self.fallback_backend_name = (
+                self.fallback_backend_name,
+                self.active_backend_name,
+            )
 
-                # Swap backends
-                self.active_backend_name, self.fallback_backend_name = (
-                    self.fallback_backend_name,
-                    self.active_backend_name,
-                )
-
-                self.advanced_stats["backend_switches"] += 1
+            self.advanced_stats["backend_switches"] += 1
+            logger.info(f"Successfully switched to {self.active_backend_name}")
 
         except Exception as e:
             logger.error(f"Backend switch consideration failed: {str(e)}")
 
+    def _switch_to_backend(self, backend_name: str) -> None:
+        """
+        Switch to a different backend by reconfiguring the parent component.
+        
+        Args:
+            backend_name: Name of the backend to switch to ("faiss" or "weaviate")
+        """
+        if backend_name not in ["faiss", "weaviate"]:
+            raise ValueError(f"Unknown backend: {backend_name}")
+        
+        if backend_name == "weaviate" and not (
+            self.advanced_config.feature_flags.get("weaviate_backend", False)
+            and self.advanced_config.backends.weaviate
+        ):
+            raise ValueError("Weaviate backend not available or not configured")
+        
+        try:
+            # Update active backend
+            old_backend = self.active_backend_name
+            self.active_backend_name = backend_name
+            
+            # Reconfigure parent's vector index
+            vector_index_config = self._get_vector_index_config()
+            
+            # Create new vector index with the new backend
+            new_vector_index = self._create_vector_index(vector_index_config)
+            
+            # Initialize with same dimension if we have documents
+            if hasattr(self, 'vector_index') and self.vector_index and len(self.documents) > 0:
+                # Get embedding dimension from existing documents
+                if self.documents[0].embedding is not None:
+                    embedding_dim = len(self.documents[0].embedding)
+                    new_vector_index.initialize_index(embedding_dim)
+                    
+                    # Re-index documents in new backend
+                    new_vector_index.add_documents(self.documents)
+                    logger.info(f"Re-indexed {len(self.documents)} documents in new backend")
+            
+            # Replace the vector index in parent
+            self.vector_index = new_vector_index
+            
+            logger.info(f"Successfully switched backend from {old_backend} to {backend_name}")
+            
+        except Exception as e:
+            # Revert backend change on failure
+            self.active_backend_name = old_backend if 'old_backend' in locals() else self.active_backend_name
+            logger.error(f"Failed to switch to backend {backend_name}: {e}")
+            raise RuntimeError(f"Backend switch failed: {e}") from e
 
     def get_configuration(self) -> Dict[str, Any]:
         """
@@ -367,5 +425,6 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             "advanced_config": self.advanced_config.to_dict(),
             "active_backend": self.active_backend_name,
             "fallback_backend": self.fallback_backend_name,
-            "available_backends": list(self.backends.keys()),
+            "available_backends": ["faiss", "weaviate"],
+            "vector_index_type": base_config.get("vector_index", {}).get("type", "unknown"),
         }

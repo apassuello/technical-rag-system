@@ -14,6 +14,7 @@ import numpy as np
 from src.core.interfaces import Retriever, Document, RetrievalResult, Embedder
 from .indices.base import VectorIndex
 from .indices.faiss_index import FAISSIndex
+from .indices.weaviate_index import WeaviateIndex
 from .sparse.base import SparseRetriever
 from .sparse.bm25_retriever import BM25Retriever
 from .fusion.base import FusionStrategy
@@ -107,6 +108,8 @@ class ModularUnifiedRetriever(Retriever):
         
         if index_type == "faiss":
             return FAISSIndex(index_config)
+        elif index_type == "weaviate":
+            return WeaviateIndex(index_config)
         else:
             raise ValueError(f"Unknown vector index type: {index_type}")
     
