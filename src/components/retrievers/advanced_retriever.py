@@ -26,6 +26,10 @@ from .graph.relationship_mapper import RelationshipMapper
 from .graph.graph_retriever import GraphRetriever
 from .graph.graph_analytics import GraphAnalytics
 
+# Neural Reranking components (Epic 2 Week 3)
+from .reranking.neural_reranker import NeuralReranker
+from .reranking.config.reranking_config import EnhancedNeuralRerankingConfig
+
 logger = logging.getLogger(__name__)
 
 
@@ -107,6 +111,9 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         self.graph_retriever = None
         self.graph_analytics = None
         
+        # Neural Reranking components (Epic 2 Week 3)
+        self.neural_reranker = None
+        
         # Initialize backends (including graph if enabled)
         self._initialize_backends()
         
@@ -174,6 +181,9 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         
         # Initialize graph components if enabled
         self._initialize_graph_components()
+        
+        # Initialize neural reranking if enabled
+        self._initialize_neural_reranking()
     
     def _initialize_graph_components(self) -> None:
         """Initialize graph-based retrieval components."""
@@ -227,6 +237,35 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             logger.warning(f"Failed to initialize graph components: {str(e)}")
             logger.info("Continuing without graph functionality")
     
+    def _initialize_neural_reranking(self) -> None:
+        """Initialize neural reranking components."""
+        try:
+            # Check if neural reranking is enabled
+            if not self.advanced_config.neural_reranking.enabled:
+                logger.info("Neural reranking disabled in configuration")
+                return
+            
+            # Convert base config to enhanced config for backward compatibility
+            import dataclasses
+            if hasattr(self.advanced_config.neural_reranking, '__dict__'):
+                # If it's a dataclass, convert to dict
+                neural_config_dict = dataclasses.asdict(self.advanced_config.neural_reranking)
+            else:
+                # If it's already a dict or other mapping
+                neural_config_dict = dict(self.advanced_config.neural_reranking)
+            
+            enhanced_config = EnhancedNeuralRerankingConfig.from_base_config(neural_config_dict)
+            
+            # Initialize neural reranker
+            self.neural_reranker = NeuralReranker(enhanced_config)
+            
+            logger.info("Neural reranking components initialized successfully")
+            
+        except Exception as e:
+            logger.warning(f"Failed to initialize neural reranking: {str(e)}")
+            logger.info("Continuing without neural reranking functionality")
+            self.neural_reranker = None
+    
     def _setup_health_monitoring(self) -> None:
         """Set up backend health monitoring."""
         logger.info("Health monitoring enabled for backend hot-swapping")
@@ -265,6 +304,9 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             try:
                 results = self._retrieve_with_backend(query, k, self.active_backend_name)
                 
+                # Apply neural reranking if enabled (4th stage)
+                results = self._apply_neural_reranking(query, results)
+                
                 # Post-retrieval analytics
                 if self.analytics_enabled:
                     elapsed_time = time.time() - start_time
@@ -285,6 +327,9 @@ class AdvancedRetriever(ModularUnifiedRetriever):
                     try:
                         results = self._retrieve_with_backend(query, k, self.fallback_backend_name)
                         self.advanced_stats["fallback_activations"] += 1
+                        
+                        # Apply neural reranking if enabled (4th stage)
+                        results = self._apply_neural_reranking(query, results)
                         
                         # Consider switching backends
                         if self.advanced_config.backends.enable_hot_swap:
@@ -432,6 +477,76 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             
             # Return empty results on failure
             return []
+    
+    def _apply_neural_reranking(self, query: str, results: List[RetrievalResult]) -> List[RetrievalResult]:
+        """
+        Apply neural reranking to retrieval results (4th stage).
+        
+        Args:
+            query: Search query
+            results: Initial retrieval results
+            
+        Returns:
+            Reranked results
+        """
+        # Skip if neural reranking is disabled or not available
+        if not self.neural_reranker or not results:
+            return results
+        
+        try:
+            start_time = time.time()
+            
+            # Convert RetrievalResults to Documents and scores
+            documents = []
+            initial_scores = []
+            
+            for result in results:
+                documents.append(result.document)
+                initial_scores.append(result.score)
+            
+            # Apply neural reranking
+            reranked_indices_scores = self.neural_reranker.rerank(
+                query=query,
+                documents=documents,
+                initial_scores=initial_scores
+            )
+            
+            # Convert back to RetrievalResults with updated scores
+            reranked_results = []
+            for doc_idx, new_score in reranked_indices_scores:
+                if doc_idx < len(results):
+                    original_result = results[doc_idx]
+                    reranked_result = RetrievalResult(
+                        document=original_result.document,
+                        score=new_score,
+                        rank=len(reranked_results) + 1,
+                        metadata={
+                            **original_result.metadata,
+                            "neural_reranked": True,
+                            "original_score": original_result.score,
+                            "neural_score": new_score
+                        }
+                    )
+                    reranked_results.append(reranked_result)
+            
+            # Update advanced stats
+            neural_latency = (time.time() - start_time) * 1000
+            self.advanced_stats["total_advanced_retrievals"] += 1
+            
+            logger.debug(f"Neural reranking completed in {neural_latency:.1f}ms, "
+                        f"processed {len(documents)} documents")
+            
+            # Log performance warning if too slow
+            if neural_latency > self.advanced_config.neural_reranking.max_latency_ms:
+                logger.warning(f"Neural reranking took {neural_latency:.1f}ms, "
+                             f"exceeding target of {self.advanced_config.neural_reranking.max_latency_ms}ms")
+            
+            return reranked_results
+            
+        except Exception as e:
+            logger.error(f"Neural reranking failed: {str(e)}")
+            # Return original results on failure
+            return results
     
     def index_documents(self, documents: List[Document]) -> None:
         """
