@@ -8,5 +8,6 @@ All fusion strategies are direct implementations as they implement pure algorith
 from .base import FusionStrategy
 from .rrf_fusion import RRFFusion
 from .weighted_fusion import WeightedFusion
+from .graph_enhanced_fusion import GraphEnhancedRRFFusion
 
-__all__ = ["FusionStrategy", "RRFFusion", "WeightedFusion"]
+__all__ = ["FusionStrategy", "RRFFusion", "WeightedFusion", "GraphEnhancedRRFFusion"]
