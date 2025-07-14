@@ -4,6 +4,9 @@ Adaptive Strategies for Neural Reranking.
 This module provides query-type aware reranking strategies that can
 adapt model selection and parameters based on query characteristics
 to optimize relevance and performance.
+
+Migrated from reranking/ module and simplified for integration with
+the enhanced neural reranker in the rerankers/ component.
 """
 
 import logging
@@ -11,8 +14,6 @@ import re
 import time
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
-
-from .config.reranking_config import AdaptiveConfig
 
 logger = logging.getLogger(__name__)
 
@@ -34,19 +35,28 @@ class QueryTypeDetector:
     procedural, comparative, etc. to enable optimal model selection.
     """
     
-    def __init__(self, config):
+    def __init__(self, confidence_threshold: float = 0.7):
         """
         Initialize query type detector.
         
         Args:
-            config: Query classification configuration
+            confidence_threshold: Minimum confidence for classification
         """
-        self.config = config
+        self.confidence_threshold = confidence_threshold
         self.stats = {
             "classifications": 0,
             "type_counts": {},
             "high_confidence": 0,
             "low_confidence": 0
+        }
+        
+        # Model strategies for different query types
+        self.strategies = {
+            "technical": "technical_model",
+            "general": "default_model", 
+            "comparative": "technical_model",
+            "procedural": "default_model",
+            "factual": "default_model"
         }
         
         # Define patterns for different query types
@@ -118,7 +128,7 @@ class QueryTypeDetector:
             confidence = 0.5  # Default confidence for general queries
         
         # Apply confidence threshold
-        if confidence < self.config.confidence_threshold:
+        if confidence < self.confidence_threshold:
             best_type = "general"
             confidence = 0.5
         
@@ -126,7 +136,7 @@ class QueryTypeDetector:
         features = self._extract_features(query)
         
         # Get recommended model
-        recommended_model = self.config.strategies.get(best_type, "default_model")
+        recommended_model = self.strategies.get(best_type, "default_model")
         
         # Update statistics
         self._update_stats(best_type, confidence)
@@ -175,15 +185,30 @@ class AdaptiveStrategies:
     to maximize relevance while maintaining performance targets.
     """
     
-    def __init__(self, config: AdaptiveConfig):
+    def __init__(
+        self, 
+        enabled: bool = True,
+        confidence_threshold: float = 0.7,
+        enable_dynamic_switching: bool = False,
+        performance_window: int = 100,
+        quality_threshold: float = 0.8
+    ):
         """
         Initialize adaptive strategies.
         
         Args:
-            config: Adaptive configuration
+            enabled: Whether adaptive strategies are enabled
+            confidence_threshold: Minimum confidence for query classification
+            enable_dynamic_switching: Whether to enable performance-based model switching
+            performance_window: Number of queries to track for performance
+            quality_threshold: Quality threshold for model switching
         """
-        self.config = config
-        self.detector = QueryTypeDetector(config.query_classification) if config.enabled else None
+        self.enabled = enabled
+        self.enable_dynamic_switching = enable_dynamic_switching
+        self.performance_window = performance_window
+        self.quality_threshold = quality_threshold
+        
+        self.detector = QueryTypeDetector(confidence_threshold) if enabled else None
         
         self.stats = {
             "model_selections": 0,
@@ -194,7 +219,7 @@ class AdaptiveStrategies:
         # Performance tracking for adaptive adjustments
         self.performance_history = []
         
-        logger.info(f"AdaptiveStrategies initialized, enabled={config.enabled}")
+        logger.info(f"AdaptiveStrategies initialized, enabled={enabled}")
     
     def select_model(
         self, 
@@ -213,7 +238,7 @@ class AdaptiveStrategies:
         Returns:
             Name of the selected model
         """
-        if not self.config.enabled or not self.detector:
+        if not self.enabled or not self.detector:
             return default_model
         
         try:
@@ -232,7 +257,7 @@ class AdaptiveStrategies:
                 self.stats["fallbacks"] += 1
             
             # Consider performance-based adaptations
-            if self.config.model_selection.enable_dynamic_switching:
+            if self.enable_dynamic_switching:
                 selected_model = self._consider_performance_adaptation(
                     selected_model, available_models, default_model
                 )
@@ -258,8 +283,8 @@ class AdaptiveStrategies:
         """Consider performance-based model adaptation."""
         try:
             # Check recent performance history
-            if len(self.performance_history) >= self.config.model_selection.performance_window:
-                recent_performance = self.performance_history[-self.config.model_selection.performance_window:]
+            if len(self.performance_history) >= self.performance_window:
+                recent_performance = self.performance_history[-self.performance_window:]
                 
                 # Calculate average quality for current selection
                 current_model_performance = [
@@ -271,10 +296,10 @@ class AdaptiveStrategies:
                     avg_quality = sum(p.get("quality", 0) for p in current_model_performance) / len(current_model_performance)
                     
                     # Switch if quality is below threshold
-                    if avg_quality < self.config.model_selection.quality_threshold:
+                    if avg_quality < self.quality_threshold:
                         logger.info(f"Switching from {current_selection} due to low quality: {avg_quality:.2f}")
                         self.stats["adaptations"] += 1
-                        return self.config.model_selection.fallback_model
+                        return default_model
             
             return current_selection
             
@@ -299,29 +324,28 @@ class AdaptiveStrategies:
         Returns:
             Adapted configuration
         """
-        if not self.config.enabled:
+        if not self.enabled:
             return base_config
         
         try:
             adapted_config = base_config.copy()
             
             # Adapt batch size based on query complexity
-            if self.config.performance_adaptation.adaptive_batch_size:
-                query_complexity = self._assess_query_complexity(query)
-                
-                if query_complexity == "high":
-                    adapted_config["batch_size"] = max(1, adapted_config.get("batch_size", 16) // 2)
-                elif query_complexity == "low":
-                    adapted_config["batch_size"] = min(64, adapted_config.get("batch_size", 16) * 2)
+            query_complexity = self._assess_query_complexity(query)
+            
+            if query_complexity == "high":
+                adapted_config["batch_size"] = max(1, adapted_config.get("batch_size", 16) // 2)
+            elif query_complexity == "low":
+                adapted_config["batch_size"] = min(64, adapted_config.get("batch_size", 16) * 2)
             
             # Adapt number of candidates based on query type
-            if self.config.performance_adaptation.adaptive_candidates:
-                analysis = self.detector.classify_query(query) if self.detector else None
+            if self.detector:
+                analysis = self.detector.classify_query(query)
                 
-                if analysis and analysis.query_type == "technical":
+                if analysis.query_type == "technical":
                     # Technical queries might benefit from more candidates
                     adapted_config["max_candidates"] = min(100, adapted_config.get("max_candidates", 50) * 1.5)
-                elif analysis and analysis.query_type == "factual":
+                elif analysis.query_type == "factual":
                     # Factual queries might need fewer candidates
                     adapted_config["max_candidates"] = max(10, adapted_config.get("max_candidates", 50) // 2)
             
@@ -369,7 +393,7 @@ class AdaptiveStrategies:
         self.performance_history.append(performance_record)
         
         # Keep only recent history
-        max_history = self.config.model_selection.performance_window * 2
+        max_history = self.performance_window * 2
         if len(self.performance_history) > max_history:
             self.performance_history = self.performance_history[-max_history:]
     

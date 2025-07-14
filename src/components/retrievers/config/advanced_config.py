@@ -11,6 +11,7 @@ from typing import Dict, Any, Optional, List, Union
 from pathlib import Path
 
 from ..backends.weaviate_config import WeaviateBackendConfig
+from ..rerankers.config.neural_config import EnhancedNeuralRerankingConfig
 
 
 @dataclass
@@ -101,42 +102,6 @@ class HybridSearchConfig:
             raise ValueError(f"Normalization method must be one of {valid_normalization}")
 
 
-@dataclass
-class NeuralRerankingConfig:
-    """Configuration for neural reranking."""
-    
-    enabled: bool = False
-    
-    # Model configuration
-    model_name: str = "cross-encoder/ms-marco-MiniLM-L6-v2"
-    model_type: str = "cross_encoder"  # "cross_encoder", "bi_encoder", "ensemble"
-    device: str = "auto"  # "auto", "cpu", "cuda", "mps"
-    
-    # Reranking parameters
-    max_candidates: int = 50
-    batch_size: int = 32
-    max_length: int = 512
-    
-    # Performance thresholds
-    max_latency_ms: int = 200
-    fallback_to_fast_reranker: bool = True
-    fast_reranker_threshold: int = 100  # Switch to fast reranker if more candidates
-    
-    # Training and fine-tuning
-    enable_online_learning: bool = False
-    feedback_weight: float = 0.1
-    update_frequency: int = 1000
-    
-    def __post_init__(self):
-        """Validate neural reranking configuration."""
-        if self.max_candidates <= 0:
-            raise ValueError("Max candidates must be positive")
-        if self.batch_size <= 0:
-            raise ValueError("Batch size must be positive")
-        if self.max_length <= 0:
-            raise ValueError("Max length must be positive")
-        if self.max_latency_ms <= 0:
-            raise ValueError("Max latency must be positive")
 
 
 @dataclass
@@ -251,7 +216,7 @@ class AdvancedRetrieverConfig:
     # Component configurations
     backends: BackendConfig = field(default_factory=BackendConfig)
     hybrid_search: HybridSearchConfig = field(default_factory=HybridSearchConfig)
-    neural_reranking: NeuralRerankingConfig = field(default_factory=NeuralRerankingConfig)
+    neural_reranking: EnhancedNeuralRerankingConfig = field(default_factory=EnhancedNeuralRerankingConfig)
     graph_retrieval: GraphRetrievalConfig = field(default_factory=GraphRetrievalConfig)
     analytics: AnalyticsConfig = field(default_factory=AnalyticsConfig)
     experiments: ExperimentsConfig = field(default_factory=ExperimentsConfig)
@@ -282,6 +247,20 @@ class AdvancedRetrieverConfig:
         if self.cache_size < 0:
             raise ValueError("Cache size cannot be negative")
         
+        # Convert dictionary configurations to proper dataclass objects if needed
+        if isinstance(self.backends, dict):
+            self.backends = BackendConfig(**self.backends)
+        if isinstance(self.hybrid_search, dict):
+            self.hybrid_search = HybridSearchConfig(**self.hybrid_search)
+        if isinstance(self.neural_reranking, dict):
+            self.neural_reranking = EnhancedNeuralRerankingConfig.from_base_config(self.neural_reranking)
+        if isinstance(self.graph_retrieval, dict):
+            self.graph_retrieval = GraphRetrievalConfig(**self.graph_retrieval)
+        if isinstance(self.analytics, dict):
+            self.analytics = AnalyticsConfig(**self.analytics)
+        if isinstance(self.experiments, dict):
+            self.experiments = ExperimentsConfig(**self.experiments)
+        
         # Auto-enable features if enable_all_features is True
         if self.enable_all_features:
             for key in self.feature_flags:
@@ -300,15 +279,17 @@ class AdvancedRetrieverConfig:
         # Extract sub-configurations
         backends_config = BackendConfig(**config_dict.get('backends', {}))
         hybrid_config = HybridSearchConfig(**config_dict.get('hybrid_search', {}))
-        reranking_config = NeuralRerankingConfig(**config_dict.get('neural_reranking', {}))
+        # Use enhanced config with backward compatibility
+        neural_reranking_dict = config_dict.get('neural_reranking', {})
+        reranking_config = EnhancedNeuralRerankingConfig.from_base_config(neural_reranking_dict)
         graph_config = GraphRetrievalConfig(**config_dict.get('graph_retrieval', {}))
         analytics_config = AnalyticsConfig(**config_dict.get('analytics', {}))
         experiments_config = ExperimentsConfig(**config_dict.get('experiments', {}))
         
-        # Extract main configuration
+        # Extract main configuration (excluding type and sub-configurations)
         main_config = {
             k: v for k, v in config_dict.items()
-            if k not in ['backends', 'hybrid_search', 'neural_reranking', 
+            if k not in ['type', 'backends', 'hybrid_search', 'neural_reranking', 
                         'graph_retrieval', 'analytics', 'experiments']
         }
         

@@ -22,6 +22,7 @@ import time
 import json
 import sys
 import os
+import requests
 from pathlib import Path
 from typing import Dict, Any, List
 import numpy as np
@@ -84,12 +85,108 @@ class Epic2ValidationRunner:
 
         self.validation_results = {}
         self.overall_metrics = {}
+        self.infrastructure_status = {}
+    
+    def check_infrastructure(self) -> Dict[str, Any]:
+        """Check Epic 2 infrastructure availability."""
+        logger.info("Checking Epic 2 infrastructure...")
+        
+        infrastructure = {
+            "weaviate": {"available": False, "url": None, "error": None},
+            "ollama": {"available": False, "url": None, "error": None},
+            "docker": {"available": False, "error": None}
+        }
+        
+        # Check Weaviate
+        weaviate_urls = ["http://localhost:8080", "http://127.0.0.1:8080"]
+        for url in weaviate_urls:
+            try:
+                response = requests.get(f"{url}/v1/.well-known/ready", timeout=5)
+                if response.status_code == 200:
+                    infrastructure["weaviate"]["available"] = True
+                    infrastructure["weaviate"]["url"] = url
+                    logger.info(f"✅ Weaviate available at {url}")
+                    break
+            except requests.RequestException as e:
+                infrastructure["weaviate"]["error"] = str(e)
+                continue
+        
+        if not infrastructure["weaviate"]["available"]:
+            logger.warning("⚠️  Weaviate not available - multi-backend tests will be limited")
+        
+        # Check Ollama
+        try:
+            response = requests.get("http://localhost:11434/api/version", timeout=5)
+            if response.status_code == 200:
+                infrastructure["ollama"]["available"] = True
+                infrastructure["ollama"]["url"] = "http://localhost:11434"
+                logger.info("✅ Ollama available")
+            else:
+                infrastructure["ollama"]["error"] = f"HTTP {response.status_code}"
+        except requests.RequestException as e:
+            infrastructure["ollama"]["error"] = str(e)
+            logger.warning("⚠️  Ollama not available - answer generation tests may be limited")
+        
+        # Check Docker (basic check)
+        try:
+            import subprocess
+            result = subprocess.run(["docker", "--version"], capture_output=True, timeout=5)
+            if result.returncode == 0:
+                infrastructure["docker"]["available"] = True
+                logger.info("✅ Docker available")
+            else:
+                infrastructure["docker"]["error"] = "Docker command failed"
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            infrastructure["docker"]["error"] = str(e)
+            logger.warning("⚠️  Docker not available - containerized testing not possible")
+        
+        self.infrastructure_status = infrastructure
+        return infrastructure
+    
+    def generate_setup_recommendations(self) -> List[str]:
+        """Generate setup recommendations based on infrastructure status."""
+        recommendations = []
+        
+        if not self.infrastructure_status.get("weaviate", {}).get("available", False):
+            recommendations.extend([
+                "🐳 Start Weaviate server:",
+                "   docker-compose up -d weaviate",
+                "   # Or run: ./scripts/setup_weaviate.sh setup",
+                ""
+            ])
+        
+        if not self.infrastructure_status.get("ollama", {}).get("available", False):
+            recommendations.extend([
+                "🦙 Start Ollama server:",
+                "   docker-compose up -d ollama",
+                "   # Or install: https://ollama.ai/download",
+                ""
+            ])
+        
+        if not self.infrastructure_status.get("docker", {}).get("available", False):
+            recommendations.extend([
+                "🐳 Install Docker:",
+                "   # Visit: https://docs.docker.com/get-docker/",
+                ""
+            ])
+        
+        if recommendations:
+            recommendations.insert(0, "📋 Setup Recommendations:")
+            recommendations.insert(1, "")
+        else:
+            recommendations = ["✅ All infrastructure components available!"]
+        
+        return recommendations
 
     def run_comprehensive_validation(self) -> Dict[str, Any]:
         """Run complete Epic 2 validation suite."""
         logger.info("Starting comprehensive Epic 2 validation...")
 
         start_time = time.time()
+        
+        # Check infrastructure first
+        infrastructure = self.check_infrastructure()
+        self.validation_results["infrastructure"] = infrastructure
 
         # Run all validation modules
         for validator_name, validator in self.validators.items():
