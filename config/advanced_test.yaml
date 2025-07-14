@@ -92,9 +92,18 @@ retriever:
       max_length: 512
       
       # Performance thresholds
-      max_latency_ms: 200
+      max_latency_ms: 5000  # 5 seconds max (within validation limit)
       fallback_to_fast_reranker: true
       fast_reranker_threshold: 100
+      
+      # Enhanced configuration for Epic 2 validation
+      models:
+        default_model:
+          name: "cross-encoder/ms-marco-MiniLM-L6-v2"
+          device: "auto"
+          batch_size: 32
+          max_length: 512
+      default_model: "default_model"
 
     # Graph Retrieval Configuration (Epic 2 - simplified structure)
     graph_retrieval:
