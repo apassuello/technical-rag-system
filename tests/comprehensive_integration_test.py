@@ -1024,7 +1024,25 @@ class ComprehensiveIntegrationTest:
 
 def main():
     """Main execution function."""
-    test = ComprehensiveIntegrationTest()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Run comprehensive RAG integration tests')
+    parser.add_argument('config_path', nargs='?', default='config/default.yaml',
+                       help='Path to configuration file (default: config/default.yaml)')
+    parser.add_argument('--epic2', action='store_true',
+                       help='Use Epic 2 configuration (config/advanced_test.yaml)')
+    
+    args = parser.parse_args()
+    
+    # Handle Epic 2 flag
+    if args.epic2:
+        config_path = 'config/advanced_test.yaml'
+    else:
+        config_path = args.config_path
+    
+    print(f"Using configuration: {config_path}")
+    
+    test = ComprehensiveIntegrationTest(config_path)
     results = test.run_comprehensive_test()
     
     # Save results

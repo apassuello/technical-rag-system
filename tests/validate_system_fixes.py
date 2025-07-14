@@ -28,7 +28,8 @@ from src.core.interfaces import Document
 class SystemValidator:
     """Comprehensive system validation for development readiness."""
     
-    def __init__(self):
+    def __init__(self, config_path: str = "config/default.yaml"):
+        self.config_path = config_path
         self.results = {
             'timestamp': datetime.now().isoformat(),
             'configuration_validation': {},
@@ -169,7 +170,7 @@ class SystemValidator:
     def validate_configuration(self):
         """Validate all configuration changes are correct."""
         try:
-            with open('config/default.yaml', 'r') as f:
+            with open(self.config_path, 'r') as f:
                 config = yaml.safe_load(f)
             
             # Check Fix 1: Ollama configuration
@@ -206,7 +207,7 @@ class SystemValidator:
         """Validate system initializes correctly with new configuration."""
         try:
             # Test system initialization
-            self.orchestrator = PlatformOrchestrator('config/default.yaml')
+            self.orchestrator = PlatformOrchestrator(self.config_path)
             
             # Check system health
             health = self.orchestrator.get_system_health()
