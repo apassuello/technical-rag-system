@@ -76,6 +76,7 @@ class ComponentFactory:
         # "hybrid": "src.components.retrievers.hybrid_retriever.HybridRetriever",
         "unified": "src.components.retrievers.unified_retriever.UnifiedRetriever",
         "modular_unified": "src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever",
+        "advanced": "src.components.retrievers.advanced_retriever.AdvancedRetriever",  # Epic 2 implementation
     }
     
     _GENERATORS: Dict[str, str] = {
@@ -504,12 +505,13 @@ class ComponentFactory:
         try:
             logger.debug(f"Creating {retriever_type} retriever with args: {kwargs}")
             
-            # Special handling for modular_unified retriever
-            if retriever_type == "modular_unified":
+            # Special handling for retrievers that need embedder + config pattern
+            if retriever_type in ["modular_unified", "advanced"]:
                 # Extract embedder and config from kwargs
                 embedder = kwargs.pop("embedder", None)
                 if embedder is None:
-                    raise ValueError("ModularUnifiedRetriever requires 'embedder' parameter")
+                    retriever_name = "ModularUnifiedRetriever" if retriever_type == "modular_unified" else "AdvancedRetriever"
+                    raise ValueError(f"{retriever_name} requires 'embedder' parameter")
                 
                 # All remaining kwargs become the config
                 config = kwargs

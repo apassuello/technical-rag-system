@@ -1,0 +1,115 @@
+# Diagnostic Test Configuration with Graph Validation
+# Epic 2 Week 2 - Focused diagnostic testing for graph capabilities
+
+# Document processor for diagnostics
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 256  # Smaller chunks for faster testing
+    chunk_overlap: 64
+
+# Embedder for diagnostics
+embedder:
+  type: "modular"
+  config:
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        device: "auto"
+        normalize_embeddings: true
+    batch_processor:
+      type: "dynamic"
+      config:
+        initial_batch_size: 8  # Smaller batch for diagnostics
+        max_batch_size: 32
+        optimize_for_memory: true
+    cache:
+      type: "memory"
+      config:
+        max_entries: 1000
+        max_memory_mb: 256
+
+# Advanced retriever with graph - diagnostic focus
+retriever:
+  type: "advanced"
+  config:
+    # Backend Configuration
+    backends:
+      primary_backend: "faiss"
+      fallback_enabled: false  # Simplified for diagnostics
+      fallback_backend: null
+      
+      # FAISS backend settings
+      faiss:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+        metric: "cosine"
+      
+      weaviate: null
+
+    # Hybrid Search Configuration
+    hybrid_search:
+      enabled: true
+      
+      # Strategy weights for diagnostic testing
+      dense_weight: 0.4
+      sparse_weight: 0.3
+      graph_weight: 0.3
+      
+      fusion_method: "rrf"
+      rrf_k: 20
+      adaptive_weights: false
+      query_dependent_weighting: false
+      normalization_method: "min_max"
+      max_candidates_per_strategy: 50  # Smaller for diagnostics
+      early_termination_threshold: 0.95
+
+    # Neural Reranking (Disabled for graph diagnostics)
+    neural_reranking:
+      enabled: false
+
+    # Graph Retrieval Configuration - DIAGNOSTIC FOCUS
+    graph_retrieval:
+      enabled: true
+      enable_entity_linking: true
+      enable_cross_references: true
+      similarity_threshold: 0.5  # Lower threshold for more diagnostics
+      max_connections_per_document: 5
+
+    # Analytics Configuration
+    analytics:
+      enabled: true
+      collect_query_metrics: true
+      collect_performance_metrics: true
+      collect_quality_metrics: true
+      dashboard_enabled: false
+      dashboard_port: 8050
+      dashboard_host: "localhost"
+      auto_refresh_seconds: 5
+      metrics_retention_days: 1
+      detailed_logs_retention_days: 1
+
+    # Experiments Configuration
+    experiments:
+      enabled: false
+
+# Answer generation strategy for diagnostics
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    model_name: "llama3.2:3b"
+    api_token: null
+    temperature: 0.0
+    max_tokens: 200
+    use_ollama: true
+    ollama_url: "http://localhost:11434"
+    use_inference_providers: false
+    enable_adaptive_prompts: false
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
+
+# Global settings (optional)
+global_settings:
+  environment: "diagnostic"
+  log_level: "debug"
