@@ -1,302 +1,141 @@
 # Comprehensive Test Configuration with Graph Retrieval
 # Epic 2 Week 2 - Complete configuration for testing graph capabilities
 
-# Global settings
-global_settings:
-  log_level: "INFO"
-  max_concurrent_requests: 10
-  cache_ttl_seconds: 3600
+# Document processor for handling input files
+document_processor:
+  type: "hybrid_pdf"  # Use proven document processor
+  config:
+    chunk_size: 512
+    chunk_overlap: 128
 
-# Pipeline configuration
-pipeline:
-  # Component configuration
-  components:
-    # Document processor - uses modular architecture
-    processor:
-      type: "modular"
+# Embedding generator for converting text to vectors  
+embedder:
+  type: "modular"  # Use proven modular embedder
+  config:
+    model:
+      type: "sentence_transformer"
       config:
-        chunk_size: 512
-        chunk_overlap: 128
-        max_chunk_length: 1000
-        clean_whitespace: true
-        extract_metadata: true
-        chunker:
-          implementation: "sentence_boundary"
-          config:
-            chunk_size: 512
-            chunk_overlap: 128
-            respect_boundaries: true
-        cleaner:
-          implementation: "technical_content"
-          config:
-            remove_headers: true
-            normalize_whitespace: true
-            preserve_code_blocks: true
-    
-    # Embedder - modular with batch processing
-    embedder:
-      type: "modular"
-      config:
-        model_name: "sentence-transformers/all-MiniLM-L6-v2"
-        device: "mps"
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        device: "auto"
         normalize_embeddings: true
-        batch_size: 32
-        max_seq_length: 384
-        show_progress: false
-        model:
-          implementation: "sentence_transformer"
-          config:
-            model_name: "sentence-transformers/all-MiniLM-L6-v2"
-            device: "mps"
-            normalize_embeddings: true
-        batch_processor:
-          implementation: "dynamic"
-          config:
-            batch_size: 32
-            max_batch_size: 128
-            adaptive_batching: true
-        cache:
-          implementation: "memory"
-          config:
-            max_size: 1000
-            ttl_seconds: 3600
-    
-    # Advanced retriever with graph capabilities
-    retriever:
-      type: "advanced"
+    batch_processor:
+      type: "dynamic"
       config:
-        # Dense retrieval (vector similarity)
-        dense_retrieval:
-          implementation: "faiss"
-          config:
-            index_type: "FlatIP"
-            metric: "inner_product"
-            nprobe: 10
-        
-        # Sparse retrieval (BM25)
-        sparse_retrieval:
-          implementation: "bm25"
-          config:
-            k1: 1.2
-            b: 0.75
-            use_stemming: true
-            language: "english"
-        
-        # NEW: Graph retrieval configuration
-        graph_retrieval:
-          enabled: true
-          
-          # Entity extraction with spaCy
-          entity_extraction:
-            implementation: "spacy"
-            config:
-              model: "en_core_web_sm"
-              confidence_threshold: 0.7
-              batch_size: 4
-              entity_types: ["TECH", "PROTOCOL", "ARCH", "EXTENSION"]
-              custom_patterns: {}
-          
-          # Graph construction with NetworkX
-          graph_builder:
-            implementation: "networkx"
-            config:
-              node_types: ["concept", "protocol", "architecture", "extension"]
-              max_graph_size: 1000
-              enable_pruning: true
-              pruning_threshold: 0.1
-          
-          # Relationship detection
-          relationship_detection:
-            implementation: "semantic"
-            config:
-              similarity_threshold: 0.6
-              max_relationships_per_node: 10
-              enable_bidirectional: true
-              use_semantic_similarity: true
-          
-          # Graph search algorithms
-          retrieval:
-            algorithms: ["shortest_path", "subgraph_expansion"]
-            max_graph_results: 10
-            max_path_length: 3
-            subgraph_radius: 2
-            score_aggregation: "weighted_average"
-            random_walk_steps: 50
-          
-          # Analytics and monitoring
-          analytics:
-            enabled: true
-            collect_graph_metrics: true
-            enable_visualization: false
-            track_query_performance: true
-        
-        # Result fusion with graph strategy
-        fusion:
-          strategy: "rrf"
-          k: 60
-          weights:
-            dense_weight: 0.4      # Reduced to accommodate graph
-            sparse_weight: 0.3     # Maintained
-            graph_weight: 0.3      # NEW: Graph-based retrieval
-        
-        # Reranking configuration
-        reranking:
-          enabled: false  # Will be enabled in Week 3
-          implementation: "identity"
-          config:
-            model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"
-            batch_size: 16
-            top_k: 100
-        
-        # Performance settings
-        performance:
-          max_results: 20
-          timeout_seconds: 30
-          enable_caching: true
-          cache_size: 1000
-    
-    # Answer generator - modular with LLM integration
-    generator:
-      type: "modular"
+        initial_batch_size: 32
+        max_batch_size: 128
+        optimize_for_memory: true
+    cache:
+      type: "memory"
       config:
-        max_context_length: 4000
-        response_format: "markdown"
-        include_sources: true
-        confidence_threshold: 0.3
-        prompt_builder:
-          implementation: "simple"
-          config:
-            template_name: "technical_qa"
-            include_context: true
-            max_context_tokens: 3000
-        llm_client:
-          implementation: "ollama"
-          config:
-            model: "llama3.2:3b"
-            base_url: "http://localhost:11434"
-            timeout: 30
-            temperature: 0.1
-            max_tokens: 500
-        response_parser:
-          implementation: "markdown"
-          config:
-            extract_sections: true
-            preserve_formatting: true
-        confidence_scorer:
-          implementation: "semantic"
-          config:
-            similarity_threshold: 0.5
+        max_entries: 100000
+        max_memory_mb: 1024
 
-# Testing configuration
-testing:
-  # Test data sources
-  data_sources:
-    documents:
-      - "data/test_docs/risc_v_intro.pdf"
-      - "data/test_docs/vector_extension.pdf"
-      - "data/test_docs/privileged_spec.pdf"
-    
-    queries:
-      - "What is RISC-V instruction set architecture?"
-      - "How does the vector extension work?"
-      - "Explain RISC-V privileged modes"
-      - "What are control status registers?"
-      - "How does AXI protocol integrate with RISC-V?"
-      - "What extensions are available for RISC-V?"
-      - "Explain RISC-V atomic operations"
-      - "How does memory management work in RISC-V?"
-  
-  # Performance targets
-  performance_targets:
-    # Graph-specific targets
-    graph_construction_time: 10.0    # seconds
-    entity_extraction_rate: 100      # entities/second
-    relationship_detection_time: 5.0  # seconds
-    graph_query_time: 100             # milliseconds
-    graph_memory_usage: 500           # MB
-    
-    # Overall system targets
-    end_to_end_latency: 2000          # milliseconds
-    document_processing_rate: 1       # documents/second
-    query_throughput: 10              # queries/second
-    memory_usage_total: 2000          # MB
-    
-    # Quality targets
-    answer_relevance: 0.8
-    citation_accuracy: 0.9
-    retrieval_precision: 0.7
-    retrieval_recall: 0.6
-  
-  # Test scenarios
-  test_scenarios:
-    basic_functionality:
-      enabled: true
-      timeout: 30
-    
-    performance_benchmarks:
-      enabled: true
-      iterations: 5
-      timeout: 120
-    
-    graph_specific_tests:
-      enabled: true
-      test_entity_extraction: true
-      test_graph_construction: true
-      test_relationship_detection: true
-      test_graph_retrieval: true
-      test_graph_analytics: true
-    
-    stress_testing:
-      enabled: false  # Set to true for full stress testing
-      concurrent_queries: 10
-      duration_minutes: 5
-    
-    error_handling:
-      enabled: true
-      test_missing_models: true
-      test_malformed_queries: true
-      test_empty_results: true
+# EPIC 2 ADVANCED RETRIEVER WITH GRAPH CAPABILITIES
+retriever:
+  type: "advanced"  # Use Epic 2 Advanced Retriever
+  config:
+    # Backend Configuration
+    backends:
+      primary_backend: "faiss"  # Use FAISS for testing
+      fallback_enabled: true
+      fallback_backend: null
+      
+      # Hot-swapping configuration
+      enable_hot_swap: false
+      health_check_interval_seconds: 30
+      switch_threshold_error_rate: 0.1
+      
+      # FAISS backend settings
+      faiss:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+        metric: "cosine"
+      
+      # Weaviate backend settings (disabled for testing)
+      weaviate: null
 
-# Monitoring configuration
-monitoring:
-  metrics:
-    enabled: true
-    collection_interval: 5  # seconds
-    
-    # Graph-specific metrics
-    graph_metrics:
-      track_node_count: true
-      track_edge_count: true
-      track_graph_density: true
-      track_construction_time: true
-      track_query_performance: true
-      track_memory_usage: true
-    
-    # System metrics
-    system_metrics:
-      track_cpu_usage: true
-      track_memory_usage: true
-      track_query_latency: true
-      track_error_rates: true
-  
-  logging:
-    level: "INFO"
-    format: "detailed"
-    include_timestamps: true
-    log_graph_operations: true
-    log_performance_metrics: true
+    # Hybrid Search Configuration
+    hybrid_search:
+      enabled: true
+      
+      # Strategy weights (must sum to 1.0) - Updated for graph testing
+      dense_weight: 0.4   # Reduced to accommodate graph
+      sparse_weight: 0.3  # Maintained
+      graph_weight: 0.3   # NEW: Graph-based retrieval
+      
+      # Fusion method
+      fusion_method: "rrf"
+      rrf_k: 60
+      
+      # Advanced fusion parameters
+      adaptive_weights: false
+      query_dependent_weighting: false
+      normalization_method: "min_max"
+      
+      # Performance optimization
+      max_candidates_per_strategy: 100
+      early_termination_threshold: 0.95
 
-# Development settings
-development:
-  debug_mode: true
-  verbose_logging: true
-  save_intermediate_results: true
-  enable_profiling: false
-  
-  # Graph debugging
-  graph_debugging:
-    save_graph_snapshots: true
-    export_graph_formats: ["gexf", "json"]
-    log_entity_extraction: true
-    log_relationship_detection: true
-    visualize_graphs: false  # Set to true if plotly available
+    # Neural Reranking Configuration (Disabled for graph testing)
+    neural_reranking:
+      enabled: false
+      model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
+      model_type: "cross_encoder"
+      device: "auto"
+      max_candidates: 50
+      batch_size: 32
+      max_length: 512
+      max_latency_ms: 200
+      fallback_to_fast_reranker: true
+      fast_reranker_threshold: 100
+
+    # Graph Retrieval Configuration (Epic 2 Week 2) - MAIN FOCUS
+    graph_retrieval:
+      enabled: true  # Enable graph-based retrieval
+      enable_entity_linking: true
+      enable_cross_references: true
+      similarity_threshold: 0.7
+      max_connections_per_document: 10
+
+    # Analytics Configuration (Enhanced for graph testing)
+    analytics:
+      enabled: true
+      collect_query_metrics: true
+      collect_performance_metrics: true
+      collect_quality_metrics: true
+      dashboard_enabled: false
+      dashboard_port: 8050
+      dashboard_host: "localhost"
+      auto_refresh_seconds: 5
+      metrics_retention_days: 1
+      detailed_logs_retention_days: 1
+
+    # Experiments Configuration (A/B testing framework)
+    experiments:
+      enabled: false  # Disabled for comprehensive testing
+      assignment_method: "deterministic"
+      assignment_key_field: "query_hash"
+      experiment_id: null
+      control_config: null
+      treatment_configs: []
+      min_sample_size: 100
+
+# Answer generation strategy for testing
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    model_name: "llama3.2:3b"
+    api_token: null
+    temperature: 0.1
+    max_tokens: 500
+    use_ollama: true
+    ollama_url: "http://localhost:11434"
+    use_inference_providers: false
+    enable_adaptive_prompts: false
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
+
+# Global settings (optional)
+global_settings:
+  environment: "testing"
+  log_level: "info"

@@ -505,12 +505,13 @@ class ComponentFactory:
         try:
             logger.debug(f"Creating {retriever_type} retriever with args: {kwargs}")
             
-            # Special handling for modular_unified retriever
-            if retriever_type == "modular_unified":
+            # Special handling for retrievers that need embedder + config pattern
+            if retriever_type in ["modular_unified", "advanced"]:
                 # Extract embedder and config from kwargs
                 embedder = kwargs.pop("embedder", None)
                 if embedder is None:
-                    raise ValueError("ModularUnifiedRetriever requires 'embedder' parameter")
+                    retriever_name = "ModularUnifiedRetriever" if retriever_type == "modular_unified" else "AdvancedRetriever"
+                    raise ValueError(f"{retriever_name} requires 'embedder' parameter")
                 
                 # All remaining kwargs become the config
                 config = kwargs

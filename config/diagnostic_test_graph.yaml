@@ -1,326 +1,115 @@
 # Diagnostic Test Configuration with Graph Validation
 # Epic 2 Week 2 - Focused diagnostic testing for graph capabilities
 
-# Global settings for diagnostic testing
-global_settings:
-  log_level: "DEBUG"
-  enable_detailed_logging: true
-  diagnostic_mode: true
+# Document processor for diagnostics
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 256  # Smaller chunks for faster testing
+    chunk_overlap: 64
 
-# Pipeline configuration for diagnostics
-pipeline:
-  # Component configuration
-  components:
-    # Document processor - modular for diagnostics
-    processor:
-      type: "modular"
+# Embedder for diagnostics
+embedder:
+  type: "modular"
+  config:
+    model:
+      type: "sentence_transformer"
       config:
-        chunk_size: 256  # Smaller chunks for faster testing
-        chunk_overlap: 64
-        max_chunk_length: 500
-        
-    # Embedder - modular with debugging
-    embedder:
-      type: "modular"
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        device: "auto"
+        normalize_embeddings: true
+    batch_processor:
+      type: "dynamic"
       config:
-        model_name: "sentence-transformers/all-MiniLM-L6-v2"
-        device: "mps"
-        batch_size: 8  # Smaller batch for diagnostics
-        
-    # Advanced retriever with graph - diagnostic focus
-    retriever:
-      type: "advanced"
+        initial_batch_size: 8  # Smaller batch for diagnostics
+        max_batch_size: 32
+        optimize_for_memory: true
+    cache:
+      type: "memory"
       config:
-        # Dense retrieval
-        dense_retrieval:
-          implementation: "faiss"
-          config:
-            index_type: "FlatIP"
-            metric: "inner_product"
-        
-        # Sparse retrieval
-        sparse_retrieval:
-          implementation: "bm25"
-          config:
-            k1: 1.2
-            b: 0.75
-        
-        # Graph retrieval - detailed configuration for diagnostics
-        graph_retrieval:
-          enabled: true
-          
-          # Entity extraction - diagnostic settings
-          entity_extraction:
-            implementation: "spacy"
-            config:
-              model: "en_core_web_sm"
-              confidence_threshold: 0.5  # Lower threshold for more entities
-              batch_size: 2  # Small batch for detailed logging
-              entity_types: ["TECH", "PROTOCOL", "ARCH", "EXTENSION"]
-              extract_entities: true
-              debug_mode: true
-          
-          # Graph builder - diagnostic configuration
-          graph_builder:
-            implementation: "networkx"
-            config:
-              node_types: ["concept", "protocol", "architecture", "extension"]
-              max_graph_size: 100  # Smaller for diagnostics
-              enable_pruning: false  # Disable for full graph analysis
-              debug_construction: true
-          
-          # Relationship detection - comprehensive settings
-          relationship_detection:
-            implementation: "semantic"
-            config:
-              similarity_threshold: 0.4  # Lower threshold for more relationships
-              max_relationships_per_node: 5
-              enable_bidirectional: true
-              use_semantic_similarity: true
-              debug_relationships: true
-          
-          # Graph retrieval - all algorithms for testing
-          retrieval:
-            algorithms: ["shortest_path", "random_walk", "subgraph_expansion"]
-            max_graph_results: 5
-            max_path_length: 2
-            subgraph_radius: 1
-            score_aggregation: "max"
-            random_walk_steps: 10  # Fewer steps for faster diagnostics
-            debug_retrieval: true
-          
-          # Analytics - full monitoring
-          analytics:
-            enabled: true
-            collect_graph_metrics: true
-            enable_visualization: false
-            track_query_performance: true
-            detailed_metrics: true
-        
-        # Result fusion
-        fusion:
-          strategy: "rrf"
-          k: 20
-          weights:
-            dense_weight: 0.4
-            sparse_weight: 0.3
-            graph_weight: 0.3
-        
-        # Performance settings for diagnostics
-        performance:
-          max_results: 10  # Fewer results for faster testing
-          timeout_seconds: 60  # Longer timeout for debugging
-          enable_caching: false  # Disable caching for fresh results
-    
-    # Answer generator
-    generator:
-      type: "modular"
-      config:
-        max_context_length: 2000  # Smaller context for faster testing
-        llm_client:
-          implementation: "ollama"
-          config:
-            model: "llama3.2:3b"
-            timeout: 30
-            temperature: 0.0  # Deterministic for testing
+        max_entries: 1000
+        max_memory_mb: 256
 
-# Diagnostic test configuration
-diagnostic_tests:
-  # Graph component validation
-  graph_validation:
-    # Entity extraction diagnostics
-    entity_extraction:
-      test_spacy_model_loading: true
-      test_custom_patterns: true
-      test_confidence_scoring: true
-      test_batch_processing: true
-      validate_entity_types: true
-      check_pattern_coverage: true
+# Advanced retriever with graph - diagnostic focus
+retriever:
+  type: "advanced"
+  config:
+    # Backend Configuration
+    backends:
+      primary_backend: "faiss"
+      fallback_enabled: false  # Simplified for diagnostics
+      fallback_backend: null
       
-      # Test documents for entity extraction
-      test_documents:
-        - content: "RISC-V is an open instruction set architecture. The RV32I base supports 32-bit operations."
-          expected_entities: ["RISC-V", "instruction set architecture", "RV32I"]
-        - content: "AXI protocol implements burst transfers. The protocol requires AHB compatibility."
-          expected_entities: ["AXI", "protocol", "AHB"]
-        - content: "Vector extension adds SIMD operations to RISC-V. The V extension supports variable-length vectors."
-          expected_entities: ["vector extension", "RISC-V", "V extension"]
-    
-    # Graph construction diagnostics
-    graph_construction:
-      test_node_creation: true
-      test_edge_creation: true
-      test_graph_structure: true
-      test_incremental_updates: true
-      validate_graph_properties: true
-      check_memory_usage: true
+      # FAISS backend settings
+      faiss:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+        metric: "cosine"
       
-      # Expected graph properties
-      expected_properties:
-        min_nodes: 3
-        min_edges: 1
-        max_construction_time: 5.0  # seconds
-        memory_limit_mb: 50
-    
-    # Relationship detection diagnostics
-    relationship_detection:
-      test_pattern_matching: true
-      test_semantic_analysis: true
-      test_co_occurrence: true
-      validate_relationship_types: true
-      check_confidence_scores: true
+      weaviate: null
+
+    # Hybrid Search Configuration
+    hybrid_search:
+      enabled: true
       
-      # Test relationship patterns
-      test_patterns:
-        - text: "RV32I implements the base instruction set"
-          expected_relationship: "implements"
-        - text: "Vector extension extends RISC-V capabilities"
-          expected_relationship: "extends"
-        - text: "AXI protocol requires address decoding"
-          expected_relationship: "requires"
-    
-    # Graph retrieval diagnostics
+      # Strategy weights for diagnostic testing
+      dense_weight: 0.4
+      sparse_weight: 0.3
+      graph_weight: 0.3
+      
+      fusion_method: "rrf"
+      rrf_k: 20
+      adaptive_weights: false
+      query_dependent_weighting: false
+      normalization_method: "min_max"
+      max_candidates_per_strategy: 50  # Smaller for diagnostics
+      early_termination_threshold: 0.95
+
+    # Neural Reranking (Disabled for graph diagnostics)
+    neural_reranking:
+      enabled: false
+
+    # Graph Retrieval Configuration - DIAGNOSTIC FOCUS
     graph_retrieval:
-      test_query_matching: true
-      test_algorithm_execution: true
-      test_result_aggregation: true
-      test_score_calculation: true
-      validate_retrieval_quality: true
-      
-      # Test queries with expected behavior
-      test_queries:
-        - query: "RISC-V instruction"
-          expected_min_results: 1
-          expected_algorithms: ["shortest_path", "subgraph_expansion"]
-        - query: "vector operations"
-          expected_min_results: 1
-          timeout_ms: 100
-        - query: "protocol implementation"
-          expected_min_results: 1
-          test_all_algorithms: true
-    
-    # Analytics diagnostics
-    analytics_validation:
-      test_metric_collection: true
-      test_snapshot_creation: true
-      test_report_generation: true
-      validate_performance_tracking: true
-      check_visualization_support: true
+      enabled: true
+      enable_entity_linking: true
+      enable_cross_references: true
+      similarity_threshold: 0.5  # Lower threshold for more diagnostics
+      max_connections_per_document: 5
 
-  # Integration diagnostics
-  integration_validation:
-    # Component interaction
-    component_interaction:
-      test_factory_registration: true
-      test_configuration_loading: true
-      test_pipeline_integration: true
-      validate_error_handling: true
-      check_fallback_mechanisms: true
-    
-    # End-to-end workflow
-    end_to_end_testing:
-      test_document_to_graph: true
-      test_query_to_results: true
-      test_multi_strategy_fusion: true
-      validate_response_quality: true
-      check_performance_targets: true
-    
-    # Error scenarios
-    error_scenario_testing:
-      test_missing_spacy_model: true
-      test_empty_documents: true
-      test_malformed_queries: true
-      test_graph_construction_failures: true
-      test_retrieval_timeouts: true
+    # Analytics Configuration
+    analytics:
+      enabled: true
+      collect_query_metrics: true
+      collect_performance_metrics: true
+      collect_quality_metrics: true
+      dashboard_enabled: false
+      dashboard_port: 8050
+      dashboard_host: "localhost"
+      auto_refresh_seconds: 5
+      metrics_retention_days: 1
+      detailed_logs_retention_days: 1
 
-  # Performance diagnostics
-  performance_validation:
-    # Latency testing
-    latency_tests:
-      entity_extraction_time: 1.0    # seconds per document
-      graph_construction_time: 5.0   # seconds total
-      relationship_detection_time: 2.0  # seconds total
-      query_processing_time: 0.1     # seconds per query
-      end_to_end_time: 10.0          # seconds total
-    
-    # Throughput testing
-    throughput_tests:
-      documents_per_second: 5
-      entities_per_second: 50
-      queries_per_second: 10
-      relationships_per_second: 20
-    
-    # Memory testing
-    memory_tests:
-      max_graph_memory_mb: 100
-      max_total_memory_mb: 500
-      memory_leak_detection: true
-      garbage_collection_efficiency: true
-    
-    # Scalability testing
-    scalability_tests:
-      test_document_scaling: true
-      test_graph_size_scaling: true
-      test_concurrent_queries: true
-      validate_pruning_effectiveness: true
+    # Experiments Configuration
+    experiments:
+      enabled: false
 
-# Test execution configuration
-test_execution:
-  # Test data
-  test_data:
-    # Minimal test documents for fast execution
-    documents:
-      - content: "RISC-V instruction set architecture defines base instructions for 32-bit and 64-bit processors."
-        metadata: {"id": "test_doc_1", "source": "risc_v_base"}
-      - content: "Vector extension adds SIMD capabilities to RISC-V. The V extension supports variable-length vectors."
-        metadata: {"id": "test_doc_2", "source": "risc_v_vector"}
-      - content: "AXI protocol implementation requires address decoding and burst transfer support."
-        metadata: {"id": "test_doc_3", "source": "axi_protocol"}
-    
-    # Test queries
-    queries:
-      - "RISC-V instruction set"
-      - "vector extension capabilities"
-      - "AXI protocol requirements"
-  
-  # Execution settings
-  settings:
-    parallel_execution: false  # Sequential for diagnostics
-    detailed_logging: true
-    save_intermediate_results: true
-    generate_debug_files: true
-    timeout_per_test: 30  # seconds
-    max_retries: 2
-    
-    # Graph-specific settings
-    graph_settings:
-      export_graphs: true
-      save_entity_extractions: true
-      log_relationship_detection: true
-      track_algorithm_performance: true
+# Answer generation strategy for diagnostics
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    model_name: "llama3.2:3b"
+    api_token: null
+    temperature: 0.0
+    max_tokens: 200
+    use_ollama: true
+    ollama_url: "http://localhost:11434"
+    use_inference_providers: false
+    enable_adaptive_prompts: false
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
 
-# Output configuration
-output:
-  # Report generation
-  reports:
-    generate_summary: true
-    include_performance_metrics: true
-    include_graph_statistics: true
-    include_error_analysis: true
-    format: "markdown"
-  
-  # File outputs
-  files:
-    save_test_results: true
-    save_graph_data: true
-    save_performance_logs: true
-    output_directory: "test_results/diagnostic_graph"
-  
-  # Logging configuration
-  logging:
-    level: "DEBUG"
-    include_graph_operations: true
-    include_timing_information: true
-    log_entity_details: true
-    log_relationship_details: true
-    log_retrieval_details: true
+# Global settings (optional)
+global_settings:
+  environment: "diagnostic"
+  log_level: "debug"
