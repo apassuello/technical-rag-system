@@ -40,6 +40,10 @@ class QueryMetrics:
     components_used: List[str]
     backend_used: str
     
+    # Stage timing information (Epic 2 Week 4 enhancement)
+    stage_times: Optional[Dict[str, float]] = None
+    stage_count: Optional[int] = None
+    
     # User interaction
     user_id: Optional[str] = None
     session_id: Optional[str] = None

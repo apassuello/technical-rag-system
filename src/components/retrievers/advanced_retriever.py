@@ -353,13 +353,19 @@ class AdvancedRetriever(ModularUnifiedRetriever):
 
     def retrieve(self, query: str, k: int = 5) -> List[RetrievalResult]:
         """
-        Retrieve relevant documents using advanced multi-backend search.
+        Retrieve relevant documents using advanced modular hybrid search.
 
-        This method extends the base retrieve method with:
+        This method extends the base modular retriever with:
         - Multi-backend support with automatic fallback
-        - Enhanced analytics collection
-        - Performance monitoring
-        - Health-based backend switching
+        - Graph-based retrieval as additional signal
+        - Enhanced neural reranking capabilities
+        - Advanced analytics collection
+
+        Maintains architectural compliance with 4 sub-component structure:
+        1. Vector Index (enhanced with multiple backends)
+        2. Sparse Retriever (BM25 with technical optimization)
+        3. Fusion Strategy (enhanced to handle graph signals)
+        4. Reranker (enhanced with neural capabilities)
 
         Args:
             query: Search query string
@@ -379,77 +385,17 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             if self.advanced_config.backends.enable_hot_swap:
                 self._check_and_switch_backend()
 
-            # Attempt retrieval with active backend
-            try:
-                results = self._retrieve_with_backend(
-                    query, k, self.active_backend_name
+            # Use enhanced modular retrieval with graph and neural capabilities
+            results = self._enhanced_modular_retrieval(query, k)
+
+            # Post-retrieval analytics
+            if self.analytics_enabled:
+                elapsed_time = time.time() - start_time
+                self._collect_query_completion_analytics(
+                    query, k, results, elapsed_time, self.active_backend_name
                 )
 
-                # Apply neural reranking if enabled (4th stage)
-                results = self._apply_neural_reranking(query, results)
-
-                # Post-retrieval analytics
-                if self.analytics_enabled:
-                    elapsed_time = time.time() - start_time
-                    self._collect_query_completion_analytics(
-                        query, k, results, elapsed_time, self.active_backend_name
-                    )
-
-                return results
-
-            except Exception as backend_error:
-                logger.warning(
-                    f"Retrieval failed with {self.active_backend_name} backend: {str(backend_error)}"
-                )
-
-                # Try fallback backend if enabled
-                if (
-                    self.advanced_config.backends.fallback_enabled
-                    and self.fallback_backend_name
-                    and self.fallback_backend_name in self.backends
-                ):
-
-                    logger.info(
-                        f"Attempting fallback to {self.fallback_backend_name} backend"
-                    )
-
-                    try:
-                        results = self._retrieve_with_backend(
-                            query, k, self.fallback_backend_name
-                        )
-                        self.advanced_stats["fallback_activations"] += 1
-
-                        # Apply neural reranking if enabled (4th stage)
-                        results = self._apply_neural_reranking(query, results)
-
-                        # Consider switching backends
-                        if self.advanced_config.backends.enable_hot_swap:
-                            self._consider_backend_switch(backend_error)
-
-                        if self.analytics_enabled:
-                            elapsed_time = time.time() - start_time
-                            self._collect_query_completion_analytics(
-                                query,
-                                k,
-                                results,
-                                elapsed_time,
-                                f"{self.active_backend_name}_fallback_{self.fallback_backend_name}",
-                            )
-
-                        return results
-
-                    except Exception as fallback_error:
-                        logger.error(
-                            f"Fallback retrieval also failed: {str(fallback_error)}"
-                        )
-                        raise AdvancedRetrievalError(
-                            f"Both primary ({self.active_backend_name}) and fallback "
-                            f"({self.fallback_backend_name}) backends failed"
-                        ) from backend_error
-                else:
-                    raise AdvancedRetrievalError(
-                        f"Retrieval failed with {self.active_backend_name}"
-                    ) from backend_error
+            return results
 
         except Exception as e:
             logger.error(f"Advanced retrieval failed: {str(e)}")
@@ -464,39 +410,267 @@ class AdvancedRetriever(ModularUnifiedRetriever):
 
             raise RuntimeError(f"Advanced retrieval failed: {str(e)}") from e
 
-    def _retrieve_with_backend(
-        self, query: str, k: int, backend_name: str
-    ) -> List[RetrievalResult]:
+    def _enhanced_modular_retrieval(self, query: str, k: int) -> List[RetrievalResult]:
         """
-        Perform retrieval using specified backend.
-
+        Enhanced modular retrieval maintaining architectural compliance.
+        
+        Uses the existing 4 sub-component structure:
+        1. Vector Index - enhanced with backend switching
+        2. Sparse Retriever - maintains existing BM25 implementation
+        3. Fusion Strategy - enhanced to include graph signals
+        4. Reranker - enhanced with neural capabilities
+        
         Args:
             query: Search query
-            k: Number of results
-            backend_name: Name of backend to use
-
+            k: Number of results to return
+            
         Returns:
             List of retrieval results
         """
-        if backend_name not in self.backends:
-            raise ValueError(f"Backend '{backend_name}' not available")
+        start_time = time.time()
+        
+        try:
+            # Validation (from parent class)
+            if k <= 0:
+                raise ValueError("k must be positive")
+            if not query.strip():
+                raise ValueError("Query cannot be empty")
+            if not self.documents:
+                raise RuntimeError("No documents have been indexed")
+            
+            # 1. Generate query embeddings (same as parent)
+            query_embedding = np.array(self.embedder.embed([query])[0])
+            
+            # 2. Enhanced dense vector search (Sub-component 1: Vector Index)
+            dense_results = self._enhanced_dense_search(query_embedding, k*2)
+            
+            # 3. Sparse keyword search (Sub-component 2: Sparse Retriever - unchanged)
+            sparse_results = self.sparse_retriever.search(query, k=k*2)
+            
+            # 4. Graph-based retrieval (additional signal for fusion)
+            graph_results = self._get_graph_retrieval_signals(query, k)
+            
+            # 5. Enhanced fusion (Sub-component 3: Fusion Strategy with graph)
+            fused_results = self._enhanced_fusion_with_graph(dense_results, sparse_results, graph_results)
+            
+            # 6. Enhanced reranking (Sub-component 4: Reranker with neural capabilities)
+            final_results = self._enhanced_neural_reranking(query, fused_results, k)
+            
+            # Update performance stats
+            elapsed_time = time.time() - start_time
+            self.retrieval_stats["total_retrievals"] += 1
+            self.retrieval_stats["total_time"] += elapsed_time
+            self.retrieval_stats["avg_time"] = (
+                self.retrieval_stats["total_time"] / self.retrieval_stats["total_retrievals"]
+            )
+            self.retrieval_stats["last_retrieval_time"] = elapsed_time
+            
+            return final_results
+            
+        except Exception as e:
+            logger.error(f"Enhanced modular retrieval failed: {str(e)}")
+            raise RuntimeError(f"Enhanced modular retrieval failed: {str(e)}") from e
 
-        backend = self.backends[backend_name]
+    def _enhanced_dense_search(self, query_embedding: np.ndarray, k: int) -> List[Tuple[int, float]]:
+        """Enhanced dense search with backend switching support."""
+        try:
+            if self.active_backend_name == "weaviate" and "weaviate" in self.backends:
+                # Use Weaviate backend for dense search
+                weaviate_results = self._retrieve_with_weaviate_vectors(query_embedding, k)
+                return self._convert_retrieval_results_to_index_format(weaviate_results)
+            else:
+                # Use default FAISS vector index (existing sub-component)
+                return self.vector_index.search(query_embedding, k=k)
+        except Exception as e:
+            logger.warning(f"Enhanced dense search failed, using fallback: {str(e)}")
+            # Fallback to base vector index
+            return self.vector_index.search(query_embedding, k=k)
 
-        if backend_name == "faiss":
-            # Use FAISS backend (falls back to parent implementation)
-            return super().retrieve(query, k)
+    def _get_graph_retrieval_signals(self, query: str, k: int) -> List[RetrievalResult]:
+        """Get graph retrieval signals to enhance fusion (architecture compliant)."""
+        try:
+            # Check if graph retrieval is enabled and available
+            if not self.graph_retriever:
+                logger.debug("Graph retrieval not available")
+                return []
+            
+            # Get graph-based results as additional signals
+            graph_results = self.graph_retriever.retrieve(query, k=k)
+            
+            # Track analytics if enabled
+            if self.graph_analytics:
+                self.graph_analytics.track_query(
+                    query=query,
+                    results_count=len(graph_results),
+                    latency_ms=0.0,
+                    algorithm_used="graph_modular_integration",
+                    success=True
+                )
+            
+            return graph_results
+            
+        except Exception as e:
+            logger.warning(f"Graph retrieval signals failed: {str(e)}")
+            # Track failed query
+            if self.graph_analytics:
+                self.graph_analytics.track_query(
+                    query=query,
+                    results_count=0,
+                    latency_ms=0.0,
+                    algorithm_used="graph_modular_integration",
+                    success=False
+                )
+            return []
 
-        elif backend_name == "weaviate":
-            # Use Weaviate backend with enhanced search
-            return self._retrieve_with_weaviate(query, k, backend)
+    def _enhanced_fusion_with_graph(
+        self, 
+        dense_results: List[Tuple[int, float]], 
+        sparse_results: List[Tuple[int, float]], 
+        graph_results: List[RetrievalResult]
+    ) -> List[Tuple[int, float]]:
+        """Enhanced fusion strategy incorporating graph signals (Sub-component 3)."""
+        try:
+            # First, use existing fusion strategy for dense + sparse (maintains architecture)
+            base_fused = self.fusion_strategy.fuse_results(dense_results, sparse_results)
+            
+            # Now enhance with graph signals if available
+            if not graph_results:
+                return base_fused
+            
+            # Convert graph results to index format
+            graph_index_results = self._convert_retrieval_results_to_index_format(graph_results)
+            
+            # Create a score map for efficient lookup
+            base_scores = {doc_idx: score for doc_idx, score in base_fused}
+            graph_scores = {doc_idx: score for doc_idx, score in graph_index_results}
+            
+            # Enhanced fusion: combine base fusion with graph signals
+            enhanced_results = {}
+            
+            # Start with base fused results
+            for doc_idx, score in base_fused:
+                enhanced_results[doc_idx] = score
+            
+            # Boost scores for documents also found by graph retrieval
+            graph_boost = 0.2  # Configurable boost factor
+            for doc_idx, graph_score in graph_scores:
+                if doc_idx in enhanced_results:
+                    # Boost existing documents found by graph
+                    enhanced_results[doc_idx] += graph_score * graph_boost
+                else:
+                    # Add new graph-found documents with weighted score
+                    enhanced_results[doc_idx] = graph_score * graph_boost
+            
+            # Sort by enhanced score and return as list of tuples
+            sorted_results = sorted(enhanced_results.items(), key=lambda x: x[1], reverse=True)
+            
+            return sorted_results
+            
+        except Exception as e:
+            logger.error(f"Enhanced fusion with graph failed: {str(e)}")
+            # Fallback to base fusion
+            return self.fusion_strategy.fuse_results(dense_results, sparse_results)
 
-        elif backend_name == "graph":
-            # Use graph-based retrieval (Epic 2 Week 2)
-            return self._retrieve_with_graph(query, k, backend)
+    def _enhanced_neural_reranking(self, query: str, fused_results: List[Tuple[int, float]], k: int) -> List[RetrievalResult]:
+        """Enhanced reranking with neural capabilities (Sub-component 4)."""
+        try:
+            # First apply existing reranking if enabled
+            if self.reranker.is_enabled() and fused_results:
+                # Prepare documents and scores for existing reranker
+                top_candidates = fused_results[:k*2]  # Rerank top candidates
+                candidate_documents = [self.documents[idx] for idx, _ in top_candidates]
+                candidate_scores = [score for _, score in top_candidates]
+                
+                reranked_results = self.reranker.rerank(query, candidate_documents, candidate_scores)
+                
+                # Update final results with reranked scores
+                reranked_final = []
+                for local_idx, reranked_score in reranked_results:
+                    if local_idx < len(top_candidates):
+                        original_idx = top_candidates[local_idx][0]
+                        reranked_final.append((original_idx, reranked_score))
+                
+                # Add remaining documents that weren't reranked
+                reranked_indices = {top_candidates[local_idx][0] for local_idx, _ in reranked_results 
+                                   if local_idx < len(top_candidates)}
+                for doc_idx, score in fused_results:
+                    if doc_idx not in reranked_indices:
+                        reranked_final.append((doc_idx, score))
+                
+                # Sort by final score and limit to k
+                reranked_final.sort(key=lambda x: x[1], reverse=True)
+                base_final = reranked_final[:k*2]  # Get more for neural reranking
+            else:
+                # No base reranking, use fused results directly
+                base_final = fused_results[:k*2]
+            
+            # Apply neural reranking if available
+            base_retrieval_results = []
+            for doc_idx, score in base_final:
+                if doc_idx < len(self.documents):
+                    document = self.documents[doc_idx]
+                    retrieval_result = RetrievalResult(
+                        document=document,
+                        score=float(score),
+                        retrieval_method="advanced_modular_hybrid"
+                    )
+                    base_retrieval_results.append(retrieval_result)
+            
+            # Apply neural reranking enhancement
+            neural_enhanced_results = self._apply_neural_reranking(query, base_retrieval_results)
+            
+            return neural_enhanced_results[:k]  # Return final k results
+            
+        except Exception as e:
+            logger.error(f"Enhanced neural reranking failed: {str(e)}")
+            # Fallback to basic result conversion
+            final_results = []
+            for doc_idx, score in fused_results[:k]:
+                if doc_idx < len(self.documents):
+                    document = self.documents[doc_idx]
+                    retrieval_result = RetrievalResult(
+                        document=document,
+                        score=float(score),
+                        retrieval_method="advanced_modular_fallback"
+                    )
+                    final_results.append(retrieval_result)
+            return final_results
 
-        else:
-            raise ValueError(f"Unknown backend: {backend_name}")
+    def _retrieve_with_weaviate_vectors(self, query_embedding: np.ndarray, k: int) -> List[RetrievalResult]:
+        """Retrieve using Weaviate backend with vector input."""
+        try:
+            backend = self.backends["weaviate"]
+            search_results = backend.search(query_embedding=query_embedding, k=k, query_text=None)
+            
+            # Convert to RetrievalResult objects
+            retrieval_results = []
+            for doc_idx, score in search_results:
+                if doc_idx < len(self.documents):
+                    document = self.documents[doc_idx]
+                    retrieval_result = RetrievalResult(
+                        document=document,
+                        score=float(score),
+                        retrieval_method="advanced_weaviate_vector"
+                    )
+                    retrieval_results.append(retrieval_result)
+            
+            return retrieval_results
+        except Exception as e:
+            logger.error(f"Weaviate vector retrieval failed: {str(e)}")
+            return []
+
+    def _convert_retrieval_results_to_index_format(self, results: List[RetrievalResult]) -> List[Tuple[int, float]]:
+        """Convert RetrievalResult objects to (index, score) tuples."""
+        index_results = []
+        for result in results:
+            # Find document index in self.documents
+            try:
+                doc_index = next(i for i, doc in enumerate(self.documents) if doc.content == result.document.content)
+                index_results.append((doc_index, result.score))
+            except StopIteration:
+                # Document not found in indexed documents, skip
+                continue
+        return index_results
 
     def _retrieve_with_weaviate(
         self, query: str, k: int, backend: WeaviateBackend
@@ -535,52 +709,6 @@ class AdvancedRetriever(ModularUnifiedRetriever):
                 retrieval_results.append(retrieval_result)
 
         return retrieval_results
-
-    def _retrieve_with_graph(
-        self, query: str, k: int, backend: GraphRetriever
-    ) -> List[RetrievalResult]:
-        """
-        Perform retrieval using graph-based search.
-
-        Args:
-            query: Search query
-            k: Number of results
-            backend: Graph retriever instance
-
-        Returns:
-            List of retrieval results
-        """
-        try:
-            # Use graph retriever directly
-            results = backend.retrieve(query, k)
-
-            # Track query for analytics if enabled
-            if self.graph_analytics:
-                self.graph_analytics.track_query(
-                    query=query,
-                    results_count=len(results),
-                    latency_ms=0.0,  # Latency will be tracked by the graph retriever
-                    algorithm_used="graph_hybrid",
-                    success=True,
-                )
-
-            return results
-
-        except Exception as e:
-            logger.error(f"Graph retrieval failed: {str(e)}")
-
-            # Track failed query
-            if self.graph_analytics:
-                self.graph_analytics.track_query(
-                    query=query,
-                    results_count=0,
-                    latency_ms=0.0,
-                    algorithm_used="graph_hybrid",
-                    success=False,
-                )
-
-            # Return empty results on failure
-            return []
 
     def _apply_neural_reranking(
         self, query: str, results: List[RetrievalResult]
@@ -887,15 +1015,15 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         if self.query_analytics:
             # Update the latest entry
             latest_entry = self.query_analytics[-1]
-            latest_entry.update(
-                {
-                    "completion_time": time.time(),
-                    "elapsed_time": elapsed_time,
-                    "results_count": len(results),
-                    "method": method,
-                    "success": True,
-                }
-            )
+            update_data = {
+                "completion_time": time.time(),
+                "elapsed_time": elapsed_time,
+                "results_count": len(results),
+                "method": method,
+                "success": True,
+            }
+            
+            latest_entry.update(update_data)
 
     def get_configuration(self) -> Dict[str, Any]:
         """
