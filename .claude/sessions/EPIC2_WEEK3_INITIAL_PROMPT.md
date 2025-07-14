@@ -1,104 +1,141 @@
-# Epic 2 Week 3: Neural Reranking - Initial Session Prompt
+# Epic 2 Week 3 Initial Session Prompt: Neural Reranking Implementation
 
-## Session Initialization
+## Quick Start Instructions
 
-Welcome to Epic 2 Week 3! This session focuses on implementing neural reranking with cross-encoder models to enhance the multi-modal retrieval system built in Weeks 1-2.
+You are continuing **Epic 2 Week 3** of the RAG Portfolio Project. This session focuses on **neural reranking implementation** with cross-encoder models to enhance answer quality.
 
-### Context Status ✅
-- **Week 1**: Advanced multi-backend retriever with Weaviate + FAISS ✅ COMPLETE
-- **Week 2**: Knowledge graph construction and graph-based retrieval ✅ COMPLETE  
-- **Performance**: All targets exceeded by 100-1000x margins ✅ VALIDATED
-- **Quality**: 100% test success rates, zero critical issues ✅ CONFIRMED
-- **Architecture**: 100% modular compliance maintained ✅ VERIFIED
+### Read These Context Files First:
+1. **Primary Context**: `/CLAUDE.md` - Current development status and Week 3 guidelines
+2. **Session Context**: `/.claude/sessions/EPIC2_WEEK3_NEURAL_RERANKING_CONTEXT.md` - Detailed Week 3 implementation plan
+3. **Quick Reference**: `/.claude/sessions/EPIC2_QUICK_REFERENCE.md` - System architecture overview
 
-## Week 3 Mission
-
-**Primary Objective**: Implement neural reranking as the fourth stage of the retrieval pipeline to significantly improve result relevance for technical documentation queries.
-
-**Target Architecture**:
-```
-AdvancedRetriever (Week 3 Enhanced)
-├── Dense Retrieval (Vector similarity) [Week 1]
-├── Sparse Retrieval (BM25 keyword search) [Week 1]  
-├── Graph Retrieval (Knowledge graph traversal) [Week 2]
-└── Neural Reranking (Cross-encoder refinement) [Week 3] ← TODAY'S FOCUS
-```
-
-## Implementation Strategy
-
-### Phase 1: Neural Foundation (Today)
-1. **Cross-encoder Integration**: Set up transformer-based reranking models
-2. **Basic Pipeline**: Implement simple neural reranking workflow
-3. **Configuration**: Extend YAML config for neural reranking features
-4. **Performance Baseline**: Establish latency and quality baselines
-
-### Key Technical Components to Build
-```
-src/components/retrievers/reranking/
-├── neural_reranker.py              # Main cross-encoder implementation
-├── cross_encoder_models.py         # Model management and caching
-├── score_fusion.py                 # Neural + retrieval score combination
-├── adaptive_strategies.py          # Query-type aware reranking
-└── config/reranking_config.py      # Configuration schema
-```
-
-## Performance Targets for Week 3
-- **Neural Reranking Latency**: <200ms additional overhead
-- **End-to-end Latency**: Maintain <700ms P95 (current: 31ms - large headroom)
-- **Quality Enhancement**: >20% improvement in relevance metrics
-- **Memory Usage**: <1GB additional for cross-encoder models
-
-## Success Criteria for Today
-- [ ] Cross-encoder model integration working
-- [ ] Basic neural reranking pipeline operational  
-- [ ] Configuration system extended for neural features
-- [ ] Performance baseline established (latency + quality)
-- [ ] Integration with existing AdvancedRetriever maintained
-
-## Getting Started
-
-### First Steps
-1. **Review existing architecture**: Examine current AdvancedRetriever implementation
-2. **Set up neural dependencies**: Add required TensorFlow/Keras libraries
-3. **Create module structure**: Build neural reranking component hierarchy
-4. **Implement basic reranker**: Start with simple cross-encoder integration
-
-### Key Files to Reference
-- **Current Implementation**: `src/components/retrievers/advanced_retriever.py`
-- **Week 2 Graph Code**: `src/components/retrievers/graph/` (follow patterns)
-- **Configuration**: `config/advanced_test.yaml` (extend for neural features)
-- **Testing Framework**: `tests/` (maintain comprehensive testing)
-
-### Development Philosophy
-- **Maintain Performance**: Neural features must not degrade existing 31ms latency
-- **Modular Design**: Follow Week 1-2 patterns for consistency
-- **Configuration-driven**: All neural features controllable via YAML
-- **Quality-focused**: Measurable improvement in result relevance
-
-## Context Reminders
-
-### What's Already Working (Weeks 1-2)
-- **Multi-backend Retrieval**: FAISS + Weaviate with 31ms latency
-- **Knowledge Graph**: Entity extraction + relationship mapping operational  
-- **Analytics**: Real-time metrics and monitoring framework
-- **Testing**: 100% success rates across comprehensive test suites
-- **Documentation**: Complete architecture guides and API documentation
-
-### Quality Standards Maintained
-- **Swiss Engineering**: Production-ready code with comprehensive error handling
-- **Performance-first**: Optimization mindset from embedded systems background
-- **Modular Architecture**: Small, testable, single-purpose components
-- **Comprehensive Testing**: Unit, integration, and performance validation
-- **Analytics Integration**: Built-in metrics for all operations
-
-## Ready to Begin
-
-The foundation is solid, all Week 1-2 components are production-ready and validated. Week 3 neural reranking will build upon this excellent foundation to deliver the final enhancement in retrieval quality.
-
-**Let's implement neural reranking and complete the advanced hybrid retriever system!**
+### Week 3 Primary Objective
+**Implement cross-encoder neural reranking to significantly improve answer relevance while maintaining <700ms P95 latency target.**
 
 ---
 
-*Session Context: Epic 2 Week 3 - Neural Reranking Implementation*  
-*Foundation: Advanced multi-backend retriever (Week 1) + Knowledge graph (Week 2)*  
-*Target: Cross-encoder neural reranking with <700ms latency and >20% quality improvement*
+## Week 3 Implementation Plan
+
+### Phase 1: Core Neural Reranking (Days 1-2)
+**Goal**: Basic cross-encoder implementation with performance optimization
+
+**Tasks**:
+1. Create `src/components/retrievers/reranking/` module structure
+2. Implement `CrossEncoderReranker` with `cross-encoder/ms-marco-MiniLM-L6-v2` model
+3. Integrate with AdvancedRetriever `neural_reranking` configuration
+4. Optimize for <200ms additional latency target
+5. Implement basic score fusion with retrieval results
+
+### Phase 2: Adaptive Strategies (Days 3-4)
+**Goal**: Query-type aware reranking and advanced score fusion
+
+**Tasks**:
+1. Implement `QueryTypeDetector` for categorizing queries (factual, analytical, comparative, procedural)
+2. Create `AdaptiveReranker` with different strategies per query type
+3. Develop `NeuralScoreFusion` with sophisticated combination algorithms
+4. Performance benchmark and optimize adaptive processing
+5. Validate quality improvements across query types
+
+### Phase 3: Quality Enhancement & Integration (Day 5)
+**Goal**: Quality validation and complete AdvancedRetriever integration
+
+**Tasks**:
+1. Validate >20% improvement in answer relevance metrics
+2. Complete integration with AdvancedRetriever configuration system
+3. Performance optimization and latency validation
+4. End-to-end testing with neural reranking operational
+5. Prepare for Week 4 graph integration
+
+---
+
+## Key Technical Specifications
+
+### Performance Targets
+- **Neural Reranking Latency**: <200ms additional overhead per query
+- **End-to-End Latency**: <700ms P95 maintained (current: 31ms - large headroom)
+- **Quality Enhancement**: >20% improvement in answer relevance metrics  
+- **Memory Usage**: <1GB additional for cross-encoder model
+- **Batch Efficiency**: >32 candidates reranked per batch
+
+### Integration Points
+- **AdvancedRetriever**: Integrate with existing `neural_reranking` configuration
+- **Score Fusion**: Combine dense, sparse, and neural scores optimally
+- **Configuration System**: Update AdvancedRetrieverConfig for operational neural reranking
+- **Performance Pipeline**: Add neural reranking to retrieve() workflow
+
+### Model Requirements
+- **Primary Model**: `cross-encoder/ms-marco-MiniLM-L6-v2` (proven for passage reranking)
+- **Framework**: Keras/TensorFlow integration for Epic 2 consistency
+- **Input Format**: `[CLS] query [SEP] passage [SEP]` for cross-encoder scoring
+- **Output**: Relevance scores in [0,1] range for score fusion
+
+---
+
+## Current System Status
+
+### Week 2 Completion ✅
+- **Graph Framework**: Complete implementation (2,800+ lines)
+- **Configuration Integration**: Graph settings operational with AdvancedRetriever  
+- **End-to-End Validation**: Graph configuration creates working AdvancedRetriever
+- **Status**: Framework complete, integration pending Week 4
+
+### Portfolio Metrics
+- **Current Score**: 74.6% (STAGING_READY) - temporary decrease due to configured but unintegrated features
+- **Expected Recovery**: 90-95% when neural reranking becomes operational (this week)
+- **Performance Headroom**: 31ms current vs 700ms target = large optimization room available
+
+### Architecture Foundation
+- **AdvancedRetriever**: Fully operational with multi-backend support (Weaviate + FAISS)
+- **ComponentFactory**: Enhanced to support "advanced" retriever type
+- **PlatformOrchestrator**: Updated to recognize "advanced" as unified architecture
+- **Configuration System**: YAML-driven Epic 2 architecture operational
+
+---
+
+## Development Philosophy
+
+### Epic 2 Design Patterns
+- **Modular Architecture**: Maintain clear separation of concerns
+- **Configuration-driven**: All features configurable via YAML
+- **Performance-first**: Meet latency targets while adding sophistication
+- **Quality Enhancement**: Measurable improvements in answer relevance
+
+### Implementation Guidelines
+- Follow established Epic 2 component patterns
+- Use adapter pattern for external models (cross-encoder)
+- Implement direct algorithms for score fusion and query detection
+- Ensure graceful degradation when neural reranking unavailable
+
+### Success Criteria
+- [ ] Cross-encoder neural reranking operational
+- [ ] Adaptive reranking strategies for different query types
+- [ ] >20% improvement in answer relevance validated
+- [ ] Performance targets met (<700ms P95 with neural processing)
+- [ ] Complete integration with AdvancedRetriever configuration
+
+---
+
+## Next Session Preparation
+
+### Week 4 Focus
+After completing neural reranking, Week 4 will focus on:
+- **Graph Integration**: Connect Week 2 graph components to AdvancedRetriever
+- **A/B Testing**: Implement experiment framework for feature comparison
+- **Final Optimization**: System-wide performance tuning and portfolio score recovery
+- **Production Readiness**: Complete Epic 2 with all features operational
+
+### Portfolio Score Recovery
+Expected progression:
+- **Week 3 Start**: 74.6% (neural reranking configured but not implemented)
+- **Week 3 End**: ~80-85% (neural reranking operational, quality improvements)
+- **Week 4 End**: 90-95% (graph integration complete, all features operational)
+
+---
+
+## Get Started
+
+**Your first task**: Begin implementing the neural reranking module following the Phase 1 plan. Start by creating the module structure and implementing the basic CrossEncoderReranker with cross-encoder model integration.
+
+Focus on leveraging the large performance headroom (31ms → 700ms target) to implement sophisticated neural reranking while maintaining excellent system performance.
+
+**Remember**: The AdvancedRetriever framework is already operational and ready for neural reranking integration. Build on the solid foundation from Weeks 1-2 to add this crucial quality enhancement capability.
