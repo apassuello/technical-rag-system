@@ -54,10 +54,53 @@ class GraphIntegrationValidator:
                 "store",
                 "branch",
                 "jump",
+                "auipc",
+                "lui",
             ],
-            "formats": ["R-type", "I-type", "S-type", "B-type", "U-type", "J-type"],
-            "concepts": ["pipeline", "hazard", "forwarding", "cache", "memory", "ALU"],
+            "extensions": ["RV32I", "RV64I", "RV32M", "RV64M", "RV32A", "RV64A"],
+            "concepts": [
+                "pipeline",
+                "hazard",
+                "forwarding",
+                "stall",
+                "branch prediction",
+                "cache",
+                "memory",
+                "privilege",
+            ],
         }
+
+    def _create_proper_mock_embedder(self) -> Mock:
+        """Create properly configured mock embedder that handles multiple documents."""
+        embedder = Mock(spec=Embedder)
+
+        def mock_embed(texts):
+            if isinstance(texts, str):
+                texts = [texts]
+            return [np.random.rand(384).tolist() for _ in range(len(texts))]
+
+        embedder.embed.side_effect = mock_embed
+        embedder.embedding_dim = 384
+        return embedder
+
+    def _create_test_documents_with_embeddings(
+        self, documents: List[Document], embedder: Optional[Mock] = None
+    ) -> List[Document]:
+        """Add embeddings to test documents."""
+        if embedder is None:
+            embedder = self._create_proper_mock_embedder()
+
+        # Generate embeddings for documents that don't have them
+        texts = [doc.content for doc in documents if doc.embedding is None]
+        if texts:
+            embeddings = embedder.embed(texts)
+            embedding_idx = 0
+            for doc in documents:
+                if doc.embedding is None:
+                    doc.embedding = embeddings[embedding_idx]
+                    embedding_idx += 1
+
+        return documents
 
     def run_all_validations(self) -> Dict[str, Any]:
         """Run all graph integration validation tests."""

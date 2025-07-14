@@ -46,6 +46,44 @@ class MultiBackendValidator:
         self.performance_metrics = {}
         self.validation_errors = []
 
+    def _create_proper_mock_embedder(self) -> Mock:
+        """Create properly configured mock embedder that handles multiple documents."""
+        embedder = Mock(spec=Embedder)
+
+        def mock_embed(texts):
+            if isinstance(texts, str):
+                texts = [texts]
+            return [np.random.rand(384).tolist() for _ in range(len(texts))]
+
+        embedder.embed.side_effect = mock_embed
+        embedder.embedding_dim = 384
+        return embedder
+
+    def _create_test_documents_with_embeddings(
+        self, count: int = 10, embedder: Optional[Mock] = None
+    ) -> List[Document]:
+        """Create test documents with proper embeddings."""
+        if embedder is None:
+            embedder = self._create_proper_mock_embedder()
+
+        documents = [
+            Document(
+                content=f"Test document {i} for multi-backend validation with RISC-V architecture content",
+                metadata={"id": i, "type": "test_doc", "backend_test": True},
+            )
+            for i in range(count)
+        ]
+
+        # Generate embeddings for documents
+        texts = [doc.content for doc in documents]
+        embeddings = embedder.embed(texts)
+
+        # Add embeddings to documents
+        for doc, embedding in zip(documents, embeddings):
+            doc.embedding = embedding
+
+        return documents
+
     def run_all_validations(self) -> Dict[str, Any]:
         """Run all multi-backend validation tests."""
         logger.info("Starting comprehensive multi-backend validation...")
@@ -106,9 +144,8 @@ class MultiBackendValidator:
             config.backends.fallback_backend = "weaviate"
             config.backends.fallback_enabled = True
 
-            # Create mock embedder
-            embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Create properly configured mock embedder
+            embedder = self._create_proper_mock_embedder()
 
             # Test AdvancedRetriever initialization
             retriever = AdvancedRetriever(config, embedder)
@@ -139,15 +176,14 @@ class MultiBackendValidator:
                 "weaviate_backend_available": weaviate_available,
                 "active_backend": retriever.active_backend_name,
                 "fallback_backend": retriever.fallback_backend_name,
-                "advanced_stats_initialized": bool(retriever.advanced_stats),
+                "backends_count": len(retriever.backends),
             }
 
-            # Test passes if basic initialization works
             test_result["passed"] = True
             logger.info("Backend initialization test passed")
 
         except Exception as e:
-            error_msg = f"Backend initialization failed: {str(e)}"
+            error_msg = f"Backend initialization test failed: {str(e)}"
             test_result["errors"].append(error_msg)
             logger.error(error_msg)
 
@@ -164,18 +200,14 @@ class MultiBackendValidator:
             config.backends.primary_backend = "faiss"
             config.backends.fallback_backend = "weaviate"
 
-            # Create mock embedder
-            embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Create properly configured mock embedder
+            embedder = self._create_proper_mock_embedder()
 
             # Create retriever
             retriever = AdvancedRetriever(config, embedder)
 
-            # Add test documents
-            test_docs = [
-                Document(content=f"Test document {i}", metadata={"id": i})
-                for i in range(10)
-            ]
+            # Create test documents with embeddings
+            test_docs = self._create_test_documents_with_embeddings(10, embedder)
             retriever.index_documents(test_docs)
 
             # Measure switching performance
@@ -203,26 +235,26 @@ class MultiBackendValidator:
             test_result["details"] = {
                 "avg_switching_time_ms": avg_switching_time,
                 "max_switching_time_ms": max_switching_time,
-                "all_switching_times_ms": switching_times,
+                "switching_measurements": switching_times,
                 "target_avg_ms": TARGET_AVG_SWITCH_TIME,
                 "target_max_ms": TARGET_MAX_SWITCH_TIME,
+                "documents_indexed": len(test_docs),
             }
 
-            # Test passes if performance targets are met
-            performance_ok = (
-                avg_switching_time < TARGET_AVG_SWITCH_TIME
-                and max_switching_time < TARGET_MAX_SWITCH_TIME
+            # Test passes if switching meets performance targets
+            test_result["passed"] = (
+                avg_switching_time <= TARGET_AVG_SWITCH_TIME
+                and max_switching_time <= TARGET_MAX_SWITCH_TIME
             )
 
-            if performance_ok:
-                test_result["passed"] = True
+            if test_result["passed"]:
                 logger.info(
-                    f"Backend switching performance test passed (avg: {avg_switching_time:.1f}ms)"
+                    f"Switching performance test passed: {avg_switching_time:.2f}ms avg"
                 )
             else:
-                error_msg = f"Backend switching too slow: avg={avg_switching_time:.1f}ms, max={max_switching_time:.1f}ms"
-                test_result["errors"].append(error_msg)
-                logger.warning(error_msg)
+                logger.warning(
+                    f"Switching performance test failed: {avg_switching_time:.2f}ms avg > {TARGET_AVG_SWITCH_TIME}ms target"
+                )
 
         except Exception as e:
             error_msg = f"Switching performance test failed: {str(e)}"
@@ -279,19 +311,12 @@ class MultiBackendValidator:
             config.backends.primary_backend = "faiss"
             config.backends.fallback_backend = "weaviate"
 
-            embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            embedder = self._create_proper_mock_embedder()
 
             retriever = AdvancedRetriever(config, embedder)
 
-            # Add test documents
-            test_docs = [
-                Document(
-                    content=f"Test document {i} for fallback testing",
-                    metadata={"id": i},
-                )
-                for i in range(5)
-            ]
+            # Create test documents with embeddings
+            test_docs = self._create_test_documents_with_embeddings(5, embedder)
             retriever.index_documents(test_docs)
 
             # Test fallback statistics tracking
@@ -323,19 +348,22 @@ class MultiBackendValidator:
             final_fallback_count = retriever.advanced_stats.get(
                 "fallback_activations", 0
             )
-            fallback_triggered = final_fallback_count > initial_fallback_count
 
             test_result["details"] = {
-                "fallback_enabled": config.backends.fallback_enabled,
-                "fallback_triggered": fallback_triggered,
-                "fallback_successful": fallback_successful,
                 "initial_fallback_count": initial_fallback_count,
                 "final_fallback_count": final_fallback_count,
+                "fallback_successful": fallback_successful,
+                "documents_indexed": len(test_docs),
+                "fallback_enabled": config.backends.fallback_enabled,
             }
 
-            # Test passes if fallback mechanism is functional
-            test_result["passed"] = True  # Basic framework test
-            logger.info("Fallback mechanism test passed")
+            # Test passes if fallback mechanism works
+            test_result["passed"] = fallback_successful
+
+            if test_result["passed"]:
+                logger.info("Fallback mechanism test passed")
+            else:
+                logger.warning("Fallback mechanism test failed")
 
         except Exception as e:
             error_msg = f"Fallback mechanism test failed: {str(e)}"
