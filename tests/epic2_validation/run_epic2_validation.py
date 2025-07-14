@@ -24,6 +24,7 @@ import sys
 import os
 from pathlib import Path
 from typing import Dict, Any, List
+import numpy as np
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent.parent
@@ -35,34 +36,43 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import all validation modules
-try:
-    from .test_multi_backend_validation import MultiBackendValidator
-    from .test_graph_integration_validation import GraphIntegrationValidator
-    from .test_neural_reranking_validation import NeuralRerankingValidator
-    from .test_epic2_integration_validation import Epic2IntegrationValidator
-    from .test_epic2_performance_validation import Epic2PerformanceValidator
-    from .test_epic2_quality_validation import Epic2QualityValidator
-except ImportError:
-    # Fallback for direct execution
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    sys.path.append(current_dir)
+# Import validation modules
+from test_multi_backend_validation import MultiBackendValidator
+from test_graph_integration_validation import GraphIntegrationValidator
+from test_neural_reranking_validation import NeuralRerankingValidator
+from test_epic2_integration_validation import Epic2IntegrationValidator
+from test_epic2_performance_validation import Epic2PerformanceValidator
+from test_epic2_quality_validation import Epic2QualityValidator
 
-    from test_multi_backend_validation import MultiBackendValidator
-    from test_graph_integration_validation import GraphIntegrationValidator
-    from test_neural_reranking_validation import NeuralRerankingValidator
-    from test_epic2_integration_validation import Epic2IntegrationValidator
-    from test_epic2_performance_validation import Epic2PerformanceValidator
-    from test_epic2_quality_validation import Epic2QualityValidator
+
+class NumpyJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles numpy data types."""
+
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (np.bool_, bool)):
+            return bool(obj)
+        return super().default(obj)
 
 
 class Epic2ValidationRunner:
-    """Main validation runner for Epic 2 system."""
+    """
+    Comprehensive Epic 2 validation runner.
+
+    Orchestrates all validation components for thorough Epic 2 system validation.
+    """
 
     def __init__(self, output_dir: str = "validation_results"):
+        """Initialize validation runner."""
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
+        # Initialize all validators
         self.validators = {
             "multi_backend": MultiBackendValidator(),
             "graph_integration": GraphIntegrationValidator(),
@@ -347,6 +357,7 @@ class Epic2ValidationRunner:
                 },
                 f,
                 indent=2,
+                cls=NumpyJSONEncoder,
             )
 
         # Save summary report
