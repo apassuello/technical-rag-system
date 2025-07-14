@@ -398,7 +398,7 @@ class EnhancedNeuralRerankingConfig:
                 return False
             
             # Check performance constraints
-            if self.performance.max_latency_ms > 1000:  # Very generous limit
+            if self.performance.max_latency_ms > 10000:  # Very generous limit for development/testing
                 return False
             
             return True

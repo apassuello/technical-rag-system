@@ -620,16 +620,13 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             for doc_idx, new_score in reranked_indices_scores:
                 if doc_idx < len(results):
                     original_result = results[doc_idx]
+                    # Handle metadata gracefully (RetrievalResult may not have metadata)
+                    original_metadata = getattr(original_result, "metadata", {})
+
                     reranked_result = RetrievalResult(
                         document=original_result.document,
                         score=new_score,
-                        rank=len(reranked_results) + 1,
-                        metadata={
-                            **original_result.metadata,
-                            "neural_reranked": True,
-                            "original_score": original_result.score,
-                            "neural_score": new_score,
-                        },
+                        retrieval_method=f"{original_result.retrieval_method}_neural_reranked",
                     )
                     reranked_results.append(reranked_result)
 
@@ -672,10 +669,14 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         # Index in graph components if enabled
         if hasattr(self, "graph_retriever") and self.graph_retriever is not None:
             try:
-                self.graph_retriever.index_documents(documents)
-                logger.debug("Documents indexed in graph retriever")
+                # Use graph builder to build/update the graph with new documents
+                if hasattr(self, "graph_builder") and self.graph_builder is not None:
+                    self.graph_builder.build_graph(documents)
+                    logger.debug("Documents indexed in graph builder")
+                else:
+                    logger.debug("Graph builder not available, skipping graph indexing")
             except Exception as e:
-                logger.error(f"Failed to index documents in graph retriever: {str(e)}")
+                logger.error(f"Failed to index documents in graph builder: {str(e)}")
                 # Continue execution - graph indexing failure shouldn't break main indexing
 
         logger.debug(
