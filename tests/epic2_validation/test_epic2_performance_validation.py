@@ -174,16 +174,33 @@ class Epic2PerformanceValidator:
             config.graph_retrieval.enabled = True
             config.neural_reranking.enabled = True
 
+            # Create properly configured mock embedder
             embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+
+            # Mock embed method to return correct number of embeddings
+            def mock_embed(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                return [np.random.rand(384).tolist() for _ in range(len(texts))]
+
+            embedder.embed.side_effect = mock_embed
+            embedder.embedding_dim = 384
 
             try:
                 retriever = AdvancedRetriever(config, embedder)
 
-                # Index performance test documents
+                # Create test documents
                 test_docs = self._create_performance_test_documents(
                     50
                 )  # Reasonable size for testing
+
+                # Generate embeddings for documents (following PlatformOrchestrator pattern)
+                texts = [doc.content for doc in test_docs]
+                embeddings = embedder.embed(texts)
+
+                # Add embeddings to documents before indexing
+                for doc, embedding in zip(test_docs, embeddings):
+                    doc.embedding = embedding
 
                 indexing_start = time.time()
                 retriever.index_documents(test_docs)
