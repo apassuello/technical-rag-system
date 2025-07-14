@@ -4,6 +4,9 @@ Score Fusion for Neural Reranking.
 This module provides advanced score fusion capabilities for combining
 neural reranking scores with retrieval scores using various strategies
 including weighted fusion, learned combination, and adaptive methods.
+
+Migrated from reranking/ module and simplified for integration with
+the enhanced neural reranker in the rerankers/ component.
 """
 
 import logging
@@ -11,11 +14,28 @@ import time
 import numpy as np
 from typing import List, Dict, Any, Optional, Tuple
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 from src.core.interfaces import Document
-from .config.reranking_config import ScoreFusionConfig, WeightsConfig, NormalizationConfig
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class NormalizationConfig:
+    """Configuration for score normalization."""
+    method: str = "min_max"  # "min_max", "z_score", "softmax", "sigmoid"
+    clip_outliers: bool = True
+    outlier_threshold: float = 3.0
+
+
+@dataclass
+class WeightsConfig:
+    """Configuration for score weights."""
+    retrieval_score: float = 0.3
+    neural_score: float = 0.7
+    graph_score: float = 0.0  # For future graph integration
+    temporal_score: float = 0.0  # For future temporal features
 
 
 class ScoreNormalizer:
@@ -192,97 +212,17 @@ class WeightedFusion(BaseFusionStrategy):
         return self.stats.copy()
 
 
-class LearnedFusion(BaseFusionStrategy):
-    """Learned fusion using a simple neural network."""
-    
-    def __init__(self, config):
-        """
-        Initialize learned fusion.
-        
-        Args:
-            config: Learned fusion configuration
-        """
-        self.config = config
-        self.model = None
-        self.stats = {"fusions": 0, "model_predictions": 0}
-        
-        if config.enabled and config.model_path:
-            self._load_model()
-    
-    def _load_model(self):
-        """Load the learned fusion model."""
-        try:
-            # This would load a pre-trained fusion model
-            # For now, we'll use a placeholder
-            logger.info("Learned fusion model loading not implemented")
-            self.model = None
-        except Exception as e:
-            logger.error(f"Failed to load learned fusion model: {e}")
-            self.model = None
-    
-    def fuse(
-        self,
-        retrieval_scores: List[float],
-        neural_scores: List[float],
-        query: str,
-        documents: List[Document]
-    ) -> List[float]:
-        """Fuse scores using learned model."""
-        if self.model is None:
-            # Fallback to simple weighted fusion
-            fused_scores = []
-            for ret_score, neural_score in zip(retrieval_scores, neural_scores):
-                fused_score = 0.3 * ret_score + 0.7 * neural_score
-                fused_scores.append(fused_score)
-            return fused_scores
-        
-        # Use learned model for fusion
-        features = self._extract_features(retrieval_scores, neural_scores, query, documents)
-        fused_scores = self.model.predict(features)
-        
-        self.stats["fusions"] += 1
-        self.stats["model_predictions"] += len(fused_scores)
-        
-        return fused_scores.tolist()
-    
-    def _extract_features(
-        self,
-        retrieval_scores: List[float],
-        neural_scores: List[float],
-        query: str,
-        documents: List[Document]
-    ) -> np.ndarray:
-        """Extract features for learned fusion."""
-        features = []
-        
-        for ret_score, neural_score, doc in zip(retrieval_scores, neural_scores, documents):
-            # Basic features: retrieval score, neural score, score difference, score ratio
-            doc_features = [
-                ret_score,
-                neural_score,
-                abs(ret_score - neural_score),
-                neural_score / (ret_score + 1e-8)  # Avoid division by zero
-            ]
-            features.append(doc_features)
-        
-        return np.array(features)
-    
-    def get_stats(self) -> Dict[str, Any]:
-        """Get fusion statistics."""
-        return self.stats.copy()
-
-
 class AdaptiveFusion(BaseFusionStrategy):
     """Adaptive fusion that adjusts weights based on query and context."""
     
-    def __init__(self, config):
+    def __init__(self, adaptation_window: int = 50):
         """
         Initialize adaptive fusion.
         
         Args:
-            config: Adaptive fusion configuration
+            adaptation_window: Number of queries to remember for adaptation
         """
-        self.config = config
+        self.adaptation_window = adaptation_window
         self.stats = {"fusions": 0, "adaptations": 0}
         self.query_history = []
     
@@ -303,8 +243,7 @@ class AdaptiveFusion(BaseFusionStrategy):
             fused_scores.append(fused_score)
         
         # Update query history for future adaptations
-        if self.config.query_dependent:
-            self._update_query_history(query, weights)
+        self._update_query_history(query, weights)
         
         self.stats["fusions"] += 1
         return fused_scores
@@ -334,15 +273,14 @@ class AdaptiveFusion(BaseFusionStrategy):
                 retrieval_weight = 0.5
         
         # Adapt based on query characteristics
-        if self.config.query_dependent:
-            query_lower = query.lower()
-            
-            # Technical queries might benefit more from neural reranking
-            technical_terms = ["protocol", "implementation", "api", "configuration", "architecture"]
-            if any(term in query_lower for term in technical_terms):
-                neural_weight = min(0.9, neural_weight + 0.1)
-                retrieval_weight = 1.0 - neural_weight
-                self.stats["adaptations"] += 1
+        query_lower = query.lower()
+        
+        # Technical queries might benefit more from neural reranking
+        technical_terms = ["protocol", "implementation", "api", "configuration", "architecture"]
+        if any(term in query_lower for term in technical_terms):
+            neural_weight = min(0.9, neural_weight + 0.1)
+            retrieval_weight = 1.0 - neural_weight
+            self.stats["adaptations"] += 1
         
         return {"retrieval": retrieval_weight, "neural": neural_weight}
     
@@ -355,8 +293,8 @@ class AdaptiveFusion(BaseFusionStrategy):
         })
         
         # Keep only recent history
-        if len(self.query_history) > self.config.adaptation_window:
-            self.query_history = self.query_history[-self.config.adaptation_window:]
+        if len(self.query_history) > self.adaptation_window:
+            self.query_history = self.query_history[-self.adaptation_window:]
     
     def get_stats(self) -> Dict[str, Any]:
         """Get fusion statistics."""
@@ -368,36 +306,44 @@ class ScoreFusion:
     Main score fusion component for neural reranking.
     
     Combines retrieval scores with neural reranking scores using
-    configurable strategies including weighted, learned, and adaptive fusion.
+    configurable strategies including weighted and adaptive fusion.
     """
     
-    def __init__(self, config: ScoreFusionConfig):
+    def __init__(
+        self,
+        method: str = "weighted",
+        weights: Optional[WeightsConfig] = None,
+        normalization: Optional[NormalizationConfig] = None
+    ):
         """
         Initialize score fusion.
         
         Args:
-            config: Score fusion configuration
+            method: Fusion method ("weighted" or "adaptive")
+            weights: Weight configuration for weighted fusion
+            normalization: Normalization configuration
         """
-        self.config = config
-        self.normalizer = ScoreNormalizer(config.normalization)
+        self.method = method
+        self.weights = weights or WeightsConfig()
+        self.normalization = normalization or NormalizationConfig()
+        
+        self.normalizer = ScoreNormalizer(self.normalization)
         
         # Initialize fusion strategy
-        if config.method == "weighted":
-            self.strategy = WeightedFusion(config.weights)
-        elif config.method == "learned":
-            self.strategy = LearnedFusion(config.learned_fusion)
-        elif config.method == "adaptive":
-            self.strategy = AdaptiveFusion(config.adaptive_fusion)
+        if method == "weighted":
+            self.strategy = WeightedFusion(self.weights)
+        elif method == "adaptive":
+            self.strategy = AdaptiveFusion()
         else:
-            logger.warning(f"Unknown fusion method: {config.method}, using weighted")
-            self.strategy = WeightedFusion(config.weights)
+            logger.warning(f"Unknown fusion method: {method}, using weighted")
+            self.strategy = WeightedFusion(self.weights)
         
         self.stats = {
             "total_fusions": 0,
-            "method": config.method
+            "method": method
         }
         
-        logger.info(f"ScoreFusion initialized with method: {config.method}")
+        logger.info(f"ScoreFusion initialized with method: {method}")
     
     def fuse_scores(
         self,
@@ -429,8 +375,8 @@ class ScoreFusion:
             # Apply fusion strategy
             fused_scores = self.strategy.fuse(norm_retrieval, norm_neural, query, documents)
             
-            # Final normalization if needed
-            if self.config.method in ["learned", "adaptive"]:
+            # Final normalization for adaptive method
+            if self.method == "adaptive":
                 fused_scores = self.normalizer.normalize(fused_scores)
             
             self.stats["total_fusions"] += 1
@@ -454,11 +400,11 @@ class ScoreFusion:
         """Reset fusion statistics."""
         self.stats = {
             "total_fusions": 0,
-            "method": self.config.method
+            "method": self.method
         }
         self.normalizer.stats = {
             "normalizations": 0,
             "outliers_clipped": 0
         }
         if hasattr(self.strategy, 'stats'):
-            self.strategy.stats = getattr(self.strategy.__class__, 'stats', {})
+            self.strategy.stats = {"fusions": 0}
