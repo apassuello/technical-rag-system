@@ -118,7 +118,7 @@ class ComprehensiveTestRunner:
         print("  • Running system validation...")
         
         try:
-            validator = SystemValidator()
+            validator = SystemValidator(self.config_path)
             validation_results = validator.run_all_validations()
             
             self.test_results['system_validation_results'] = validation_results
@@ -169,7 +169,7 @@ class ComprehensiveTestRunner:
         print("  • Running component-specific tests...")
         
         try:
-            component_tester = ComponentSpecificTester()
+            component_tester = ComponentSpecificTester(self.config_path)
             component_results = component_tester.run_all_component_tests()
             
             self.test_results['component_test_results'] = component_results
@@ -2191,7 +2191,25 @@ class ComprehensiveTestRunner:
 
 def main():
     """Main execution function."""
-    runner = ComprehensiveTestRunner()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Run comprehensive RAG system tests')
+    parser.add_argument('config_path', nargs='?', default='config/default.yaml',
+                       help='Path to configuration file (default: config/default.yaml)')
+    parser.add_argument('--epic2', action='store_true',
+                       help='Use Epic 2 configuration (config/advanced_test.yaml)')
+    
+    args = parser.parse_args()
+    
+    # Handle Epic 2 flag
+    if args.epic2:
+        config_path = 'config/advanced_test.yaml'
+    else:
+        config_path = args.config_path
+    
+    print(f"Using configuration: {config_path}")
+    
+    runner = ComprehensiveTestRunner(config_path)
     results = runner.run_all_tests()
     
     # Save results

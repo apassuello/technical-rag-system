@@ -44,8 +44,9 @@ class ComponentSpecificTester:
     - Answer Generator: Query answering, confidence scoring
     """
     
-    def __init__(self):
+    def __init__(self, config_path: str = "config/default.yaml"):
         """Initialize component-specific tester."""
+        self.config_path = config_path
         self.test_results = {
             'timestamp': datetime.now().isoformat(),
             'test_id': f"component_test_{int(time.time())}",
@@ -62,6 +63,44 @@ class ComponentSpecificTester:
         self.test_embeddings = []
         self.test_queries = []
         self.test_answers = []
+        
+        # Load component types from configuration
+        self._load_component_config()
+    
+    def _load_component_config(self):
+        """Load component types and configs from configuration file."""
+        from src.core.config import load_config
+        from pathlib import Path
+        
+        try:
+            config = load_config(Path(self.config_path))
+            self.component_types = {
+                'document_processor': config.document_processor.type,
+                'embedder': config.embedder.type,
+                'retriever': config.retriever.type,
+                'answer_generator': config.answer_generator.type
+            }
+            self.component_configs = {
+                'document_processor': config.document_processor.config,
+                'embedder': config.embedder.config,
+                'retriever': config.retriever.config,
+                'answer_generator': config.answer_generator.config
+            }
+        except Exception as e:
+            # Fallback to default types if config loading fails
+            self.component_types = {
+                'document_processor': 'hybrid_pdf',
+                'embedder': 'sentence_transformer',
+                'retriever': 'modular_unified',
+                'answer_generator': 'adaptive'
+            }
+            self.component_configs = {
+                'document_processor': {},
+                'embedder': {},
+                'retriever': {},
+                'answer_generator': {}
+            }
+            print(f"Warning: Could not load config from {self.config_path}, using defaults: {e}")
     
     def _count_actual_citations(self, answer) -> int:
         """Count actual citations in answer text (supports multiple formats)."""
@@ -97,8 +136,11 @@ class ComponentSpecificTester:
     def _extract_full_text(self, pdf_path: Path) -> Optional[str]:
         """Extract full text from PDF for coverage analysis."""
         try:
-            # Use the same processor to extract full text (ModularDocumentProcessor)
-            processor = ComponentFactory.create_processor("hybrid_pdf")
+            # Use the same processor to extract full text from configuration
+            processor = ComponentFactory.create_processor(
+                self.component_types['document_processor'],
+                **self.component_configs['document_processor']
+            )
             documents = processor.process(pdf_path)
             # Combine all document content to approximate full document text
             full_text = " ".join([doc.content for doc in documents])
@@ -400,7 +442,10 @@ class ComponentSpecificTester:
         print("  • Testing document processor behavior with coverage analysis...")
         
         # Initialize actual document processor for real testing
-        processor = ComponentFactory.create_processor("hybrid_pdf")
+        processor = ComponentFactory.create_processor(
+            self.component_types['document_processor'],
+            **self.component_configs['document_processor']
+        )
         
         # Test with real documents for coverage analysis
         data_folder = Path(project_root) / "data" / "test"
@@ -598,11 +643,10 @@ class ComponentSpecificTester:
         """Test embedder with full vector analysis."""
         print("  • Testing embedder behavior...")
         
-        # Initialize embedder using ComponentFactory
+        # Initialize embedder using ComponentFactory with config-based type
         embedder = ComponentFactory.create_embedder(
-            "sentence_transformer",
-            model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1",
-            use_mps=True
+            self.component_types['embedder'],
+            **self.component_configs['embedder']
         )
         
         # Test texts with varying characteristics
@@ -771,9 +815,9 @@ class ComponentSpecificTester:
         }
         
         retriever = ComponentFactory.create_retriever(
-            "modular_unified", 
-            config=retriever_config, 
-            embedder=embedder
+            self.component_types['retriever'],
+            embedder=embedder,
+            **self.component_configs['retriever']
         )
         
         # Index test documents - first ensure they have embeddings
@@ -936,11 +980,8 @@ class ComponentSpecificTester:
         
         # Initialize answer generator using ComponentFactory
         generator = ComponentFactory.create_generator(
-            "adaptive_modular",  # Use new modular implementation
-            model_name="llama3.2:3b",
-            temperature=0.3,
-            max_tokens=512,
-            enable_adaptive_prompts=False  # Disable adaptive prompts to avoid errors
+            self.component_types['answer_generator'],
+            **self.component_configs['answer_generator']
         )
         
         # Test queries with varying complexity
