@@ -13,7 +13,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Optional
 
-from base_diagnostic import DiagnosticTestBase, DataValidator
+from .base_diagnostic import DiagnosticTestBase, DataValidator
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent

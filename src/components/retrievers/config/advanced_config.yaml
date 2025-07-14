@@ -78,9 +78,9 @@ hybrid_search:
   max_candidates_per_strategy: 100
   early_termination_threshold: 0.95
 
-# Neural Reranking Configuration (Framework ready, implementation in future)
+# Neural Reranking Configuration (Epic 2 enabled)
 neural_reranking:
-  enabled: false  # Set to true when implementation is complete
+  enabled: true  # ENABLED for Epic 2
   
   # Model configuration
   model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
@@ -97,9 +97,9 @@ neural_reranking:
   fallback_to_fast_reranker: true
   fast_reranker_threshold: 100
 
-# Graph Retrieval Configuration (Framework ready, implementation in future)
+# Graph Retrieval Configuration (Epic 2 enabled)
 graph_retrieval:
-  enabled: false  # Set to true when implementation is complete
+  enabled: true  # ENABLED for Epic 2
   
   # Graph construction
   enable_entity_linking: true
@@ -169,11 +169,11 @@ max_total_latency_ms: 700  # P95 latency target including all processing
 enable_caching: true
 cache_size: 1000
 
-# Feature Flags
-enable_all_features: false  # Set to true to enable all Epic 2 features
+# Feature Flags (Epic 2 enabled)
+enable_all_features: true   # ENABLED for Epic 2
 feature_flags:
   weaviate_backend: true     # Enable Weaviate as alternative to FAISS
-  neural_reranking: false    # Enable neural reranking (future)
-  graph_retrieval: false     # Enable graph-based retrieval (future)
-  analytics_dashboard: false # Enable Plotly dashboard (future)
+  neural_reranking: true     # ENABLED for Epic 2
+  graph_retrieval: true      # ENABLED for Epic 2
+  analytics_dashboard: true  # ENABLED for Epic 2
   ab_testing: false          # Enable A/B testing framework (future)

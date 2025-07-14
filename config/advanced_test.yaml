@@ -77,9 +77,9 @@ retriever:
       max_candidates_per_strategy: 100
       early_termination_threshold: 0.95
 
-    # Neural Reranking Configuration (Framework testing only)
+    # Neural Reranking Configuration (Epic 2 enabled)
     neural_reranking:
-      enabled: false  # Disabled for baseline testing
+      enabled: true  # ENABLED for Epic 2 testing
       
       # Model configuration
       model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
@@ -96,65 +96,26 @@ retriever:
       fallback_to_fast_reranker: true
       fast_reranker_threshold: 100
 
-    # Graph Retrieval Configuration (Epic 2 Week 2)
+    # Graph Retrieval Configuration (Epic 2 - simplified structure)
     graph_retrieval:
       enabled: true  # Enable graph-based retrieval
       
       # Graph construction
-      builder:
-        implementation: "networkx"
-        config:
-          node_types: ["concept", "protocol", "architecture", "extension"]
-          relationship_types: ["implements", "extends", "requires", "conflicts"]
-          max_graph_size: 10000
-          update_strategy: "incremental"
-          enable_pruning: true
-          pruning_threshold: 0.1
+      enable_entity_linking: true
+      enable_cross_references: true
+      similarity_threshold: 0.7
+      max_connections_per_document: 10
       
-      # Entity extraction
-      entity_extraction:
-        implementation: "spacy"
-        config:
-          model: "en_core_web_sm"
-          entity_types: ["TECH", "PROTOCOL", "ARCH"]
-          confidence_threshold: 0.8
-          batch_size: 32
-          custom_patterns: {}
-          enable_custom_entities: true
+      # Graph algorithms
+      use_pagerank: true
+      pagerank_damping: 0.85
+      use_community_detection: false
+      community_algorithm: "louvain"
       
-      # Relationship detection
-      relationship_detection:
-        implementation: "semantic"
-        config:
-          similarity_threshold: 0.7
-          relationship_model: "sentence_transformer"
-          max_relationships_per_node: 20
-          enable_bidirectional: true
-          weight_decay_factor: 0.9
-      
-      # Graph retrieval algorithms
-      retrieval:
-        algorithms: ["shortest_path", "random_walk", "subgraph_expansion"]
-        max_graph_results: 10
-        max_path_length: 3
-        random_walk_steps: 10
-        subgraph_radius: 2
-        score_aggregation: "weighted_average"
-        enable_path_scoring: true
-      
-      # Graph analytics
-      analytics:
-        enabled: true
-        collect_graph_metrics: true
-        collect_retrieval_metrics: true
-        enable_visualization: false  # Disabled for performance
-        visualization_max_nodes: 100
-        metrics_retention_hours: 24
-      
-      # Performance settings
-      max_memory_mb: 500
-      enable_caching: true
-      cache_size: 1000
+      # Retrieval strategies
+      max_graph_hops: 3
+      graph_weight_decay: 0.5
+      combine_with_vector_search: true
 
     # Analytics Configuration (Enabled for testing)
     analytics:
@@ -207,13 +168,13 @@ retriever:
     enable_caching: true
     cache_size: 1000
 
-    # Feature Flags (Test framework readiness)
-    enable_all_features: false
+    # Feature Flags (Epic 2 enabled)
+    enable_all_features: true
     feature_flags:
-      weaviate_backend: false    # Disabled - no Weaviate server
-      neural_reranking: false    # Framework test only
-      graph_retrieval: false     # Framework test only
-      analytics_dashboard: false # Framework test only
+      weaviate_backend: false    # Disabled - no Weaviate server for testing
+      neural_reranking: true     # ENABLED for Epic 2
+      graph_retrieval: true      # ENABLED for Epic 2
+      analytics_dashboard: true  # ENABLED for Epic 2
       ab_testing: false          # Framework test only
 
 # Answer generation strategy (Same as baseline)
