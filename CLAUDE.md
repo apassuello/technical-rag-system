@@ -234,6 +234,58 @@ src/components/retrievers/
 4. **Performance Optimization**: ✅ <200ms neural reranking latency achieved
 5. **Architecture Completion**: ✅ Task 2.4 and 2.5 Epic deliverables implemented
 
+### Critical Architecture Fixes (July 16, 2025) ✅
+
+#### Architecture Violations Discovered & Fixed
+After implementation, comprehensive architecture review revealed several violations of Component Factory, Adapter, and direct wiring principles:
+
+**Phase 0: AdvancedRetriever Cleanup**
+- ✅ Removed bypass methods that violated delegation patterns
+- ✅ Removed analytics injection from retrieval flow
+- ✅ Restored clean configuration-only extension pattern
+
+**Phase 1: Neural Reranking Architecture Compliance**
+- ✅ Moved from separate `reranking/` component to proper `rerankers/` sub-component
+- ✅ Created `NeuralReranker` implementing Reranker interface
+- ✅ Integrated with ModularUnifiedRetriever through configuration
+
+**Phase 2: Graph Integration Architecture Compliance**
+- ✅ Moved from separate `graph/` component to proper `fusion/` sub-component  
+- ✅ Created `GraphEnhancedRRFFusion` extending FusionStrategy
+- ✅ Integrated graph signals as third fusion stream
+
+**Phase 3: Weaviate Integration Architecture Compliance**
+- ✅ Created `WeaviateIndex` as proper VectorIndex adapter (follows OllamaAdapter pattern)
+- ✅ Added Weaviate support to ModularUnifiedRetriever `_create_vector_index()`
+- ✅ Fixed AdvancedRetriever backend management (removed separate backend objects)
+- ✅ Implemented missing `_switch_to_backend()` method with proper reconfiguration
+- ✅ Restored proper delegation to parent ModularUnifiedRetriever
+
+#### Architecture Compliance Achieved ✅
+Following the architecture fixes, the system now properly follows all design principles:
+
+**✅ Component Factory Pattern**
+- Centralized creation through ModularUnifiedRetriever factory methods
+- Configuration-driven component selection (faiss vs weaviate)
+- Enhanced logging shows sub-component hierarchy
+
+**✅ Adapter Pattern (for Weaviate)**
+- External service integration (Weaviate is external)
+- Protocol translation (REST API calls)
+- Isolation of external dependencies
+
+**✅ Direct Wiring Architecture**
+- Parent ModularUnifiedRetriever holds direct reference to vector_index
+- No runtime factory lookups during retrieval
+- Clean delegation pattern
+
+**✅ Configuration-Only Extension**
+- AdvancedRetriever configures parent, doesn't replace logic
+- Backend switching through reconfiguration
+- Maintains performance benefits of direct wiring
+
+The Epic 2 system now has full architecture compliance while preserving all advanced features.
+
 ### Technical Implementation Completed
 1. ✅ Fixed neural reranking configuration validation (max_latency_ms: 1000ms → 10000ms)
 2. ✅ Implemented complete analytics dashboard with Plotly Dash (1,200+ lines)
@@ -263,6 +315,7 @@ src/components/retrievers/
 - **Epic 2 Week 2**: Graph framework implementation complete ✅ (July 14, 2025)
 - **Epic 2 Week 3**: Neural reranking architecture complete ✅ (July 15, 2025)
 - **Epic 2 Week 4 Phase 1**: Neural reranking & analytics dashboard complete ✅ (July 16, 2025)
-- **Last achievement**: Task 2.4 (Neural Reranking) + Task 2.5 (Analytics Dashboard) fully operational
-- **Current milestone**: Ready for Week 4 Phase 2 - Graph Integration & System Completion
-- **Next session focus**: Graph pipeline integration and portfolio score recovery to 90-95%
+- **Epic 2 Architecture Fix**: Phase 0-3 Complete - Architecture compliance restored ✅ (July 16, 2025)
+- **Last achievement**: Architecture violations fixed, Weaviate integration properly implemented
+- **Current milestone**: Ready for Phase 4 (Analytics) & Phase 5 (Validation)
+- **Next session focus**: Complete Epic 2 with analytics restructuring and portfolio score recovery

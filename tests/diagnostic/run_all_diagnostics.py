@@ -20,9 +20,9 @@ logging.basicConfig(level=logging.INFO, format='[%(name)s] %(levelname)s: %(mess
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-from base_diagnostic import DiagnosticTestBase
-from test_configuration_forensics import ConfigurationForensics
-from test_answer_generation_forensics import AnswerGenerationForensics
+from .base_diagnostic import DiagnosticTestBase
+from .test_configuration_forensics import ConfigurationForensics
+from .test_answer_generation_forensics import AnswerGenerationForensics
 
 
 class ComprehensiveDiagnosticRunner:
