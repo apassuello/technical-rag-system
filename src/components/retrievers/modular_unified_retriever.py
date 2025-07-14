@@ -19,9 +19,11 @@ from .sparse.bm25_retriever import BM25Retriever
 from .fusion.base import FusionStrategy
 from .fusion.rrf_fusion import RRFFusion
 from .fusion.weighted_fusion import WeightedFusion
+from .fusion.graph_enhanced_fusion import GraphEnhancedRRFFusion
 from .rerankers.base import Reranker
 from .rerankers.semantic_reranker import SemanticReranker
 from .rerankers.identity_reranker import IdentityReranker
+from .rerankers.neural_reranker import NeuralReranker
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +129,8 @@ class ModularUnifiedRetriever(Retriever):
             return RRFFusion(fusion_config)
         elif fusion_type == "weighted":
             return WeightedFusion(fusion_config)
+        elif fusion_type == "graph_enhanced_rrf":
+            return GraphEnhancedRRFFusion(fusion_config)
         else:
             raise ValueError(f"Unknown fusion strategy type: {fusion_type}")
     
@@ -139,6 +143,8 @@ class ModularUnifiedRetriever(Retriever):
             return SemanticReranker(reranker_config)
         elif reranker_type == "identity":
             return IdentityReranker(reranker_config)
+        elif reranker_type == "neural":
+            return NeuralReranker(reranker_config)
         else:
             raise ValueError(f"Unknown reranker type: {reranker_type}")
     
