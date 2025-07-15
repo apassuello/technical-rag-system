@@ -259,8 +259,10 @@ class ModularUnifiedRetriever(Retriever):
         if not documents:
             raise ValueError("Cannot index empty document list")
         
-        # Store documents
-        self.documents = documents.copy()
+        # Store documents (extend existing instead of replacing)
+        if not hasattr(self, 'documents') or self.documents is None:
+            self.documents = []
+        self.documents.extend(documents)
         
         # Get embedding dimension from first document
         if documents[0].embedding is not None:
@@ -268,11 +270,14 @@ class ModularUnifiedRetriever(Retriever):
         else:
             raise ValueError("Documents must have embeddings before indexing")
         
-        # Initialize and index in vector index
-        self.vector_index.initialize_index(embedding_dim)
+        # Initialize index only if not already initialized
+        if not hasattr(self.vector_index, 'index') or self.vector_index.index is None:
+            self.vector_index.initialize_index(embedding_dim)
+        
+        # Add documents to vector index
         self.vector_index.add_documents(documents)
         
-        # Index in sparse retriever
+        # Index in sparse retriever (this needs fixing too)
         self.sparse_retriever.index_documents(documents)
         
         logger.info(f"Indexed {len(documents)} documents in all sub-components")

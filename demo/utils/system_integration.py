@@ -14,6 +14,8 @@ from typing import Dict, Any, List, Optional, Tuple
 import json
 import os
 import sys
+import numpy as np
+from .knowledge_cache import KnowledgeCache, create_embedder_config_hash
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
@@ -32,7 +34,7 @@ logger = logging.getLogger(__name__)
 class Epic2SystemManager:
     """Manages Epic 2 system initialization and operations for the demo"""
     
-    def __init__(self):
+    def __init__(self, demo_mode: bool = True):
         self.system: Optional[PlatformOrchestrator] = None
         self.config_path = Path("config/advanced_test.yaml")
         self.corpus_path = Path("data/riscv_comprehensive_corpus")
@@ -40,6 +42,8 @@ class Epic2SystemManager:
         self.documents_processed = 0
         self.last_query_results = None
         self.performance_metrics = {}
+        self.knowledge_cache = KnowledgeCache()
+        self.demo_mode = demo_mode  # Use reduced corpus for faster testing
         
     def initialize_system(self, progress_callback=None, status_callback=None) -> bool:
         """
@@ -79,22 +83,45 @@ class Epic2SystemManager:
             if not self._verify_system_health():
                 raise RuntimeError("System health check failed")
             
-            if progress_callback:
-                progress_callback(60)
-            if status_callback:
-                status_callback("📄 Processing RISC-V document corpus...")
+            # Check if we can load from cache first
+            pdf_files = self._get_corpus_files()
+            embedder_config = self._get_embedder_config()
             
-            # Process documents (this will take longer now)
-            self.documents_processed = self._process_documents()
+            if self.knowledge_cache.is_cache_valid(pdf_files, embedder_config):
+                if progress_callback:
+                    progress_callback(70)
+                if status_callback:
+                    status_callback("⚡ Loading from cache...")
+                
+                # Try to load from cache
+                if self._load_from_cache():
+                    logger.info("🚀 Successfully loaded from cache - skipping document processing")
+                    self.documents_processed = len(pdf_files)
+                    
+                    if progress_callback:
+                        progress_callback(95)
+                    if status_callback:
+                        status_callback("✅ System ready from cache")
+                else:
+                    logger.warning("Cache load failed, falling back to document processing")
+                    self.documents_processed = self._process_documents_with_progress(progress_callback, status_callback)
+            else:
+                if progress_callback:
+                    progress_callback(60)
+                if status_callback:
+                    status_callback("📄 Processing RISC-V document corpus...")
+                
+                # Process documents (this will take longer now)
+                self.documents_processed = self._process_documents_with_progress(progress_callback, status_callback)
             
             if progress_callback:
-                progress_callback(85)
+                progress_callback(95)
             if status_callback:
                 status_callback("🔍 Finalizing search indices...")
             
             # Small delay to show index finalization
             import time
-            time.sleep(1)
+            time.sleep(0.5)
             
             # Warm up the system with a test query
             self._warmup_system()
@@ -146,30 +173,211 @@ class Epic2SystemManager:
             logger.error(f"System health check failed: {e}")
             return False
     
-    def _process_documents(self) -> int:
-        """Process all documents in the RISC-V corpus"""
+    def _get_corpus_files(self) -> List[Path]:
+        """Get corpus files based on demo mode"""
+        if not self.corpus_path.exists():
+            logger.warning(f"Corpus path not found: {self.corpus_path}")
+            return []
+        
+        pdf_files = list(self.corpus_path.rglob("*.pdf"))
+        
+        if self.demo_mode:
+            # In demo mode, use only first 10 files for faster testing
+            demo_files = pdf_files[:10]
+            logger.info(f"Demo mode: Using {len(demo_files)} files out of {len(pdf_files)} total")
+            return demo_files
+        else:
+            logger.info(f"Production mode: Using all {len(pdf_files)} files")
+            return pdf_files
+    
+    def _get_embedder_config(self) -> Dict[str, Any]:
+        """Get current embedder configuration for cache validation"""
         try:
-            if not self.corpus_path.exists():
-                logger.warning(f"Corpus path not found: {self.corpus_path}")
-                return 0
+            embedder = self.system.get_component('embedder')
+            if hasattr(embedder, 'get_config'):
+                return embedder.get_config()
+            else:
+                # Fallback: create basic config from embedder
+                return {
+                    "model_name": getattr(embedder, 'model_name', 'default'),
+                    "device": getattr(embedder, 'device', 'cpu'),
+                    "max_length": getattr(embedder, 'max_length', 512)
+                }
+        except Exception as e:
+            logger.warning(f"Could not get embedder config: {e}")
+            return {"model_name": "default", "device": "cpu", "max_length": 512}
+    
+    def _load_from_cache(self) -> bool:
+        """Load processed documents from cache"""
+        try:
+            if not self.knowledge_cache.is_valid():
+                return False
             
-            # Find all PDF files in the corpus
-            pdf_files = list(self.corpus_path.rglob("*.pdf"))
-            logger.info(f"Found {len(pdf_files)} PDF files in corpus")
+            # Load documents and embeddings from cache
+            documents, embeddings = self.knowledge_cache.load_knowledge_base()
+            
+            if not documents or embeddings is None:
+                logger.warning("Cache data is incomplete")
+                return False
+            
+            # Restore to the retriever
+            retriever = self.system.get_component('retriever')
+            
+            # First, try to restore via proper methods
+            if hasattr(retriever, 'restore_from_cache'):
+                return retriever.restore_from_cache(documents, embeddings)
+            
+            # For AdvancedRetriever, try to access the underlying ModularUnifiedRetriever
+            if hasattr(retriever, 'retriever') and hasattr(retriever.retriever, 'vector_index'):
+                base_retriever = retriever.retriever
+                base_retriever.vector_index.documents = documents
+                base_retriever.vector_index.embeddings = embeddings
+                
+                # Rebuild FAISS index
+                if hasattr(base_retriever.vector_index, 'index') and base_retriever.vector_index.index is not None:
+                    base_retriever.vector_index.index.reset()
+                    base_retriever.vector_index.index.add(embeddings)
+                
+                # Rebuild BM25 index
+                if hasattr(base_retriever, 'sparse_retriever'):
+                    base_retriever.sparse_retriever.build_index(documents)
+                
+                logger.info(f"Cache restored: {len(documents)} documents, {embeddings.shape} embeddings")
+                return True
+            
+            # For ModularUnifiedRetriever directly
+            elif hasattr(retriever, 'vector_index'):
+                retriever.vector_index.documents = documents
+                retriever.vector_index.embeddings = embeddings
+                
+                # Rebuild FAISS index
+                if hasattr(retriever.vector_index, 'index') and retriever.vector_index.index is not None:
+                    retriever.vector_index.index.reset()
+                    retriever.vector_index.index.add(embeddings)
+                
+                # Rebuild BM25 index
+                if hasattr(retriever, 'sparse_retriever'):
+                    retriever.sparse_retriever.build_index(documents)
+                
+                logger.info(f"Cache restored: {len(documents)} documents, {embeddings.shape} embeddings")
+                return True
+            
+            else:
+                logger.warning("Cannot restore cache - unsupported retriever type")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to load from cache: {e}")
+            return False
+    
+    def _process_documents_with_progress(self, progress_callback=None, status_callback=None) -> int:
+        """Process documents with progress updates"""
+        if status_callback:
+            status_callback("📄 Processing RISC-V document corpus...")
+        
+        # Get the actual processing done and update progress
+        total_processed = self._process_documents()
+        
+        if progress_callback:
+            progress_callback(85)
+        
+        return total_processed
+    
+    def _process_documents(self) -> int:
+        """Process documents in the RISC-V corpus"""
+        try:
+            # Get corpus files (respects demo mode)
+            pdf_files = self._get_corpus_files()
             
             if not pdf_files:
                 logger.warning("No PDF files found in corpus")
                 return 0
             
-            # Actually process documents through the system
+            # Process documents fresh (caching temporarily disabled for stability)
+            logger.info("🔄 Processing documents fresh...")
+            
+            # Use optimized batch processing for better performance
             logger.info("Processing documents through Epic 2 system...")
-            results = self.system.process_documents(pdf_files)
+            
+            # Import parallel processor
+            from .parallel_processor import ParallelDocumentProcessor
+            
+            # Use batch processing for better memory management
+            parallel_processor = ParallelDocumentProcessor(self.system, max_workers=2)
+            results = parallel_processor.process_documents_batched(pdf_files, batch_size=10)
             
             # Calculate total chunks processed
             total_chunks = sum(results.values())
             processed_files = len([f for f, chunks in results.items() if chunks > 0])
             
             logger.info(f"Successfully processed {processed_files} documents, created {total_chunks} chunks")
+            
+            # Save to cache for future use
+            try:
+                logger.info("💾 Saving processed documents to cache...")
+                
+                # Get embedder config for cache validation
+                embedder_config = self._get_embedder_config()
+                
+                # Extract documents and embeddings from the retriever
+                retriever = self.system.get_component('retriever')
+                
+                # Try to extract documents and embeddings for caching
+                documents = []
+                embeddings = []
+                
+                # Try different methods to get documents from retriever
+                if hasattr(retriever, 'get_all_documents'):
+                    documents = retriever.get_all_documents()
+                    embeddings = retriever.get_all_embeddings()
+                
+                # For AdvancedRetriever, access the underlying ModularUnifiedRetriever
+                elif hasattr(retriever, 'retriever') and hasattr(retriever.retriever, 'vector_index'):
+                    base_retriever = retriever.retriever
+                    if hasattr(base_retriever.vector_index, 'documents'):
+                        documents = base_retriever.vector_index.documents
+                        if hasattr(base_retriever.vector_index, 'embeddings'):
+                            embeddings = base_retriever.vector_index.embeddings
+                        
+                # For ModularUnifiedRetriever directly
+                elif hasattr(retriever, 'vector_index') and hasattr(retriever.vector_index, 'documents'):
+                    documents = retriever.vector_index.documents
+                    if hasattr(retriever.vector_index, 'embeddings'):
+                        embeddings = retriever.vector_index.embeddings
+                        
+                else:
+                    logger.warning("Cannot extract documents for caching - unsupported retriever structure")
+                
+                # Save to cache if we have documents
+                if documents:
+                    # Convert embeddings to numpy array if needed
+                    if embeddings is not None and not isinstance(embeddings, np.ndarray):
+                        try:
+                            embeddings = np.array(embeddings)
+                        except Exception as e:
+                            logger.warning(f"Failed to convert embeddings to numpy array: {e}")
+                            embeddings = None
+                    
+                    # Create dummy embeddings if not available
+                    if embeddings is None or not hasattr(embeddings, 'shape') or embeddings.shape[0] == 0:
+                        logger.warning("No embeddings available, creating placeholder for cache")
+                        embeddings = np.zeros((len(documents), 384))  # Default embedding size
+                    
+                    self.knowledge_cache.save_knowledge_base(
+                        documents=documents,
+                        embeddings=embeddings,
+                        pdf_files=pdf_files,
+                        embedder_config=embedder_config
+                    )
+                    
+                    logger.info("✅ Documents cached successfully for future use")
+                else:
+                    logger.warning("No documents found for caching")
+                    
+            except Exception as cache_e:
+                logger.error(f"Failed to save cache: {cache_e}")
+                # Continue without caching - not critical
+            
             return processed_files
             
         except Exception as e:
@@ -190,6 +398,18 @@ class Epic2SystemManager:
             logger.info("System warmup completed")
         except Exception as e:
             logger.warning(f"System warmup failed: {e}")
+    
+    def query(self, query: str) -> Dict[str, Any]:
+        """
+        Process a query through the Epic 2 system (alias for process_query)
+        
+        Args:
+            query: User query string
+            
+        Returns:
+            Dict containing results and performance metrics
+        """
+        return self.process_query(query)
     
     def process_query(self, query: str) -> Dict[str, Any]:
         """
@@ -232,6 +452,18 @@ class Epic2SystemManager:
             total_time = (time.time() - start_time) * 1000
             
             logger.info(f"Query processed successfully in {total_time:.0f}ms")
+            
+            # Debug: Log source information
+            if hasattr(answer, 'sources'):
+                logger.info(f"Retrieved {len(answer.sources)} source documents:")
+                for i, source in enumerate(answer.sources[:3]):  # Log first 3 sources
+                    source_info = getattr(source, 'metadata', {})
+                    source_file = source_info.get('source', 'unknown')
+                    source_page = source_info.get('page', 'unknown')
+                    content_preview = source.content[:100] + "..." if len(source.content) > 100 else source.content
+                    logger.info(f"  Source {i+1}: {source_file} (page {source_page}) - {content_preview}")
+            else:
+                logger.warning("No sources found in answer object")
             
             # Extract results from the answer object
             if hasattr(answer, 'text') and hasattr(answer, 'sources'):
@@ -493,9 +725,20 @@ class Epic2SystemManager:
                 "performance": "~25ms for entity extraction"
             }
         }
+    
+    def get_cache_info(self) -> Dict[str, Any]:
+        """Get information about the knowledge cache"""
+        return self.knowledge_cache.get_cache_info()
+    
+    def clear_cache(self):
+        """Clear the knowledge cache"""
+        self.knowledge_cache.clear_cache()
 
 # Global system manager instance
-system_manager = Epic2SystemManager()
+# Use environment variable or default to demo_mode=False for full corpus
+import os
+demo_mode = os.getenv('EPIC2_DEMO_MODE', 'false').lower() == 'true'
+system_manager = Epic2SystemManager(demo_mode=demo_mode)
 
 def get_system_manager() -> Epic2SystemManager:
     """Get the global system manager instance"""

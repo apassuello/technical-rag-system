@@ -22,9 +22,9 @@ embedder:
     batch_processor:
       type: "dynamic"
       config:
-        initial_batch_size: 32
-        max_batch_size: 128
-        optimize_for_memory: true
+        initial_batch_size: 64  # Increased from 32
+        max_batch_size: 256     # Increased from 128
+        optimize_for_memory: false  # Prioritize speed over memory
     cache:
       type: "memory"
       config:
@@ -73,8 +73,8 @@ retriever:
       query_dependent_weighting: false
       normalization_method: "min_max"  # "min_max", "z_score", "softmax"
       
-      # Performance optimization
-      max_candidates_per_strategy: 100
+      # Performance optimization - increased for better quality with 4567 chunks
+      max_candidates_per_strategy: 200  # Increased from 100 to get more diverse candidates
       early_termination_threshold: 0.95
 
     # Neural Reranking Configuration (Epic 2 enabled)
@@ -86,8 +86,8 @@ retriever:
       model_type: "cross_encoder"
       device: "auto"
       
-      # Reranking parameters
-      max_candidates: 50
+      # Reranking parameters - increased for better quality
+      max_candidates: 100  # Increased from 50 to rerank more candidates
       batch_size: 32
       max_length: 512
       
@@ -109,11 +109,11 @@ retriever:
     graph_retrieval:
       enabled: true  # Enable graph-based retrieval
       
-      # Graph construction
+      # Graph construction - increased for better coverage
       enable_entity_linking: true
       enable_cross_references: true
-      similarity_threshold: 0.7
-      max_connections_per_document: 10
+      similarity_threshold: 0.65  # Lowered from 0.7 to find more connections
+      max_connections_per_document: 15  # Increased from 10
       
       # Graph algorithms
       use_pagerank: true
@@ -186,20 +186,49 @@ retriever:
       analytics_dashboard: true  # ENABLED for Epic 2
       ab_testing: false          # Framework test only
 
-# Answer generation strategy (Same as baseline)
+# Answer generation strategy (Enhanced for technical documentation)
 answer_generator:
   type: "adaptive_modular"
   config:
     model_name: "llama3.2:3b"
     api_token: null
     temperature: 0.3
-    max_tokens: 512
+    max_tokens: 1024  # Increased from 512 for more comprehensive answers
     use_ollama: true
     ollama_url: "http://localhost:11434"
     use_inference_providers: false
     enable_adaptive_prompts: false
     enable_chain_of_thought: false
     confidence_threshold: 0.85
+    
+    # Enhanced prompt configuration for technical documentation
+    prompt_builder:
+      type: "simple"
+      config:
+        max_context_length: 12000  # Increased from 4000 for more context
+        include_instructions: true
+        citation_style: "inline"
+        template: |
+          You are an expert technical assistant specializing in RISC-V architecture and computer systems.
+          
+          Context Documents:
+          {context}
+          
+          Question: {query}
+          
+          Instructions:
+          - Provide a comprehensive, detailed technical answer based ONLY on the provided context
+          - Include technical specifications, encoding details, and implementation information when available
+          - Explain concepts step-by-step with technical depth appropriate for engineers
+          - Cover related concepts and connections mentioned in the context
+          - Include specific examples, instruction formats, or implementation details when present
+          - Be thorough and detailed - technical documentation requires comprehensive coverage
+          - If multiple aspects are mentioned in the context, address all of them
+          - ALWAYS include citations using [Document X] format after every factual claim
+          - Every technical specification, instruction format, or implementation detail must be cited
+          - Use multiple citations when information comes from several sources: [Document 1, Document 2]
+          
+          Answer:
 
 # Global settings
 global_settings:
