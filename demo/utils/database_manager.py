@@ -414,6 +414,11 @@ class DatabaseManager:
                             embedding = doc['embedding']
                         
                         if embedding is not None:
+                            # Convert to numpy array if it's a list
+                            if isinstance(embedding, list):
+                                embedding = np.array(embedding, dtype=np.float32)
+                            elif not isinstance(embedding, np.ndarray):
+                                embedding = np.array(embedding, dtype=np.float32)
                             chunk.set_embedding(embedding)
                         
                         session.add(chunk)
