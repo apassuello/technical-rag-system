@@ -96,33 +96,42 @@ class BM25Retriever(SparseRetriever):
         
         start_time = time.time()
         
-        # Store documents
-        self.documents = documents.copy()
+        # Store documents (extend existing instead of replacing)
+        if not hasattr(self, 'documents') or self.documents is None:
+            self.documents = []
+        if not hasattr(self, 'tokenized_corpus') or self.tokenized_corpus is None:
+            self.tokenized_corpus = []
+        if not hasattr(self, 'chunk_mapping') or self.chunk_mapping is None:
+            self.chunk_mapping = []
         
-        # Extract and preprocess texts
+        # Keep track of starting index for new documents
+        start_idx = len(self.documents)
+        
+        # Add new documents
+        self.documents.extend(documents)
+        
+        # Extract and preprocess texts for new documents only
         texts = [doc.content for doc in documents]
-        self.tokenized_corpus = [self._preprocess_text(text) for text in texts]
+        new_tokenized = [self._preprocess_text(text) for text in texts]
         
-        # Filter out empty tokenized texts and track mapping
-        valid_corpus = []
-        self.chunk_mapping = []
-        
-        for i, tokens in enumerate(self.tokenized_corpus):
+        # Filter out empty tokenized texts and track mapping for new documents
+        for i, tokens in enumerate(new_tokenized):
             if tokens:  # Only include non-empty tokenized texts
-                valid_corpus.append(tokens)
-                self.chunk_mapping.append(i)
+                self.tokenized_corpus.append(tokens)
+                self.chunk_mapping.append(start_idx + i)
         
-        if not valid_corpus:
+        if not self.tokenized_corpus:
             raise ValueError("No valid text content found in documents")
         
-        # Create BM25 index
-        self.bm25 = BM25Okapi(valid_corpus, k1=self.k1, b=self.b)
+        # Rebuild BM25 index with all documents (BM25Okapi doesn't support incremental updates)
+        self.bm25 = BM25Okapi(self.tokenized_corpus, k1=self.k1, b=self.b)
         
         elapsed = time.time() - start_time
         total_tokens = sum(len(tokens) for tokens in self.tokenized_corpus)
         tokens_per_sec = total_tokens / elapsed if elapsed > 0 else 0
         
-        logger.info(f"Indexed {len(documents)} documents ({len(valid_corpus)} valid) in {elapsed:.3f}s")
+        valid_doc_count = len([tokens for tokens in self.tokenized_corpus if tokens])
+        logger.info(f"Indexed {len(documents)} new documents ({valid_doc_count} total valid) in {elapsed:.3f}s")
         logger.debug(f"Processing rate: {tokens_per_sec:.1f} tokens/second")
     
     def search(self, query: str, k: int = 5) -> List[Tuple[int, float]]:
