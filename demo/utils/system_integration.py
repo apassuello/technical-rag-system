@@ -111,8 +111,14 @@ class Epic2SystemManager:
                 if status_callback:
                     status_callback("📄 Processing RISC-V document corpus...")
                 
+                # Enable deferred indexing for better performance
+                self._enable_deferred_indexing()
+                
                 # Process documents (this will take longer now)
                 self.documents_processed = self._process_documents_with_progress(progress_callback, status_callback)
+                
+                # Disable deferred indexing and rebuild final index
+                self._disable_deferred_indexing()
             
             if progress_callback:
                 progress_callback(95)
@@ -206,6 +212,50 @@ class Epic2SystemManager:
         except Exception as e:
             logger.warning(f"Could not get embedder config: {e}")
             return {"model_name": "default", "device": "cpu", "max_length": 512}
+    
+    def _enable_deferred_indexing(self) -> None:
+        """Enable deferred indexing mode for batch processing optimization"""
+        try:
+            retriever = self.system.get_component('retriever')
+            
+            # AdvancedRetriever inherits from ModularUnifiedRetriever, so it has sparse_retriever directly
+            if hasattr(retriever, 'sparse_retriever'):
+                sparse_retriever = retriever.sparse_retriever
+                logger.debug(f"Found sparse retriever: {type(sparse_retriever).__name__}")
+            else:
+                logger.warning("Cannot enable deferred indexing - sparse retriever not found")
+                return
+            
+            if hasattr(sparse_retriever, 'enable_deferred_indexing'):
+                sparse_retriever.enable_deferred_indexing()
+                logger.info("🚀 Deferred indexing enabled for batch processing optimization")
+            else:
+                logger.warning(f"Sparse retriever {type(sparse_retriever).__name__} does not support deferred indexing")
+                
+        except Exception as e:
+            logger.warning(f"Failed to enable deferred indexing: {e}")
+    
+    def _disable_deferred_indexing(self) -> None:
+        """Disable deferred indexing mode and rebuild final index"""
+        try:
+            retriever = self.system.get_component('retriever')
+            
+            # AdvancedRetriever inherits from ModularUnifiedRetriever, so it has sparse_retriever directly
+            if hasattr(retriever, 'sparse_retriever'):
+                sparse_retriever = retriever.sparse_retriever
+                logger.debug(f"Found sparse retriever: {type(sparse_retriever).__name__}")
+            else:
+                logger.warning("Cannot disable deferred indexing - sparse retriever not found")
+                return
+            
+            if hasattr(sparse_retriever, 'disable_deferred_indexing'):
+                sparse_retriever.disable_deferred_indexing()
+                logger.info("✅ Deferred indexing disabled and final BM25 index rebuilt")
+            else:
+                logger.warning(f"Sparse retriever {type(sparse_retriever).__name__} does not support deferred indexing")
+                
+        except Exception as e:
+            logger.warning(f"Failed to disable deferred indexing: {e}")
     
     def _load_from_cache(self) -> bool:
         """Load processed documents from cache"""
