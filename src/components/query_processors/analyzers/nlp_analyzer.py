@@ -162,6 +162,9 @@ class NLPAnalyzer(BaseQueryAnalyzer):
         suggested_k = self._suggest_retrieval_k(query, basic_features)
         confidence = self._calculate_confidence(basic_features)
         
+        # Epic 2 feature analysis
+        epic2_features = self._analyze_epic2_features(query, basic_features)
+        
         return QueryAnalysis(
             query=query,
             complexity_score=complexity_score,
@@ -175,7 +178,8 @@ class NLPAnalyzer(BaseQueryAnalyzer):
                 'model_used': self._model_name,
                 'nlp_available': self._nlp is not None,
                 'features': basic_features,
-                'analysis_version': '1.0'
+                'epic2_features': epic2_features,
+                'analysis_version': '2.0'
             }
         )
     

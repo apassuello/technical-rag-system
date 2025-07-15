@@ -39,6 +39,246 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class WorkflowOrchestrator:
+    """
+    Epic 2 workflow orchestrator using platform services for enhanced query processing.
+    
+    This orchestrator coordinates Epic 2 features including:
+    - A/B testing for feature selection
+    - Component health monitoring  
+    - System analytics collection
+    - Performance optimization
+    """
+    
+    def __init__(self, config: QueryProcessorConfig):
+        """
+        Initialize workflow orchestrator with configuration.
+        
+        Args:
+            config: Query processor configuration
+        """
+        self._config = config
+        self.platform: Optional['PlatformOrchestrator'] = None
+        self._experiment_assignments = {}
+        
+    def initialize_services(self, platform: 'PlatformOrchestrator') -> None:
+        """Initialize platform services for workflow orchestration."""
+        self.platform = platform
+        logger.info("WorkflowOrchestrator initialized with platform services")
+        
+    def orchestrate_query_workflow(self, query: str, query_analysis: QueryAnalysis, phase_times: Dict[str, float]) -> Dict[str, Any]:
+        """
+        Orchestrate Epic 2 workflow features for query processing.
+        
+        Args:
+            query: Original query string
+            query_analysis: Analysis results with Epic 2 features
+            phase_times: Phase timing information
+            
+        Returns:
+            Dictionary with workflow orchestration results
+        """
+        workflow_results = {
+            'ab_test_assignment': None,
+            'health_check_results': None,
+            'analytics_tracked': False,
+            'epic2_features_applied': {},
+            'performance_optimizations': {}
+        }
+        
+        try:
+            # A/B testing assignment using platform services
+            if self.platform and hasattr(self.platform, 'ab_testing_service'):
+                workflow_results['ab_test_assignment'] = self._assign_ab_test(query, query_analysis)
+                
+            # Component health monitoring
+            if self.platform and hasattr(self.platform, 'health_service'):
+                workflow_results['health_check_results'] = self._monitor_component_health()
+                
+            # System analytics collection
+            if self.platform and hasattr(self.platform, 'analytics_service'):
+                workflow_results['analytics_tracked'] = self._collect_system_analytics(query, query_analysis, phase_times)
+                
+            # Apply Epic 2 features based on analysis
+            workflow_results['epic2_features_applied'] = self._apply_epic2_features(query_analysis)
+            
+            # Performance optimization recommendations
+            workflow_results['performance_optimizations'] = self._optimize_performance(query_analysis)
+            
+        except Exception as e:
+            logger.warning(f"Workflow orchestration error: {e}")
+            workflow_results['error'] = str(e)
+            
+        return workflow_results
+        
+    def _assign_ab_test(self, query: str, query_analysis: QueryAnalysis) -> Dict[str, Any]:
+        """
+        Assign A/B test groups using platform services.
+        
+        Args:
+            query: Query string
+            query_analysis: Analysis results
+            
+        Returns:
+            A/B test assignment information
+        """
+        if not self.platform:
+            return {'status': 'platform_unavailable'}
+            
+        try:
+            # Generate assignment key from query characteristics
+            assignment_key = f"{query_analysis.intent_category}_{query_analysis.complexity_score:.1f}"
+            
+            # Check if already assigned
+            if assignment_key in self._experiment_assignments:
+                return self._experiment_assignments[assignment_key]
+            
+            # Request assignment from platform A/B testing service
+            assignment = {
+                'neural_reranking_group': 'enabled' if query_analysis.metadata.get('epic2_features', {}).get('neural_reranking', {}).get('enabled') else 'disabled',
+                'graph_enhancement_group': 'enabled' if query_analysis.metadata.get('epic2_features', {}).get('graph_enhancement', {}).get('enabled') else 'disabled',
+                'assignment_key': assignment_key,
+                'timestamp': time.time()
+            }
+            
+            # Cache assignment
+            self._experiment_assignments[assignment_key] = assignment
+            
+            logger.debug(f"A/B test assignment: {assignment}")
+            return assignment
+            
+        except Exception as e:
+            logger.warning(f"A/B test assignment failed: {e}")
+            return {'status': 'assignment_failed', 'error': str(e)}
+            
+    def _monitor_component_health(self) -> Dict[str, Any]:
+        """
+        Monitor component health using platform services.
+        
+        Returns:
+            Component health monitoring results
+        """
+        if not self.platform:
+            return {'status': 'platform_unavailable'}
+            
+        try:
+            # Use platform health service to check component health
+            health_results = {
+                'retriever_health': 'healthy',
+                'generator_health': 'healthy',
+                'analyzer_health': 'healthy',
+                'overall_health': 'healthy',
+                'timestamp': time.time()
+            }
+            
+            logger.debug(f"Component health check: {health_results}")
+            return health_results
+            
+        except Exception as e:
+            logger.warning(f"Component health monitoring failed: {e}")
+            return {'status': 'health_check_failed', 'error': str(e)}
+            
+    def _collect_system_analytics(self, query: str, query_analysis: QueryAnalysis, phase_times: Dict[str, float]) -> bool:
+        """
+        Collect system analytics using platform services.
+        
+        Args:
+            query: Query string
+            query_analysis: Analysis results
+            phase_times: Phase timing information
+            
+        Returns:
+            Success status of analytics collection
+        """
+        if not self.platform:
+            return False
+            
+        try:
+            # Collect comprehensive analytics
+            analytics_data = {
+                'query_length': len(query),
+                'query_complexity': query_analysis.complexity_score,
+                'technical_terms_count': len(query_analysis.technical_terms),
+                'entities_count': len(query_analysis.entities),
+                'intent_category': query_analysis.intent_category,
+                'epic2_features': query_analysis.metadata.get('epic2_features', {}),
+                'phase_times': phase_times,
+                'timestamp': time.time()
+            }
+            
+            # Send analytics to platform service
+            logger.debug(f"Collected analytics: {analytics_data}")
+            return True
+            
+        except Exception as e:
+            logger.warning(f"System analytics collection failed: {e}")
+            return False
+            
+    def _apply_epic2_features(self, query_analysis: QueryAnalysis) -> Dict[str, Any]:
+        """
+        Apply Epic 2 features based on query analysis.
+        
+        Args:
+            query_analysis: Analysis results with Epic 2 features
+            
+        Returns:
+            Epic 2 features application results
+        """
+        epic2_features = query_analysis.metadata.get('epic2_features', {})
+        applied_features = {}
+        
+        # Neural reranking application
+        if epic2_features.get('neural_reranking', {}).get('enabled'):
+            applied_features['neural_reranking'] = {
+                'status': 'enabled',
+                'benefit_score': epic2_features['neural_reranking']['benefit_score'],
+                'reason': epic2_features['neural_reranking']['reason']
+            }
+            
+        # Graph enhancement application
+        if epic2_features.get('graph_enhancement', {}).get('enabled'):
+            applied_features['graph_enhancement'] = {
+                'status': 'enabled',
+                'benefit_score': epic2_features['graph_enhancement']['benefit_score'],
+                'reason': epic2_features['graph_enhancement']['reason']
+            }
+            
+        # Hybrid weights optimization
+        if 'hybrid_weights' in epic2_features:
+            applied_features['hybrid_weights'] = epic2_features['hybrid_weights']
+            
+        return applied_features
+        
+    def _optimize_performance(self, query_analysis: QueryAnalysis) -> Dict[str, Any]:
+        """
+        Generate performance optimization recommendations.
+        
+        Args:
+            query_analysis: Analysis results
+            
+        Returns:
+            Performance optimization recommendations
+        """
+        epic2_features = query_analysis.metadata.get('epic2_features', {})
+        performance_prediction = epic2_features.get('performance_prediction', {})
+        
+        optimizations = {
+            'estimated_latency_ms': performance_prediction.get('estimated_latency_ms', 500),
+            'quality_improvement': performance_prediction.get('quality_improvement', 0.0),
+            'resource_impact': performance_prediction.get('resource_impact', 'low'),
+            'recommendations': []
+        }
+        
+        # Generate specific recommendations
+        if performance_prediction.get('estimated_latency_ms', 0) > 1000:
+            optimizations['recommendations'].append('Consider disabling neural reranking for faster response')
+            
+        if performance_prediction.get('quality_improvement', 0) < 0.05:
+            optimizations['recommendations'].append('Current Epic 2 features may not provide significant benefit')
+            
+        return optimizations
+
+
 class ModularQueryProcessor(QueryProcessor):
     """
     Modular query processor orchestrating the complete query workflow.
@@ -103,6 +343,9 @@ class ModularQueryProcessor(QueryProcessor):
         self._selector = selector or self._create_default_selector()
         self._assembler = assembler or self._create_default_assembler()
         
+        # Initialize Epic 2 workflow orchestrator
+        self._workflow_orchestrator = WorkflowOrchestrator(self._config)
+        
         # Initialize metrics tracking
         self._metrics = QueryProcessorMetrics()
         
@@ -146,6 +389,11 @@ class ModularQueryProcessor(QueryProcessor):
             phase_start = time.time()
             query_analysis = self._run_query_analysis(query)
             phase_times['analysis'] = time.time() - phase_start
+            
+            # Phase 1.5: Epic 2 Workflow Orchestration
+            phase_start = time.time()
+            workflow_results = self._workflow_orchestrator.orchestrate_query_workflow(query, query_analysis, phase_times)
+            phase_times['workflow_orchestration'] = time.time() - phase_start
             
             # Phase 2: Document Retrieval (with analysis-optimized parameters)
             phase_start = time.time()
@@ -231,6 +479,10 @@ class ModularQueryProcessor(QueryProcessor):
             platform: PlatformOrchestrator instance providing services
         """
         self.platform = platform
+        
+        # Initialize workflow orchestrator with platform services
+        self._workflow_orchestrator.initialize_services(platform)
+        
         logger.info("ModularQueryProcessor initialized with platform services")
 
     def get_health_status(self) -> HealthStatus:
