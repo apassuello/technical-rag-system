@@ -155,7 +155,7 @@ class EnhancedNeuralRerankingConfig:
     
     def validate_compatibility(self) -> bool:
         """
-        Validate compatibility with existing AdvancedRetriever.
+        Validate compatibility with existing ModularUnifiedRetriever.
         
         Returns:
             True if configuration is compatible

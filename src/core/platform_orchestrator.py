@@ -230,7 +230,7 @@ class ComponentHealthServiceImpl(ComponentHealthService):
             "VectorStore": ["add", "search"],
             "Retriever": ["retrieve"],
             "ModularUnifiedRetriever": ["retrieve"],
-            "AdvancedRetriever": ["retrieve"],
+            # "AdvancedRetriever": ["retrieve"],  # Removed - functionality moved to ModularUnifiedRetriever
             "AnswerGenerator": ["generate"]
         }
         
@@ -921,7 +921,7 @@ class ConfigurationServiceImpl(ConfigurationService):
                     errors.append(f"Invalid embedder type: {component_config.get('type')}")
             
             elif component == "retriever":
-                valid_types = ["unified", "modular_unified", "enhanced_modular_unified", "advanced"]
+                valid_types = ["unified", "modular_unified"]
                 if component_config.get("type") not in valid_types:
                     errors.append(f"Invalid retriever type: {component_config.get('type')}")
             
@@ -1492,6 +1492,145 @@ class BackendManagementServiceImpl(BackendManagementService):
             del self.backend_status[backend_name]
         
         logger.info(f"Unregistered backend: {backend_name}")
+    
+    def check_component_backend_health(self, component: Any) -> None:
+        """Check backend health for a component and switch if necessary (migrated from AdvancedRetriever).
+        
+        Args:
+            component: Component to check backend health for
+        """
+        component_name = type(component).__name__
+        component_id = f"{component_name}_{id(component)}"
+        
+        # Get current backend for this component
+        current_backend = self.component_backends.get(component_id)
+        if not current_backend:
+            # No backend assigned yet - try to detect from component
+            if hasattr(component, 'active_backend_name'):
+                current_backend = component.active_backend_name
+                self.component_backends[component_id] = current_backend
+            else:
+                logger.warning(f"Component {component_name} has no backend assigned")
+                return
+        
+        try:
+            # Check health of current backend
+            backend_status = self.get_backend_status(current_backend)
+            
+            if not backend_status.is_available:
+                logger.warning(
+                    f"Backend {current_backend} for {component_name} is unhealthy: "
+                    f"{backend_status.error_message}"
+                )
+                self._consider_backend_switch_for_component(component, current_backend)
+        except Exception as e:
+            logger.error(f"Backend health check failed for {component_name}: {str(e)}")
+    
+    def _consider_backend_switch_for_component(self, component: Any, failing_backend: str) -> None:
+        """Consider switching to fallback backend for a component.
+        
+        Args:
+            component: Component to switch backend for
+            failing_backend: Name of the failing backend
+        """
+        component_name = type(component).__name__
+        
+        # Get fallback backend if available
+        fallback_backend = None
+        if hasattr(component, 'fallback_backend_name'):
+            fallback_backend = component.fallback_backend_name
+        
+        # If no fallback configured, try to find available backend
+        if not fallback_backend:
+            for backend_name in self.registered_backends:
+                if backend_name != failing_backend:
+                    status = self.get_backend_status(backend_name)
+                    if status.is_available:
+                        fallback_backend = backend_name
+                        break
+        
+        if not fallback_backend:
+            logger.error(f"No fallback backend available for {component_name}")
+            return
+        
+        if fallback_backend == failing_backend:
+            logger.warning(f"Fallback backend same as failing backend for {component_name}")
+            return
+        
+        try:
+            logger.info(f"Switching {component_name} from {failing_backend} to {fallback_backend}")
+            
+            # Use the existing switch_component_backend method
+            self.switch_component_backend(component, fallback_backend)
+            
+            # Update component's backend references if supported
+            if hasattr(component, 'active_backend_name'):
+                old_backend = component.active_backend_name
+                component.active_backend_name = fallback_backend
+                
+                # Update fallback to previous active if supported
+                if hasattr(component, 'fallback_backend_name'):
+                    component.fallback_backend_name = old_backend
+            
+            logger.info(f"Successfully switched {component_name} to {fallback_backend}")
+            
+        except Exception as e:
+            logger.error(f"Failed to switch {component_name} backend: {str(e)}")
+    
+    def monitor_component_backends(self, components: List[Any]) -> Dict[str, Any]:
+        """Monitor backend health for multiple components.
+        
+        Args:
+            components: List of components to monitor
+            
+        Returns:
+            Dictionary with monitoring results
+        """
+        monitoring_results = {
+            "timestamp": time.time(),
+            "components_checked": len(components),
+            "healthy_components": 0,
+            "unhealthy_components": 0,
+            "backend_switches": 0,
+            "component_status": {}
+        }
+        
+        for component in components:
+            component_name = type(component).__name__
+            component_id = f"{component_name}_{id(component)}"
+            
+            try:
+                # Check backend health
+                self.check_component_backend_health(component)
+                
+                # Get current backend status
+                current_backend = self.component_backends.get(component_id, "unknown")
+                backend_status = self.get_backend_status(current_backend) if current_backend != "unknown" else None
+                
+                component_status = {
+                    "backend": current_backend,
+                    "healthy": backend_status.is_available if backend_status else False,
+                    "last_check": backend_status.last_check if backend_status else 0,
+                    "error": backend_status.error_message if backend_status and backend_status.error_message else None
+                }
+                
+                monitoring_results["component_status"][component_name] = component_status
+                
+                if component_status["healthy"]:
+                    monitoring_results["healthy_components"] += 1
+                else:
+                    monitoring_results["unhealthy_components"] += 1
+                    
+            except Exception as e:
+                logger.error(f"Error monitoring {component_name}: {str(e)}")
+                monitoring_results["component_status"][component_name] = {
+                    "backend": "unknown",
+                    "healthy": False,
+                    "error": str(e)
+                }
+                monitoring_results["unhealthy_components"] += 1
+        
+        return monitoring_results
 
 
 class PlatformOrchestrator:
@@ -1580,7 +1719,7 @@ class PlatformOrchestrator:
             
             # Phase 3: Architecture detection with factory-based instantiation
             ret_config = self.config.retriever
-            if ret_config.type in ["unified", "modular_unified", "enhanced_modular_unified"]:
+            if ret_config.type in ["unified", "modular_unified"]:
                 # Phase 2: Use unified retriever (no separate vector store needed)
                 self._components['retriever'] = ComponentFactory.create_retriever(
                     ret_config.type,
@@ -2202,7 +2341,7 @@ class PlatformOrchestrator:
         
         if 'retriever' in component_types:
             total_components += 1
-            if component_types['retriever'] in ['ModularUnifiedRetriever', 'AdvancedRetriever']:
+            if component_types['retriever'] in ['ModularUnifiedRetriever']:
                 modular_components += 1
         
         if 'answer_generator' in component_types:
@@ -2663,6 +2802,25 @@ class PlatformOrchestrator:
             List of migration records
         """
         return self.backend_management_service.get_migration_history()
+    
+    def check_component_backend_health(self, component: Any) -> None:
+        """Check backend health for a component and switch if necessary.
+        
+        Args:
+            component: Component to check backend health for
+        """
+        return self.backend_management_service.check_component_backend_health(component)
+    
+    def monitor_component_backends(self, components: List[Any]) -> Dict[str, Any]:
+        """Monitor backend health for multiple components.
+        
+        Args:
+            components: List of components to monitor
+            
+        Returns:
+            Dictionary with monitoring results
+        """
+        return self.backend_management_service.monitor_component_backends(components)
     
     def __str__(self) -> str:
         """String representation of the orchestrator."""
