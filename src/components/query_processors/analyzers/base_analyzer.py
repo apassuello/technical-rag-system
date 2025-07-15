@@ -261,3 +261,209 @@ class BaseQueryAnalyzer(QueryAnalyzer):
             k = max(2, k - 1)   # Definitions usually need fewer sources
         
         return k
+    
+    def _analyze_epic2_features(self, query: str, features: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze Epic 2 features for enhanced retrieval optimization.
+        
+        Args:
+            query: Query string
+            features: Basic features extracted from query
+            
+        Returns:
+            Dictionary with Epic 2 feature recommendations
+        """
+        epic2_features = {}
+        
+        # Neural reranking optimization
+        neural_reranking_score = self._calculate_neural_reranking_benefit(query, features)
+        epic2_features['neural_reranking'] = {
+            'enabled': neural_reranking_score > 0.5,
+            'benefit_score': neural_reranking_score,
+            'reason': self._get_neural_reranking_reason(neural_reranking_score, features)
+        }
+        
+        # Graph enhancement optimization
+        graph_enhancement_score = self._calculate_graph_enhancement_benefit(query, features)
+        epic2_features['graph_enhancement'] = {
+            'enabled': graph_enhancement_score > 0.4,
+            'benefit_score': graph_enhancement_score,
+            'reason': self._get_graph_enhancement_reason(graph_enhancement_score, features)
+        }
+        
+        # Hybrid search weight optimization
+        epic2_features['hybrid_weights'] = self._optimize_hybrid_weights(query, features)
+        
+        # Performance prediction
+        epic2_features['performance_prediction'] = self._predict_performance_impact(query, features, epic2_features)
+        
+        return epic2_features
+    
+    def _calculate_neural_reranking_benefit(self, query: str, features: Dict[str, Any]) -> float:
+        """
+        Calculate potential benefit of neural reranking for this query.
+        
+        Args:
+            query: Query string
+            features: Basic features
+            
+        Returns:
+            Benefit score (0.0 to 1.0)
+        """
+        benefit_score = 0.0
+        
+        # Complex queries benefit more from neural reranking
+        complexity = features.get('complexity', 'medium')
+        if complexity == 'complex':
+            benefit_score += 0.4
+        elif complexity == 'medium':
+            benefit_score += 0.2
+        
+        # Technical queries benefit from semantic understanding
+        if features.get('has_technical_indicators'):
+            benefit_score += 0.3
+        
+        # Question-based queries benefit from semantic matching
+        if features.get('has_question_words'):
+            benefit_score += 0.2
+        
+        # Longer queries have more context for neural models
+        if features.get('word_count', 0) > 10:
+            benefit_score += 0.2
+        
+        # Comparison queries benefit from semantic similarity
+        if any(word in query.lower() for word in ['compare', 'difference', 'vs', 'versus']):
+            benefit_score += 0.3
+        
+        return min(1.0, benefit_score)
+    
+    def _calculate_graph_enhancement_benefit(self, query: str, features: Dict[str, Any]) -> float:
+        """
+        Calculate potential benefit of graph enhancement for this query.
+        
+        Args:
+            query: Query string
+            features: Basic features
+            
+        Returns:
+            Benefit score (0.0 to 1.0)
+        """
+        benefit_score = 0.0
+        
+        # Queries with entities benefit from graph relationships
+        query_lower = query.lower()
+        entity_indicators = ['api', 'protocol', 'system', 'component', 'module', 'service', 'function']
+        if any(indicator in query_lower for indicator in entity_indicators):
+            benefit_score += 0.4
+        
+        # Relationship-based queries benefit from graph traversal
+        relationship_words = ['related', 'connection', 'dependency', 'integrate', 'connect', 'link']
+        if any(word in query_lower for word in relationship_words):
+            benefit_score += 0.5
+        
+        # Architecture and design queries benefit from graph structure
+        architecture_words = ['architecture', 'design', 'pattern', 'structure', 'flow', 'workflow']
+        if any(word in query_lower for word in architecture_words):
+            benefit_score += 0.3
+        
+        # Complex technical queries benefit from entity relationships
+        if features.get('has_technical_indicators') and features.get('complexity') == 'complex':
+            benefit_score += 0.2
+        
+        return min(1.0, benefit_score)
+    
+    def _get_neural_reranking_reason(self, score: float, features: Dict[str, Any]) -> str:
+        """Get human-readable reason for neural reranking decision."""
+        if score > 0.7:
+            return "High semantic complexity benefits from neural understanding"
+        elif score > 0.5:
+            return "Moderate complexity with semantic benefits"
+        elif score > 0.3:
+            return "Some semantic benefit possible"
+        else:
+            return "Simple query, limited neural benefit"
+    
+    def _get_graph_enhancement_reason(self, score: float, features: Dict[str, Any]) -> str:
+        """Get human-readable reason for graph enhancement decision."""
+        if score > 0.6:
+            return "Strong entity relationships detected"
+        elif score > 0.4:
+            return "Moderate entity/relationship patterns"
+        elif score > 0.2:
+            return "Some entity indicators present"
+        else:
+            return "Limited entity/relationship content"
+    
+    def _optimize_hybrid_weights(self, query: str, features: Dict[str, Any]) -> Dict[str, float]:
+        """
+        Optimize hybrid search weights based on query characteristics.
+        
+        Args:
+            query: Query string
+            features: Basic features
+            
+        Returns:
+            Optimized weights for dense/sparse/graph components
+        """
+        # Default weights
+        dense_weight = 0.6
+        sparse_weight = 0.3
+        graph_weight = 0.1
+        
+        # Adjust based on query characteristics
+        if features.get('has_technical_indicators'):
+            # Technical queries benefit from semantic similarity
+            dense_weight += 0.1
+            sparse_weight -= 0.05
+            graph_weight -= 0.05
+        
+        if features.get('word_count', 0) < 5:
+            # Short queries benefit from exact term matching
+            sparse_weight += 0.1
+            dense_weight -= 0.1
+        
+        # Normalize weights
+        total_weight = dense_weight + sparse_weight + graph_weight
+        return {
+            'dense_weight': dense_weight / total_weight,
+            'sparse_weight': sparse_weight / total_weight,
+            'graph_weight': graph_weight / total_weight
+        }
+    
+    def _predict_performance_impact(self, query: str, features: Dict[str, Any], epic2_features: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Predict performance impact of Epic 2 features for this query.
+        
+        Args:
+            query: Query string
+            features: Basic features
+            epic2_features: Epic 2 feature analysis
+            
+        Returns:
+            Performance prediction metrics
+        """
+        prediction = {
+            'estimated_latency_ms': 500,  # Base latency
+            'quality_improvement': 0.0,
+            'resource_impact': 'low'
+        }
+        
+        # Neural reranking impact
+        if epic2_features.get('neural_reranking', {}).get('enabled'):
+            prediction['estimated_latency_ms'] += 200
+            prediction['quality_improvement'] += 0.15
+            prediction['resource_impact'] = 'medium'
+        
+        # Graph enhancement impact
+        if epic2_features.get('graph_enhancement', {}).get('enabled'):
+            prediction['estimated_latency_ms'] += 100
+            prediction['quality_improvement'] += 0.10
+            if prediction['resource_impact'] == 'low':
+                prediction['resource_impact'] = 'medium'
+        
+        # Complexity impact
+        if features.get('complexity') == 'complex':
+            prediction['estimated_latency_ms'] += 100
+            prediction['quality_improvement'] += 0.05
+        
+        return prediction
