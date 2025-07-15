@@ -11,7 +11,12 @@ import time
 from typing import List, Dict, Any, Optional, Tuple
 import numpy as np
 
-from src.core.interfaces import Retriever, Document, RetrievalResult, Embedder
+from src.core.interfaces import Retriever, Document, RetrievalResult, Embedder, HealthStatus
+
+# Forward declaration to avoid circular import
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.core.platform_orchestrator import PlatformOrchestrator
 from .indices.base import VectorIndex
 from .indices.faiss_index import FAISSIndex
 from .indices.weaviate_index import WeaviateIndex
@@ -98,6 +103,9 @@ class ModularUnifiedRetriever(Retriever):
             "avg_time": 0.0,
             "last_retrieval_time": 0.0
         }
+        
+        # Platform services (initialized via initialize_services)
+        self.platform: Optional['PlatformOrchestrator'] = None
         
         logger.info("ModularUnifiedRetriever initialized with all sub-components")
     
@@ -243,9 +251,40 @@ class ModularUnifiedRetriever(Retriever):
             )
             self.retrieval_stats["last_retrieval_time"] = elapsed_time
             
+            # Track performance using platform services
+            if self.platform:
+                self.platform.track_component_performance(
+                    self, 
+                    "document_retrieval", 
+                    {
+                        "success": True,
+                        "retrieval_time": elapsed_time,
+                        "query": query,
+                        "results_count": len(retrieval_results),
+                        "k_requested": k,
+                        "indexed_documents": len(self.documents)
+                    }
+                )
+            
             return retrieval_results
             
         except Exception as e:
+            # Track failure using platform services
+            if self.platform:
+                elapsed_time = time.time() - start_time
+                self.platform.track_component_performance(
+                    self, 
+                    "document_retrieval", 
+                    {
+                        "success": False,
+                        "retrieval_time": elapsed_time,
+                        "query": query,
+                        "k_requested": k,
+                        "indexed_documents": len(self.documents),
+                        "error": str(e)
+                    }
+                )
+            
             logger.error(f"Modular retrieval failed: {str(e)}")
             raise RuntimeError(f"Modular retrieval failed: {str(e)}") from e
     
@@ -369,6 +408,107 @@ class ModularUnifiedRetriever(Retriever):
         }
         
         logger.info("Cleared all documents from modular retriever")
+    
+    # Standard ComponentBase interface implementation
+    def initialize_services(self, platform: 'PlatformOrchestrator') -> None:
+        """Initialize platform services for the component.
+        
+        Args:
+            platform: PlatformOrchestrator instance providing services
+        """
+        self.platform = platform
+        logger.info("ModularUnifiedRetriever initialized with platform services")
+
+    def get_health_status(self) -> HealthStatus:
+        """Get the current health status of the component.
+        
+        Returns:
+            HealthStatus object with component health information
+        """
+        if self.platform:
+            return self.platform.check_component_health(self)
+        
+        # Fallback if platform services not initialized
+        is_healthy = True
+        issues = []
+        
+        # Check sub-components
+        if not hasattr(self.vector_index, 'get_index_info'):
+            is_healthy = False
+            issues.append("Vector index not properly initialized")
+        
+        if not hasattr(self.sparse_retriever, 'get_stats'):
+            is_healthy = False
+            issues.append("Sparse retriever not properly initialized")
+        
+        if not hasattr(self.fusion_strategy, 'get_strategy_info'):
+            is_healthy = False
+            issues.append("Fusion strategy not properly initialized")
+        
+        if not hasattr(self.reranker, 'get_reranker_info'):
+            is_healthy = False
+            issues.append("Reranker not properly initialized")
+        
+        return HealthStatus(
+            is_healthy=is_healthy,
+            status="healthy" if is_healthy else "unhealthy",
+            details={
+                "indexed_documents": len(self.documents),
+                "retrieval_stats": self.retrieval_stats,
+                "sub_components": self.get_component_info(),
+                "issues": issues
+            }
+        )
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get component-specific metrics.
+        
+        Returns:
+            Dictionary containing component metrics
+        """
+        if self.platform:
+            return self.platform.collect_component_metrics(self)
+        
+        # Fallback if platform services not initialized
+        return {
+            "indexed_documents": len(self.documents),
+            "retrieval_stats": self.retrieval_stats,
+            "sub_components": self.get_component_info(),
+            "configuration": self.get_configuration()
+        }
+
+    def get_capabilities(self) -> List[str]:
+        """Get list of component capabilities.
+        
+        Returns:
+            List of capability strings
+        """
+        capabilities = [
+            "hybrid_retrieval",
+            "modular_architecture",
+            "dense_search",
+            "sparse_search",
+            "result_fusion",
+            "reranking"
+        ]
+        
+        # Add vector index capabilities
+        if hasattr(self.vector_index, 'get_capabilities'):
+            capabilities.extend([f"vector_{cap}" for cap in self.vector_index.get_capabilities()])
+        
+        # Add sparse retriever capabilities
+        if hasattr(self.sparse_retriever, 'get_capabilities'):
+            capabilities.extend([f"sparse_{cap}" for cap in self.sparse_retriever.get_capabilities()])
+        
+        # Add fusion strategy capabilities
+        if hasattr(self.fusion_strategy, 'get_capabilities'):
+            capabilities.extend([f"fusion_{cap}" for cap in self.fusion_strategy.get_capabilities()])
+        
+        # Add reranker capabilities
+        if hasattr(self.reranker, 'get_capabilities'):
+            capabilities.extend([f"reranker_{cap}" for cap in self.reranker.get_capabilities()])
+        
+        return capabilities
     
     def get_document_count(self) -> int:
         """Get the number of documents in the retriever."""

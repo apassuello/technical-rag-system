@@ -13,6 +13,11 @@ from pathlib import Path
 from enum import Enum
 import time
 
+# Forward declaration for type hints
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .platform_orchestrator import PlatformOrchestrator
+
 
 @dataclass
 class Document:
@@ -86,7 +91,53 @@ class Answer:
             raise TypeError("Sources must be a list of Documents")
 
 
-class DocumentProcessor(ABC):
+class ComponentBase(ABC):
+    """Base interface for all system components.
+    
+    This interface defines standard methods that all components must implement
+    to enable universal platform service access. Components implementing this
+    interface can use platform services for health monitoring, analytics,
+    configuration management, and other cross-cutting concerns.
+    """
+    
+    @abstractmethod
+    def get_health_status(self) -> 'HealthStatus':
+        """Get the current health status of the component.
+        
+        Returns:
+            HealthStatus object with component health information
+        """
+        pass
+    
+    @abstractmethod
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get component-specific metrics.
+        
+        Returns:
+            Dictionary containing component metrics (performance, usage, etc.)
+        """
+        pass
+    
+    @abstractmethod
+    def get_capabilities(self) -> List[str]:
+        """Get list of component capabilities.
+        
+        Returns:
+            List of capability strings describing what the component can do
+        """
+        pass
+    
+    @abstractmethod
+    def initialize_services(self, platform: 'PlatformOrchestrator') -> None:
+        """Initialize platform services for the component.
+        
+        Args:
+            platform: PlatformOrchestrator instance providing services
+        """
+        pass
+
+
+class DocumentProcessor(ComponentBase):
     """Interface for document processing strategies.
 
     Implementations should handle different file formats and
@@ -119,7 +170,7 @@ class DocumentProcessor(ABC):
         pass
 
 
-class Embedder(ABC):
+class Embedder(ComponentBase):
     """Interface for embedding generation.
 
     Implementations should convert text into numerical vectors
@@ -151,7 +202,7 @@ class Embedder(ABC):
         pass
 
 
-class VectorStore(ABC):
+class VectorStore(ComponentBase):
     """Interface for vector storage backends.
 
     Implementations should provide efficient storage and
@@ -204,7 +255,7 @@ class VectorStore(ABC):
         pass
 
 
-class Retriever(ABC):
+class Retriever(ComponentBase):
     """Interface for retrieval strategies.
 
     Implementations can use different approaches like
@@ -228,7 +279,7 @@ class Retriever(ABC):
         pass
 
 
-class AnswerGenerator(ABC):
+class AnswerGenerator(ComponentBase):
     """Interface for answer generation.
 
     Implementations can use different models and strategies
@@ -271,7 +322,7 @@ class QueryOptions:
     stream: bool = False
 
 
-class QueryProcessor(ABC):
+class QueryProcessor(ComponentBase):
     """Interface for query processing workflow.
 
     Implementations orchestrate the complete query workflow:

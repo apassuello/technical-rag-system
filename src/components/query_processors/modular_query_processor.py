@@ -29,7 +29,12 @@ from .base import (
 from .analyzers import QueryAnalyzer, NLPAnalyzer, RuleBasedAnalyzer
 from .selectors import ContextSelector, MMRSelector, TokenLimitSelector
 from .assemblers import ResponseAssembler, StandardAssembler, RichAssembler
-from src.core.interfaces import Answer, QueryOptions, Document, Retriever, AnswerGenerator
+from src.core.interfaces import Answer, QueryOptions, Document, Retriever, AnswerGenerator, HealthStatus
+
+# Forward declaration to avoid circular import
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.core.platform_orchestrator import PlatformOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +110,9 @@ class ModularQueryProcessor(QueryProcessor):
         self._last_health_check = 0
         self._health_status = {'healthy': True, 'issues': []}
         
+        # Platform services (initialized via initialize_services)
+        self.platform: Optional['PlatformOrchestrator'] = None
+        
         logger.info(f"Initialized ModularQueryProcessor with {self._get_component_summary()}")
     
     def process(self, query: str, options: Optional[QueryOptions] = None) -> Answer:
@@ -163,6 +171,14 @@ class ModularQueryProcessor(QueryProcessor):
             total_time = time.time() - start_time
             self._metrics.record_query(True, total_time, phase_times)
             
+            # Track performance using platform services
+            if self.platform:
+                self.platform.track_component_performance(
+                    self, 
+                    "query_processing", 
+                    {"success": True, "total_time": total_time, "phase_times": phase_times}
+                )
+            
             logger.info(f"Query processed successfully in {total_time:.3f}s")
             return final_answer
             
@@ -170,6 +186,14 @@ class ModularQueryProcessor(QueryProcessor):
             # Record failed processing
             total_time = time.time() - start_time
             self._metrics.record_query(False, total_time, phase_times)
+            
+            # Track failure using platform services
+            if self.platform:
+                self.platform.track_component_performance(
+                    self, 
+                    "query_processing", 
+                    {"success": False, "total_time": total_time, "error": str(e)}
+                )
             
             logger.error(f"Query processing failed after {total_time:.3f}s: {e}")
             
@@ -199,13 +223,27 @@ class ModularQueryProcessor(QueryProcessor):
         
         return self._run_query_analysis(query)
     
-    def get_health_status(self) -> Dict[str, Any]:
+    # Standard ComponentBase interface implementation
+    def initialize_services(self, platform: 'PlatformOrchestrator') -> None:
+        """Initialize platform services for the component.
+        
+        Args:
+            platform: PlatformOrchestrator instance providing services
+        """
+        self.platform = platform
+        logger.info("ModularQueryProcessor initialized with platform services")
+
+    def get_health_status(self) -> HealthStatus:
         """
         Get health status of query processor and sub-components.
         
         Returns:
-            Dictionary with health information
+            HealthStatus object with component health information
         """
+        if self.platform:
+            return self.platform.check_component_health(self)
+        
+        # Fallback if platform services not initialized
         current_time = time.time()
         
         # Only check health periodically to avoid overhead
@@ -213,12 +251,65 @@ class ModularQueryProcessor(QueryProcessor):
             self._last_health_check = current_time
             self._health_status = self._perform_health_check()
         
-        # Add performance metrics
-        health_info = self._health_status.copy()
-        health_info['performance_metrics'] = self._metrics.get_stats()
-        health_info['last_check'] = self._last_health_check
+        # Convert to HealthStatus format
+        return HealthStatus(
+            is_healthy=self._health_status.get('healthy', True),
+            status="healthy" if self._health_status.get('healthy', True) else "unhealthy",
+            details={
+                "sub_components": self._get_component_summary(),
+                "performance_metrics": self._metrics.get_stats(),
+                "last_check": self._last_health_check,
+                "issues": self._health_status.get('issues', [])
+            }
+        )
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get component-specific metrics.
         
-        return health_info
+        Returns:
+            Dictionary containing component metrics
+        """
+        if self.platform:
+            return self.platform.collect_component_metrics(self)
+        
+        # Fallback if platform services not initialized
+        return {
+            "sub_components": self._get_component_summary(),
+            "performance_stats": self._metrics.get_stats(),
+            "analyzer_type": self._analyzer.__class__.__name__,
+            "selector_type": self._selector.__class__.__name__,
+            "assembler_type": self._assembler.__class__.__name__,
+            "workflow_phases": ["analysis", "retrieval", "selection", "generation", "assembly"]
+        }
+
+    def get_capabilities(self) -> List[str]:
+        """Get list of component capabilities.
+        
+        Returns:
+            List of capability strings
+        """
+        capabilities = [
+            "query_analysis",
+            "workflow_orchestration",
+            "context_selection",
+            "response_assembly",
+            "modular_architecture",
+            "performance_monitoring"
+        ]
+        
+        # Add analyzer-specific capabilities
+        if hasattr(self._analyzer, 'get_capabilities'):
+            capabilities.extend([f"analyzer_{cap}" for cap in self._analyzer.get_capabilities()])
+        
+        # Add selector-specific capabilities
+        if hasattr(self._selector, 'get_capabilities'):
+            capabilities.extend([f"selector_{cap}" for cap in self._selector.get_capabilities()])
+        
+        # Add assembler-specific capabilities
+        if hasattr(self._assembler, 'get_capabilities'):
+            capabilities.extend([f"assembler_{cap}" for cap in self._assembler.get_capabilities()])
+            
+        return capabilities
     
     def configure(self, config: QueryProcessorConfig) -> None:
         """
@@ -227,6 +318,10 @@ class ModularQueryProcessor(QueryProcessor):
         Args:
             config: Complete configuration object
         """
+        # Use platform configuration service if available
+        if self.platform:
+            self.platform.update_component_configuration(self, config.__dict__)
+        
         self._config = config
         
         # Reconfigure sub-components

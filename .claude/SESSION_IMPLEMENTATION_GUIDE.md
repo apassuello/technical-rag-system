@@ -109,7 +109,7 @@ claude code
 ```
 I'm starting Session 2 of the AdvancedRetriever refactoring. Please:
 
-1. Read session-1-handoff.md (if exists) to understand the current state from Session 1
+1. ReadSESSION_1_HANDOFF_DOCUMENT.md to understand the current state from Session 1
 2. Read the current context from .claude/claude.md to understand the session objectives
 3. Read .claude/ARCHITECTURE_SAFEGUARDS.md to understand the critical architectural requirements
 4. Validate that Session 1 services are properly implemented in the Platform Orchestrator

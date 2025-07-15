@@ -11,9 +11,14 @@ import time
 from typing import List, Dict, Any, Optional, Tuple, Union
 import numpy as np
 
-from src.core.interfaces import Retriever, Document, RetrievalResult, Embedder
+from src.core.interfaces import Retriever, Document, RetrievalResult, Embedder, HealthStatus
 from .modular_unified_retriever import ModularUnifiedRetriever
 from .config.advanced_config import AdvancedRetrieverConfig
+
+# Forward declaration to avoid circular import
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.core.platform_orchestrator import PlatformOrchestrator
 
 # Note: Graph enhancement now properly integrated via fusion sub-component
 # Note: Neural reranking now properly integrated via reranker sub-component
@@ -79,19 +84,8 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         base_config = self._extract_base_config()
         super().__init__(base_config, embedder)
 
-        # Performance tracking
-        self.advanced_stats = {
-            "backend_switches": 0,
-            "fallback_activations": 0,
-            "total_advanced_retrievals": 0,
-            "backend_health_checks": 0,
-            "last_health_check": 0,
-            "migration_count": 0,
-        }
-
-        # Analytics collector
-        self.analytics_enabled = self.advanced_config.analytics.enabled
-        self.query_analytics: List[Dict[str, Any]] = []
+        # Platform services (initialized via initialize_services)
+        self.platform: Optional['PlatformOrchestrator'] = None
 
         # Graph components (Epic 2 Week 2)
         self.graph_config = None
@@ -249,7 +243,71 @@ class AdvancedRetriever(ModularUnifiedRetriever):
         # Note: Graph enhancement now configured via parent's fusion sub-component
         # Note: Neural reranking now configured via parent's reranker sub-component
 
+    # Standard ComponentBase interface implementation
+    def initialize_services(self, platform: 'PlatformOrchestrator') -> None:
+        """Initialize platform services for the component.
+        
+        Args:
+            platform: PlatformOrchestrator instance providing services
+        """
+        self.platform = platform
+        logger.info("AdvancedRetriever initialized with platform services")
 
+    def get_health_status(self) -> HealthStatus:
+        """Get the current health status of the component.
+        
+        Returns:
+            HealthStatus object with component health information
+        """
+        if self.platform:
+            return self.platform.check_component_health(self)
+        
+        # Fallback if platform services not initialized
+        return HealthStatus(
+            is_healthy=True,
+            status="healthy",
+            details={"backend": self.active_backend_name, "fallback": self.fallback_backend_name}
+        )
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get component-specific metrics.
+        
+        Returns:
+            Dictionary containing component metrics
+        """
+        if self.platform:
+            return self.platform.collect_component_metrics(self)
+        
+        # Fallback if platform services not initialized
+        return {
+            "active_backend": self.active_backend_name,
+            "fallback_backend": self.fallback_backend_name,
+            "supports_multi_backend": True,
+            "supports_hot_swap": self.advanced_config.backends.enable_hot_swap,
+            "graph_enabled": self.advanced_config.feature_flags.get("graph_retrieval", False),
+            "neural_reranking_enabled": self.advanced_config.feature_flags.get("neural_reranking", False)
+        }
+
+    def get_capabilities(self) -> List[str]:
+        """Get list of component capabilities.
+        
+        Returns:
+            List of capability strings
+        """
+        capabilities = [
+            "multi_backend_retrieval",
+            "backend_hot_swap",
+            "hybrid_search",
+            "fallback_handling"
+        ]
+        
+        if self.advanced_config.feature_flags.get("graph_retrieval", False):
+            capabilities.append("graph_enhanced_retrieval")
+        
+        if self.advanced_config.feature_flags.get("neural_reranking", False):
+            capabilities.append("neural_reranking")
+            
+        return capabilities
 
     def _setup_health_monitoring(self) -> None:
         """Set up backend health monitoring."""
@@ -277,27 +335,37 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             List of retrieval results sorted by relevance score
         """
         try:
-            # Check backend health and switch if needed
+            # Check backend health and switch if needed using platform services
             if self.advanced_config.backends.enable_hot_swap:
-                self._check_and_switch_backend()
+                self._check_and_switch_backend_with_platform()
 
             # Delegate to parent for actual retrieval using enhanced sub-components
             results = super().retrieve(query, k)
 
-            # Update advanced statistics
-            self.advanced_stats["total_advanced_retrievals"] += 1
+            # Track analytics using platform services
+            if self.platform:
+                self.platform.track_component_performance(
+                    self, 
+                    "retrieval", 
+                    {"query": query, "results_count": len(results), "backend": self.active_backend_name}
+                )
             
             return results
 
         except Exception as e:
             logger.error(f"Advanced retrieval failed: {str(e)}")
 
-            # Try backend fallback if configured
+            # Try backend fallback if configured using platform services
             if self.fallback_backend_name and self.fallback_backend_name != self.active_backend_name:
                 logger.info(f"Attempting backend fallback from {self.active_backend_name} to {self.fallback_backend_name}")
                 try:
-                    self._switch_to_backend(self.fallback_backend_name)
-                    self.advanced_stats["fallback_activations"] += 1
+                    self._switch_to_backend_with_platform(self.fallback_backend_name)
+                    if self.platform:
+                        self.platform.track_component_performance(
+                            self, 
+                            "fallback_activation", 
+                            {"from_backend": self.active_backend_name, "to_backend": self.fallback_backend_name}
+                        )
                     return super().retrieve(query, k)
                 except Exception as fallback_error:
                     logger.error(f"Backend fallback also failed: {fallback_error}")
@@ -305,17 +373,27 @@ class AdvancedRetriever(ModularUnifiedRetriever):
             raise RuntimeError(f"Advanced retrieval failed: {str(e)}") from e
 
 
+    def _check_and_switch_backend_with_platform(self) -> None:
+        """Check backend health and switch if necessary using platform services."""
+        if not self.platform:
+            # Fallback to original method if platform services not available
+            return self._check_and_switch_backend()
+
+        try:
+            # Use platform health service to check component health
+            health_status = self.platform.check_component_health(self)
+            
+            if not health_status.is_healthy:
+                logger.warning(
+                    f"Active backend {self.active_backend_name} unhealthy: {health_status.details}"
+                )
+                self._consider_backend_switch_with_platform(None)
+
+        except Exception as e:
+            logger.error(f"Platform health check failed: {str(e)}")
+
     def _check_and_switch_backend(self) -> None:
-        """Check backend health and switch if necessary."""
-        current_time = time.time()
-
-        # Rate limit health checks
-        if (
-            current_time - self.advanced_stats["last_health_check"]
-            < self.advanced_config.backends.health_check_interval_seconds
-        ):
-            return
-
+        """Check backend health and switch if necessary (fallback method)."""
         try:
             # Check health of current vector index
             health = {"is_healthy": True, "issues": []}
@@ -331,11 +409,69 @@ class AdvancedRetriever(ModularUnifiedRetriever):
                 )
                 self._consider_backend_switch(None)
 
-            self.advanced_stats["last_health_check"] = current_time
-            self.advanced_stats["backend_health_checks"] += 1
-
         except Exception as e:
             logger.error(f"Health check failed: {str(e)}")
+
+    def _consider_backend_switch_with_platform(self, error: Optional[Exception]) -> None:
+        """Consider switching to fallback backend using platform services."""
+        if not self.platform:
+            # Fallback to original method if platform services not available
+            return self._consider_backend_switch(error)
+
+        if not self.fallback_backend_name or self.fallback_backend_name == self.active_backend_name:
+            return
+
+        try:
+            logger.info(
+                f"Attempting to switch from {self.active_backend_name} to {self.fallback_backend_name}"
+            )
+
+            # Try to switch to fallback backend using platform services
+            self._switch_to_backend_with_platform(self.fallback_backend_name)
+            
+            # If successful, swap active and fallback
+            self.active_backend_name, self.fallback_backend_name = (
+                self.fallback_backend_name,
+                self.active_backend_name,
+            )
+
+            # Track backend switch using platform services
+            if self.platform:
+                self.platform.track_component_performance(
+                    self, 
+                    "backend_switch", 
+                    {"from": self.fallback_backend_name, "to": self.active_backend_name}
+                )
+
+            logger.info(f"Successfully switched to {self.active_backend_name}")
+
+        except Exception as e:
+            logger.error(f"Platform backend switch consideration failed: {str(e)}")
+
+    def _switch_to_backend_with_platform(self, backend_name: str) -> None:
+        """
+        Switch to a different backend using platform services.
+        
+        Args:
+            backend_name: Name of the backend to switch to ("faiss" or "weaviate")
+        """
+        if not self.platform:
+            # Fallback to original method if platform services not available
+            return self._switch_to_backend(backend_name)
+
+        try:
+            # Use platform backend management service
+            self.platform.switch_component_backend(self, backend_name)
+            
+            # Update active backend
+            old_backend = self.active_backend_name
+            self.active_backend_name = backend_name
+            
+            logger.info(f"Successfully switched backend from {old_backend} to {backend_name} using platform services")
+            
+        except Exception as e:
+            logger.error(f"Platform backend switch failed: {str(e)}")
+            raise
 
     def _consider_backend_switch(self, error: Optional[Exception]) -> None:
         """Consider switching to fallback backend."""
