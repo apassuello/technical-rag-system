@@ -74,6 +74,10 @@ class BM25Retriever(SparseRetriever):
         self.tokenized_corpus: List[List[str]] = []
         self.chunk_mapping: List[int] = []
         
+        # Deferred indexing control
+        self._index_dirty = False  # Track if index needs rebuilding
+        self._deferred_mode = False  # Enable deferred indexing mode
+        
         # Compile regex patterns for technical term preservation
         if self.preserve_technical_terms:
             self._tech_pattern = re.compile(r'[a-zA-Z0-9][\w\-_.]*[a-zA-Z0-9]|[a-zA-Z0-9]')
@@ -83,6 +87,41 @@ class BM25Retriever(SparseRetriever):
             self._punctuation_pattern = re.compile(r'[^\w\s]')
         
         logger.info(f"BM25Retriever initialized with k1={self.k1}, b={self.b}")
+    
+    def enable_deferred_indexing(self) -> None:
+        """Enable deferred indexing mode to avoid rebuilding index on every batch"""
+        self._deferred_mode = True
+        logger.debug("Deferred indexing mode enabled")
+    
+    def disable_deferred_indexing(self) -> None:
+        """Disable deferred indexing mode and rebuild index if needed"""
+        self._deferred_mode = False
+        if self._index_dirty:
+            self._rebuild_index()
+        logger.debug("Deferred indexing mode disabled")
+    
+    def force_rebuild_index(self) -> None:
+        """Force rebuild the BM25 index with all accumulated documents"""
+        if self.tokenized_corpus:
+            self._rebuild_index()
+        else:
+            logger.warning("No documents to rebuild index")
+    
+    def _rebuild_index(self) -> None:
+        """Internal method to rebuild the BM25 index"""
+        if not self.tokenized_corpus:
+            logger.warning("No tokenized corpus available for index rebuild")
+            return
+        
+        start_time = time.time()
+        self.bm25 = BM25Okapi(self.tokenized_corpus, k1=self.k1, b=self.b)
+        self._index_dirty = False
+        
+        elapsed = time.time() - start_time
+        total_tokens = sum(len(tokens) for tokens in self.tokenized_corpus)
+        valid_doc_count = len([tokens for tokens in self.tokenized_corpus if tokens])
+        
+        logger.info(f"Rebuilt BM25 index with {valid_doc_count} documents in {elapsed:.3f}s")
     
     def index_documents(self, documents: List[Document]) -> None:
         """
@@ -123,8 +162,14 @@ class BM25Retriever(SparseRetriever):
         if not self.tokenized_corpus:
             raise ValueError("No valid text content found in documents")
         
-        # Rebuild BM25 index with all documents (BM25Okapi doesn't support incremental updates)
-        self.bm25 = BM25Okapi(self.tokenized_corpus, k1=self.k1, b=self.b)
+        # Rebuild BM25 index unless in deferred mode
+        if self._deferred_mode:
+            # Mark index as dirty but don't rebuild yet
+            self._index_dirty = True
+            logger.debug(f"Added {len(documents)} documents to corpus (deferred mode - index not rebuilt)")
+        else:
+            # Rebuild index immediately (original behavior)
+            self._rebuild_index()
         
         elapsed = time.time() - start_time
         total_tokens = sum(len(tokens) for tokens in self.tokenized_corpus)
@@ -145,8 +190,13 @@ class BM25Retriever(SparseRetriever):
         Returns:
             List of (document_index, score) tuples sorted by relevance
         """
-        if self.bm25 is None:
-            raise ValueError("Must call index_documents() before searching")
+        # Ensure index is built before searching
+        if self.bm25 is None or self._index_dirty:
+            if self._index_dirty:
+                logger.debug("Rebuilding BM25 index before search (was dirty)")
+                self._rebuild_index()
+            else:
+                raise ValueError("Must call index_documents() before searching")
         
         if not query or not query.strip():
             return []
