@@ -341,24 +341,30 @@ class KnowledgeCache:
             return None
 
 
-def create_embedder_config_hash(system) -> Dict[str, Any]:
+def create_embedder_config_hash(system_or_config) -> Dict[str, Any]:
     """Extract embedder configuration for cache validation"""
     try:
-        embedder = system.get_component('embedder')
-        
-        # Get key configuration parameters
-        config = {
-            "model_name": getattr(embedder, 'model_name', 'unknown'),
-            "model_type": type(embedder).__name__,
-            "device": getattr(embedder, 'device', 'unknown'),
-            "normalize_embeddings": getattr(embedder, 'normalize_embeddings', True)
-        }
-        
-        # Add batch processor config if available
-        if hasattr(embedder, 'batch_processor'):
-            config["batch_size"] = getattr(embedder.batch_processor, 'batch_size', 32)
-        
-        return config
+        # Handle both system object and dict inputs
+        if isinstance(system_or_config, dict):
+            # Already a config dict, return as-is
+            return system_or_config
+        else:
+            # System object, extract config
+            embedder = system_or_config.get_component('embedder')
+            
+            # Get key configuration parameters
+            config = {
+                "model_name": getattr(embedder, 'model_name', 'unknown'),
+                "model_type": type(embedder).__name__,
+                "device": getattr(embedder, 'device', 'unknown'),
+                "normalize_embeddings": getattr(embedder, 'normalize_embeddings', True)
+            }
+            
+            # Add batch processor config if available
+            if hasattr(embedder, 'batch_processor'):
+                config["batch_size"] = getattr(embedder.batch_processor, 'batch_size', 32)
+            
+            return config
         
     except Exception as e:
         logger.error(f"Error creating embedder config hash: {e}")

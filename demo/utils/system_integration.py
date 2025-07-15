@@ -82,25 +82,35 @@ class Epic2SystemManager:
             if status_callback:
                 status_callback("🤖 Loading models and components...")
             
-            # Verify system is properly initialized
-            if not self._verify_system_health():
-                raise RuntimeError("System health check failed")
-            
             # Database-first approach for <5s initialization
             pdf_files = self._get_corpus_files()
-            processor_config = self._get_processor_config()
-            embedder_config = self._get_embedder_config()
             
-            # Check database first for fastest initialization
             # For demo mode, only use first 10 files for consistent testing
             demo_files = pdf_files[:10] if self.demo_mode else pdf_files
             logger.info(f"Using {len(demo_files)} files for initialization (demo_mode={self.demo_mode})")
             
+            # Get configs using fallback methods (works before full system init)
+            processor_config = self._get_fallback_processor_config()
+            embedder_config = self._get_fallback_embedder_config()
+            
+            # Check database first for fastest initialization
             if self.db_manager.is_cache_valid(demo_files, processor_config, embedder_config):
+                if progress_callback:
+                    progress_callback(50)
+                if status_callback:
+                    status_callback("⚡ Loading from database...")
+                
+                # Initialize system first
+                self.system = PlatformOrchestrator(self.config_path)
+                
+                # Verify system is properly initialized
+                if not self._verify_system_health():
+                    raise RuntimeError("System health check failed")
+                
                 if progress_callback:
                     progress_callback(70)
                 if status_callback:
-                    status_callback("⚡ Loading from database...")
+                    status_callback("🚀 Restoring from database...")
                 
                 # Try to load from database (fastest option)
                 if self._load_from_database(demo_files):
@@ -115,6 +125,13 @@ class Epic2SystemManager:
                     logger.warning("Database load failed, falling back to cache/processing")
                     self.documents_processed = self._fallback_initialization(pdf_files, processor_config, embedder_config, progress_callback, status_callback)
             else:
+                # Initialize system for regular processing
+                self.system = PlatformOrchestrator(self.config_path)
+                
+                # Verify system is properly initialized
+                if not self._verify_system_health():
+                    raise RuntimeError("System health check failed")
+                
                 # Check if we can migrate from existing cache
                 if self.knowledge_cache.is_cache_valid(pdf_files, embedder_config):
                     if progress_callback:
@@ -234,6 +251,10 @@ class Epic2SystemManager:
     
     def _get_processor_config(self) -> Dict[str, Any]:
         """Get current processor configuration for cache validation"""
+        # If system is not ready, use fallback config
+        if not self.system or not self.is_initialized:
+            return self._get_fallback_processor_config()
+            
         try:
             processor = self.system.get_component('document_processor')
             if hasattr(processor, 'get_config'):
@@ -246,11 +267,15 @@ class Epic2SystemManager:
                     "chunk_overlap": getattr(processor, 'chunk_overlap', 128)
                 }
         except Exception as e:
-            logger.warning(f"Could not get processor config: {e}")
-            return {"processor_type": "default", "chunk_size": 512, "chunk_overlap": 128}
+            logger.warning(f"Could not get processor config: {e}, using fallback")
+            return self._get_fallback_processor_config()
     
     def _get_embedder_config(self) -> Dict[str, Any]:
         """Get current embedder configuration for cache validation"""
+        # If system is not ready, use fallback config
+        if not self.system or not self.is_initialized:
+            return self._get_fallback_embedder_config()
+            
         try:
             embedder = self.system.get_component('embedder')
             if hasattr(embedder, 'get_config'):
@@ -263,8 +288,67 @@ class Epic2SystemManager:
                     "max_length": getattr(embedder, 'max_length', 512)
                 }
         except Exception as e:
-            logger.warning(f"Could not get embedder config: {e}")
-            return {"model_name": "default", "device": "cpu", "max_length": 512}
+            logger.warning(f"Could not get embedder config: {e}, using fallback")
+            return self._get_fallback_embedder_config()
+    
+    def _get_fallback_processor_config(self) -> Dict[str, Any]:
+        """Get fallback processor configuration when system is not ready"""
+        # Load from config file to get consistent values
+        try:
+            from src.core.config import ConfigManager
+            config_manager = ConfigManager(self.config_path)
+            config = config_manager.config  # Use config property instead of get_config()
+            
+            # Extract processor config from the configuration
+            processor_config = getattr(config, 'document_processor', {})
+            if hasattr(processor_config, 'type'):
+                processor_type = processor_config.type
+            else:
+                processor_type = 'modular'
+            
+            # Try to get chunker config
+            chunk_size = 512
+            chunk_overlap = 128
+            if hasattr(processor_config, 'chunker') and hasattr(processor_config.chunker, 'config'):
+                chunk_size = getattr(processor_config.chunker.config, 'chunk_size', 512)
+                chunk_overlap = getattr(processor_config.chunker.config, 'chunk_overlap', 128)
+            
+            return {
+                "processor_type": processor_type,
+                "chunk_size": chunk_size,
+                "chunk_overlap": chunk_overlap
+            }
+        except Exception as e:
+            logger.warning(f"Could not load processor config from file: {e}")
+            return {"processor_type": "modular", "chunk_size": 512, "chunk_overlap": 128}
+    
+    def _get_fallback_embedder_config(self) -> Dict[str, Any]:
+        """Get fallback embedder configuration when system is not ready"""
+        # Load from config file to get consistent values
+        try:
+            from src.core.config import ConfigManager
+            config_manager = ConfigManager(self.config_path)
+            config = config_manager.config  # Use config property instead of get_config()
+            
+            # Extract embedder config from the configuration
+            embedder_config = getattr(config, 'embedder', {})
+            model_name = 'sentence-transformers/all-MiniLM-L6-v2'
+            device = 'cpu'
+            max_length = 512
+            
+            if hasattr(embedder_config, 'model') and hasattr(embedder_config.model, 'config'):
+                model_name = getattr(embedder_config.model.config, 'model_name', model_name)
+                device = getattr(embedder_config.model.config, 'device', device)
+                max_length = getattr(embedder_config.model.config, 'max_length', max_length)
+            
+            return {
+                "model_name": model_name,
+                "device": device,
+                "max_length": max_length
+            }
+        except Exception as e:
+            logger.warning(f"Could not load embedder config from file: {e}")
+            return {"model_name": "sentence-transformers/all-MiniLM-L6-v2", "device": "cpu", "max_length": 512}
     
     def _enable_deferred_indexing(self) -> None:
         """Enable deferred indexing mode for batch processing optimization"""
@@ -389,7 +473,7 @@ class Epic2SystemManager:
             # Convert database format to expected format
             converted_docs = []
             for doc in documents:
-                # Create document object with expected attributes
+                # Create a simple document object compatible with the retriever
                 doc_obj = type('Document', (), {
                     'content': doc.get('content', ''),
                     'metadata': doc.get('metadata', {}),
@@ -422,13 +506,22 @@ class Epic2SystemManager:
             
             # For ModularUnifiedRetriever directly
             elif hasattr(retriever, 'vector_index'):
-                retriever.vector_index.documents = converted_docs
-                retriever.vector_index.embeddings = embeddings
+                # Initialize the FAISS index if needed
+                if hasattr(retriever.vector_index, 'initialize_index'):
+                    if embeddings.shape[0] > 0:
+                        retriever.vector_index.initialize_index(embeddings.shape[1])
                 
-                # Rebuild FAISS index
-                if hasattr(retriever.vector_index, 'index') and retriever.vector_index.index is not None:
-                    retriever.vector_index.index.reset()
-                    retriever.vector_index.index.add(embeddings)
+                # Store documents in the vector index
+                retriever.vector_index.documents = converted_docs
+                
+                # Use add_documents method which properly handles FAISS indexing
+                if hasattr(retriever.vector_index, 'add_documents'):
+                    retriever.vector_index.add_documents(converted_docs)
+                else:
+                    # Fallback: direct FAISS index manipulation
+                    if hasattr(retriever.vector_index, 'index') and retriever.vector_index.index is not None:
+                        retriever.vector_index.index.reset()
+                        retriever.vector_index.index.add(embeddings)
                 
                 # Rebuild BM25 index
                 if hasattr(retriever, 'sparse_retriever'):
