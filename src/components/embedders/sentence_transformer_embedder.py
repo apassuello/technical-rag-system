@@ -8,14 +8,17 @@ in the modular architecture while preserving all existing functionality.
 
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.interfaces import Embedder
+from src.core.interfaces import Embedder, HealthStatus
 from shared_utils.embeddings.generator import generate_embeddings
+
+if TYPE_CHECKING:
+    from src.core.platform_orchestrator import PlatformOrchestrator
 
 
 class SentenceTransformerEmbedder(Embedder):
@@ -59,6 +62,9 @@ class SentenceTransformerEmbedder(Embedder):
         self.batch_size = batch_size
         self.use_mps = use_mps
         self._embedding_dim = None
+        
+        # Platform services (initialized via initialize_services)
+        self.platform: Optional['PlatformOrchestrator'] = None
     
     def embed(self, texts: List[str]) -> List[List[float]]:
         """
@@ -159,3 +165,93 @@ class SentenceTransformerEmbedder(Embedder):
             "cache_type": "content_based",
             "note": "Cache statistics require access to global cache from generator module"
         }
+    
+    # ComponentBase interface implementation
+    def initialize_services(self, platform: 'PlatformOrchestrator') -> None:
+        """Initialize platform services for the component.
+        
+        Args:
+            platform: PlatformOrchestrator instance providing services
+        """
+        self.platform = platform
+    
+    def get_health_status(self) -> HealthStatus:
+        """Get the current health status of the component.
+        
+        Returns:
+            HealthStatus object with component health information
+        """
+        if self.platform:
+            return self.platform.check_component_health(self)
+        
+        # Fallback if platform services not initialized
+        is_healthy = True
+        issues = []
+        
+        # Basic health checks
+        if not self.model_name:
+            is_healthy = False
+            issues.append("Model name not configured")
+        
+        if self.batch_size <= 0:
+            is_healthy = False
+            issues.append("Invalid batch size")
+        
+        return HealthStatus(
+            is_healthy=is_healthy,
+            issues=issues,
+            metrics={
+                "model_name": self.model_name,
+                "batch_size": self.batch_size,
+                "use_mps": self.use_mps,
+                "embedding_dim": self._embedding_dim
+            },
+            component_name=self.__class__.__name__
+        )
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get component-specific metrics.
+        
+        Returns:
+            Dictionary containing component metrics
+        """
+        if self.platform:
+            try:
+                component_metrics = self.platform.analytics_service.collect_component_metrics(self)
+                return {
+                    "component_name": component_metrics.component_name,
+                    "component_type": component_metrics.component_type,
+                    "success_count": component_metrics.success_count,
+                    "error_count": component_metrics.error_count,
+                    "resource_usage": component_metrics.resource_usage,
+                    "performance_metrics": component_metrics.performance_metrics,
+                    "timestamp": component_metrics.timestamp
+                }
+            except Exception:
+                # Fallback if platform service fails
+                pass
+        
+        # Fallback metrics
+        return {
+            "model_name": self.model_name,
+            "batch_size": self.batch_size,
+            "use_mps": self.use_mps,
+            "embedding_dimension": self._embedding_dim,
+            "caching_enabled": True,
+            "component_type": "sentence_transformer_embedder"
+        }
+    
+    def get_capabilities(self) -> List[str]:
+        """Get list of component capabilities.
+        
+        Returns:
+            List of capability strings
+        """
+        return [
+            "text_embedding",
+            "batch_processing",
+            "content_based_caching",
+            "mps_acceleration",
+            "sentence_transformer_models",
+            "384_dimensional_embeddings"
+        ]
