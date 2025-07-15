@@ -33,7 +33,7 @@ embedder:
 
 # EPIC 2 ADVANCED RETRIEVER CONFIGURATION
 retriever:
-  type: "enhanced_modular_unified"  # Use Epic 2 Enhanced Modular Unified Retriever
+  type: "modular_unified"  # Use ModularUnifiedRetriever with Epic 2 features via advanced config
   config:
     # Backend Configuration
     backends:

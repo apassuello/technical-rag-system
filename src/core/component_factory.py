@@ -76,7 +76,7 @@ class ComponentFactory:
         # "hybrid": "src.components.retrievers.hybrid_retriever.HybridRetriever",
         "unified": "src.components.retrievers.unified_retriever.UnifiedRetriever",
         "modular_unified": "src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever",
-        "enhanced_modular_unified": "src.components.retrievers.advanced_retriever.AdvancedRetriever",  # Epic 2 enhanced modular implementation
+        # Note: enhanced_modular_unified removed - Epic 2 features now handled via advanced config transformation
     }
     
     _GENERATORS: Dict[str, str] = {
@@ -506,15 +506,18 @@ class ComponentFactory:
             logger.debug(f"Creating {retriever_type} retriever with args: {kwargs}")
             
             # Special handling for retrievers that need embedder + config pattern
-            if retriever_type in ["modular_unified", "enhanced_modular_unified"]:
+            if retriever_type in ["modular_unified"]:
                 # Extract embedder and config from kwargs
                 embedder = kwargs.pop("embedder", None)
                 if embedder is None:
-                    retriever_name = "ModularUnifiedRetriever" if retriever_type == "modular_unified" else "AdvancedRetriever"
-                    raise ValueError(f"{retriever_name} requires 'embedder' parameter")
+                    raise ValueError(f"ModularUnifiedRetriever requires 'embedder' parameter")
                 
                 # All remaining kwargs become the config
                 config = kwargs
+                
+                # Transform advanced configuration to ModularUnifiedRetriever format if needed
+                if cls._is_advanced_config(config):
+                    config = cls._transform_advanced_config(config)
                 
                 return cls._create_with_tracking(
                     retriever_class, 
@@ -533,6 +536,195 @@ class ComponentFactory:
                 f"Failed to create retriever '{retriever_type}': {e}. "
                 f"Check constructor arguments: {kwargs}"
             ) from e
+    
+    @classmethod
+    def _is_advanced_config(cls, config: Dict[str, Any]) -> bool:
+        """
+        Check if the configuration contains advanced features that need transformation.
+        
+        Args:
+            config: Configuration dictionary to check
+            
+        Returns:
+            True if advanced configuration is detected
+        """
+        # Check for advanced configuration indicators
+        advanced_indicators = [
+            "backends",
+            "neural_reranking", 
+            "graph_retrieval",
+            "analytics",
+            "experiments"
+        ]
+        
+        return any(indicator in config for indicator in advanced_indicators)
+    
+    @classmethod
+    def _transform_advanced_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Transform advanced configuration format to ModularUnifiedRetriever format.
+        
+        Args:
+            config: Advanced configuration dictionary
+            
+        Returns:
+            Transformed configuration for ModularUnifiedRetriever
+        """
+        logger.debug("Transforming advanced configuration for ModularUnifiedRetriever")
+        
+        # Extract base configuration elements
+        transformed_config = {}
+        
+        # Configure vector index based on backend configuration
+        if "backends" in config:
+            transformed_config["vector_index"] = cls._transform_vector_index_config(config["backends"])
+        
+        # Configure sparse retriever (BM25)
+        transformed_config["sparse"] = {
+            "type": "bm25",
+            "config": {
+                "k1": 1.2,
+                "b": 0.75,
+                "lowercase": True,
+                "preserve_technical_terms": True,
+            }
+        }
+        
+        # Configure fusion strategy
+        transformed_config["fusion"] = cls._transform_fusion_config(config)
+        
+        # Configure reranker
+        transformed_config["reranker"] = cls._transform_reranker_config(config)
+        
+        # Copy any other configuration that doesn't need transformation
+        for key, value in config.items():
+            if key not in ["backends", "neural_reranking", "graph_retrieval", "analytics", "experiments"]:
+                transformed_config[key] = value
+        
+        logger.debug(f"Transformed advanced config: {transformed_config}")
+        return transformed_config
+    
+    @classmethod
+    def _transform_vector_index_config(cls, backends_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform backend configuration to vector index configuration."""
+        primary_backend = backends_config.get("primary_backend", "faiss")
+        
+        if primary_backend == "weaviate":
+            if "weaviate" in backends_config:
+                weaviate_config = backends_config["weaviate"]
+                if isinstance(weaviate_config, dict):
+                    return {
+                        "type": "weaviate",
+                        "config": weaviate_config
+                    }
+                else:
+                    # Handle config object with to_dict method
+                    return {
+                        "type": "weaviate", 
+                        "config": weaviate_config.to_dict() if hasattr(weaviate_config, 'to_dict') else weaviate_config
+                    }
+            else:
+                logger.warning("Weaviate backend selected but no weaviate config found, falling back to FAISS")
+                return {
+                    "type": "faiss",
+                    "config": backends_config.get("faiss", {
+                        "index_type": "IndexFlatIP",
+                        "normalize_embeddings": True,
+                        "metric": "cosine"
+                    })
+                }
+        else:
+            # Default to FAISS
+            return {
+                "type": "faiss",
+                "config": backends_config.get("faiss", {
+                    "index_type": "IndexFlatIP",
+                    "normalize_embeddings": True,
+                    "metric": "cosine"
+                })
+            }
+    
+    @classmethod
+    def _transform_fusion_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform fusion configuration with graph enhancement support."""
+        # Get hybrid search configuration
+        hybrid_search = config.get("hybrid_search", {})
+        
+        # Base fusion configuration
+        base_fusion_config = {
+            "k": hybrid_search.get("rrf_k", 60),
+            "weights": {
+                "dense": hybrid_search.get("dense_weight", 0.7),
+                "sparse": hybrid_search.get("sparse_weight", 0.3),
+            },
+        }
+        
+        # Check if graph retrieval is enabled
+        graph_retrieval = config.get("graph_retrieval", {})
+        if graph_retrieval.get("enabled", False):
+            graph_enhanced_config = {
+                "base_fusion": base_fusion_config,
+                "graph_enhancement": {
+                    "enabled": True,
+                    "graph_weight": 0.1,
+                    "entity_boost": 0.15,
+                    "relationship_boost": 0.1,
+                    "similarity_threshold": graph_retrieval.get("similarity_threshold", 0.7),
+                    "max_graph_hops": graph_retrieval.get("max_graph_hops", 3)
+                }
+            }
+            
+            return {
+                "type": "graph_enhanced_rrf",
+                "config": graph_enhanced_config
+            }
+        else:
+            # Use standard fusion
+            return {
+                "type": hybrid_search.get("fusion_method", "rrf"),
+                "config": base_fusion_config
+            }
+    
+    @classmethod
+    def _transform_reranker_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform reranker configuration with neural reranking support."""
+        # Check if neural reranking is enabled
+        neural_reranking = config.get("neural_reranking", {})
+        if neural_reranking.get("enabled", False):
+            # Convert neural reranking config to proper format
+            neural_config = {
+                "enabled": True,
+                "models": {
+                    "default": {
+                        "name": neural_reranking.get("model_name", "cross-encoder/ms-marco-MiniLM-L6-v2"),
+                        "max_length": neural_reranking.get("max_length", 512),
+                        "batch_size": neural_reranking.get("batch_size", 16)
+                    }
+                },
+                "performance": {
+                    "target_latency_ms": 200,
+                    "max_latency_ms": neural_reranking.get("max_latency_ms", 1000)
+                },
+                "score_fusion": {
+                    "method": "weighted",
+                    "neural_weight": 0.7,
+                    "retrieval_weight": 0.3
+                },
+                "adaptive": {
+                    "enabled": True
+                }
+            }
+            
+            return {
+                "type": "neural",
+                "config": neural_config
+            }
+        else:
+            # Use identity reranker
+            return {
+                "type": "identity",
+                "config": {"enabled": True}
+            }
     
     @classmethod
     def create_generator(cls, generator_type: str, **kwargs) -> AnswerGenerator:
