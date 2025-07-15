@@ -423,12 +423,12 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
         
         return HealthStatus(
             is_healthy=is_healthy,
-            status="healthy" if is_healthy else "unhealthy",
-            details={
+            issues=issues,
+            metrics={
                 "sub_components": self.get_component_info(),
-                "metrics": self.get_generator_info(),
-                "issues": issues
-            }
+                "generator_info": self.get_generator_info()
+            },
+            component_name=self.__class__.__name__
         )
 
     def get_metrics(self) -> Dict[str, Any]:

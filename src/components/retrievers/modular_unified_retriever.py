@@ -451,13 +451,13 @@ class ModularUnifiedRetriever(Retriever):
         
         return HealthStatus(
             is_healthy=is_healthy,
-            status="healthy" if is_healthy else "unhealthy",
-            details={
+            issues=issues,
+            metrics={
                 "indexed_documents": len(self.documents),
                 "retrieval_stats": self.retrieval_stats,
-                "sub_components": self.get_component_info(),
-                "issues": issues
-            }
+                "sub_components": self.get_component_info()
+            },
+            component_name=self.__class__.__name__
         )
 
     def get_metrics(self) -> Dict[str, Any]:
@@ -467,7 +467,20 @@ class ModularUnifiedRetriever(Retriever):
             Dictionary containing component metrics
         """
         if self.platform:
-            return self.platform.collect_component_metrics(self)
+            try:
+                component_metrics = self.platform.analytics_service.collect_component_metrics(self)
+                return {
+                    "component_name": component_metrics.component_name,
+                    "component_type": component_metrics.component_type,
+                    "success_count": component_metrics.success_count,
+                    "error_count": component_metrics.error_count,
+                    "resource_usage": component_metrics.resource_usage,
+                    "performance_metrics": component_metrics.performance_metrics,
+                    "timestamp": component_metrics.timestamp
+                }
+            except Exception as e:
+                # Fallback if platform service fails
+                pass
         
         # Fallback if platform services not initialized
         return {
