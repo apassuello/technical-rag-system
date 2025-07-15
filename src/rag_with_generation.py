@@ -15,6 +15,7 @@ import sys
 from src.core.platform_orchestrator import PlatformOrchestrator
 
 # Import from shared utils - Support HF API, Ollama, and Inference Providers
+sys.path.append(str(Path(__file__).parent.parent))
 from shared_utils.generation.hf_answer_generator import (
     HuggingFaceAnswerGenerator,
     GeneratedAnswer,

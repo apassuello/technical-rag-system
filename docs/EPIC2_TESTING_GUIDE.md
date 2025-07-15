@@ -1,16 +1,16 @@
 # Epic 2 Testing Guide
 
-Complete testing procedures for Epic 2 Advanced Hybrid Retriever system, including Weaviate setup, component validation, and comprehensive test execution.
+Complete testing procedures for Epic 2 Advanced Hybrid Retriever system implemented in ModularUnifiedRetriever, including configuration validation, component testing, and comprehensive system validation.
 
 ## Overview
 
-Epic 2 implements a sophisticated 4-stage retrieval pipeline:
-1. **Dense Retrieval** - Vector similarity (FAISS/Weaviate)
-2. **Sparse Retrieval** - BM25 keyword search
-3. **Graph Retrieval** - Document relationship analysis
-4. **Neural Reranking** - Cross-encoder optimization
+Epic 2 implements a sophisticated 4-stage retrieval pipeline in ModularUnifiedRetriever:
+1. **Dense Retrieval** - Vector similarity (FAISS/Weaviate) via Vector Index sub-component
+2. **Sparse Retrieval** - BM25 keyword search via Sparse sub-component  
+3. **Graph Retrieval** - Document relationship analysis via GraphEnhancedRRFFusion sub-component
+4. **Neural Reranking** - Cross-encoder optimization via NeuralReranker sub-component
 
-This guide provides step-by-step testing procedures to validate all Epic 2 components and ensure production readiness.
+This guide provides step-by-step testing procedures to validate all Epic 2 components and ensure production readiness with 100% architecture compliance.
 
 ## Quick Start (5 Minutes)
 

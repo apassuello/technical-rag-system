@@ -159,19 +159,28 @@ class Epic2SystemManager:
                 logger.warning("No retriever component found")
                 return False
             
-            # Check if it's the AdvancedRetriever (Epic 2)
+            # Check if it's the ModularUnifiedRetriever (Epic 2 features now integrated)
             retriever_type = type(retriever).__name__
-            if retriever_type != "AdvancedRetriever":
-                logger.warning(f"Expected AdvancedRetriever, got {retriever_type}")
+            if retriever_type != "ModularUnifiedRetriever":
+                logger.warning(f"Expected ModularUnifiedRetriever, got {retriever_type}")
                 return False
             
-            # Verify Epic 2 features are enabled
-            if hasattr(retriever, 'enabled_features'):
-                features = retriever.enabled_features
-                expected_features = ['neural_reranking', 'graph_retrieval', 'analytics_dashboard']
-                for feature in expected_features:
-                    if feature not in features:
-                        logger.warning(f"Epic 2 feature not enabled: {feature}")
+            # Verify Epic 2 features are enabled via configuration
+            if hasattr(retriever, 'config'):
+                config = retriever.config
+                # Check for Epic 2 features in configuration
+                epic2_features = {
+                    'neural_reranking': config.get('reranker', {}).get('type') == 'neural',
+                    'graph_retrieval': config.get('fusion', {}).get('type') == 'graph_enhanced_rrf',
+                    'multi_backend': config.get('vector_index', {}).get('type') in ['faiss', 'weaviate']
+                }
+                
+                enabled_features = [feature for feature, enabled in epic2_features.items() if enabled]
+                logger.info(f"Epic 2 features detected: {enabled_features}")
+                
+                # At least some Epic 2 features should be enabled
+                if not any(epic2_features.values()):
+                    logger.warning("No Epic 2 features detected in configuration")
             
             return True
             
@@ -218,7 +227,7 @@ class Epic2SystemManager:
         try:
             retriever = self.system.get_component('retriever')
             
-            # AdvancedRetriever inherits from ModularUnifiedRetriever, so it has sparse_retriever directly
+            # ModularUnifiedRetriever has sparse_retriever directly
             if hasattr(retriever, 'sparse_retriever'):
                 sparse_retriever = retriever.sparse_retriever
                 logger.debug(f"Found sparse retriever: {type(sparse_retriever).__name__}")
@@ -240,7 +249,7 @@ class Epic2SystemManager:
         try:
             retriever = self.system.get_component('retriever')
             
-            # AdvancedRetriever inherits from ModularUnifiedRetriever, so it has sparse_retriever directly
+            # ModularUnifiedRetriever has sparse_retriever directly
             if hasattr(retriever, 'sparse_retriever'):
                 sparse_retriever = retriever.sparse_retriever
                 logger.debug(f"Found sparse retriever: {type(sparse_retriever).__name__}")
@@ -277,7 +286,7 @@ class Epic2SystemManager:
             if hasattr(retriever, 'restore_from_cache'):
                 return retriever.restore_from_cache(documents, embeddings)
             
-            # For AdvancedRetriever, try to access the underlying ModularUnifiedRetriever
+            # For ModularUnifiedRetriever, try to access the components directly
             if hasattr(retriever, 'retriever') and hasattr(retriever.retriever, 'vector_index'):
                 base_retriever = retriever.retriever
                 base_retriever.vector_index.documents = documents
@@ -381,7 +390,7 @@ class Epic2SystemManager:
                     documents = retriever.get_all_documents()
                     embeddings = retriever.get_all_embeddings()
                 
-                # For AdvancedRetriever, access the underlying ModularUnifiedRetriever
+                # For ModularUnifiedRetriever, access the components directly
                 elif hasattr(retriever, 'retriever') and hasattr(retriever.retriever, 'vector_index'):
                     base_retriever = retriever.retriever
                     if hasattr(base_retriever.vector_index, 'documents'):
@@ -719,13 +728,22 @@ class Epic2SystemManager:
             retriever = self.system.get_component('retriever')
             retriever_type = type(retriever).__name__ if retriever else "Unknown"
             
-            # Get Epic 2 features
+            # Get Epic 2 features from configuration
             epic2_features = []
-            if retriever and hasattr(retriever, 'enabled_features'):
-                epic2_features = list(retriever.enabled_features)
+            if retriever and hasattr(retriever, 'config'):
+                config = retriever.config
+                # Check for Epic 2 features in configuration
+                if config.get('reranker', {}).get('type') == 'neural':
+                    epic2_features.append('neural_reranking')
+                if config.get('fusion', {}).get('type') == 'graph_enhanced_rrf':
+                    epic2_features.append('graph_retrieval')
+                if config.get('vector_index', {}).get('type') in ['faiss', 'weaviate']:
+                    epic2_features.append('multi_backend')
+                # Analytics is always available through platform services
+                epic2_features.append('analytics_dashboard')
             
-            # Determine architecture
-            architecture = "modular" if retriever_type == "AdvancedRetriever" else "unknown"
+            # Determine architecture - ModularUnifiedRetriever is modular compliant
+            architecture = "modular" if retriever_type == "ModularUnifiedRetriever" else "unknown"
             
             return {
                 "status": "Online",
