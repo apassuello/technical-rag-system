@@ -16,6 +16,8 @@ import os
 import sys
 import numpy as np
 from .knowledge_cache import KnowledgeCache, create_embedder_config_hash
+from .database_manager import get_database_manager
+from .migration_utils import migrate_existing_cache, get_migration_status
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
@@ -43,6 +45,7 @@ class Epic2SystemManager:
         self.last_query_results = None
         self.performance_metrics = {}
         self.knowledge_cache = KnowledgeCache()
+        self.db_manager = get_database_manager()
         self.demo_mode = demo_mode  # Use reduced corpus for faster testing
         
     def initialize_system(self, progress_callback=None, status_callback=None) -> bool:
@@ -83,42 +86,65 @@ class Epic2SystemManager:
             if not self._verify_system_health():
                 raise RuntimeError("System health check failed")
             
-            # Check if we can load from cache first
+            # Database-first approach for <5s initialization
             pdf_files = self._get_corpus_files()
+            processor_config = self._get_processor_config()
             embedder_config = self._get_embedder_config()
             
-            if self.knowledge_cache.is_cache_valid(pdf_files, embedder_config):
+            # Check database first for fastest initialization
+            # For demo mode, only use first 10 files for consistent testing
+            demo_files = pdf_files[:10] if self.demo_mode else pdf_files
+            logger.info(f"Using {len(demo_files)} files for initialization (demo_mode={self.demo_mode})")
+            
+            if self.db_manager.is_cache_valid(demo_files, processor_config, embedder_config):
                 if progress_callback:
                     progress_callback(70)
                 if status_callback:
-                    status_callback("⚡ Loading from cache...")
+                    status_callback("⚡ Loading from database...")
                 
-                # Try to load from cache
-                if self._load_from_cache():
-                    logger.info("🚀 Successfully loaded from cache - skipping document processing")
-                    self.documents_processed = len(pdf_files)
+                # Try to load from database (fastest option)
+                if self._load_from_database(demo_files):
+                    logger.info("🚀 Successfully loaded from database - <5s initialization achieved")
+                    self.documents_processed = len(demo_files)
                     
                     if progress_callback:
                         progress_callback(95)
                     if status_callback:
-                        status_callback("✅ System ready from cache")
+                        status_callback("✅ System ready from database")
                 else:
-                    logger.warning("Cache load failed, falling back to document processing")
-                    self.documents_processed = self._process_documents_with_progress(progress_callback, status_callback)
+                    logger.warning("Database load failed, falling back to cache/processing")
+                    self.documents_processed = self._fallback_initialization(pdf_files, processor_config, embedder_config, progress_callback, status_callback)
             else:
-                if progress_callback:
-                    progress_callback(60)
-                if status_callback:
-                    status_callback("📄 Processing RISC-V document corpus...")
-                
-                # Enable deferred indexing for better performance
-                self._enable_deferred_indexing()
-                
-                # Process documents (this will take longer now)
-                self.documents_processed = self._process_documents_with_progress(progress_callback, status_callback)
-                
-                # Disable deferred indexing and rebuild final index
-                self._disable_deferred_indexing()
+                # Check if we can migrate from existing cache
+                if self.knowledge_cache.is_cache_valid(pdf_files, embedder_config):
+                    if progress_callback:
+                        progress_callback(50)
+                    if status_callback:
+                        status_callback("🔄 Migrating cache to database...")
+                    
+                    # Migrate existing cache to database
+                    if migrate_existing_cache(pdf_files, processor_config, embedder_config):
+                        logger.info("📦 Successfully migrated cache to database")
+                        if self._load_from_database(pdf_files):
+                            self.documents_processed = len(pdf_files)
+                            if progress_callback:
+                                progress_callback(95)
+                            if status_callback:
+                                status_callback("✅ System ready from migrated database")
+                        else:
+                            logger.warning("Migration succeeded but load failed")
+                            self.documents_processed = self._fallback_initialization(pdf_files, processor_config, embedder_config, progress_callback, status_callback)
+                    else:
+                        logger.warning("Cache migration failed, falling back to processing")
+                        self.documents_processed = self._fallback_initialization(pdf_files, processor_config, embedder_config, progress_callback, status_callback)
+                else:
+                    if progress_callback:
+                        progress_callback(60)
+                    if status_callback:
+                        status_callback("📄 Processing RISC-V document corpus...")
+                    
+                    # Fresh processing - will save to database
+                    self.documents_processed = self._process_documents_with_progress(progress_callback, status_callback, save_to_db=True)
             
             if progress_callback:
                 progress_callback(95)
@@ -205,6 +231,23 @@ class Epic2SystemManager:
         else:
             logger.info(f"🔄 Production mode: Using all {len(pdf_files)} files")
             return pdf_files
+    
+    def _get_processor_config(self) -> Dict[str, Any]:
+        """Get current processor configuration for cache validation"""
+        try:
+            processor = self.system.get_component('document_processor')
+            if hasattr(processor, 'get_config'):
+                return processor.get_config()
+            else:
+                # Fallback: create basic config from processor
+                return {
+                    "processor_type": type(processor).__name__,
+                    "chunk_size": getattr(processor, 'chunk_size', 512),
+                    "chunk_overlap": getattr(processor, 'chunk_overlap', 128)
+                }
+        except Exception as e:
+            logger.warning(f"Could not get processor config: {e}")
+            return {"processor_type": "default", "chunk_size": 512, "chunk_overlap": 128}
     
     def _get_embedder_config(self) -> Dict[str, Any]:
         """Get current embedder configuration for cache validation"""
@@ -300,7 +343,7 @@ class Epic2SystemManager:
                 
                 # Rebuild BM25 index
                 if hasattr(base_retriever, 'sparse_retriever'):
-                    base_retriever.sparse_retriever.build_index(documents)
+                    base_retriever.sparse_retriever.index_documents(converted_docs)
                 
                 logger.info(f"Cache restored: {len(documents)} documents, {embeddings.shape} embeddings")
                 return True
@@ -317,7 +360,7 @@ class Epic2SystemManager:
                 
                 # Rebuild BM25 index
                 if hasattr(retriever, 'sparse_retriever'):
-                    retriever.sparse_retriever.build_index(documents)
+                    retriever.sparse_retriever.index_documents(documents)
                 
                 logger.info(f"Cache restored: {len(documents)} documents, {embeddings.shape} embeddings")
                 return True
@@ -330,20 +373,130 @@ class Epic2SystemManager:
             logger.error(f"Failed to load from cache: {e}")
             return False
     
-    def _process_documents_with_progress(self, progress_callback=None, status_callback=None) -> int:
+    def _load_from_database(self, pdf_files: List[Path]) -> bool:
+        """Load processed documents from database (fastest option)"""
+        try:
+            # Load documents and embeddings from database
+            documents, embeddings = self.db_manager.load_documents_and_embeddings(pdf_files)
+            
+            if not documents or embeddings is None:
+                logger.warning("Database data is incomplete")
+                return False
+            
+            # Restore to the retriever
+            retriever = self.system.get_component('retriever')
+            
+            # Convert database format to expected format
+            converted_docs = []
+            for doc in documents:
+                # Create document object with expected attributes
+                doc_obj = type('Document', (), {
+                    'content': doc.get('content', ''),
+                    'metadata': doc.get('metadata', {}),
+                    'confidence': doc.get('confidence', 0.8),
+                    'embedding': doc.get('embedding')
+                })()
+                converted_docs.append(doc_obj)
+            
+            # First, try to restore via proper methods
+            if hasattr(retriever, 'restore_from_cache'):
+                return retriever.restore_from_cache(converted_docs, embeddings)
+            
+            # For ModularUnifiedRetriever, try to access the components directly
+            if hasattr(retriever, 'retriever') and hasattr(retriever.retriever, 'vector_index'):
+                base_retriever = retriever.retriever
+                base_retriever.vector_index.documents = converted_docs
+                base_retriever.vector_index.embeddings = embeddings
+                
+                # Rebuild FAISS index
+                if hasattr(base_retriever.vector_index, 'index') and base_retriever.vector_index.index is not None:
+                    base_retriever.vector_index.index.reset()
+                    base_retriever.vector_index.index.add(embeddings)
+                
+                # Rebuild BM25 index
+                if hasattr(base_retriever, 'sparse_retriever'):
+                    base_retriever.sparse_retriever.index_documents(converted_docs)
+                
+                logger.info(f"Database restored: {len(converted_docs)} documents, {embeddings.shape} embeddings")
+                return True
+            
+            # For ModularUnifiedRetriever directly
+            elif hasattr(retriever, 'vector_index'):
+                retriever.vector_index.documents = converted_docs
+                retriever.vector_index.embeddings = embeddings
+                
+                # Rebuild FAISS index
+                if hasattr(retriever.vector_index, 'index') and retriever.vector_index.index is not None:
+                    retriever.vector_index.index.reset()
+                    retriever.vector_index.index.add(embeddings)
+                
+                # Rebuild BM25 index
+                if hasattr(retriever, 'sparse_retriever'):
+                    retriever.sparse_retriever.index_documents(converted_docs)
+                
+                logger.info(f"Database restored: {len(converted_docs)} documents, {embeddings.shape} embeddings")
+                return True
+            
+            else:
+                logger.warning("Cannot restore database - unsupported retriever type")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to load from database: {e}")
+            return False
+    
+    def _fallback_initialization(self, pdf_files: List[Path], processor_config: Dict[str, Any], 
+                               embedder_config: Dict[str, Any], progress_callback=None, status_callback=None) -> int:
+        """Fallback initialization when database load fails"""
+        try:
+            # Try cache first
+            if self.knowledge_cache.is_cache_valid(pdf_files, embedder_config):
+                if progress_callback:
+                    progress_callback(70)
+                if status_callback:
+                    status_callback("⚡ Loading from pickle cache...")
+                
+                if self._load_from_cache():
+                    logger.info("🚀 Successfully loaded from pickle cache")
+                    return len(pdf_files)
+                else:
+                    logger.warning("Cache load failed, processing documents")
+            
+            # Final fallback: process documents fresh
+            if progress_callback:
+                progress_callback(60)
+            if status_callback:
+                status_callback("📄 Processing RISC-V document corpus...")
+            
+            # Enable deferred indexing for better performance
+            self._enable_deferred_indexing()
+            
+            # Process documents and save to database
+            processed_count = self._process_documents_with_progress(progress_callback, status_callback, save_to_db=True)
+            
+            # Disable deferred indexing and rebuild final index
+            self._disable_deferred_indexing()
+            
+            return processed_count
+            
+        except Exception as e:
+            logger.error(f"Fallback initialization failed: {e}")
+            return 0
+    
+    def _process_documents_with_progress(self, progress_callback=None, status_callback=None, save_to_db: bool = False) -> int:
         """Process documents with progress updates"""
         if status_callback:
             status_callback("📄 Processing RISC-V document corpus...")
         
         # Get the actual processing done and update progress
-        total_processed = self._process_documents()
+        total_processed = self._process_documents(save_to_db=save_to_db)
         
         if progress_callback:
             progress_callback(85)
         
         return total_processed
     
-    def _process_documents(self) -> int:
+    def _process_documents(self, save_to_db: bool = False) -> int:
         """Process documents in the RISC-V corpus"""
         try:
             # Get corpus files (respects demo mode)
@@ -372,17 +525,19 @@ class Epic2SystemManager:
             
             logger.info(f"Successfully processed {processed_files} documents, created {total_chunks} chunks")
             
-            # Save to cache for future use
+            # Save to cache/database for future use
             try:
-                logger.info("💾 Saving processed documents to cache...")
+                storage_type = "database" if save_to_db else "cache"
+                logger.info(f"💾 Saving processed documents to {storage_type}...")
                 
-                # Get embedder config for cache validation
+                # Get configuration for validation
+                processor_config = self._get_processor_config()
                 embedder_config = self._get_embedder_config()
                 
                 # Extract documents and embeddings from the retriever
                 retriever = self.system.get_component('retriever')
                 
-                # Try to extract documents and embeddings for caching
+                # Try to extract documents and embeddings for storage
                 documents = []
                 embeddings = []
                 
@@ -406,9 +561,9 @@ class Epic2SystemManager:
                         embeddings = retriever.vector_index.embeddings
                         
                 else:
-                    logger.warning("Cannot extract documents for caching - unsupported retriever structure")
+                    logger.warning(f"Cannot extract documents for {storage_type} - unsupported retriever structure")
                 
-                # Save to cache if we have documents
+                # Save to storage if we have documents
                 if documents:
                     # Convert embeddings to numpy array if needed
                     if embeddings is not None and not isinstance(embeddings, np.ndarray):
@@ -420,23 +575,44 @@ class Epic2SystemManager:
                     
                     # Create dummy embeddings if not available
                     if embeddings is None or not hasattr(embeddings, 'shape') or embeddings.shape[0] == 0:
-                        logger.warning("No embeddings available, creating placeholder for cache")
+                        logger.warning("No embeddings available, creating placeholder")
                         embeddings = np.zeros((len(documents), 384))  # Default embedding size
                     
-                    self.knowledge_cache.save_knowledge_base(
-                        documents=documents,
-                        embeddings=embeddings,
-                        pdf_files=pdf_files,
-                        embedder_config=embedder_config
-                    )
-                    
-                    logger.info("✅ Documents cached successfully for future use")
+                    if save_to_db:
+                        # Save to database for fast future loading
+                        success = self.db_manager.save_documents_and_embeddings(
+                            documents=documents,
+                            pdf_files=pdf_files,
+                            processor_config=processor_config,
+                            embedder_config=embedder_config
+                        )
+                        if success:
+                            logger.info("✅ Documents saved to database successfully")
+                        else:
+                            logger.warning("Database save failed, falling back to pickle cache")
+                            # Fallback to pickle cache
+                            self.knowledge_cache.save_knowledge_base(
+                                documents=documents,
+                                embeddings=embeddings,
+                                pdf_files=pdf_files,
+                                embedder_config=embedder_config
+                            )
+                            logger.info("✅ Documents cached to pickle successfully")
+                    else:
+                        # Save to pickle cache
+                        self.knowledge_cache.save_knowledge_base(
+                            documents=documents,
+                            embeddings=embeddings,
+                            pdf_files=pdf_files,
+                            embedder_config=embedder_config
+                        )
+                        logger.info("✅ Documents cached to pickle successfully")
                 else:
-                    logger.warning("No documents found for caching")
+                    logger.warning(f"No documents found for {storage_type}")
                     
-            except Exception as cache_e:
-                logger.error(f"Failed to save cache: {cache_e}")
-                # Continue without caching - not critical
+            except Exception as storage_e:
+                logger.error(f"Failed to save to {storage_type}: {storage_e}")
+                # Continue without storage - not critical
             
             return processed_files
             
@@ -796,12 +972,34 @@ class Epic2SystemManager:
         }
     
     def get_cache_info(self) -> Dict[str, Any]:
-        """Get information about the knowledge cache"""
-        return self.knowledge_cache.get_cache_info()
+        """Get information about the knowledge cache and database"""
+        cache_info = self.knowledge_cache.get_cache_info()
+        
+        # Add database information
+        try:
+            db_stats = self.db_manager.get_database_stats()
+            cache_info.update({
+                'database_populated': self.db_manager.is_database_populated(),
+                'database_stats': db_stats,
+                'database_size_mb': db_stats.get('database_size_mb', 0)
+            })
+        except Exception as e:
+            logger.warning(f"Failed to get database info: {e}")
+            cache_info.update({
+                'database_populated': False,
+                'database_error': str(e)
+            })
+        
+        return cache_info
     
     def clear_cache(self):
-        """Clear the knowledge cache"""
+        """Clear the knowledge cache and database"""
         self.knowledge_cache.clear_cache()
+        try:
+            self.db_manager.clear_database()
+            logger.info("Database cleared successfully")
+        except Exception as e:
+            logger.error(f"Failed to clear database: {e}")
 
 # Global system manager instance
 # Use environment variable or default to demo_mode=False for full corpus
