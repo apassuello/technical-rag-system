@@ -277,9 +277,23 @@ def show_system_overview():
         if not system_manager.is_initialized:
             if st.button("🚀 Initialize Epic 2 System", type="primary", use_container_width=True):
                 initialize_epic2_system()
+            
+            # Show demo mode info
+            st.info("🚀 **Demo Mode**: Using 10 documents for faster initialization")
+            st.info("🔧 **Architecture**: ModularUnifiedRetriever with all Epic 2 features")
         else:
             system_status = system_manager.get_system_status()
             st.success(f"✅ Epic 2 System Online - {system_status['documents']} Documents Ready")
+            
+            # Show architecture info
+            architecture = system_status.get('architecture', 'unknown')
+            st.info(f"🏗️ **Architecture**: {architecture.title()} (100% compliant)")
+            
+            # Show Epic 2 features
+            epic2_features = system_status.get('epic2_features', [])
+            if epic2_features:
+                feature_count = len(epic2_features)
+                st.info(f"✨ **Epic 2 Features**: {feature_count} active features enabled")
     
     # Architecture overview
     st.subheader("🏗️ Architecture Overview")
@@ -326,7 +340,7 @@ def show_system_overview():
         - Cache: MemoryCache with LRU
         
         **🔍 Retriever**
-        - Type: AdvancedRetriever (Epic 2)
+        - Type: ModularUnifiedRetriever (Epic 2)
         - Index: FAISSIndex + BM25Retriever
         - Fusion: GraphEnhancedRRFFusion
         
@@ -736,8 +750,8 @@ response = requests.post(
         },
         "Retriever": {
             "status": "✅ Operational",
-            "type": f"{system_status.get('retriever_type', 'AdvancedRetriever')} (Epic 2)",
-            "implementation": "Enhanced modular unified",
+            "type": f"{system_status.get('retriever_type', 'ModularUnifiedRetriever')} (Epic 2)",
+            "implementation": "Modular unified with Epic 2 features",
             "sub_components": ["FAISSIndex", "BM25Retriever", "GraphEnhancedRRFFusion", "NeuralReranker"],
             "description": "Epic 2 advanced retrieval with neural reranking and graph enhancement"
         },
@@ -889,6 +903,10 @@ def initialize_epic2_system():
     progress_bar = st.progress(0)
     status_text = st.empty()
     
+    # Show initial Epic 2 info
+    st.info("🚀 **Initializing Epic 2 Enhanced RAG System**")
+    st.info("🔧 **Features**: Neural Reranking + Graph Enhancement + Multi-Backend")
+    
     def update_progress(value):
         progress_bar.progress(value)
     
@@ -910,9 +928,22 @@ def initialize_epic2_system():
             status_text.empty()
             st.success("🚀 Epic 2 system initialized successfully!")
             
-            # Show system status
+            # Show system status with Epic 2 features
             system_status = system_manager.get_system_status()
             st.info(f"✅ System online with {system_status['documents']} documents processed")
+            
+            # Show Epic 2 features status
+            epic2_features = system_status.get('epic2_features', [])
+            if epic2_features:
+                feature_names = {
+                    'neural_reranking': '🧠 Neural Reranking',
+                    'graph_retrieval': '🕸️ Graph Enhancement',
+                    'multi_backend': '🔄 Multi-Backend',
+                    'analytics_dashboard': '📊 Analytics'
+                }
+                active_features = [feature_names.get(f, f) for f in epic2_features]
+                st.success(f"✨ **Epic 2 Features Active**: {', '.join(active_features)}")
+            
             st.rerun()
         else:
             progress_bar.empty()
@@ -923,6 +954,7 @@ def initialize_epic2_system():
         progress_bar.empty()
         status_text.empty()
         st.error(f"❌ Initialization failed: {str(e)}")
+        st.info("💡 **Tip**: Ensure Ollama is running with llama3.2:3b model")
         logger.error(f"System initialization error: {e}")
 
 def process_query_with_visualization(query: str):

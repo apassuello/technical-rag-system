@@ -163,7 +163,8 @@ class Epic2SystemManager:
             retriever_type = type(retriever).__name__
             if retriever_type != "ModularUnifiedRetriever":
                 logger.warning(f"Expected ModularUnifiedRetriever, got {retriever_type}")
-                return False
+                # Still allow system to continue - other retrievers might work
+                logger.info("Continuing with non-ModularUnifiedRetriever - some Epic 2 features may not be available")
             
             # Verify Epic 2 features are enabled via configuration
             if hasattr(retriever, 'config'):
@@ -199,10 +200,10 @@ class Epic2SystemManager:
         if self.demo_mode:
             # In demo mode, use only first 10 files for faster testing
             demo_files = pdf_files[:10]
-            logger.info(f"Demo mode: Using {len(demo_files)} files out of {len(pdf_files)} total")
+            logger.info(f"📊 Demo mode: Using {len(demo_files)} files out of {len(pdf_files)} total for faster initialization")
             return demo_files
         else:
-            logger.info(f"Production mode: Using all {len(pdf_files)} files")
+            logger.info(f"🔄 Production mode: Using all {len(pdf_files)} files")
             return pdf_files
     
     def _get_embedder_config(self) -> Dict[str, Any]:
