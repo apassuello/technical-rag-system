@@ -14,6 +14,7 @@ Architecture Notes:
 """
 
 import time
+import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import sys
@@ -22,12 +23,19 @@ import sys
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.interfaces import DocumentProcessor as DocumentProcessorInterface, Document
+from src.core.interfaces import DocumentProcessor as DocumentProcessorInterface, Document, HealthStatus
+
+# Forward declaration to avoid circular import
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.core.platform_orchestrator import PlatformOrchestrator
 from .base import ProcessingPipeline, ConfigurableComponent, ValidationResult
 from .pipeline import DocumentProcessingPipeline
 from .adapters import PyMuPDFAdapter
 from .chunkers import SentenceBoundaryChunker
 from .cleaners import TechnicalContentCleaner
+
+logger = logging.getLogger(__name__)
 
 
 class ModularDocumentProcessor(DocumentProcessorInterface, ConfigurableComponent):
@@ -156,6 +164,9 @@ class ModularDocumentProcessor(DocumentProcessorInterface, ConfigurableComponent
             'component_metrics': {}
         }
         
+        # Platform services (initialized via initialize_services)
+        self.platform: Optional['PlatformOrchestrator'] = None
+        
         # Initialize components
         self._initialize_components()
     
@@ -190,10 +201,38 @@ class ModularDocumentProcessor(DocumentProcessorInterface, ConfigurableComponent
             processing_time = time.perf_counter() - start_time
             self._update_metrics(documents, processing_time, file_path)
             
+            # Track performance using platform services
+            if self.platform:
+                self.platform.track_component_performance(
+                    self, 
+                    "document_processing", 
+                    {
+                        "success": True, 
+                        "processing_time": processing_time, 
+                        "file_path": str(file_path),
+                        "documents_created": len(documents),
+                        "total_chunks": sum(1 for doc in documents if doc.content)
+                    }
+                )
+            
             return documents
             
         except Exception as e:
             self.metrics['errors_encountered'] += 1
+            
+            # Track failure using platform services
+            if self.platform:
+                processing_time = time.perf_counter() - start_time
+                self.platform.track_component_performance(
+                    self, 
+                    "document_processing", 
+                    {
+                        "success": False, 
+                        "processing_time": processing_time, 
+                        "file_path": str(file_path),
+                        "error": str(e)
+                    }
+                )
             
             if self.config['pipeline']['fail_fast']:
                 raise
@@ -252,6 +291,10 @@ class ModularDocumentProcessor(DocumentProcessorInterface, ConfigurableComponent
         Raises:
             ValueError: If configuration is invalid
         """
+        # Use platform configuration service if available
+        if self.platform:
+            self.platform.update_component_configuration(self, config)
+        
         # Validate configuration
         self._validate_config(config)
         
@@ -269,24 +312,6 @@ class ModularDocumentProcessor(DocumentProcessorInterface, ConfigurableComponent
             Current configuration dictionary
         """
         return self._deep_copy_dict(self.config)
-    
-    def get_metrics(self) -> Dict[str, Any]:
-        """
-        Get processing metrics.
-        
-        Returns:
-            Dictionary with processing metrics and statistics
-        """
-        # Update component metrics
-        if self.config['pipeline']['enable_metrics']:
-            self.metrics['component_metrics'] = {
-                'parser': self.parser.get_metrics() if hasattr(self.parser, 'get_metrics') else {},
-                'chunker': self.chunker.get_metrics() if hasattr(self.chunker, 'get_metrics') else {},
-                'cleaner': self.cleaner.get_metrics() if hasattr(self.cleaner, 'get_metrics') else {},
-                'pipeline': self.pipeline.get_metrics() if hasattr(self.pipeline, 'get_metrics') else {}
-            }
-        
-        return self.metrics.copy()
     
     def get_component_info(self) -> Dict[str, Any]:
         """
@@ -317,6 +342,118 @@ class ModularDocumentProcessor(DocumentProcessorInterface, ConfigurableComponent
                 'metrics_enabled': self.config['pipeline']['enable_metrics']
             }
         }
+    
+    # Standard ComponentBase interface implementation
+    def initialize_services(self, platform: 'PlatformOrchestrator') -> None:
+        """Initialize platform services for the component.
+        
+        Args:
+            platform: PlatformOrchestrator instance providing services
+        """
+        self.platform = platform
+        logger.info("ModularDocumentProcessor initialized with platform services")
+
+    def get_health_status(self) -> HealthStatus:
+        """Get the current health status of the component.
+        
+        Returns:
+            HealthStatus object with component health information
+        """
+        if self.platform:
+            return self.platform.check_component_health(self)
+        
+        # Fallback if platform services not initialized
+        is_healthy = True
+        issues = []
+        
+        # Check sub-components
+        if not self.parser:
+            is_healthy = False
+            issues.append("Parser not initialized")
+        
+        if not self.chunker:
+            is_healthy = False
+            issues.append("Chunker not initialized")
+        
+        if not self.cleaner:
+            is_healthy = False
+            issues.append("Cleaner not initialized")
+        
+        if not self.pipeline:
+            is_healthy = False
+            issues.append("Pipeline not initialized")
+        
+        return HealthStatus(
+            is_healthy=is_healthy,
+            issues=issues,
+            metrics={
+                "sub_components": self.get_component_info(),
+                "basic_metrics": self.metrics.copy()
+            },
+            component_name=self.__class__.__name__
+        )
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get component-specific metrics.
+        
+        Returns:
+            Dictionary containing component metrics
+        """
+        if self.platform:
+            try:
+                component_metrics = self.platform.analytics_service.collect_component_metrics(self)
+                return {
+                    "component_name": component_metrics.component_name,
+                    "component_type": component_metrics.component_type,
+                    "success_count": component_metrics.success_count,
+                    "error_count": component_metrics.error_count,
+                    "resource_usage": component_metrics.resource_usage,
+                    "performance_metrics": component_metrics.performance_metrics,
+                    "timestamp": component_metrics.timestamp
+                }
+            except Exception as e:
+                # Fallback if platform service fails
+                pass
+        
+        # Fallback if platform services not initialized - use existing method
+        # Update component metrics
+        if self.config['pipeline']['enable_metrics']:
+            self.metrics['component_metrics'] = {
+                'parser': self.parser.get_metrics() if hasattr(self.parser, 'get_metrics') else {},
+                'chunker': self.chunker.get_metrics() if hasattr(self.chunker, 'get_metrics') else {},
+                'cleaner': self.cleaner.get_metrics() if hasattr(self.cleaner, 'get_metrics') else {},
+                'pipeline': self.pipeline.get_metrics() if hasattr(self.pipeline, 'get_metrics') else {}
+            }
+        
+        return self.metrics.copy()
+
+    def get_capabilities(self) -> List[str]:
+        """Get list of component capabilities.
+        
+        Returns:
+            List of capability strings
+        """
+        capabilities = [
+            "document_processing",
+            "multi_format_support",
+            "modular_architecture",
+            "configurable_pipeline",
+            "performance_metrics"
+        ]
+        
+        # Add parser capabilities
+        if self.parser and hasattr(self.parser, 'supported_formats'):
+            capabilities.extend([f"parser_{fmt}" for fmt in self.parser.supported_formats()])
+        
+        # Add chunker capabilities
+        if self.chunker:
+            capabilities.append(f"chunker_{self.config['chunker']['type']}")
+        
+        # Add cleaner capabilities
+        if self.cleaner:
+            capabilities.append(f"cleaner_{self.config['cleaner']['type']}")
+        
+        return capabilities
     
     def _initialize_components(self) -> None:
         """Initialize all sub-components based on configuration."""

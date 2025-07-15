@@ -1,139 +1,137 @@
-# CURRENT SESSION CONTEXT: IMPLEMENTER MODE - Platform Orchestrator System Services
+# CURRENT SESSION CONTEXT: IMPLEMENTER MODE - Component Interface Standardization
 
-## Role Focus: Phase 1 AdvancedRetriever Refactoring Implementation
-**Perspective**: Swiss engineering implementation with service-based architecture
-**Key Concerns**: Universal system services, standard interfaces, cross-component applicability
-**Decision Framework**: Service-based architecture, comprehensive testing, backward compatibility
-**Output Style**: Working services, standard interfaces, system-wide capabilities
+## Role Focus: Phase 2 AdvancedRetriever Refactoring Implementation
+**Perspective**: Swiss engineering implementation with interface standardization focus
+**Key Concerns**: Universal interfaces, service integration, cross-component applicability
+**Decision Framework**: Standard interface implementation, comprehensive testing, service usage
+**Output Style**: Working interfaces, service integration, universal capabilities
 **Constraints**: Maintain Epic 2 features, Apple Silicon optimization, production readiness
 
 ## ⚠️ CRITICAL ARCHITECTURAL SAFEGUARDS ⚠️
 **MANDATORY**: Consult `.claude/ARCHITECTURE_SAFEGUARDS.md` before ANY implementation
-**MANDATORY**: Platform Orchestrator provides SERVICES, not feature containers
-**MANDATORY**: Services must be usable by ALL components through standard interfaces
-**MANDATORY**: NO component-specific logic in Platform Orchestrator
+**MANDATORY**: All components must implement STANDARD INTERFACES
+**MANDATORY**: Components must USE platform services, not implement them
+**MANDATORY**: NO component-specific service implementations
 
-## Implementation Target: Platform Orchestrator System Services
-### Current Phase: Phase 1 of 3-phase refactoring
-### Services to Create: Universal system services for ALL components
-### Priority: HIGH - Critical service-based architecture foundation
-### Success Criteria: Platform Orchestrator provides system-wide services that ALL components can use
+## Implementation Target: Component Interface Standardization
+### Current Phase: Phase 2 of 3-phase refactoring
+### Interfaces to Implement: Standard interfaces in ALL components
+### Priority: HIGH - Enable universal service access
+### Success Criteria: All components implement standard interfaces and use platform services
 
-## Specific System Services to Implement:
+## Specific Standard Interfaces to Implement:
 
-### 1. ComponentHealthService (HIGH PRIORITY)
-**Purpose**: Universal health monitoring service for ALL components
-**Source**: Extract from `advanced_retriever.py:254-259, 308-339`
-**Target**: `platform_orchestrator.py` - new system service
-**Service Interface**:
-- `check_component_health(component: Component) -> HealthStatus`
-- `monitor_component_health(component: Component) -> HealthMonitor`
-- `report_component_failure(component: Component, error: Exception) -> None`
-- `get_system_health_summary() -> SystemHealthSummary`
+### 1. Component Base Interface (HIGH PRIORITY)
+**Purpose**: Universal interface for all components to use platform services
+**Target**: All components (Document Processor, Embedder, Retriever, Answer Generator, Query Processor)
+**Interface Methods**:
+- `get_health_status() -> HealthStatus` - Report component health
+- `get_metrics() -> Dict[str, Any]` - Report component metrics
+- `get_capabilities() -> List[str]` - Report component capabilities
+- `initialize_services(platform: PlatformOrchestrator) -> None` - Initialize platform services
 
-### 2. SystemAnalyticsService (HIGH PRIORITY)
-**Purpose**: Universal analytics collection service for ALL components
-**Source**: Extract from `advanced_retriever.py:92-94, 142-172, 83-91`
-**Target**: `platform_orchestrator.py` - new system service
-**Service Interface**:
-- `collect_component_metrics(component: Component) -> ComponentMetrics`
-- `aggregate_system_metrics() -> SystemMetrics`
-- `track_component_performance(component: Component, metrics: Dict) -> None`
-- `generate_analytics_report() -> AnalyticsReport`
+### 2. AdvancedRetriever Interface Implementation (HIGH PRIORITY)
+**Purpose**: Convert AdvancedRetriever to use platform services
+**Source**: Remove service implementations from `advanced_retriever.py`
+**Target**: `advanced_retriever.py` - implement standard interfaces
+**Interface Implementation**:
+- `get_health_status()` - Use ComponentHealthService
+- `get_metrics()` - Use SystemAnalyticsService
+- `get_capabilities()` - Report retrieval capabilities
+- `initialize_services()` - Connect to platform services
 
-### 3. ABTestingService (HIGH PRIORITY)
-**Purpose**: Universal A/B testing service for ALL components
-**Source**: Extract from `advanced_retriever.py:175-210`
-**Target**: `platform_orchestrator.py` - new system service
-**Service Interface**:
-- `assign_experiment(context: QueryContext) -> ExperimentAssignment`
-- `track_experiment_outcome(experiment_id: str, outcome: Dict) -> None`
-- `get_experiment_results(experiment_name: str) -> ExperimentResults`
-- `configure_experiment(experiment_config: ExperimentConfig) -> None`
+### 3. All Components Interface Implementation (HIGH PRIORITY)
+**Purpose**: Implement standard interfaces in ALL components
+**Components**: Document Processor, Embedder, Answer Generator, Query Processor
+**Interface Implementation**:
+- `get_health_status()` - Component-specific health reporting
+- `get_metrics()` - Component-specific metrics
+- `get_capabilities()` - Component-specific capabilities
+- `initialize_services()` - Platform service initialization
 
-### 4. ConfigurationService (HIGH PRIORITY)
-**Purpose**: Universal configuration management service for ALL components
-**Source**: Extract from `advanced_retriever.py:119-229`
-**Target**: `platform_orchestrator.py` - new system service
-**Service Interface**:
-- `get_component_config(component_name: str) -> ComponentConfig`
-- `update_component_config(component_name: str, config: ComponentConfig) -> None`
-- `validate_configuration(config: SystemConfig) -> ValidationResult`
-- `get_system_configuration() -> SystemConfig`
-
-### 5. BackendManagementService (HIGH PRIORITY)
-**Purpose**: Universal backend management service for ALL components
-**Source**: Extract from `advanced_retriever.py:340-413`
-**Target**: `platform_orchestrator.py` - new system service
-**Service Interface**:
-- `register_backend(backend_name: str, backend_config: BackendConfig) -> None`
-- `switch_component_backend(component: Component, backend_name: str) -> None`
-- `get_backend_status(backend_name: str) -> BackendStatus`
-- `migrate_component_data(component: Component, from_backend: str, to_backend: str) -> None`
+### 4. Platform Service Integration (HIGH PRIORITY)
+**Purpose**: Enable all components to use platform services
+**Integration Points**:
+- Health monitoring via ComponentHealthService
+- Analytics collection via SystemAnalyticsService
+- A/B testing via ABTestingService
+- Configuration management via ConfigurationService
+- Backend management via BackendManagementService
 
 ## Key Files for Implementation:
 - `/src/components/retrievers/advanced_retriever.py` - Source code to extract
-- `/src/core/platform_orchestrator.py` - Target implementation
+- `/src/components/query_processors/modular_query_processor.py` - Target implementation
 - `/src/core/interfaces.py` - Interface definitions
 - `/config/advanced_test.yaml` - Configuration management
 - `/tests/` - Comprehensive test validation
 
 ## Implementation Strategy:
 
-### Step 1: Extract System Health Monitoring
-- Create `SystemHealthMonitor` class in Platform Orchestrator
-- Implement health check interfaces
-- Add backend health status tracking
-- Test health monitoring functionality
+### Step 1: Extract Query Analytics Collection
+- Create `QueryAnalytics` sub-component in Query Processor
+- Implement analytics collection interfaces
+- Add query performance tracking
+- Test analytics accuracy and reporting
 
-### Step 2: Extract Backend Management
-- Create `BackendManager` class in Platform Orchestrator
-- Implement backend switching logic
-- Add multi-backend configuration
-- Test backend management operations
+### Step 2: Extract Workflow Orchestration Logic
+- Create `WorkflowOrchestrator` sub-component in Query Processor
+- Implement workflow decision making
+- Add pipeline coordination
+- Test workflow orchestration functionality
 
-### Step 3: Extract System Statistics
-- Create `SystemMetrics` class in Platform Orchestrator
-- Implement metrics collection
-- Add performance tracking
-- Test metrics accuracy and reporting
+### Step 3: Extract A/B Testing Framework
+- Create `ExperimentManager` sub-component in Query Processor
+- Implement experiment configuration
+- Add assignment and analysis methods
+- Test A/B testing functionality
 
-### Step 4: Extract Configuration Management
-- Create `ConfigurationManager` class in Platform Orchestrator
-- Implement centralized configuration
-- Add feature flag management
-- Test configuration validation
+### Step 4: Integrate with Existing Query Processor
+- Update `ModularQueryProcessor` to include new sub-components
+- Implement proper workflow orchestration
+- Add configuration management
+- Test complete query processing pipeline
 
-### Step 5: Extract Analytics Framework
-- Create `AnalyticsManager` class in Platform Orchestrator
-- Implement system-wide analytics
-- Add dashboard configuration
-- Test analytics collection and reporting
+### Step 5: Remove Workflow Logic from AdvancedRetriever
+- Remove query analytics from retriever
+- Remove workflow orchestration logic
+- Remove A/B testing framework
+- Test retriever with clean boundaries
 
 ## Swiss Engineering Implementation Standards:
 ### Code Quality: Comprehensive error handling, proper logging, Swiss documentation
 ### Testing: Unit tests for each extracted component, integration tests
 ### Performance: Maintain Apple Silicon optimization, <5% performance overhead
-### Backward Compatibility: Maintain existing AdvancedRetriever interface
+### Backward Compatibility: Maintain existing query processing interface
 ### Architecture Compliance: Clean component boundaries, proper interfaces
 
+## Query Processor Sub-component Architecture:
+### Existing Sub-components:
+- `QueryAnalyzer` - Query analysis and optimization
+- `ContextSelector` - Context selection and ranking
+- `ResponseAssembler` - Response formatting and assembly
+
+### New Sub-components (from AdvancedRetriever):
+- `QueryAnalytics` - Analytics collection and reporting
+- `WorkflowOrchestrator` - Workflow coordination and decision making
+- `ExperimentManager` - A/B testing and experimentation
+
 ## Success Criteria:
-- [ ] All 5 system-wide features migrated to Platform Orchestrator
-- [ ] AdvancedRetriever no longer contains system-wide concerns
-- [ ] All existing functionality preserved
+- [ ] All 3 workflow features migrated to Query Processor
+- [ ] AdvancedRetriever no longer contains workflow orchestration
+- [ ] All existing query processing functionality preserved
 - [ ] Comprehensive test coverage for migrated features
 - [ ] Performance baseline maintained or improved
 - [ ] Backward compatibility validated
 
 ## Testing Requirements:
-- Unit tests for each new Platform Orchestrator component
-- Integration tests for system health monitoring
-- Performance tests for backend switching
+- Unit tests for each new Query Processor sub-component
+- Integration tests for workflow orchestration
+- Performance tests for query processing pipeline
 - Compatibility tests for existing interfaces
-- End-to-end tests for complete system operation
+- End-to-end tests for complete query processing
 
 ## Quality Gates:
-- **Architecture Compliance**: System-wide concerns properly isolated
+- **Architecture Compliance**: Workflow concerns properly isolated in Query Processor
 - **Performance**: <5% overhead from migration
 - **Testing**: >95% coverage for migrated components
 - **Backward Compatibility**: 100% existing functionality preserved
@@ -141,48 +139,6 @@
 
 ## Next Session Preparation:
 - Validate all migrated components working correctly
-- Prepare for Phase 2: Query Processor migration
+- Prepare for Phase 3: Remaining component cleanup
 - Update component interfaces for extracted features
 - Document migration success and lessons learned
-
----
-
-# PREVIOUS SESSION RESULTS: Epic 2 Demo Debugging - OPTIMIZATION COMPLETE ✅
-
-## Performance Optimization Session Summary (2025-07-15)
-
-### Critical Bottleneck Identified and Resolved
-**Problem**: Epic 2 demo system hanging during full corpus processing (73 documents)
-**Root Cause**: BM25 index O(n²) rebuilding bottleneck during batch processing
-**Solution**: Implemented deferred indexing in BM25Retriever to eliminate rebuilding penalty
-
-### Results Achieved
-- **Demo Mode Performance**: 9.17s initialization (target: <10s) ✅
-- **System Stability**: No more hanging during document processing ✅
-- **Query Processing**: 13.74s query response time with functional system ✅
-- **Memory Usage**: 588MB (HuggingFace Spaces compatible) ✅
-
-### Major Discovery: Document Size Bottleneck
-**Critical Finding**: vector-intrinsic-specification.pdf identified as major performance bottleneck
-- **Size**: 4,027 pages, 8.2MB
-- **Impact**: Generates ~35,000 chunks (single document)
-- **Processing Time**: Accounts for ~50% of total corpus processing time
-- **Recommendation**: Consider document size limits for production deployment
-
-### Technical Implementation
-- **Deferred Indexing**: Added to BM25Retriever (`src/components/retrievers/sparse/bm25_retriever.py`)
-- **System Integration**: Modified `demo/utils/system_integration.py` to use deferred indexing
-- **Architecture**: Maintained 100% modular compliance with AdvancedRetriever
-- **Validation**: Comprehensive testing confirmed optimization success
-
-### Files Updated
-- `src/components/retrievers/sparse/bm25_retriever.py` - Added deferred indexing capability
-- `demo/utils/system_integration.py` - Integrated deferred indexing into system workflow
-- `README_EPIC2_DEMO.md` - Updated with optimization results and bottleneck analysis
-- `EPIC2_DEFERRED_INDEXING_OPTIMIZATION_REPORT.md` - Complete technical documentation
-
-### Swiss Engineering Quality Standards Met
-- **Quantified Performance**: Before/after metrics with clear success criteria
-- **Root Cause Analysis**: Systematic debugging with technical depth
-- **Comprehensive Documentation**: Complete technical reports and implementation guides
-- **Backward Compatibility**: Zero breaking changes to existing functionality

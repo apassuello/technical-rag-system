@@ -24,7 +24,12 @@ import sys
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.interfaces import Embedder as EmbedderInterface
+from src.core.interfaces import Embedder as EmbedderInterface, HealthStatus
+
+# Forward declaration to avoid circular import
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.core.platform_orchestrator import PlatformOrchestrator
 from .base import (
     EmbeddingModel, 
     BatchProcessor, 
@@ -133,6 +138,9 @@ class ModularEmbedder(EmbedderInterface, ConfigurableEmbedderComponent):
         self._cache_hits = 0
         self._cache_misses = 0
         self._created_time = time.time()
+        
+        # Platform services (initialized via initialize_services)
+        self.platform: Optional['PlatformOrchestrator'] = None
         
         # Validate complete system
         validation_result = self.validate_components()
@@ -311,12 +319,41 @@ class ModularEmbedder(EmbedderInterface, ConfigurableEmbedderComponent):
             self._total_embeddings_generated += len(texts)
             self._total_processing_time += processing_time
             
+            # Track performance using platform services
+            if self.platform:
+                self.platform.track_component_performance(
+                    self, 
+                    "embedding_generation", 
+                    {
+                        "success": True,
+                        "processing_time": processing_time,
+                        "texts_count": len(texts),
+                        "cache_hits": len(cached_embeddings),
+                        "new_embeddings": len(new_embeddings),
+                        "embedding_dimension": self.embedding_dim()
+                    }
+                )
+            
             logger.debug(f"Generated {len(texts)} embeddings in {processing_time:.3f}s "
                         f"(cache hits: {len(cached_embeddings)}, computed: {len(new_embeddings)})")
             
             return result_embeddings
             
         except Exception as e:
+            # Track failure using platform services
+            if self.platform:
+                processing_time = time.time() - start_time
+                self.platform.track_component_performance(
+                    self, 
+                    "embedding_generation", 
+                    {
+                        "success": False,
+                        "processing_time": processing_time,
+                        "texts_count": len(texts),
+                        "error": str(e)
+                    }
+                )
+            
             logger.error(f"Embedding generation failed: {e}")
             raise RuntimeError(f"Failed to generate embeddings: {str(e)}") from e
     
@@ -496,6 +533,91 @@ class ModularEmbedder(EmbedderInterface, ConfigurableEmbedderComponent):
             "architecture": "modular_embedder",
             "total_sub_components": 3
         }
+    
+    # Standard ComponentBase interface implementation
+    def initialize_services(self, platform: 'PlatformOrchestrator') -> None:
+        """Initialize platform services for the component.
+        
+        Args:
+            platform: PlatformOrchestrator instance providing services
+        """
+        self.platform = platform
+        logger.info("ModularEmbedder initialized with platform services")
+
+    def get_health_status(self) -> HealthStatus:
+        """Get the current health status of the component.
+        
+        Returns:
+            HealthStatus object with component health information
+        """
+        if self.platform:
+            return self.platform.check_component_health(self)
+        
+        # Fallback if platform services not initialized
+        validation_result = self.validate_components()
+        
+        return HealthStatus(
+            is_healthy=validation_result.is_valid,
+            status="healthy" if validation_result.is_valid else "unhealthy",
+            details={
+                "validation_message": validation_result.message,
+                "validation_details": validation_result.details,
+                "sub_components": self.get_sub_components(),
+                "performance": self.get_performance_stats()
+            }
+        )
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get component-specific metrics.
+        
+        Returns:
+            Dictionary containing component metrics
+        """
+        if self.platform:
+            return self.platform.collect_component_metrics(self)
+        
+        # Fallback if platform services not initialized
+        return {
+            "performance": self.get_performance_stats(),
+            "model_info": self.get_model_info(),
+            "sub_components": self.get_sub_components(),
+            "cache_stats": {
+                "hits": self._cache_hits,
+                "misses": self._cache_misses,
+                "hit_rate": self._cache_hits / max(1, self._cache_hits + self._cache_misses)
+            }
+        }
+
+    def get_capabilities(self) -> List[str]:
+        """Get list of component capabilities.
+        
+        Returns:
+            List of capability strings
+        """
+        capabilities = [
+            "text_embedding",
+            "batch_processing",
+            "caching",
+            "modular_architecture",
+            "performance_optimization",
+            "streaming_support"
+        ]
+        
+        # Add model-specific capabilities
+        if self.model:
+            capabilities.append(f"model_{self.config['model']['type']}")
+            
+        # Add batch processor capabilities
+        if self.batch_processor:
+            capabilities.append(f"batch_processor_{self.config['batch_processor']['type']}")
+            if self.batch_processor.supports_streaming():
+                capabilities.append("streaming_processing")
+        
+        # Add cache capabilities
+        if self.cache:
+            capabilities.append(f"cache_{self.config['cache']['type']}")
+        
+        return capabilities
     
     def cleanup(self) -> None:
         """Clean up resources used by sub-components."""

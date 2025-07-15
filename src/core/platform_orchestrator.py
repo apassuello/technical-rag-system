@@ -2353,6 +2353,17 @@ class PlatformOrchestrator:
         component = self._components[component_name]
         return self.health_service.check_component_health(component)
     
+    def check_component_health(self, component: Any) -> HealthStatus:
+        """Check health of a component object.
+        
+        Args:
+            component: Component instance to check
+            
+        Returns:
+            HealthStatus object with health information
+        """
+        return self.health_service.check_component_health(component)
+    
     def get_system_health_summary(self) -> Dict[str, Any]:
         """Get a comprehensive system health summary.
         
@@ -2418,6 +2429,21 @@ class PlatformOrchestrator:
         
         component = self._components[component_name]
         self.analytics_service.track_component_performance(component, metrics)
+    
+    def track_component_performance(self, component: Any, operation: str, metrics: Dict[str, Any]) -> None:
+        """Track performance metrics for a component object.
+        
+        Args:
+            component: Component instance
+            operation: Operation type (e.g., 'query_processing', 'embedding_generation')
+            metrics: Performance metrics to track
+        """
+        # Create combined metrics with operation type
+        combined_metrics = {
+            "operation": operation,
+            **metrics
+        }
+        self.analytics_service.track_component_performance(component, combined_metrics)
     
     def generate_analytics_report(self) -> Dict[str, Any]:
         """Generate a comprehensive analytics report.
@@ -2506,6 +2532,16 @@ class PlatformOrchestrator:
         """
         self.configuration_service.update_component_config(component_name, config)
     
+    def update_component_configuration(self, component: Any, config: Dict[str, Any]) -> None:
+        """Update configuration for a component object.
+        
+        Args:
+            component: Component instance
+            config: New configuration
+        """
+        component_name = type(component).__name__
+        self.configuration_service.update_component_config(component_name, config)
+    
     def get_system_configuration(self) -> Dict[str, Any]:
         """Get the complete system configuration.
         
@@ -2563,6 +2599,26 @@ class PlatformOrchestrator:
         
         component = self._components[component_name]
         self.backend_management_service.switch_component_backend(component, backend_name)
+    
+    def switch_component_backend(self, component: Any, backend_name: str) -> None:
+        """Switch a component object to a different backend.
+        
+        Args:
+            component: Component instance
+            backend_name: Name of the target backend
+        """
+        self.backend_management_service.switch_component_backend(component, backend_name)
+    
+    def initialize_component_services(self, component: Any) -> None:
+        """Initialize platform services for a component.
+        
+        Args:
+            component: Component instance that needs service initialization
+        """
+        if hasattr(component, 'initialize_services'):
+            component.initialize_services(self)
+        else:
+            logger.warning(f"Component {type(component).__name__} does not support service initialization")
     
     def get_backend_status(self, backend_name: str) -> BackendStatus:
         """Get status information for a backend.

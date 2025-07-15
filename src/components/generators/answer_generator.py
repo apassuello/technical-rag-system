@@ -23,7 +23,12 @@ import sys
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.interfaces import AnswerGenerator as AnswerGeneratorInterface, Document, Answer
+from src.core.interfaces import AnswerGenerator as AnswerGeneratorInterface, Document, Answer, HealthStatus
+
+# Forward declaration to avoid circular import
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.core.platform_orchestrator import PlatformOrchestrator
 from .base import ConfigurableComponent, GenerationParams, GenerationError, Citation
 
 # Import sub-component registries
@@ -170,6 +175,9 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
         self._generation_count = 0
         self._total_time = 0.0
         
+        # Platform services (initialized via initialize_services)
+        self.platform: Optional['PlatformOrchestrator'] = None
+        
         logger.info(f"Initialized AnswerGenerator with components: "
                    f"prompt_builder={self.config['prompt_builder']['type']}, "
                    f"llm_client={self.config['llm_client']['type']}, "
@@ -235,6 +243,22 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
             self._generation_count += 1
             self._total_time += elapsed_time
             
+            # Track performance using platform services
+            if self.platform:
+                self.platform.track_component_performance(
+                    self, 
+                    "answer_generation", 
+                    {
+                        "success": True,
+                        "generation_time": elapsed_time,
+                        "confidence": confidence,
+                        "query": query,
+                        "context_docs": len(context),
+                        "answer_length": len(answer_text),
+                        "citations_count": len(citations)
+                    }
+                )
+            
             logger.info(f"Generated answer in {elapsed_time:.2f}s with confidence {confidence:.3f}")
             
             return Answer(
@@ -245,6 +269,21 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
             )
             
         except Exception as e:
+            # Track failure using platform services
+            if self.platform:
+                elapsed_time = time.time() - start_time
+                self.platform.track_component_performance(
+                    self, 
+                    "answer_generation", 
+                    {
+                        "success": False,
+                        "generation_time": elapsed_time,
+                        "query": query,
+                        "context_docs": len(context),
+                        "error": str(e)
+                    }
+                )
+            
             logger.error(f"Answer generation failed: {str(e)}")
             raise GenerationError(f"Failed to generate answer: {str(e)}") from e
     
@@ -332,6 +371,121 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
             raise ValueError(f"LLM validation error: {str(e)}")
         
         return True
+    
+    # Standard ComponentBase interface implementation
+    def initialize_services(self, platform: 'PlatformOrchestrator') -> None:
+        """Initialize platform services for the component.
+        
+        Args:
+            platform: PlatformOrchestrator instance providing services
+        """
+        self.platform = platform
+        logger.info("AnswerGenerator initialized with platform services")
+
+    def get_health_status(self) -> HealthStatus:
+        """Get the current health status of the component.
+        
+        Returns:
+            HealthStatus object with component health information
+        """
+        if self.platform:
+            return self.platform.check_component_health(self)
+        
+        # Fallback if platform services not initialized
+        is_healthy = True
+        issues = []
+        
+        # Check sub-components
+        if not self.prompt_builder:
+            is_healthy = False
+            issues.append("Prompt builder not initialized")
+        
+        if not self.llm_client:
+            is_healthy = False
+            issues.append("LLM client not initialized")
+        
+        if not self.response_parser:
+            is_healthy = False
+            issues.append("Response parser not initialized")
+        
+        if not self.confidence_scorer:
+            is_healthy = False
+            issues.append("Confidence scorer not initialized")
+        
+        # Check LLM connection
+        try:
+            if self.llm_client and not self.llm_client.validate_connection():
+                is_healthy = False
+                issues.append("LLM connection validation failed")
+        except Exception as e:
+            is_healthy = False
+            issues.append(f"LLM validation error: {str(e)}")
+        
+        return HealthStatus(
+            is_healthy=is_healthy,
+            status="healthy" if is_healthy else "unhealthy",
+            details={
+                "sub_components": self.get_component_info(),
+                "metrics": self.get_generator_info(),
+                "issues": issues
+            }
+        )
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get component-specific metrics.
+        
+        Returns:
+            Dictionary containing component metrics
+        """
+        if self.platform:
+            return self.platform.collect_component_metrics(self)
+        
+        # Fallback if platform services not initialized
+        return {
+            "generation_count": self._generation_count,
+            "total_time": self._total_time,
+            "avg_time": self._total_time / max(1, self._generation_count),
+            "sub_components": self.get_component_info(),
+            "config": {
+                "prompt_builder": self.config['prompt_builder']['type'],
+                "llm_client": self.config['llm_client']['type'],
+                "response_parser": self.config['response_parser']['type'],
+                "confidence_scorer": self.config['confidence_scorer']['type']
+            }
+        }
+
+    def get_capabilities(self) -> List[str]:
+        """Get list of component capabilities.
+        
+        Returns:
+            List of capability strings
+        """
+        capabilities = [
+            "answer_generation",
+            "context_synthesis",
+            "modular_architecture",
+            "configurable_prompting",
+            "confidence_scoring",
+            "citation_generation"
+        ]
+        
+        # Add LLM-specific capabilities
+        if self.llm_client:
+            capabilities.append(f"llm_{self.config['llm_client']['type']}")
+        
+        # Add prompt builder capabilities
+        if self.prompt_builder:
+            capabilities.append(f"prompt_builder_{self.config['prompt_builder']['type']}")
+        
+        # Add parser capabilities
+        if self.response_parser:
+            capabilities.append(f"response_parser_{self.config['response_parser']['type']}")
+        
+        # Add scorer capabilities
+        if self.confidence_scorer:
+            capabilities.append(f"confidence_scorer_{self.config['confidence_scorer']['type']}")
+        
+        return capabilities
     
     def _initialize_components(self) -> None:
         """Initialize all sub-components based on configuration."""
