@@ -196,7 +196,8 @@ Start by confirming you understand the session objectives and validating Session
 ### **Pre-Session Validation**
 ```bash
 # Validate system baseline
-python tests/comprehensive_integration_test.py
+python tests/run_comprehensive_tests.py
+python tests/diagnostic/run_all_diagnostics.py
 python tests/integration_validation/validate_architecture_compliance.py
 
 # Check current performance
@@ -206,7 +207,7 @@ python epic2_performance_analysis.py  # Add your performance measurement command
 ### **Post-Session Validation**
 ```bash
 # Validate functionality
-python tests/comprehensive_integration_test.py
+python tests/run_comprehensive_tests.py
 
 # Check architecture compliance
 python tests/integration_validation/validate_architecture_compliance.py
