@@ -1,0 +1,93 @@
+# Epic 2 Test Configuration - Minimal Features
+# For testing baseline performance with minimal EPIC 2 features
+
+# Document processor for handling input files
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 1024
+    chunk_overlap: 128
+
+# Embedding generator for converting text to vectors  
+embedder:
+  type: "modular"
+  config:
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        device: "auto"
+        normalize_embeddings: true
+    batch_processor:
+      type: "dynamic"
+      config:
+        initial_batch_size: 64
+        max_batch_size: 256
+        optimize_for_memory: false
+    cache:
+      type: "memory"
+      config:
+        max_entries: 100000
+        max_memory_mb: 1024
+
+# Epic 2 ModularUnifiedRetriever with Minimal Features
+retriever:
+  type: "modular_unified"
+  config:
+    vector_index:
+      type: "faiss"
+      config:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+        metric: "cosine"
+    
+    sparse:
+      type: "bm25"
+      config:
+        k1: 1.2
+        b: 0.75
+        lowercase: true
+        preserve_technical_terms: true
+    
+    # Standard RRF fusion (no graph enhancement)
+    fusion:
+      type: "rrf"
+      config:
+        k: 60
+        weights:
+          dense: 0.6
+          sparse: 0.4
+        graph_enabled: false
+    
+    # Identity reranker (no neural reranking)
+    reranker:
+      type: "identity"
+      config:
+        enabled: false
+
+# Answer generation strategy
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    model_name: "llama3.2:3b"
+    api_token: null
+    temperature: 0.3
+    max_tokens: 1024
+    use_ollama: true
+    ollama_url: "http://localhost:11434"
+    use_inference_providers: false
+    enable_adaptive_prompts: false
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
+    
+    prompt_builder:
+      type: "simple"
+      config:
+        max_context_length: 12000
+        include_instructions: true
+        citation_style: "inline"
+
+# Global settings
+global_settings:
+  environment: "testing"
+  log_level: "info"
