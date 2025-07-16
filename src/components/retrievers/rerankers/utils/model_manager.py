@@ -121,19 +121,50 @@ class ModelManager:
                 self.info.error_count += 1
                 return False
     
+    def _resolve_device(self) -> str:
+        """
+        Resolve 'auto' device to appropriate device for current system.
+        
+        Returns:
+            Resolved device string ('cpu', 'cuda', 'mps', etc.)
+        """
+        if self.config.device != "auto":
+            return self.config.device
+        
+        try:
+            import torch
+            
+            # Check for MPS (Metal Performance Shaders) on Apple Silicon
+            if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+                return "mps"
+            
+            # Check for CUDA
+            if torch.cuda.is_available():
+                return "cuda"
+            
+            # Fall back to CPU
+            return "cpu"
+            
+        except ImportError:
+            # If torch is not available, default to CPU
+            return "cpu"
+    
     def _load_sentence_transformer(self):
         """Load model using sentence-transformers."""
         try:
             from sentence_transformers import CrossEncoder
             
+            # Resolve device if set to 'auto'
+            device = self._resolve_device()
+            
             self.model = CrossEncoder(
                 self.config.name,
                 max_length=self.config.max_length,
-                device=self.config.device,
+                device=device,
                 trust_remote_code=self.config.trust_remote_code
             )
             
-            logger.debug(f"Sentence transformer model loaded: {self.config.name}")
+            logger.debug(f"Sentence transformer model loaded: {self.config.name} on device: {device}")
             
         except ImportError:
             raise ImportError("sentence-transformers library not available")
