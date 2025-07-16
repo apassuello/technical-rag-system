@@ -4,9 +4,10 @@ Epic 2 Validation Test Suite.
 This package provides comprehensive validation for all Epic 2 Advanced Retriever
 implementations, including:
 
-- Multi-backend infrastructure validation (FAISS/Weaviate)
-- Graph-based retrieval validation (entities, relationships, graph search)
+- Configuration-driven feature activation validation
+- Sub-component integration testing within ModularUnifiedRetriever
 - Neural reranking validation (cross-encoder quality and performance)
+- Graph enhancement validation (graph-enhanced fusion)
 - Complete 4-stage pipeline integration testing
 - Performance benchmarking (<700ms latency target)
 - Quality enhancement validation (>20% improvement)
@@ -27,19 +28,17 @@ __version__ = "1.0.0"
 __epic__ = "Epic 2 Complete Validation"
 __status__ = "Production Ready"
 
-# Import main validation classes
-from .test_multi_backend_validation import MultiBackendValidator
-from .test_graph_integration_validation import GraphIntegrationValidator
-from .test_neural_reranking_validation import NeuralRerankingValidator
-from .test_epic2_integration_validation import Epic2IntegrationValidator
-from .test_epic2_performance_validation import Epic2PerformanceValidator
-from .test_epic2_quality_validation import Epic2QualityValidator
+# Import main validation classes (NEW test suite)
+from .test_epic2_configuration_validation_new import Epic2ConfigurationValidator
+from .test_epic2_subcomponent_integration_new import Epic2SubComponentIntegrationValidator
+from .test_epic2_performance_validation_new import Epic2PerformanceValidator
+from .test_epic2_quality_validation_new import Epic2QualityValidator
+from .test_epic2_pipeline_validation_new import Epic2PipelineValidator
 
 __all__ = [
-    "MultiBackendValidator",
-    "GraphIntegrationValidator",
-    "NeuralRerankingValidator",
-    "Epic2IntegrationValidator",
+    "Epic2ConfigurationValidator",
+    "Epic2SubComponentIntegrationValidator", 
     "Epic2PerformanceValidator",
     "Epic2QualityValidator",
+    "Epic2PipelineValidator",
 ]
