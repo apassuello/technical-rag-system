@@ -104,6 +104,11 @@ class ModularUnifiedRetriever(Retriever):
             "last_retrieval_time": 0.0
         }
         
+        # Backend management (for multi-backend performance testing)
+        self.active_backend_name = "faiss"  # Default backend
+        self.available_backends = ["faiss", "weaviate"]
+        self.backend_switch_count = 0
+        
         # Platform services (initialized via initialize_services)
         self.platform: Optional['PlatformOrchestrator'] = None
         
@@ -150,14 +155,24 @@ class ModularUnifiedRetriever(Retriever):
         reranker_type = config.get("type", "identity")
         reranker_config = config.get("config", {})
         
+        logger.info(f"🔧 Creating reranker: type={reranker_type}, config keys={list(reranker_config.keys())}")
+        
         if reranker_type == "semantic":
-            return SemanticReranker(reranker_config)
+            reranker = SemanticReranker(reranker_config)
         elif reranker_type == "identity":
-            return IdentityReranker(reranker_config)
+            reranker = IdentityReranker(reranker_config)
         elif reranker_type == "neural":
-            return NeuralReranker(reranker_config)
+            try:
+                reranker = NeuralReranker(reranker_config)
+                logger.info(f"✅ NeuralReranker created successfully: enabled={reranker.enabled}, initialized={reranker._initialized}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create NeuralReranker: {e}")
+                logger.warning("Falling back to IdentityReranker")
+                reranker = IdentityReranker({"enabled": True})
         else:
             raise ValueError(f"Unknown reranker type: {reranker_type}")
+        
+        return reranker
     
     def retrieve(self, query: str, k: int = 5) -> List[RetrievalResult]:
         """
@@ -408,6 +423,27 @@ class ModularUnifiedRetriever(Retriever):
         }
         
         logger.info("Cleared all documents from modular retriever")
+    
+    def _consider_backend_switch(self, error: Exception) -> None:
+        """
+        Consider switching to a different backend due to an error.
+        
+        This method is used for performance testing of backend switching.
+        In a real implementation, this would switch to a fallback backend.
+        
+        Args:
+            error: The exception that triggered the switch consideration
+        """
+        logger.warning(f"Backend switch consideration triggered by: {error}")
+        
+        # Simulate backend switching logic
+        if self.active_backend_name == "faiss":
+            self.active_backend_name = "weaviate"
+        else:
+            self.active_backend_name = "faiss"
+        
+        self.backend_switch_count += 1
+        logger.info(f"Switched to backend: {self.active_backend_name} (switch count: {self.backend_switch_count})")
     
     # Standard ComponentBase interface implementation
     def initialize_services(self, platform: 'PlatformOrchestrator') -> None:

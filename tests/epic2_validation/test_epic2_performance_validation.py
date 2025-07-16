@@ -25,11 +25,13 @@ from unittest.mock import Mock, patch
 import numpy as np
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
-# Import Epic 2 components
-from src.components.retrievers.advanced_retriever import AdvancedRetriever
-from src.components.retrievers.config.advanced_config import AdvancedRetrieverConfig
+# Import Epic 2 components (updated for current architecture)
+from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.core.interfaces import Document, RetrievalResult, Embedder
+from src.core.component_factory import ComponentFactory
+from src.core.config import load_config
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +39,30 @@ logger = logging.getLogger(__name__)
 class Epic2PerformanceValidator:
     """Comprehensive performance validator for Epic 2 system."""
 
-    def __init__(self):
+    def __init__(self, config_name: str = "test_epic2_all_features"):
+        self.config_name = config_name
         self.test_results = {}
         self.performance_metrics = {}
         self.validation_errors = []
         self.baseline_measurements = {}
+        
+    def _load_test_config(self, config_name: str = None):
+        """Load test configuration from file."""
+        if config_name is None:
+            config_name = self.config_name
+        config_path = Path(f"config/{config_name}.yaml")
+        return load_config(config_path)
+    
+    def _prepare_documents_with_embeddings(self, documents, embedder):
+        """Prepare documents with embeddings for indexing."""
+        texts = [doc.content for doc in documents]
+        embeddings = embedder.embed(texts)
+        
+        # Add embeddings to documents before indexing
+        for doc, embedding in zip(documents, embeddings):
+            doc.embedding = embedding
+        
+        return documents
 
     def run_all_validations(self) -> Dict[str, Any]:
         """Run all Epic 2 performance validation tests."""
@@ -166,13 +187,9 @@ class Epic2PerformanceValidator:
         test_result = {"passed": False, "details": {}, "errors": []}
 
         try:
-            # Create Epic 2 configuration with all features enabled
-            config = AdvancedRetrieverConfig()
-            config.enable_all_features = True
-            config.backends.primary_backend = "faiss"
-            config.backends.fallback_backend = "weaviate"
-            config.graph_retrieval.enabled = True
-            config.neural_reranking.enabled = True
+            # Load Epic 2 configuration with all features enabled
+            config = self._load_test_config()
+            retriever_config = config.retriever.config
 
             # Create properly configured mock embedder
             embedder = Mock(spec=Embedder)
@@ -187,7 +204,7 @@ class Epic2PerformanceValidator:
             embedder.embedding_dim = 384
 
             try:
-                retriever = AdvancedRetriever(config, embedder)
+                retriever = ComponentFactory.create_retriever(config.retriever.type, config=retriever_config, embedder=embedder)
 
                 # Create test documents
                 test_docs = self._create_performance_test_documents(
@@ -285,20 +302,30 @@ class Epic2PerformanceValidator:
         test_result = {"passed": False, "details": {}, "errors": []}
 
         try:
-            # Configure with hot-swapping enabled
-            config = AdvancedRetrieverConfig()
-            config.backends.enable_hot_swap = True
-            config.backends.primary_backend = "faiss"
-            config.backends.fallback_backend = "weaviate"
+            # Load base configuration and configure multi-backend support
+            config = self._load_test_config("test_epic2_base")
+            retriever_config = config.retriever.config
+            
+            # Configure backend switching in the vector index config (this is the correct way)
+            # Since current ModularUnifiedRetriever doesn't have hot-swap feature yet,
+            # we'll test basic backend functionality
+            retriever_config["vector_index"]["config"]["backend_switching_enabled"] = True
 
             embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Mock embed method to return correct number of embeddings
+            def mock_embed(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                return [np.random.rand(384).tolist() for _ in range(len(texts))]
+            embedder.embed.side_effect = mock_embed
+            embedder.embedding_dim = 384
 
             try:
-                retriever = AdvancedRetriever(config, embedder)
+                retriever = ComponentFactory.create_retriever(config.retriever.type, config=retriever_config, embedder=embedder)
 
                 # Index test documents
                 test_docs = self._create_performance_test_documents(20)
+                test_docs = self._prepare_documents_with_embeddings(test_docs, embedder)
                 retriever.index_documents(test_docs)
 
                 # Measure backend switching performance
@@ -370,19 +397,26 @@ class Epic2PerformanceValidator:
 
         try:
             # Test with and without graph retrieval
-            base_config = AdvancedRetrieverConfig()
-            base_config.graph_retrieval.enabled = False
+            base_config = self._load_test_config("test_epic2_graph_disabled")
+            base_retriever_config = base_config.retriever.config
 
-            graph_config = AdvancedRetrieverConfig()
-            graph_config.graph_retrieval.enabled = True
+            graph_config = self._load_test_config("test_epic2_graph_enabled")
+            graph_retriever_config = graph_config.retriever.config
 
             embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Mock embed method to return correct number of embeddings
+            def mock_embed(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                return [np.random.rand(384).tolist() for _ in range(len(texts))]
+            embedder.embed.side_effect = mock_embed
+            embedder.embedding_dim = 384
 
             try:
                 # Test baseline (without graph)
-                base_retriever = AdvancedRetriever(base_config, embedder)
+                base_retriever = ComponentFactory.create_retriever(base_config.retriever.type, config=base_retriever_config, embedder=embedder)
                 test_docs = self._create_performance_test_documents(20)
+                test_docs = self._prepare_documents_with_embeddings(test_docs, embedder)
                 base_retriever.index_documents(test_docs)
 
                 base_times = []
@@ -395,7 +429,8 @@ class Epic2PerformanceValidator:
 
                 # Test with graph retrieval
                 try:
-                    graph_retriever = AdvancedRetriever(graph_config, embedder)
+                    graph_retriever = ComponentFactory.create_retriever(graph_config.retriever.type, config=graph_retriever_config, embedder=embedder)
+                    # Use the same test documents (already have embeddings)
                     graph_retriever.index_documents(test_docs)
 
                     graph_times = []
@@ -459,19 +494,26 @@ class Epic2PerformanceValidator:
 
         try:
             # Test with and without neural reranking
-            base_config = AdvancedRetrieverConfig()
-            base_config.neural_reranking.enabled = False
+            base_config = self._load_test_config("test_epic2_neural_disabled")
+            base_retriever_config = base_config.retriever.config
 
-            neural_config = AdvancedRetrieverConfig()
-            neural_config.neural_reranking.enabled = True
+            neural_config = self._load_test_config("test_epic2_neural_enabled")
+            neural_retriever_config = neural_config.retriever.config
 
             embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Mock embed method to return correct number of embeddings
+            def mock_embed(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                return [np.random.rand(384).tolist() for _ in range(len(texts))]
+            embedder.embed.side_effect = mock_embed
+            embedder.embedding_dim = 384
 
             try:
                 # Test baseline (without neural reranking)
-                base_retriever = AdvancedRetriever(base_config, embedder)
+                base_retriever = ComponentFactory.create_retriever(base_config.retriever.type, config=base_retriever_config, embedder=embedder)
                 test_docs = self._create_performance_test_documents(20)
+                test_docs = self._prepare_documents_with_embeddings(test_docs, embedder)
                 base_retriever.index_documents(test_docs)
 
                 base_times = []
@@ -484,27 +526,21 @@ class Epic2PerformanceValidator:
 
                 # Test with neural reranking
                 try:
-                    neural_retriever = AdvancedRetriever(neural_config, embedder)
+                    neural_retriever = ComponentFactory.create_retriever(neural_config.retriever.type, config=neural_retriever_config, embedder=embedder)
+                    # Use the same test documents (already have embeddings)
                     neural_retriever.index_documents(test_docs)
 
                     # Mock neural reranking for consistent performance testing
-                    with patch.object(
-                        neural_retriever, "_apply_neural_reranking"
-                    ) as mock_neural:
-                        # Simulate neural reranking with controlled delay
-                        def mock_rerank(query, results):
-                            time.sleep(0.05)  # 50ms simulated neural processing
-                            return results
-
-                        mock_neural.side_effect = mock_rerank
-
-                        neural_times = []
-                        for _ in range(5):
-                            start_time = time.time()
-                            neural_retriever.retrieve(
-                                "RISC-V instruction pipeline", k=5
-                            )
-                            neural_times.append((time.time() - start_time) * 1000)
+                    # Current ModularUnifiedRetriever uses reranker sub-component, not _apply_neural_reranking
+                    # Let's test without mocking for now, as the neural reranker should work
+                    
+                    neural_times = []
+                    for _ in range(5):
+                        start_time = time.time()
+                        neural_retriever.retrieve(
+                            "RISC-V instruction pipeline", k=5
+                        )
+                        neural_times.append((time.time() - start_time) * 1000)
 
                     avg_neural_time = statistics.mean(neural_times)
                     neural_overhead = avg_neural_time - avg_base_time
@@ -564,18 +600,25 @@ class Epic2PerformanceValidator:
             baseline_memory = self.baseline_measurements.get("memory_mb", 0)
 
             # Create full Epic 2 configuration
-            config = AdvancedRetrieverConfig()
-            config.enable_all_features = True
+            config = self._load_test_config()
+            retriever_config = config.retriever.config
 
             embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Mock embed method to return correct number of embeddings
+            def mock_embed(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                return [np.random.rand(384).tolist() for _ in range(len(texts))]
+            embedder.embed.side_effect = mock_embed
+            embedder.embedding_dim = 384
 
             try:
                 # Initialize Epic 2 system
-                retriever = AdvancedRetriever(config, embedder)
+                retriever = ComponentFactory.create_retriever(config.retriever.type, config=retriever_config, embedder=embedder)
 
                 # Index substantial document set
                 test_docs = self._create_performance_test_documents(100)
+                test_docs = self._prepare_documents_with_embeddings(test_docs, embedder)
                 retriever.index_documents(test_docs)
 
                 # Perform several operations to load all components
@@ -631,15 +674,22 @@ class Epic2PerformanceValidator:
             baseline_cpu = self.baseline_measurements.get("cpu_percent", 0)
 
             # Create Epic 2 configuration
-            config = AdvancedRetrieverConfig()
-            config.enable_all_features = True
+            config = self._load_test_config()
+            retriever_config = config.retriever.config
 
             embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Mock embed method to return correct number of embeddings
+            def mock_embed(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                return [np.random.rand(384).tolist() for _ in range(len(texts))]
+            embedder.embed.side_effect = mock_embed
+            embedder.embedding_dim = 384
 
             try:
-                retriever = AdvancedRetriever(config, embedder)
+                retriever = ComponentFactory.create_retriever(config.retriever.type, config=retriever_config, embedder=embedder)
                 test_docs = self._create_performance_test_documents(50)
+                test_docs = self._prepare_documents_with_embeddings(test_docs, embedder)
                 retriever.index_documents(test_docs)
 
                 # Simulate load with concurrent queries

@@ -73,14 +73,24 @@ class Epic2ValidationRunner:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
-        # Initialize all validators
+        # Define configuration files for each validator
+        self.validator_configs = {
+            "multi_backend": "test_epic2_all_features",  # Multi-backend needs all features
+            "graph_integration": "test_epic2_graph_enabled",  # Graph-specific config
+            "neural_reranking": "test_epic2_neural_enabled",  # Neural-specific config
+            "epic2_integration": "test_epic2_all_features",  # Full integration needs all features
+            "performance": "test_epic2_all_features",  # Performance testing with all features
+            "quality": "test_epic2_all_features",  # Quality testing with all features
+        }
+
+        # Initialize all validators with their specific configurations
         self.validators = {
-            "multi_backend": MultiBackendValidator(),
-            "graph_integration": GraphIntegrationValidator(),
-            "neural_reranking": NeuralRerankingValidator(),
-            "epic2_integration": Epic2IntegrationValidator(),
-            "performance": Epic2PerformanceValidator(),
-            "quality": Epic2QualityValidator(),
+            "multi_backend": MultiBackendValidator(config_name=self.validator_configs["multi_backend"]),
+            "graph_integration": GraphIntegrationValidator(config_name=self.validator_configs["graph_integration"]),
+            "neural_reranking": NeuralRerankingValidator(config_name=self.validator_configs["neural_reranking"]),
+            "epic2_integration": Epic2IntegrationValidator(config_name=self.validator_configs["epic2_integration"]),
+            "performance": Epic2PerformanceValidator(config_name=self.validator_configs["performance"]),
+            "quality": Epic2QualityValidator(config_name=self.validator_configs["quality"]),
         }
 
         self.validation_results = {}

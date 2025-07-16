@@ -51,6 +51,7 @@ class IdentityReranker(Reranker):
         """
         self.config = config
         self.enabled = config.get("enabled", True)
+        self._initialized = True  # Always initialized since it's a no-op
         
         logger.info(f"IdentityReranker initialized with enabled={self.enabled}")
     

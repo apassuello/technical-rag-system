@@ -120,6 +120,9 @@ class WeaviateBackend:
         Raises:
             WeaviateConnectionError: If connection fails after retries
         """
+        if not WEAVIATE_AVAILABLE or weaviate is None:
+            raise WeaviateConnectionError("Weaviate package not available. Install with 'pip install weaviate-client'")
+        
         for attempt in range(self.config.max_retries + 1):
             try:
                 # Create client with configuration
