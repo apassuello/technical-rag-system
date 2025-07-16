@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # Import system integration
 try:
     from demo.utils.system_integration import get_system_manager
+    from demo.utils.analytics_dashboard import analytics_dashboard
     system_manager = get_system_manager()
 except ImportError as e:
     st.error(f"Failed to import system integration: {e}")
@@ -574,17 +575,19 @@ def show_results_analysis():
         st.info("🔍 Process a query in the Interactive Query page to see results analysis here.")
 
 def show_analytics_monitoring():
-    """Analytics and monitoring dashboard"""
-    st.header("📈 Analytics & Monitoring")
-    
+    """Interactive analytics and monitoring dashboard with real-time charts"""
     if not system_manager.is_initialized:
         st.warning("⚠️ Please initialize the Epic 2 system from the System Overview page first.")
         return
     
-    # Get system status and performance metrics
-    system_status = system_manager.get_system_status()
+    # Render the interactive analytics dashboard
+    analytics_dashboard.render_dashboard()
     
-    st.subheader("🔄 System Health")
+    # Add system health section
+    st.markdown("---")
+    st.subheader("🔄 System Health Overview")
+    
+    system_status = system_manager.get_system_status()
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -1005,6 +1008,9 @@ def process_query_with_visualization(query: str):
             
             # Get actual results from system
             query_results = system_manager.process_query(query)
+            
+            # Add query data to analytics dashboard
+            analytics_dashboard.add_query_data(query, query_results["performance"])
             
             # Update stages with actual performance data
             performance = query_results["performance"]
