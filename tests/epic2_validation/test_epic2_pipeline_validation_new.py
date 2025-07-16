@@ -58,7 +58,7 @@ from src.core.interfaces import Document, RetrievalResult
 from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.components.retrievers.rerankers.neural_reranker import NeuralReranker
 from src.components.retrievers.rerankers.identity_reranker import IdentityReranker
-from src.components.retrievers.fusion.graph_enhanced_rrf_fusion import (
+from src.components.retrievers.fusion.graph_enhanced_fusion import (
     GraphEnhancedRRFFusion,
 )
 from src.components.retrievers.fusion.rrf_fusion import RRFFusion
@@ -165,12 +165,12 @@ class Epic2PipelineValidator:
         # Create embedder (required dependency)
         factory = ComponentFactory()
         embedder = factory.create_embedder(
-            config.embedder.type, **config.embedder.config.dict()
+            config.embedder.type, **config.embedder.config
         )
 
         # Create retriever
         retriever = factory.create_retriever(
-            config.retriever.type, embedder=embedder, **config.retriever.config.dict()
+            config.retriever.type, embedder=embedder, **config.retriever.config
         )
 
         return config, retriever
@@ -389,7 +389,7 @@ class Epic2PipelineValidator:
         # Measure total pipeline execution
         start_time = time.time()
         query_embedding = embedder.embed([query])[0]
-        results = retriever.retrieve(query, query_embedding, top_k=top_k)
+        results = retriever.retrieve(query, k=3)
         total_time = (time.time() - start_time) * 1000
 
         # Analyze pipeline stages
@@ -451,7 +451,7 @@ class Epic2PipelineValidator:
 
                 # Execute pipeline
                 results, pipeline_info = self._execute_pipeline_query(
-                    retriever, query, top_k=10
+                    retriever, query, k=10
                 )
 
                 # Validate pipeline execution
@@ -845,7 +845,7 @@ class Epic2PipelineValidator:
             # Test 1: Empty query handling
             try:
                 results, pipeline_info = self._execute_pipeline_query(
-                    retriever, "", top_k=5
+                    retriever, "", k=5
                 )
                 error_scenarios["empty_query"] = {
                     "handled": True,
@@ -859,7 +859,7 @@ class Epic2PipelineValidator:
             try:
                 long_query = "RISC-V " * 100  # Very long query
                 results, pipeline_info = self._execute_pipeline_query(
-                    retriever, long_query, top_k=5
+                    retriever, long_query, k=5
                 )
                 error_scenarios["long_query"] = {
                     "handled": True,
@@ -872,7 +872,7 @@ class Epic2PipelineValidator:
             # Test 3: Invalid top_k parameter
             try:
                 results, pipeline_info = self._execute_pipeline_query(
-                    retriever, "RISC-V pipeline", top_k=0
+                    retriever, "RISC-V pipeline", k=0
                 )
                 error_scenarios["invalid_top_k"] = {
                     "handled": True,
@@ -886,7 +886,7 @@ class Epic2PipelineValidator:
             try:
                 special_query = "RISC-V @#$%^&*() pipeline []{} hazards"
                 results, pipeline_info = self._execute_pipeline_query(
-                    retriever, special_query, top_k=5
+                    retriever, special_query, k=5
                 )
                 error_scenarios["special_characters"] = {
                     "handled": True,

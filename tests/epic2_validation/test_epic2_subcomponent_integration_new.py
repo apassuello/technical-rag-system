@@ -47,7 +47,7 @@ from src.core.interfaces import Document, RetrievalResult
 from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.components.retrievers.rerankers.neural_reranker import NeuralReranker
 from src.components.retrievers.rerankers.identity_reranker import IdentityReranker
-from src.components.retrievers.fusion.graph_enhanced_rrf_fusion import (
+from src.components.retrievers.fusion.graph_enhanced_fusion import (
     GraphEnhancedRRFFusion,
 )
 from src.components.retrievers.fusion.rrf_fusion import RRFFusion
@@ -152,12 +152,12 @@ class Epic2SubComponentIntegrationValidator:
         # Create embedder (required dependency)
         factory = ComponentFactory()
         embedder = factory.create_embedder(
-            config.embedder.type, **config.embedder.config.dict()
+            config.embedder.type, **config.embedder.config
         )
 
         # Create retriever
         retriever = factory.create_retriever(
-            config.retriever.type, embedder=embedder, **config.retriever.config.dict()
+            config.retriever.type, embedder=embedder, **config.retriever.config
         )
 
         return config, retriever
@@ -240,7 +240,7 @@ class Epic2SubComponentIntegrationValidator:
             query_embedding = embedder.embed([query])[0]
 
             start_time = time.time()
-            results = retriever.retrieve(query, query_embedding, top_k=3)
+            results = retriever.retrieve(query, k=3)
             retrieval_time = (time.time() - start_time) * 1000  # Convert to ms
 
             # Validate results
@@ -279,7 +279,7 @@ class Epic2SubComponentIntegrationValidator:
                         "neural_used": neural_used,
                         "retrieval_time_ms": retrieval_time,
                         "model_name": (
-                            retriever.reranker.model_name
+                            getattr(retriever.reranker, "default_model", "unknown")
                             if has_neural_reranker
                             else None
                         ),
@@ -335,7 +335,7 @@ class Epic2SubComponentIntegrationValidator:
             query_embedding = embedder.embed([query])[0]
 
             start_time = time.time()
-            results = retriever.retrieve(query, query_embedding, top_k=3)
+            results = retriever.retrieve(query, k=3)
             retrieval_time = (time.time() - start_time) * 1000
 
             # Validate results
@@ -449,7 +449,7 @@ class Epic2SubComponentIntegrationValidator:
                 # Test retrieval
                 query = "RISC-V memory hierarchy"
                 query_embedding = embedder.embed([query])[0]
-                results = retriever.retrieve(query, query_embedding, top_k=3)
+                results = retriever.retrieve(query, k=3)
 
                 backend_results = {
                     "backend_type": type(retriever.vector_index).__name__,
@@ -516,7 +516,7 @@ class Epic2SubComponentIntegrationValidator:
 
             # Test retrieval pipeline: Dense → Sparse → Graph → Neural
             start_time = time.time()
-            results = retriever.retrieve(query, query_embedding, top_k=5)
+            results = retriever.retrieve(query, k=5)
             total_time = (time.time() - start_time) * 1000
 
             # Validate pipeline worked correctly
@@ -723,7 +723,7 @@ class Epic2SubComponentIntegrationValidator:
                     query_embedding = embedder.embed([query])[0]
 
                     start_time = time.time()
-                    results = retriever.retrieve(query, query_embedding, top_k=3)
+                    results = retriever.retrieve(query, k=3)
                     retrieval_time = (time.time() - start_time) * 1000
 
                     performance_results[config_name] = {
