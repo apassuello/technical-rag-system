@@ -53,7 +53,7 @@ from src.core.interfaces import Document, RetrievalResult
 from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.components.retrievers.rerankers.neural_reranker import NeuralReranker
 from src.components.retrievers.rerankers.identity_reranker import IdentityReranker
-from src.components.retrievers.fusion.graph_enhanced_rrf_fusion import (
+from src.components.retrievers.fusion.graph_enhanced_fusion import (
     GraphEnhancedRRFFusion,
 )
 from src.components.retrievers.fusion.rrf_fusion import RRFFusion
@@ -163,12 +163,12 @@ class Epic2PerformanceValidator:
         # Create embedder (required dependency)
         factory = ComponentFactory()
         embedder = factory.create_embedder(
-            config.embedder.type, **config.embedder.config.dict()
+            config.embedder.type, **config.embedder.config
         )
 
         # Create retriever
         retriever = factory.create_retriever(
-            config.retriever.type, embedder=embedder, **config.retriever.config.dict()
+            config.retriever.type, embedder=embedder, **config.retriever.config
         )
 
         return config, retriever
@@ -264,13 +264,13 @@ class Epic2PerformanceValidator:
             query_embedding = embedder.embed([query])[0]
 
             # Warm up
-            basic_retriever.retrieve(query, query_embedding, top_k=10)
+            basic_retriever.retrieve(query, k=10)
 
             # Measure basic retrieval time (multiple runs for accuracy)
             basic_times = []
             for _ in range(5):
                 start_time = time.time()
-                results = basic_retriever.retrieve(query, query_embedding, top_k=10)
+                results = basic_retriever.retrieve(query, k=10)
                 basic_times.append((time.time() - start_time) * 1000)
 
             basic_avg_time = statistics.mean(basic_times)
@@ -283,13 +283,13 @@ class Epic2PerformanceValidator:
             query_embedding = embedder.embed([query])[0]
 
             # Warm up neural model
-            neural_retriever.retrieve(query, query_embedding, top_k=10)
+            neural_retriever.retrieve(query, k=10)
 
             # Measure neural retrieval time
             neural_times = []
             for _ in range(5):
                 start_time = time.time()
-                results = neural_retriever.retrieve(query, query_embedding, top_k=10)
+                results = neural_retriever.retrieve(query, k=10)
                 neural_times.append((time.time() - start_time) * 1000)
 
             neural_avg_time = statistics.mean(neural_times)
@@ -372,13 +372,13 @@ class Epic2PerformanceValidator:
             query_embedding = embedder.embed([query])[0]
 
             # Warm up
-            basic_retriever.retrieve(query, query_embedding, top_k=10)
+            basic_retriever.retrieve(query, k=10)
 
             # Measure basic fusion time
             basic_times = []
             for _ in range(5):
                 start_time = time.time()
-                results = basic_retriever.retrieve(query, query_embedding, top_k=10)
+                results = basic_retriever.retrieve(query, k=10)
                 basic_times.append((time.time() - start_time) * 1000)
 
             basic_avg_time = statistics.mean(basic_times)
@@ -391,13 +391,13 @@ class Epic2PerformanceValidator:
             query_embedding = embedder.embed([query])[0]
 
             # Warm up
-            graph_retriever.retrieve(query, query_embedding, top_k=10)
+            graph_retriever.retrieve(query, k=10)
 
             # Measure graph fusion time
             graph_times = []
             for _ in range(5):
                 start_time = time.time()
-                results = graph_retriever.retrieve(query, query_embedding, top_k=10)
+                results = graph_retriever.retrieve(query, k=10)
                 graph_times.append((time.time() - start_time) * 1000)
 
             graph_avg_time = statistics.mean(graph_times)
@@ -543,7 +543,7 @@ class Epic2PerformanceValidator:
 
             # Warm up
             query_embedding = embedder.embed([queries[0]])[0]
-            retriever.retrieve(queries[0], query_embedding, top_k=10)
+            retriever.retrieve(queries[0], query_embedding, k=10)
 
             # Measure latencies for multiple queries
             latencies = []
@@ -553,7 +553,7 @@ class Epic2PerformanceValidator:
                 # Run each query multiple times
                 for _ in range(4):  # 20 total measurements (5 queries x 4 runs)
                     start_time = time.time()
-                    results = retriever.retrieve(query, query_embedding, top_k=10)
+                    results = retriever.retrieve(query, k=10)
                     latencies.append((time.time() - start_time) * 1000)
 
             # Calculate statistics
@@ -623,7 +623,7 @@ class Epic2PerformanceValidator:
             # Trigger neural model loading by doing a retrieval
             query = "RISC-V pipeline hazard detection"
             query_embedding = embedder.embed([query])[0]
-            retriever.retrieve(query, query_embedding, top_k=10)
+            retriever.retrieve(query, k=10)
 
             # Measure Epic 2 memory usage
             epic2_memory = self._measure_memory_usage()
@@ -699,7 +699,7 @@ class Epic2PerformanceValidator:
                 try:
                     query_embedding = embedder.embed([query_text])[0]
                     start_time = time.time()
-                    results = retriever.retrieve(query_text, query_embedding, top_k=5)
+                    results = retriever.retrieve(query_text, query_embedding, k=5)
                     processing_time = (time.time() - start_time) * 1000
                     return {
                         "success": True,

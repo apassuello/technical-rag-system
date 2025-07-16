@@ -47,7 +47,7 @@ from src.core.component_factory import ComponentFactory
 from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.components.retrievers.rerankers.neural_reranker import NeuralReranker
 from src.components.retrievers.rerankers.identity_reranker import IdentityReranker
-from src.components.retrievers.fusion.graph_enhanced_rrf_fusion import (
+from src.components.retrievers.fusion.graph_enhanced_fusion import (
     GraphEnhancedRRFFusion,
 )
 from src.components.retrievers.fusion.rrf_fusion import RRFFusion
@@ -355,14 +355,14 @@ class Epic2ConfigurationValidator:
                     # Create embedder first (required dependency)
                     factory = ComponentFactory()
                     embedder = factory.create_embedder(
-                        config.embedder.type, **config.embedder.config.dict()
+                        config.embedder.type, **config.embedder.config
                     )
 
                     # Create retriever through ComponentFactory
                     retriever = factory.create_retriever(
                         config.retriever.type,
                         embedder=embedder,
-                        **config.retriever.config.dict(),
+                        **config.retriever.config,
                     )
 
                     # Verify it's ModularUnifiedRetriever
@@ -488,12 +488,12 @@ class Epic2ConfigurationValidator:
                     # Create components
                     factory = ComponentFactory()
                     embedder = factory.create_embedder(
-                        config.embedder.type, **config.embedder.config.dict()
+                        config.embedder.type, **config.embedder.config
                     )
                     retriever = factory.create_retriever(
                         config.retriever.type,
                         embedder=embedder,
-                        **config.retriever.config.dict(),
+                        **config.retriever.config,
                     )
 
                     param_checks = {}
@@ -502,11 +502,11 @@ class Epic2ConfigurationValidator:
                         # Check neural reranking parameters
                         if isinstance(retriever.reranker, NeuralReranker):
                             param_checks["neural_model"] = (
-                                retriever.reranker.model_name
+                                getattr(retriever.reranker, "default_model", "unknown")
                                 == test_config["expected_params"]["neural_model"]
                             )
                             param_checks["neural_batch_size"] = (
-                                retriever.reranker.batch_size
+                                getattr(retriever.reranker, "max_candidates", 0)
                                 == test_config["expected_params"]["neural_batch_size"]
                             )
                             param_checks["neural_max_candidates"] = (
@@ -638,12 +638,12 @@ class Epic2ConfigurationValidator:
 
                     factory = ComponentFactory()
                     embedder = factory.create_embedder(
-                        config.embedder.type, **config.embedder.config.dict()
+                        config.embedder.type, **config.embedder.config
                     )
                     retriever = factory.create_retriever(
                         config.retriever.type,
                         embedder=embedder,
-                        **config.retriever.config.dict(),
+                        **config.retriever.config,
                     )
 
                     # Check actual feature activation

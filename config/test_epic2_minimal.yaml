@@ -16,7 +16,7 @@ embedder:
       type: "sentence_transformer"
       config:
         model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        device: "auto"
+        device: "mps"
         normalize_embeddings: true
     batch_processor:
       type: "dynamic"

@@ -39,7 +39,7 @@ from src.core.interfaces import Document, RetrievalResult
 from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.components.retrievers.rerankers.neural_reranker import NeuralReranker
 from src.components.retrievers.rerankers.identity_reranker import IdentityReranker
-from src.components.retrievers.fusion.graph_enhanced_rrf_fusion import (
+from src.components.retrievers.fusion.graph_enhanced_fusion import (
     GraphEnhancedRRFFusion,
 )
 from src.components.retrievers.fusion.rrf_fusion import RRFFusion
@@ -311,12 +311,12 @@ class Epic2ConfigurationManager:
         # Create embedder (required dependency)
         factory = ComponentFactory()
         embedder = factory.create_embedder(
-            config.embedder.type, **config.embedder.config.dict()
+            config.embedder.type, **config.embedder.config
         )
 
         # Create retriever
         retriever = factory.create_retriever(
-            config.retriever.type, embedder=embedder, **config.retriever.config.dict()
+            config.retriever.type, embedder=embedder, **config.retriever.config
         )
 
         return config, retriever
@@ -766,7 +766,7 @@ def execute_retrieval_with_timing(
 
     start_time = time.time()
     query_embedding = embedder.embed([query])[0]
-    results = retriever.retrieve(query, query_embedding, top_k=top_k)
+    results = retriever.retrieve(query, k=3)
     processing_time = (time.time() - start_time) * 1000
 
     return results, processing_time

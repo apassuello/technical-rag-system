@@ -56,7 +56,7 @@ from src.core.interfaces import Document, RetrievalResult
 from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.components.retrievers.rerankers.neural_reranker import NeuralReranker
 from src.components.retrievers.rerankers.identity_reranker import IdentityReranker
-from src.components.retrievers.fusion.graph_enhanced_rrf_fusion import (
+from src.components.retrievers.fusion.graph_enhanced_fusion import (
     GraphEnhancedRRFFusion,
 )
 from src.components.retrievers.fusion.rrf_fusion import RRFFusion
@@ -199,12 +199,12 @@ class Epic2QualityValidator:
         # Create embedder (required dependency)
         factory = ComponentFactory()
         embedder = factory.create_embedder(
-            config.embedder.type, **config.embedder.config.dict()
+            config.embedder.type, **config.embedder.config
         )
 
         # Create retriever
         retriever = factory.create_retriever(
-            config.retriever.type, embedder=embedder, **config.retriever.config.dict()
+            config.retriever.type, embedder=embedder, **config.retriever.config
         )
 
         return config, retriever
@@ -446,7 +446,7 @@ class Epic2QualityValidator:
 
             # Get query embedding and retrieve results
             query_embedding = embedder.embed([query])[0]
-            results = retriever.retrieve(query, query_embedding, top_k=10)
+            results = retriever.retrieve(query, k=10)
 
             # Calculate quality metrics
             ndcg = self._calculate_ndcg_at_k(results, relevant_docs, k=10)
@@ -905,7 +905,7 @@ class Epic2QualityValidator:
                 relevant_docs = query_info["relevant_doc_ids"]
 
                 query_embedding = embedder.embed([query])[0]
-                results = retriever.retrieve(query, query_embedding, top_k=10)
+                results = retriever.retrieve(query, k=10)
 
                 # Separate relevant and non-relevant scores
                 relevant_scores = []
