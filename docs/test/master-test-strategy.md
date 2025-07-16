@@ -300,9 +300,200 @@ Each test case must include:
 
 ---
 
-## 10. Test Tools and Frameworks
+## 10. Epic 2 Advanced Features Testing
 
-### 10.1 Testing Stack
+### 10.1 Epic 2 Testing Philosophy
+
+Epic 2 Advanced Hybrid Retriever features are implemented as **enhanced sub-components within ModularUnifiedRetriever**. Unlike traditional standalone component testing, Epic 2 testing emphasizes:
+
+- **Configuration-Driven Validation**: Features activated through YAML configuration
+- **Sub-Component Differentiation**: Neural vs Identity reranking, Graph-Enhanced vs RRF fusion
+- **Performance Enhancement Validation**: Measurable improvements over basic configurations
+- **Architecture Compliance**: Sub-components follow established patterns
+
+### 10.2 Epic 2 Sub-Component Testing Strategy
+
+**Neural Reranking Sub-Component**:
+- Test Type: Performance + Quality validation
+- Configuration: `reranker.type: "neural"` vs `reranker.type: "identity"`
+- Validation: Score differentiation, latency <200ms, quality improvement >15%
+- Architecture: Direct implementation with model loading
+
+**Graph Enhancement Sub-Component**:
+- Test Type: Quality + Integration validation
+- Configuration: `fusion.type: "graph_enhanced_rrf"` vs `fusion.type: "rrf"`
+- Validation: Graph construction, relationship detection, quality improvement >20%
+- Architecture: Direct implementation with NetworkX integration
+
+**Multi-Backend Sub-Component**:
+- Test Type: Integration + Resilience validation
+- Configuration: `vector_index.type: "faiss"` vs `vector_index.type: "weaviate"`
+- Validation: Backend switching, adapter pattern, failover mechanisms
+- Architecture: Adapter pattern for external services
+
+### 10.3 Epic 2 Test Categories
+
+**Category 1: Configuration Validation Tests**
+- Purpose: Verify YAML-driven Epic 2 feature activation
+- Scope: All Epic 2 configuration files
+- Success Criteria: Correct sub-component instantiation
+- Test Files: `test_epic2_integration_validation.py`
+
+**Category 2: Sub-Component Performance Tests**
+- Purpose: Validate Epic 2 sub-component performance targets
+- Scope: Neural reranking, graph processing, backend switching
+- Success Criteria: Latency targets met, no performance regression
+- Test Files: `test_epic2_performance_validation.py`
+
+**Category 3: Quality Enhancement Tests**
+- Purpose: Measure Epic 2 quality improvements
+- Scope: Relevance, accuracy, user satisfaction metrics
+- Success Criteria: Statistically significant improvements
+- Test Files: `test_epic2_quality_validation.py`
+
+**Category 4: Integration Pipeline Tests**
+- Purpose: Validate complete Epic 2 pipeline integration
+- Scope: End-to-end workflow with all Epic 2 features
+- Success Criteria: Seamless integration, no functional regression
+- Test Files: `test_epic2_integration_validation.py`
+
+### 10.4 Epic 2 Performance Targets
+
+**Realistic Performance Benchmarks**:
+- Neural reranking overhead: <200ms (100 candidates)
+- Graph processing overhead: <50ms (typical queries)
+- Backend switching latency: <50ms (FAISS ↔ Weaviate)
+- Total pipeline latency: <700ms P95 (all Epic 2 features)
+
+**Quality Improvement Targets**:
+- Neural reranking improvement: >15% vs identity reranking
+- Graph enhancement improvement: >20% vs RRF fusion
+- Combined Epic 2 improvement: >30% vs basic configuration
+- Statistical significance: p<0.05 for all improvements
+
+### 10.5 Epic 2 Test Data Requirements
+
+**Test Document Set**:
+- RISC-V technical documentation (standard dataset)
+- 10 documents (basic testing), 100 documents (performance), 1000 documents (scale)
+- Consistent content for Epic 2 validation across all test runs
+
+**Test Query Set**:
+- 20 factual queries (basic validation)
+- 50 complex queries (advanced testing)
+- 100 diverse queries (performance testing)
+- Known relevance judgments for quality measurement
+
+**Test Configurations**:
+- `test_epic2_base.yaml` - Basic configuration (no Epic 2 features)
+- `test_epic2_neural_enabled.yaml` - Neural reranking only
+- `test_epic2_graph_enabled.yaml` - Graph enhancement only
+- `test_epic2_all_features.yaml` - All Epic 2 features enabled
+
+### 10.6 Epic 2 Test Execution Strategy
+
+**Phase 1: Configuration Validation** (30 minutes)
+- Load all Epic 2 test configurations
+- Verify sub-component creation matches configuration
+- Test configuration parsing and validation
+- Validate error handling for invalid configurations
+
+**Phase 2: Sub-Component Testing** (60 minutes)
+- Neural reranking sub-component validation
+- Graph enhancement sub-component testing
+- Multi-backend sub-component validation
+- Performance baseline measurement for each sub-component
+
+**Phase 3: Integration Testing** (90 minutes)
+- Complete Epic 2 pipeline validation
+- Concurrent query processing with Epic 2 features
+- Quality comparison testing (Basic vs Epic 2)
+- End-to-end performance validation
+
+**Phase 4: Regression Testing** (30 minutes)
+- Backward compatibility validation
+- Basic configuration functionality maintained
+- Performance regression detection
+- Quality regression prevention
+
+### 10.7 Epic 2 Quality Gates
+
+**Development Quality Gate**:
+- All Epic 2 configuration tests pass
+- Sub-component tests pass individually
+- Basic performance targets met
+- No critical regressions in basic functionality
+
+**Staging Quality Gate**:
+- All Epic 2 integration tests pass
+- Performance targets met with margin
+- Quality improvements validated statistically
+- Load testing successful with Epic 2 features
+
+**Production Quality Gate**:
+- All Epic 2 tests pass consistently
+- Performance targets exceeded
+- Quality improvements proven in production scenarios
+- Epic 2 deployment validated for production use
+
+### 10.8 Epic 2 Risk Mitigation
+
+**High Risk Areas**:
+- Neural model loading and inference
+- Graph construction performance
+- Backend switching reliability
+- Configuration complexity
+
+**Medium Risk Areas**:
+- Sub-component integration points
+- Performance optimization
+- Memory usage management
+- Error handling across sub-components
+
+**Low Risk Areas**:
+- Basic configuration compatibility
+- Existing functionality preservation
+- Documentation and logging
+- Standard test execution
+
+### 10.9 Epic 2 Continuous Integration
+
+**CI Pipeline Integration**:
+```yaml
+# Epic 2 CI stages
+stages:
+  - epic2_config_validation
+  - epic2_subcomponent_testing
+  - epic2_integration_testing
+  - epic2_performance_validation
+  - epic2_quality_assessment
+```
+
+**Automated Test Execution**:
+- Quick validation: 5 minutes (configuration + basic sub-component tests)
+- Comprehensive validation: 3 hours (all Epic 2 test categories)
+- Performance benchmarking: 30 minutes (focused performance testing)
+- Quality assessment: 45 minutes (statistical validation)
+
+### 10.10 Epic 2 Success Metrics
+
+**Technical Metrics**:
+- Configuration success rate: 100%
+- Sub-component validation rate: 100%
+- Performance target achievement: >90%
+- Quality improvement significance: >95%
+
+**Portfolio Metrics**:
+- Epic 2 feature differentiation: Proven
+- Portfolio score improvement: >10%
+- Production readiness: >95%
+- Market competitiveness: Advanced RAG capabilities demonstrated
+
+---
+
+## 11. Test Tools and Frameworks
+
+### 11.1 Testing Stack
 
 **Unit/Component Testing**:
 - pytest with fixtures
@@ -324,7 +515,7 @@ Each test case must include:
 - Static analysis tools
 - Dependency analyzers
 
-### 10.2 Test Automation
+### 11.2 Test Automation
 
 **CI/CD Integration**:
 - GitHub Actions workflows
@@ -334,9 +525,9 @@ Each test case must include:
 
 ---
 
-## 11. Roles and Responsibilities
+## 12. Roles and Responsibilities
 
-### 11.1 Test Roles
+### 12.1 Test Roles
 
 **Test Architect**:
 - Define test strategy
@@ -353,7 +544,7 @@ Each test case must include:
 - Execute test plans
 - Report defects
 
-### 11.2 Responsibilities Matrix
+### 12.2 Responsibilities Matrix
 
 | Activity | Test Architect | Component Lead | Test Engineer |
 |----------|---------------|----------------|---------------|
@@ -364,9 +555,9 @@ Each test case must include:
 
 ---
 
-## 12. Test Documentation Standards
+## 13. Test Documentation Standards
 
-### 12.1 Documentation Requirements
+### 13.1 Documentation Requirements
 
 Each test must document:
 - Purpose and objective
@@ -376,7 +567,7 @@ Each test must document:
 - Expected results
 - Known limitations
 
-### 12.2 Test Case Template
+### 13.2 Test Case Template
 
 ```
 Test ID: [COMPONENT-TYPE-NUMBER]
