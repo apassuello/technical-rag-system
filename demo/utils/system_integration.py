@@ -471,15 +471,20 @@ class Epic2SystemManager:
             retriever = self.system.get_component('retriever')
             
             # Convert database format to expected format
+            from src.core.interfaces import Document
             converted_docs = []
             for doc in documents:
-                # Create a simple document object compatible with the retriever
-                doc_obj = type('Document', (), {
-                    'content': doc.get('content', ''),
-                    'metadata': doc.get('metadata', {}),
-                    'confidence': doc.get('confidence', 0.8),
-                    'embedding': doc.get('embedding')
-                })()
+                # Convert embedding to list if it's a numpy array
+                embedding = doc.get('embedding')
+                if embedding is not None and hasattr(embedding, 'tolist'):
+                    embedding = embedding.tolist()
+                
+                # Create proper Document instance
+                doc_obj = Document(
+                    content=doc.get('content', ''),
+                    metadata=doc.get('metadata', {}),
+                    embedding=embedding
+                )
                 converted_docs.append(doc_obj)
             
             # First, try to restore via proper methods
@@ -513,6 +518,9 @@ class Epic2SystemManager:
                 
                 # Store documents in the vector index
                 retriever.vector_index.documents = converted_docs
+                
+                # CRITICAL: Store documents in the main retriever too
+                retriever.documents = converted_docs
                 
                 # Use add_documents method which properly handles FAISS indexing
                 if hasattr(retriever.vector_index, 'add_documents'):
