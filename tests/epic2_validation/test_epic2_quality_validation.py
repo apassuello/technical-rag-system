@@ -21,11 +21,13 @@ import statistics
 from typing import List, Dict, Any, Optional, Tuple
 from unittest.mock import Mock, patch
 import numpy as np
+from pathlib import Path
 
-# Import Epic 2 components
-from src.components.retrievers.advanced_retriever import AdvancedRetriever
-from src.components.retrievers.config.advanced_config import AdvancedRetrieverConfig
+# Import Epic 2 components (updated for current architecture)
+from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.core.interfaces import Document, RetrievalResult, Embedder
+from src.core.component_factory import ComponentFactory
+from src.core.config import load_config
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +35,30 @@ logger = logging.getLogger(__name__)
 class Epic2QualityValidator:
     """Comprehensive quality validator for Epic 2 system."""
 
-    def __init__(self):
+    def __init__(self, config_name: str = "test_epic2_all_features"):
+        self.config_name = config_name
         self.test_results = {}
         self.quality_metrics = {}
         self.validation_errors = []
         self.baseline_quality_scores = {}
+        
+    def _load_test_config(self, config_name: str = None):
+        """Load test configuration from file."""
+        if config_name is None:
+            config_name = self.config_name
+        config_path = Path(f"config/{config_name}.yaml")
+        return load_config(config_path)
+    
+    def _prepare_documents_with_embeddings(self, documents, embedder):
+        """Prepare documents with embeddings for indexing."""
+        texts = [doc.content for doc in documents]
+        embeddings = embedder.embed(texts)
+        
+        # Add embeddings to documents before indexing
+        for doc, embedding in zip(documents, embeddings):
+            doc.embedding = embedding
+        
+        return documents
 
     def run_all_validations(self) -> Dict[str, Any]:
         """Run all Epic 2 quality validation tests."""
@@ -245,28 +266,31 @@ class Epic2QualityValidator:
         test_result = {"passed": False, "details": {}, "errors": []}
 
         try:
-            # Create baseline configuration (minimal features)
-            baseline_config = AdvancedRetrieverConfig()
-            baseline_config.graph_retrieval.enabled = False
-            baseline_config.neural_reranking.enabled = False
-
-            # Create enhanced configuration (all Epic 2 features)
-            enhanced_config = AdvancedRetrieverConfig()
-            enhanced_config.enable_all_features = True
-            enhanced_config.graph_retrieval.enabled = True
-            enhanced_config.neural_reranking.enabled = True
+            # Load baseline and enhanced configurations
+            baseline_config = self._load_test_config("test_epic2_minimal")
+            baseline_retriever_config = baseline_config.retriever.config
+            
+            enhanced_config = self._load_test_config()
+            enhanced_retriever_config = enhanced_config.retriever.config
 
             embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Mock embed method to return correct number of embeddings
+            def mock_embed(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                return [np.random.rand(384).tolist() for _ in range(len(texts))]
+            embedder.embed.side_effect = mock_embed
+            embedder.embedding_dim = 384
 
             try:
                 # Test baseline system
-                baseline_retriever = AdvancedRetriever(baseline_config, embedder)
+                baseline_retriever = ComponentFactory.create_retriever(baseline_config.retriever.type, config=baseline_retriever_config, embedder=embedder)
                 test_docs = self._create_risc_v_technical_documents()
+                test_docs = self._prepare_documents_with_embeddings(test_docs, embedder)
                 baseline_retriever.index_documents(test_docs)
 
                 # Test enhanced system
-                enhanced_retriever = AdvancedRetriever(enhanced_config, embedder)
+                enhanced_retriever = ComponentFactory.create_retriever(enhanced_config.retriever.type, config=enhanced_retriever_config, embedder=embedder)
                 enhanced_retriever.index_documents(test_docs)
 
                 # Run quality tests on both systems
@@ -388,18 +412,25 @@ class Epic2QualityValidator:
         test_result = {"passed": False, "details": {}, "errors": []}
 
         try:
-            # Create Epic 2 configuration
-            config = AdvancedRetrieverConfig()
-            config.enable_all_features = True
+            # Load Epic 2 configuration with all features enabled
+            config = self._load_test_config()
+            retriever_config = config.retriever.config
 
             embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Mock embed method to return correct number of embeddings
+            def mock_embed(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                return [np.random.rand(384).tolist() for _ in range(len(texts))]
+            embedder.embed.side_effect = mock_embed
+            embedder.embedding_dim = 384
 
             try:
-                retriever = AdvancedRetriever(config, embedder)
+                retriever = ComponentFactory.create_retriever(config.retriever.type, config=retriever_config, embedder=embedder)
 
                 # Use realistic RISC-V technical documents
                 test_docs = self._create_risc_v_technical_documents()
+                test_docs = self._prepare_documents_with_embeddings(test_docs, embedder)
                 retriever.index_documents(test_docs)
 
                 # Test RISC-V specific queries
@@ -498,16 +529,23 @@ class Epic2QualityValidator:
         test_result = {"passed": False, "details": {}, "errors": []}
 
         try:
-            # Create Epic 2 configuration
-            config = AdvancedRetrieverConfig()
-            config.enable_all_features = True
+            # Load Epic 2 configuration with all features enabled
+            config = self._load_test_config()
+            retriever_config = config.retriever.config
 
             embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Mock embed method to return correct number of embeddings
+            def mock_embed(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                return [np.random.rand(384).tolist() for _ in range(len(texts))]
+            embedder.embed.side_effect = mock_embed
+            embedder.embedding_dim = 384
 
             try:
-                retriever = AdvancedRetriever(config, embedder)
+                retriever = ComponentFactory.create_retriever(config.retriever.type, config=retriever_config, embedder=embedder)
                 test_docs = self._create_risc_v_technical_documents()
+                test_docs = self._prepare_documents_with_embeddings(test_docs, embedder)
                 retriever.index_documents(test_docs)
 
                 # Test different query types
@@ -648,16 +686,23 @@ class Epic2QualityValidator:
         test_result = {"passed": False, "details": {}, "errors": []}
 
         try:
-            # Create Epic 2 configuration
-            config = AdvancedRetrieverConfig()
-            config.enable_all_features = True
+            # Load Epic 2 configuration with all features enabled
+            config = self._load_test_config()
+            retriever_config = config.retriever.config
 
             embedder = Mock(spec=Embedder)
-            embedder.embed.return_value = [np.random.rand(384).tolist()]
+            # Mock embed method to return correct number of embeddings
+            def mock_embed(texts):
+                if isinstance(texts, str):
+                    texts = [texts]
+                return [np.random.rand(384).tolist() for _ in range(len(texts))]
+            embedder.embed.side_effect = mock_embed
+            embedder.embedding_dim = 384
 
             try:
-                retriever = AdvancedRetriever(config, embedder)
+                retriever = ComponentFactory.create_retriever(config.retriever.type, config=retriever_config, embedder=embedder)
                 test_docs = self._create_risc_v_technical_documents()
+                test_docs = self._prepare_documents_with_embeddings(test_docs, embedder)
                 retriever.index_documents(test_docs)
 
                 # Test complex technical queries

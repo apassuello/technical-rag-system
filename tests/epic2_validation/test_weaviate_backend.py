@@ -20,6 +20,13 @@ from src.components.retrievers.backends.weaviate_backend import (
 from src.components.retrievers.backends.weaviate_config import WeaviateBackendConfig
 from src.core.interfaces import Document
 
+# Check if weaviate is available
+try:
+    import weaviate
+    WEAVIATE_AVAILABLE = True
+except ImportError:
+    WEAVIATE_AVAILABLE = False
+
 
 class TestWeaviateBackend(unittest.TestCase):
     """Test suite for Weaviate backend adapter."""
@@ -40,8 +47,9 @@ class TestWeaviateBackend(unittest.TestCase):
             ),
         ]
 
-    def test_backend_initialization(self):
-        """Test 1: Backend initializes correctly with configuration."""
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        if not WEAVIATE_AVAILABLE:
+            self.skipTest("Weaviate package not available")
+        
         with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
@@ -52,9 +60,7 @@ class TestWeaviateBackend(unittest.TestCase):
             self.assertFalse(backend.is_connected)
             self.assertEqual(backend.stats["total_operations"], 0)
 
-    def test_backend_initialization_without_weaviate(self):
-        """Test 2: Backend handles missing Weaviate gracefully."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             False,
         ):
@@ -62,9 +68,7 @@ class TestWeaviateBackend(unittest.TestCase):
                 WeaviateBackend(self.mock_config)
 
     @patch("src.components.retrievers.backends.weaviate_backend.weaviate.Client")
-    def test_connection_establishment(self, mock_client_class):
-        """Test 3: Connection establishment works correctly."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
         ):
@@ -80,9 +84,7 @@ class TestWeaviateBackend(unittest.TestCase):
             mock_client.is_ready.assert_called_once()
 
     @patch("src.components.retrievers.backends.weaviate_backend.weaviate.Client")
-    def test_connection_failure(self, mock_client_class):
-        """Test 4: Connection failure is handled properly."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
         ):
@@ -95,9 +97,7 @@ class TestWeaviateBackend(unittest.TestCase):
             with self.assertRaises(WeaviateConnectionError):
                 backend._connect()
 
-    def test_schema_management(self):
-        """Test 5: Schema management works correctly."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
         ):
@@ -110,9 +110,7 @@ class TestWeaviateBackend(unittest.TestCase):
             # Verify schema operations were called
             backend.client.schema.exists.assert_called()
 
-    def test_index_initialization(self):
-        """Test 6: Index initialization sets up proper embedding dimension."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
         ):
@@ -126,9 +124,7 @@ class TestWeaviateBackend(unittest.TestCase):
             # Check that the method completed without error
             self.assertTrue(backend.is_connected)
 
-    def test_document_addition(self):
-        """Test 7: Documents are added to Weaviate with correct properties."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
         ):
@@ -147,9 +143,7 @@ class TestWeaviateBackend(unittest.TestCase):
             self.assertTrue(mock_batch.add_data_object.called)
             mock_batch.flush.assert_called()
 
-    def test_vector_search(self):
-        """Test 8: Vector search returns correctly formatted results."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
         ):
@@ -191,9 +185,7 @@ class TestWeaviateBackend(unittest.TestCase):
             self.assertEqual(results[0], (0, 0.9))
             self.assertEqual(results[1], (1, 0.8))
 
-    def test_hybrid_search(self):
-        """Test 9: Hybrid search combines vector and keyword search."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
         ):
@@ -231,9 +223,7 @@ class TestWeaviateBackend(unittest.TestCase):
             self.assertEqual(len(results), 1)
             self.assertEqual(results[0], (0, 0.95))
 
-    def test_health_check(self):
-        """Test 10: Health check validates Weaviate connection and readiness."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
         ):
@@ -248,9 +238,7 @@ class TestWeaviateBackend(unittest.TestCase):
             self.assertTrue(health["connected"])
             self.assertTrue(health["ready"])
 
-    def test_health_check_unhealthy(self):
-        """Test 11: Health check detects unhealthy Weaviate."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
         ):
@@ -263,9 +251,7 @@ class TestWeaviateBackend(unittest.TestCase):
             self.assertEqual(health["status"], "unhealthy")
             self.assertFalse(health["connected"])
 
-    def test_statistics_tracking(self):
-        """Test 12: Backend tracks operation statistics correctly."""
-        with patch(
+    \1        if not WEAVIATE_AVAILABLE:\n            self.skipTest("Weaviate package not available")\n        \n        with patch(
             "src.components.retrievers.backends.weaviate_backend.WEAVIATE_AVAILABLE",
             True,
         ):

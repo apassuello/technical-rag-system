@@ -128,8 +128,21 @@ class NeuralReranker(Reranker):
         self._error_count = 0
         self._last_performance_check = time.time()
         
+        # Initialize immediately if enabled (remove lazy initialization)
+        initialize_immediately = config.get("initialize_immediately", True)
+        if self.enabled and initialize_immediately:
+            try:
+                self._initialize_if_needed()
+            except Exception as e:
+                logger.warning(f"Failed to initialize neural reranker: {e}")
+                logger.warning("Disabling neural reranker and falling back to identity mode")
+                self.enabled = False
+                self._initialized = True  # Mark as initialized even when disabled
+        else:
+            self._initialized = True  # Mark as initialized when disabled
+        
         logger.info(f"Enhanced NeuralReranker initialized with {len(self.models_config)} models, "
-                   f"enabled={self.enabled}")
+                   f"enabled={self.enabled}, initialized={self._initialized}")
     
     def _parse_configuration(self, config: Dict[str, Any]):
         """Parse and validate configuration sections."""
@@ -470,7 +483,9 @@ class NeuralReranker(Reranker):
         Returns:
             True if reranking should be performed
         """
-        return self.enabled and self._initialized
+        # Return True if configured to be enabled, regardless of initialization status
+        # Initialization happens lazily when rerank() is called
+        return self.enabled
     
     def get_reranker_info(self) -> Dict[str, Any]:
         """

@@ -66,6 +66,7 @@ class SemanticReranker(Reranker):
         # Initialize model lazily
         self.model = None
         self._model_loaded = False
+        self._initialized = True  # Always initialized (model loading is lazy)
         
         # Validation
         if self.batch_size <= 0:

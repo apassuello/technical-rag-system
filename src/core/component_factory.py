@@ -515,9 +515,18 @@ class ComponentFactory:
                 # All remaining kwargs become the config
                 config = kwargs
                 
+                # Extract actual config if it's wrapped in a 'config' key
+                if "config" in config and len(config) == 1:
+                    actual_config = config["config"]
+                else:
+                    actual_config = config
+                
                 # Transform advanced configuration to ModularUnifiedRetriever format if needed
-                if cls._is_advanced_config(config):
-                    config = cls._transform_advanced_config(config)
+                if cls._is_advanced_config(actual_config):
+                    actual_config = cls._transform_advanced_config(actual_config)
+                
+                # Use the actual config for retriever creation
+                config = actual_config
                 
                 return cls._create_with_tracking(
                     retriever_class, 
@@ -556,6 +565,16 @@ class ComponentFactory:
             "analytics",
             "experiments"
         ]
+        
+        # Check for new format neural reranking (reranker.type == "neural")
+        reranker_config = config.get("reranker", {})
+        if reranker_config.get("type") == "neural":
+            return True
+        
+        # Check for new format graph fusion (fusion.type == "graph_enhanced_rrf")
+        fusion_config = config.get("fusion", {})
+        if fusion_config.get("type") == "graph_enhanced_rrf":
+            return True
         
         return any(indicator in config for indicator in advanced_indicators)
     
@@ -598,7 +617,7 @@ class ComponentFactory:
         
         # Copy any other configuration that doesn't need transformation
         for key, value in config.items():
-            if key not in ["backends", "neural_reranking", "graph_retrieval", "analytics", "experiments"]:
+            if key not in ["backends", "neural_reranking", "graph_retrieval", "analytics", "experiments", "reranker"]:
                 transformed_config[key] = value
         
         logger.debug(f"Transformed advanced config: {transformed_config}")
@@ -688,25 +707,36 @@ class ComponentFactory:
     @classmethod
     def _transform_reranker_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
         """Transform reranker configuration with neural reranking support."""
-        # Check if neural reranking is enabled
+        # Check if neural reranking is enabled (support both old and new format)
         neural_reranking = config.get("neural_reranking", {})
-        if neural_reranking.get("enabled", False):
+        reranker_config = config.get("reranker", {})
+        
+        # Check new format first (reranker.type == "neural")
+        if reranker_config.get("type") == "neural" and reranker_config.get("config", {}).get("enabled", False):
+            neural_config_source = reranker_config.get("config", {})
+        # Check old format (neural_reranking.enabled)
+        elif neural_reranking.get("enabled", False):
+            neural_config_source = neural_reranking
+        else:
+            neural_config_source = None
+            
+        if neural_config_source:
             # Convert neural reranking config to proper NeuralReranker format
             neural_config = {
                 "enabled": True,
-                "max_candidates": neural_reranking.get("max_candidates", 50),
-                "default_model": "default_model",
-                "models": {
+                "max_candidates": neural_config_source.get("max_candidates", 50),
+                "default_model": neural_config_source.get("default_model", "default_model"),
+                "models": neural_config_source.get("models", {
                     "default_model": {
-                        "name": neural_reranking.get("model_name", "cross-encoder/ms-marco-MiniLM-L6-v2"),
-                        "max_length": neural_reranking.get("max_length", 512),
-                        "batch_size": neural_reranking.get("batch_size", 16),
-                        "device": "mps" if neural_reranking.get("device", "auto") == "auto" else neural_reranking.get("device", "auto")
+                        "name": neural_config_source.get("model_name", "cross-encoder/ms-marco-MiniLM-L6-v2"),
+                        "max_length": neural_config_source.get("max_length", 512),
+                        "batch_size": neural_config_source.get("batch_size", 16),
+                        "device": "mps" if neural_config_source.get("device", "auto") == "auto" else neural_config_source.get("device", "auto")
                     }
-                },
+                }),
                 "performance": {
                     "target_latency_ms": 200,
-                    "max_latency_ms": neural_reranking.get("max_latency_ms", 1000),
+                    "max_latency_ms": neural_config_source.get("max_latency_ms", 1000),
                     "enable_caching": True,
                     "max_cache_size": 10000
                 },
@@ -724,6 +754,9 @@ class ComponentFactory:
                     "confidence_threshold": 0.7
                 }
             }
+            
+            logger.info(f"✅ ComponentFactory: Neural reranker config transformed successfully")
+            logger.debug(f"Neural reranker config: {neural_config}")
             
             return {
                 "type": "neural",
