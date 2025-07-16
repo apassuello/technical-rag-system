@@ -337,7 +337,105 @@ Integration tests are organized into three categories based on scope and complex
 
 ---
 
-### 3.5 Adapter Pattern Integration Tests
+### 3.5 Epic 2 Advanced Features Integration Tests
+
+#### INT-EPIC2-001: Neural Reranking Sub-Component Integration
+**Components**: C4 (ModularUnifiedRetriever) with NeuralReranker sub-component  
+**Priority**: High  
+**Type**: Sub-Component Integration  
+
+**Test Objective**: Verify neural reranking sub-component integrates correctly within ModularUnifiedRetriever.
+
+**Test Steps**:
+1. Load `test_epic2_neural_enabled.yaml` configuration
+2. Verify NeuralReranker sub-component instantiation
+3. Execute retrieval with neural reranking
+4. Compare results with IdentityReranker
+5. Measure performance overhead
+6. Validate score differentiation
+
+**Expected Results**:
+- NeuralReranker created from configuration
+- Neural reranking produces different scores than identity
+- Performance overhead <200ms for 100 candidates
+- Quality improvement >15% measured
+- Integration seamless with existing pipeline
+
+---
+
+#### INT-EPIC2-002: Graph Enhancement Sub-Component Integration  
+**Components**: C4 (ModularUnifiedRetriever) with GraphEnhancedRRFFusion sub-component  
+**Priority**: High  
+**Type**: Sub-Component Integration  
+
+**Test Objective**: Validate graph enhancement sub-component integrates correctly within ModularUnifiedRetriever.
+
+**Test Steps**:
+1. Load `test_epic2_graph_enabled.yaml` configuration
+2. Verify GraphEnhancedRRFFusion sub-component instantiation
+3. Execute graph-enhanced retrieval
+4. Compare results with RRFFusion
+5. Measure graph processing overhead
+6. Validate relationship detection
+
+**Expected Results**:
+- GraphEnhancedRRFFusion created from configuration
+- Graph enhancement produces different results than RRF
+- Performance overhead <50ms for typical queries
+- Quality improvement >20% measured
+- Graph relationships detected and utilized
+
+---
+
+#### INT-EPIC2-003: Complete Epic 2 Pipeline Integration
+**Components**: C4 (ModularUnifiedRetriever) with all Epic 2 sub-components  
+**Priority**: High  
+**Type**: Complete Integration  
+
+**Test Objective**: Validate complete Epic 2 pipeline with all sub-components working together.
+
+**Test Steps**:
+1. Load `test_epic2_all_features.yaml` configuration
+2. Verify all Epic 2 sub-components instantiated
+3. Execute complete 4-stage pipeline
+4. Measure end-to-end performance
+5. Compare with basic configuration
+6. Validate combined quality improvements
+
+**Expected Results**:
+- All Epic 2 sub-components active simultaneously
+- 4-stage pipeline executes successfully
+- Total latency <700ms P95
+- Combined quality improvement >30%
+- No conflicts between sub-components
+
+---
+
+#### INT-EPIC2-004: Configuration-Driven Feature Switching
+**Components**: C4 (ModularUnifiedRetriever) with dynamic configuration  
+**Priority**: Medium  
+**Type**: Configuration Integration  
+
+**Test Objective**: Verify Epic 2 features can be toggled through configuration without code changes.
+
+**Test Steps**:
+1. Start with basic configuration
+2. Switch to neural reranking configuration
+3. Switch to graph enhancement configuration
+4. Switch to complete Epic 2 configuration
+5. Verify sub-components change accordingly
+6. Test configuration validation
+
+**Expected Results**:
+- Sub-components change based on configuration
+- No code changes required for feature switching
+- Configuration validation catches errors
+- Feature activation/deactivation works correctly
+- Performance characteristics match configuration
+
+---
+
+### 3.6 Adapter Pattern Integration Tests
 
 #### INT-ADAPT-001: LLM Adapter Switching
 **Components**: C5 with multiple LLM providers  
@@ -387,6 +485,30 @@ Integration tests are organized into three categories based on scope and complex
 
 ---
 
+#### INT-ADAPT-003: Weaviate Backend Adapter Integration
+**Components**: C4 (ModularUnifiedRetriever) with WeaviateIndex adapter  
+**Priority**: Medium  
+**Type**: Epic 2 Adapter Integration  
+
+**Test Objective**: Validate Weaviate backend adapter integrates correctly as Epic 2 multi-backend feature.
+
+**Test Steps**:
+1. Configure Weaviate backend in Epic 2 configuration
+2. Verify WeaviateIndex adapter instantiation
+3. Test vector indexing and retrieval
+4. Compare with FAISS backend performance
+5. Test backend health monitoring
+6. Validate adapter pattern compliance
+
+**Expected Results**:
+- WeaviateIndex adapter created correctly
+- Vector operations work through adapter
+- Performance within expected parameters
+- Health monitoring functional
+- Adapter pattern followed correctly
+
+---
+
 ## 4. Integration Test Data
 
 ### 4.1 Test Document Sets
@@ -403,6 +525,12 @@ Integration tests are organized into three categories based on scope and complex
 - Realistic distribution
 - Stress test scenarios
 
+**Epic 2 Test Document Set** (RISC-V Technical Documentation):
+- 10 documents for basic Epic 2 testing
+- 100 documents for Epic 2 performance testing
+- 1000 documents for Epic 2 scale testing
+- Consistent content for neural reranking and graph enhancement validation
+
 ### 4.2 Test Query Sets
 
 **Functional Queries** (50 queries):
@@ -417,6 +545,27 @@ Integration tests are organized into three categories based on scope and complex
 - Different retrieval needs
 - Diverse topics
 - Concurrent execution
+
+**Epic 2 Test Query Sets**:
+- 20 queries for basic Epic 2 validation
+- 50 queries for Epic 2 advanced testing
+- 100 queries for Epic 2 performance testing
+- Known relevance judgments for quality measurement
+
+### 4.3 Epic 2 Test Configurations
+
+**Epic 2 Configuration Files**:
+- `test_epic2_base.yaml` - Basic configuration (no Epic 2 features)
+- `test_epic2_neural_enabled.yaml` - Neural reranking sub-component only
+- `test_epic2_graph_enabled.yaml` - Graph enhancement sub-component only
+- `test_epic2_all_features.yaml` - All Epic 2 sub-components enabled
+
+**Configuration Test Matrix**:
+- Basic vs Neural reranking comparison
+- Basic vs Graph enhancement comparison
+- Basic vs Complete Epic 2 comparison
+- Neural only vs Graph only comparison
+- Individual vs Combined feature validation
 
 ---
 
@@ -433,6 +582,30 @@ Integration tests require consistent test data that exercises component interact
 ### 5.3 Service Dependencies
 
 External services like Ollama and Redis should be containerized for consistent test environments. Mock services may be used for expensive operations, but critical paths should be tested with real services to validate actual integration behavior.
+
+### 5.4 Epic 2 Environment Requirements
+
+**Epic 2 Specific Dependencies**:
+- Weaviate service for multi-backend testing
+- Neural reranking models (cross-encoder/ms-marco-MiniLM-L6-v2)
+- NetworkX for graph enhancement testing
+- Additional memory for Epic 2 features (2GB+)
+
+**Epic 2 Service Setup**:
+```bash
+# Docker services for Epic 2 testing
+docker-compose up -d weaviate ollama
+
+# Verify Epic 2 services
+curl http://localhost:8080/v1/.well-known/ready  # Weaviate
+curl http://localhost:11434/api/version          # Ollama
+```
+
+**Epic 2 Test Data**:
+- RISC-V technical documentation set
+- Pre-computed test queries with known relevance judgments
+- Graph relationship ground truth data
+- Neural reranking baseline scores
 
 ---
 
