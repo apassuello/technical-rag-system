@@ -691,27 +691,37 @@ class ComponentFactory:
         # Check if neural reranking is enabled
         neural_reranking = config.get("neural_reranking", {})
         if neural_reranking.get("enabled", False):
-            # Convert neural reranking config to proper format
+            # Convert neural reranking config to proper NeuralReranker format
             neural_config = {
                 "enabled": True,
+                "max_candidates": neural_reranking.get("max_candidates", 50),
+                "default_model": "default_model",
                 "models": {
-                    "default": {
+                    "default_model": {
                         "name": neural_reranking.get("model_name", "cross-encoder/ms-marco-MiniLM-L6-v2"),
                         "max_length": neural_reranking.get("max_length", 512),
-                        "batch_size": neural_reranking.get("batch_size", 16)
+                        "batch_size": neural_reranking.get("batch_size", 16),
+                        "device": "mps" if neural_reranking.get("device", "auto") == "auto" else neural_reranking.get("device", "auto")
                     }
                 },
                 "performance": {
                     "target_latency_ms": 200,
-                    "max_latency_ms": neural_reranking.get("max_latency_ms", 1000)
+                    "max_latency_ms": neural_reranking.get("max_latency_ms", 1000),
+                    "enable_caching": True,
+                    "max_cache_size": 10000
                 },
                 "score_fusion": {
                     "method": "weighted",
-                    "neural_weight": 0.7,
-                    "retrieval_weight": 0.3
+                    "weights": {
+                        "neural_score": 0.7,
+                        "retrieval_score": 0.3,
+                        "graph_score": 0.0,
+                        "temporal_score": 0.0
+                    }
                 },
                 "adaptive": {
-                    "enabled": True
+                    "enabled": True,
+                    "confidence_threshold": 0.7
                 }
             }
             

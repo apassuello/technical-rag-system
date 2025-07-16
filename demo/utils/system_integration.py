@@ -18,6 +18,12 @@ import numpy as np
 from .knowledge_cache import KnowledgeCache, create_embedder_config_hash
 from .database_manager import get_database_manager
 from .migration_utils import migrate_existing_cache, get_migration_status
+from .performance_timing import (
+    time_query_pipeline, 
+    ComponentPerformanceExtractor,
+    performance_instrumentation
+)
+from .initialization_profiler import profiler
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
@@ -59,53 +65,61 @@ class Epic2SystemManager:
         Returns:
             bool: True if initialization successful
         """
+        # Start profiling the initialization process
+        profiler.start_profiling()
+        
         try:
-            if progress_callback:
-                progress_callback(10)
-            if status_callback:
-                status_callback("🔄 Loading Epic 2 configuration...")
+            with profiler.profile_step("configuration_loading"):
+                if progress_callback:
+                    progress_callback(10)
+                if status_callback:
+                    status_callback("🔄 Loading Epic 2 configuration...")
+                
+                # Verify configuration exists
+                if not self.config_path.exists():
+                    raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
             
-            # Verify configuration exists
-            if not self.config_path.exists():
-                raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
+            with profiler.profile_step("platform_orchestrator_init"):
+                if progress_callback:
+                    progress_callback(20)
+                if status_callback:
+                    status_callback("🏗️ Initializing Epic 2 architecture...")
+                
+                # Initialize the platform orchestrator
+                self.system = PlatformOrchestrator(self.config_path)
             
-            if progress_callback:
-                progress_callback(20)
-            if status_callback:
-                status_callback("🏗️ Initializing Epic 2 architecture...")
+            with profiler.profile_step("corpus_file_discovery"):
+                if progress_callback:
+                    progress_callback(40)
+                if status_callback:
+                    status_callback("🤖 Loading models and components...")
+                
+                # Database-first approach for <5s initialization
+                pdf_files = self._get_corpus_files()
+                
+                # For demo mode, only use first 10 files for consistent testing
+                demo_files = pdf_files[:10] if self.demo_mode else pdf_files
+                logger.info(f"Using {len(demo_files)} files for initialization (demo_mode={self.demo_mode})")
             
-            # Initialize the platform orchestrator
-            self.system = PlatformOrchestrator(self.config_path)
-            
-            if progress_callback:
-                progress_callback(40)
-            if status_callback:
-                status_callback("🤖 Loading models and components...")
-            
-            # Database-first approach for <5s initialization
-            pdf_files = self._get_corpus_files()
-            
-            # For demo mode, only use first 10 files for consistent testing
-            demo_files = pdf_files[:10] if self.demo_mode else pdf_files
-            logger.info(f"Using {len(demo_files)} files for initialization (demo_mode={self.demo_mode})")
-            
-            # Get configs using fallback methods (works before full system init)
-            processor_config = self._get_fallback_processor_config()
-            embedder_config = self._get_fallback_embedder_config()
+            with profiler.profile_step("config_preparation"):
+                # Get configs using fallback methods (works before full system init)
+                processor_config = self._get_fallback_processor_config()
+                embedder_config = self._get_fallback_embedder_config()
             
             # Check database first for fastest initialization
-            if self.db_manager.is_cache_valid(demo_files, processor_config, embedder_config):
+            with profiler.profile_step("database_validation"):
+                database_valid = self.db_manager.is_cache_valid(demo_files, processor_config, embedder_config)
+            
+            if database_valid:
                 if progress_callback:
                     progress_callback(50)
                 if status_callback:
                     status_callback("⚡ Loading from database...")
                 
-                # Initialize system first
-                self.system = PlatformOrchestrator(self.config_path)
-                
-                # Verify system is properly initialized
-                if not self._verify_system_health():
-                    raise RuntimeError("System health check failed")
+                with profiler.profile_step("system_health_check"):
+                    # Verify system is properly initialized
+                    if not self._verify_system_health():
+                        raise RuntimeError("System health check failed")
                 
                 if progress_callback:
                     progress_callback(70)
@@ -113,7 +127,10 @@ class Epic2SystemManager:
                     status_callback("🚀 Restoring from database...")
                 
                 # Try to load from database (fastest option)
-                if self._load_from_database(demo_files):
+                with profiler.profile_step("database_loading"):
+                    database_loaded = self._load_from_database(demo_files)
+                
+                if database_loaded:
                     logger.info("🚀 Successfully loaded from database - <5s initialization achieved")
                     self.documents_processed = len(demo_files)
                     
@@ -123,7 +140,8 @@ class Epic2SystemManager:
                         status_callback("✅ System ready from database")
                 else:
                     logger.warning("Database load failed, falling back to cache/processing")
-                    self.documents_processed = self._fallback_initialization(pdf_files, processor_config, embedder_config, progress_callback, status_callback)
+                    with profiler.profile_step("fallback_initialization"):
+                        self.documents_processed = self._fallback_initialization(pdf_files, processor_config, embedder_config, progress_callback, status_callback)
             else:
                 # Initialize system for regular processing
                 self.system = PlatformOrchestrator(self.config_path)
@@ -168,12 +186,13 @@ class Epic2SystemManager:
             if status_callback:
                 status_callback("🔍 Finalizing search indices...")
             
-            # Small delay to show index finalization
-            import time
-            time.sleep(0.5)
+            with profiler.profile_step("index_finalization"):
+                # Index finalization (removed artificial delay for performance)
+                pass
             
             # Warm up the system with a test query
-            self._warmup_system()
+            with profiler.profile_step("system_warmup"):
+                self._warmup_system()
             
             if progress_callback:
                 progress_callback(100)
@@ -182,6 +201,11 @@ class Epic2SystemManager:
             
             self.is_initialized = True
             logger.info("Epic 2 system initialized successfully")
+            
+            # Complete profiling and print report
+            profiler.finish_profiling()
+            profiler.print_report()
+            
             return True
             
         except Exception as e:
@@ -750,7 +774,7 @@ class Epic2SystemManager:
     
     def process_query(self, query: str) -> Dict[str, Any]:
         """
-        Process a query through the Epic 2 system
+        Process a query through the Epic 2 system with accurate timing measurements
         
         Args:
             query: User query string
@@ -761,117 +785,121 @@ class Epic2SystemManager:
         if not self.is_initialized or not self.system:
             raise RuntimeError("System not initialized")
         
-        start_time = time.time()
+        logger.info(f"Processing query through Epic 2 system: {query}")
         
         try:
-            # Process through the actual Epic 2 system
-            logger.info(f"Processing query through Epic 2 system: {query}")
-            
-            # Stage timing tracking
-            stage_times = {}
-            
-            # Stage 1: Document Processing & Embedding
-            stage1_start = time.time()
-            
-            # Stage 2: Retrieval (Dense + Sparse + Graph)
-            stage2_start = time.time()
-            
-            # Stage 3: Neural Reranking
-            stage3_start = time.time()
-            
-            # Stage 4: Answer Generation
-            stage4_start = time.time()
-            
-            # Call the actual system to process the query
-            answer = self.system.process_query(query)
-            
-            stage4_time = (time.time() - stage4_start) * 1000
-            total_time = (time.time() - start_time) * 1000
-            
-            logger.info(f"Query processed successfully in {total_time:.0f}ms")
-            
-            # Debug: Log source information
-            if hasattr(answer, 'sources'):
-                logger.info(f"Retrieved {len(answer.sources)} source documents:")
-                for i, source in enumerate(answer.sources[:3]):  # Log first 3 sources
-                    source_info = getattr(source, 'metadata', {})
-                    source_file = source_info.get('source', 'unknown')
-                    source_page = source_info.get('page', 'unknown')
-                    content_preview = source.content[:100] + "..." if len(source.content) > 100 else source.content
-                    logger.info(f"  Source {i+1}: {source_file} (page {source_page}) - {content_preview}")
-            else:
-                logger.warning("No sources found in answer object")
-            
-            # Extract results from the answer object
-            if hasattr(answer, 'text') and hasattr(answer, 'sources'):
-                # Convert sources to results format
-                results = []
-                for i, source in enumerate(answer.sources[:5]):  # Top 5 results
-                    result = {
-                        "title": f"RISC-V Document {i+1}",
-                        "confidence": getattr(source, 'confidence', 0.8 + (i * -0.05)),
-                        "source": getattr(source, 'metadata', {}).get('source', f'document_{i+1}.pdf'),
-                        "snippet": source.content[:200] + "..." if len(source.content) > 200 else source.content,
-                        "neural_boost": 0.12 - (i * 0.02),  # Simulated neural boost
-                        "graph_connections": 5 - i,  # Simulated graph connections
-                        "page": getattr(source, 'metadata', {}).get('page', 1)
-                    }
-                    results.append(result)
+            # Use timing context manager for accurate measurement
+            with time_query_pipeline(query) as (timing, pipeline_id):
                 
-                # Package results with performance metrics
-                response = {
-                    "query": query,
-                    "answer": answer.text,  # Use the correct 'text' attribute
-                    "results": results,
-                    "performance": {
-                        "total_time_ms": total_time,
-                        "stages": {
-                            "dense_retrieval": {"time_ms": 31, "results": 15},
-                            "sparse_retrieval": {"time_ms": 15, "results": 12},
-                            "graph_enhancement": {"time_ms": 42, "results": 8},
-                            "neural_reranking": {"time_ms": stage4_time, "results": 5}
+                # Stage 1: Retrieval (Dense + Sparse + Graph + Neural Reranking)
+                with performance_instrumentation.time_stage(pipeline_id, "retrieval_stage"):
+                    retriever = self.system.get_component('retriever')
+                    retrieval_results = retriever.retrieve(query, k=10)
+                
+                # Stage 2: Answer Generation (Prompt + LLM + Parsing + Confidence)
+                with performance_instrumentation.time_stage(pipeline_id, "generation_stage"):
+                    generator = self.system.get_component('answer_generator') 
+                    # Extract documents from retrieval results for generator
+                    context_docs = [r.document for r in retrieval_results]
+                    answer = generator.generate(query, context_docs)
+                
+                # Extract detailed performance metrics from components
+                retriever_metrics = ComponentPerformanceExtractor.extract_retriever_metrics(retriever)
+                generator_metrics = ComponentPerformanceExtractor.extract_generator_metrics(generator)
+                
+                # Create demo-compatible timing format
+                demo_stage_timings = ComponentPerformanceExtractor.create_demo_timing_format(
+                    retriever_metrics, generator_metrics
+                )
+                
+                # Calculate total time from timing context
+                # The timing context will finalize when we exit the context
+                # For now, calculate intermediate time
+                current_time = time.time()
+                total_time = (current_time - timing.total_start) * 1000.0
+                
+                logger.info(f"Query processed successfully in {total_time:.0f}ms")
+                
+                # Debug: Log source information
+                if hasattr(answer, 'sources'):
+                    logger.info(f"Retrieved {len(answer.sources)} source documents:")
+                    for i, source in enumerate(answer.sources[:3]):  # Log first 3 sources
+                        source_info = getattr(source, 'metadata', {})
+                        source_file = source_info.get('source', 'unknown')
+                        source_page = source_info.get('page', 'unknown')
+                        content_preview = source.content[:100] + "..." if len(source.content) > 100 else source.content
+                        logger.info(f"  Source {i+1}: {source_file} (page {source_page}) - {content_preview}")
+                else:
+                    logger.warning("No sources found in answer object")
+                
+                # Extract results from the answer object
+                if hasattr(answer, 'text') and hasattr(answer, 'sources'):
+                    # Convert sources to results format
+                    results = []
+                    for i, source in enumerate(answer.sources[:5]):  # Top 5 results
+                        result = {
+                            "title": f"RISC-V Document {i+1}",
+                            "confidence": getattr(source, 'confidence', 0.8 + (i * -0.05)),
+                            "source": getattr(source, 'metadata', {}).get('source', f'document_{i+1}.pdf'),
+                            "snippet": source.content[:200] + "..." if len(source.content) > 200 else source.content,
+                            "neural_boost": 0.12 - (i * 0.02),  # Simulated neural boost
+                            "graph_connections": 5 - i,  # Simulated graph connections
+                            "page": getattr(source, 'metadata', {}).get('page', 1)
                         }
-                    },
-                    "epic2_features": {
-                        "neural_reranking_enabled": True,
-                        "graph_enhancement_enabled": True,
-                        "analytics_enabled": True
-                    }
-                }
-            else:
-                logger.warning("Unexpected answer format, falling back to simulation")
-                results = self._simulate_query_results(query)
-                response = {
-                    "query": query,
-                    "answer": "Answer generation failed. Please check system configuration.",
-                    "results": results,
-                    "performance": {
-                        "total_time_ms": total_time,
-                        "stages": {
-                            "dense_retrieval": {"time_ms": 31, "results": 15},
-                            "sparse_retrieval": {"time_ms": 15, "results": 12},
-                            "graph_enhancement": {"time_ms": 42, "results": 8},
-                            "neural_reranking": {"time_ms": 314, "results": 5}
+                        results.append(result)
+                    
+                    # Package results with REAL performance metrics
+                    response = {
+                        "query": query,
+                        "answer": answer.text,  # Use the correct 'text' attribute
+                        "results": results,
+                        "performance": {
+                            "total_time_ms": total_time,
+                            "stages": demo_stage_timings,
+                            "component_details": {
+                                "retriever": retriever_metrics,
+                                "generator": generator_metrics
+                            }
+                        },
+                        "epic2_features": {
+                            "neural_reranking_enabled": True,
+                            "graph_enhancement_enabled": True,
+                            "analytics_enabled": True
                         }
-                    },
-                    "epic2_features": {
-                        "neural_reranking_enabled": True,
-                        "graph_enhancement_enabled": True,
-                        "analytics_enabled": True
                     }
-                }
-            
-            self.last_query_results = response
-            self._update_performance_metrics(response["performance"])
-            
-            return response
-            
+                else:
+                    logger.warning("Unexpected answer format, falling back to simulation")
+                    results = self._simulate_query_results(query)
+                    response = {
+                        "query": query,
+                        "answer": "Answer generation failed. Please check system configuration.",
+                        "results": results,
+                        "performance": {
+                            "total_time_ms": total_time,
+                            "stages": demo_stage_timings,
+                            "component_details": {
+                                "retriever": retriever_metrics,
+                                "generator": generator_metrics
+                            }
+                        },
+                        "epic2_features": {
+                            "neural_reranking_enabled": True,
+                            "graph_enhancement_enabled": True,
+                            "analytics_enabled": True
+                        }
+                    }
+                
+                self.last_query_results = response
+                self._update_performance_metrics(response["performance"])
+                
+                return response
+                
         except Exception as e:
             logger.error(f"Query processing failed: {e}")
             # Fall back to simulation if real processing fails
             logger.info("Falling back to simulated results")
             results = self._simulate_query_results(query)
-            total_time = (time.time() - start_time) * 1000
+            total_time = 0  # Unknown time for fallback
             
             response = {
                 "query": query,
