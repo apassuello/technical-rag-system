@@ -17,16 +17,16 @@ from .base_adapter import (
     ModelNotFoundError
 )
 from .ollama_adapter import OllamaAdapter
+from .huggingface_adapter import HuggingFaceAdapter
 
 # Future adapters will be imported here
 # from .openai_adapter import OpenAIAdapter
-# from .huggingface_adapter import HuggingFaceAdapter
 
 __all__ = [
     'BaseLLMAdapter',
     'OllamaAdapter',
+    'HuggingFaceAdapter',
     # 'OpenAIAdapter',
-    # 'HuggingFaceAdapter',
     'RateLimitError',
     'AuthenticationError',
     'ModelNotFoundError'
@@ -35,8 +35,8 @@ __all__ = [
 # Adapter registry for easy lookup
 ADAPTER_REGISTRY = {
     'ollama': OllamaAdapter,
+    'huggingface': HuggingFaceAdapter,
     # 'openai': OpenAIAdapter,
-    # 'huggingface': HuggingFaceAdapter,
 }
 
 def get_adapter_class(provider: str):

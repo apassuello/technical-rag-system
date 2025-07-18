@@ -501,17 +501,22 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
         adapter_class = get_adapter_class(llm_type)
         
         # Separate adapter constructor args from generation config
-        # OllamaAdapter expects: model_name, base_url, timeout, auto_pull, config
+        # Different adapters expect different parameters
         adapter_args = {}
         generation_config = {}
         
+        # Get adapter-specific parameter names from the adapter class
+        import inspect
+        adapter_signature = inspect.signature(adapter_class.__init__)
+        adapter_params = set(adapter_signature.parameters.keys()) - {'self'}
+        
         for key, value in llm_config.items():
-            if key in ['model_name', 'base_url', 'timeout', 'auto_pull']:
+            if key in adapter_params:
                 adapter_args[key] = value
             else:
                 generation_config[key] = value
         
-        # Pass generation config (temperature, max_tokens, etc.) as config parameter
+        # Pass generation config as config parameter if there are any
         if generation_config:
             adapter_args['config'] = generation_config
             
