@@ -7,16 +7,16 @@
 
 ## Current Task Details
 **current_task**: "huggingface-api-migration"  
-**current_phase**: "phase-2-epic2-demo-integration"  
-**progress**: 100  
-**next_milestone**: "epic2-hf-api-ready"  
-**status**: "COMPLETED ✅"  
+**current_phase**: "phase-1-llm-integration"  
+**progress**: 25  
+**next_milestone**: "phase-2-reranker-integration"  
+**status**: "PHASE_1_COMPLETE"  
 **last_updated**: "2025-07-18T18:18:30Z"
 
 ## Migration Objectives
 - **Primary**: Enable HuggingFace Spaces deployment with resource constraints (16GB RAM, 2 CPU cores)
-- **Secondary**: Reduce memory footprint from ~3-4GB to ~1-1.5GB (50-70% reduction)
-- **Tertiary**: Improve reliability and eliminate local model management complexity
+- **Secondary**: Reduce memory footprint from ~3-4GB to ~1-1.5GB (50-70% reduction) - **REQUIRES PHASES 2-4**
+- **Tertiary**: Improve reliability and eliminate local model management complexity - **REQUIRES PHASES 2-4**
 
 ## Context Restoration Instructions
 
@@ -86,30 +86,31 @@
    - **Enhancement**: Dynamic adapter parameter detection
    - **Compatibility**: 100% backward compatibility maintained
 
-### 🎯 Phase 2: Epic 2 Demo Integration (COMPLETED ✅)
+### 🎯 Phase 1.5: Epic 2 Demo Integration (COMPLETED ✅)
 **Status**: ✅ COMPLETED - 2025-07-18  
 **Duration**: 2 hours actual  
 **Priority**: High  
 **Architecture Confidence**: 100%
+**Scope**: LLM integration only - embedder and reranker still use local models
 
 #### Completed Implementation
 1. **Epic 2 HF API Configuration** ✅ DONE
    - **File**: `config/epic2_hf_api.yaml`
-   - **Achievement**: Preserved all Epic 2 features with HF API backend
-   - **Features**: Neural reranking, graph enhancement, analytics maintained
-   - **Integration**: Seamless switching between local/API modes
+   - **Achievement**: LLM switched to HF API, other components remain local
+   - **Features**: Neural reranking and graph enhancement use LOCAL models
+   - **Integration**: Hybrid local/API mode (LLM via API, embedder/reranker local)
 
 2. **System Manager Enhancement** ✅ DONE
    - **File**: `demo/utils/system_integration.py`
    - **Features**: Environment-based config selection, HF_TOKEN detection
    - **Methods**: `_select_config_path()`, `get_llm_backend_info()`
-   - **Achievement**: Automatic backend switching and status reporting
+   - **Achievement**: Automatic backend switching for LLM only
 
 3. **Streamlit Demo Enhancement** ✅ DONE
    - **File**: `streamlit_epic2_demo.py`
    - **Features**: Dynamic backend display, real-time status
    - **UI**: Professional backend indicators, context-aware error messages
-   - **Achievement**: Complete Epic 2 HF API integration in demo UI
+   - **Achievement**: Epic 2 demo with HF API LLM integration
 
 4. **Configuration System Fix** ✅ DONE
    - **Files**: `src/core/config.py`, `src/core/platform_orchestrator.py`
@@ -173,16 +174,23 @@ answer_generator:
 4. `config/hf_api_test.yaml` - ✅ CREATED
 5. `src/components/generators/answer_generator.py` - ✅ ENHANCED
 
-### Success Criteria for Phase 2 ✅ ALL ACHIEVED
-- ✅ Epic 2 demo works with HuggingFace API
-- ✅ All Epic 2 features preserved (neural reranking, graph enhancement, analytics)
-- ✅ Smooth switching between local/HF API modes
-- ✅ Proper error handling and fallback mechanisms
+### Success Criteria for Phase 1.5 ✅ ALL ACHIEVED
+- ✅ Epic 2 demo works with HuggingFace API for LLM
+- ✅ Epic 2 features preserved (neural reranking, graph enhancement, analytics use LOCAL models)
+- ✅ Smooth switching between local/HF API modes for LLM only
+- ✅ Proper error handling and fallback mechanisms for LLM
 - ✅ Configuration validation and environment detection
 - ✅ Professional UI with dynamic backend display
 - ✅ Environment variable substitution in configuration system
 
-### Files Created/Modified in Phase 2 ✅ COMPLETE
+### Current System State After Phase 1.5
+- **LLM**: HuggingFace API ✅ (~50MB memory)
+- **Embedder**: Local sentence-transformers ❌ (~80-100MB memory)
+- **Reranker**: Local cross-encoder ❌ (~150-200MB memory)
+- **Total Memory**: Still ~3-4GB (minimal savings achieved)
+- **HF Spaces Ready**: NO - still requires local model downloads
+
+### Files Created/Modified in Phase 1.5 ✅ COMPLETE
 1. `config/epic2_hf_api.yaml` - ✅ CREATED
 2. `demo/utils/system_integration.py` - ✅ ENHANCED
 3. `streamlit_epic2_demo.py` - ✅ ENHANCED
@@ -269,11 +277,11 @@ pip install huggingface-hub>=0.33.1
 **last_updated**: "2025-07-18T18:18:30Z"
 
 ## Migration Status
-**migration_status**: "PHASE_2_COMPLETE"  
+**migration_status**: "PHASE_1_COMPLETE"  
 **architecture_compliance**: "100%"  
 **confidence_level**: "100%"  
-**existing_infrastructure**: "100% complete (core integration)"  
-**epic2_hf_api_ready**: "✅ ACHIEVED"
+**existing_infrastructure**: "25% complete (LLM only)"  
+**epic2_hf_api_ready**: "PARTIAL - LLM only, embedder/reranker still local"
 
 ## Key System Files
 **migration_files**: [
