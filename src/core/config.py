@@ -199,6 +199,8 @@ class ConfigManager:
             self._raw_config = cached_data.copy()
             # Apply environment variable overrides (not cached due to dynamic nature)
             data = self._apply_env_overrides(cached_data.copy())
+            # Apply environment variable substitution
+            data = self._substitute_env_vars(data)
             return PipelineConfig(**data)
         
         # Load from file
@@ -212,6 +214,9 @@ class ConfigManager:
         
         # Apply environment variable overrides
         data = self._apply_env_overrides(data)
+        
+        # Apply environment variable substitution
+        data = self._substitute_env_vars(data)
         
         # Validate and return
         return PipelineConfig(**data)
@@ -262,6 +267,35 @@ class ConfigManager:
                         current[final_key] = value
         
         return config
+    
+    def _substitute_env_vars(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Substitute environment variables in configuration values.
+        
+        Supports ${VAR} syntax for environment variable substitution.
+        
+        Args:
+            config: Configuration dictionary
+            
+        Returns:
+            Configuration with environment variables substituted
+        """
+        import re
+        
+        def substitute_recursive(obj):
+            if isinstance(obj, dict):
+                return {k: substitute_recursive(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [substitute_recursive(item) for item in obj]
+            elif isinstance(obj, str):
+                # Replace ${VAR} with environment variable
+                def replace_var(match):
+                    var_name = match.group(1)
+                    return os.environ.get(var_name, match.group(0))
+                return re.sub(r'\$\{([^}]+)\}', replace_var, obj)
+            else:
+                return obj
+        
+        return substitute_recursive(config)
     
     def _get_default_config(self) -> PipelineConfig:
         """Return a minimal default configuration.

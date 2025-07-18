@@ -143,11 +143,6 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
         if model_name or temperature or max_tokens or use_ollama is not None:
             logger.info("Converting legacy parameters to new configuration format")
             
-            if use_ollama is False:
-                # If explicitly not using Ollama, we'd need other adapters
-                # For now, default to Ollama anyway
-                logger.warning("Non-Ollama providers not yet implemented, using Ollama")
-            
             # Override LLM config with legacy parameters
             if not config:
                 config = default_config.copy()
@@ -155,6 +150,16 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
             # Ensure proper nested structure
             config.setdefault('llm_client', {})
             config['llm_client'].setdefault('config', {})
+            
+            # Handle different LLM providers
+            if use_ollama is False:
+                # Check if we have a configured LLM client type
+                if 'llm_client' in config and 'type' in config['llm_client']:
+                    # Use the configured LLM client type
+                    logger.info(f"Using configured LLM client: {config['llm_client']['type']}")
+                else:
+                    # Default to Ollama if no alternative is configured
+                    logger.warning("Non-Ollama providers not configured, using Ollama")
             
             if model_name:
                 config['llm_client']['config']['model_name'] = model_name
