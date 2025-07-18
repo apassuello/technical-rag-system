@@ -11,6 +11,7 @@ the enhanced neural reranker in the rerankers/ component.
 
 import logging
 import time
+import os
 from typing import Dict, List, Optional, Any, Union
 import threading
 from dataclasses import dataclass
@@ -25,7 +26,7 @@ class ModelConfig:
     
     # Model identification
     name: str = "cross-encoder/ms-marco-MiniLM-L6-v2"
-    backend: str = "sentence_transformers"  # "sentence_transformers", "tensorflow", "keras"
+    backend: str = "sentence_transformers"  # "sentence_transformers", "tensorflow", "keras", "huggingface_api"
     model_type: str = "cross_encoder"  # "cross_encoder", "bi_encoder", "ensemble"
     
     # Model parameters
@@ -42,6 +43,13 @@ class ModelConfig:
     trust_remote_code: bool = False
     local_files_only: bool = False
     revision: Optional[str] = None
+    
+    # HuggingFace API settings (for backend="huggingface_api")
+    api_token: Optional[str] = None
+    timeout: int = 30
+    fallback_to_local: bool = True
+    max_candidates: int = 100
+    score_threshold: float = 0.0
 
 
 @dataclass
@@ -105,6 +113,8 @@ class ModelManager:
                 
                 if self.config.backend == "sentence_transformers":
                     self._load_sentence_transformer()
+                elif self.config.backend == "huggingface_api":
+                    self._load_huggingface_api()
                 else:
                     raise ValueError(f"Unsupported backend: {self.config.backend}")
                 
@@ -171,6 +181,33 @@ class ModelManager:
         except Exception as e:
             raise RuntimeError(f"Failed to load sentence transformer: {e}")
     
+    def _load_huggingface_api(self):
+        """Load model using HuggingFace Inference API."""
+        try:
+            from huggingface_hub import InferenceClient
+            
+            # Get API token from config or environment
+            api_token = (
+                self.config.api_token or 
+                os.getenv("HF_TOKEN") or 
+                os.getenv("HUGGINGFACE_API_TOKEN") or
+                os.getenv("HF_API_TOKEN")
+            )
+            
+            if not api_token:
+                raise ValueError("HuggingFace API token required for huggingface_api backend")
+            
+            # Create inference client
+            self.model = InferenceClient(token=api_token)
+            self.api_model_name = self.config.name
+            
+            logger.debug(f"HuggingFace API client initialized for model: {self.config.name}")
+            
+        except ImportError:
+            raise ImportError("huggingface_hub library not available. Install with: pip install huggingface-hub")
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize HuggingFace API client: {e}")
+    
     def predict(self, query_doc_pairs: List[List[str]]) -> List[float]:
         """
         Generate predictions for query-document pairs.
@@ -187,11 +224,10 @@ class ModelManager:
         start_time = time.time()
         
         try:
-            scores = self.model.predict(query_doc_pairs)
-            
-            # Convert to list if numpy array
-            if hasattr(scores, 'tolist'):
-                scores = scores.tolist()
+            if self.config.backend == "huggingface_api":
+                scores = self._predict_api(query_doc_pairs)
+            else:
+                scores = self._predict_local(query_doc_pairs)
             
             # Update statistics
             inference_time = time.time() - start_time
@@ -204,7 +240,153 @@ class ModelManager:
         except Exception as e:
             self.info.error_count += 1
             logger.error(f"Model prediction failed for {self.name}: {e}")
+            
+            # Try fallback to local if API fails and fallback is enabled
+            if self.config.backend == "huggingface_api" and self.config.fallback_to_local:
+                logger.warning(f"API prediction failed, attempting fallback to local model")
+                try:
+                    return self._fallback_to_local(query_doc_pairs)
+                except Exception as fallback_error:
+                    logger.error(f"Fallback to local model also failed: {fallback_error}")
+            
             raise
+    
+    def _predict_local(self, query_doc_pairs: List[List[str]]) -> List[float]:
+        """
+        Generate predictions using local model.
+        
+        Args:
+            query_doc_pairs: List of [query, document] pairs
+            
+        Returns:
+            List of relevance scores
+        """
+        scores = self.model.predict(query_doc_pairs)
+        
+        # Convert to list if numpy array
+        if hasattr(scores, 'tolist'):
+            scores = scores.tolist()
+        
+        return scores
+    
+    def _predict_api(self, query_doc_pairs: List[List[str]]) -> List[float]:
+        """
+        Generate predictions using HuggingFace API.
+        
+        Args:
+            query_doc_pairs: List of [query, document] pairs
+            
+        Returns:
+            List of relevance scores
+        """
+        # Filter by max_candidates if specified
+        if self.config.max_candidates > 0 and len(query_doc_pairs) > self.config.max_candidates:
+            query_doc_pairs = query_doc_pairs[:self.config.max_candidates]
+            logger.debug(f"Filtered to {self.config.max_candidates} candidates for API efficiency")
+        
+        # Group by query for efficient batch processing
+        query_groups = {}
+        for i, (query, document) in enumerate(query_doc_pairs):
+            if query not in query_groups:
+                query_groups[query] = []
+            query_groups[query].append((i, document))
+        
+        # Process each query group
+        all_scores = [0.0] * len(query_doc_pairs)
+        
+        for query, doc_pairs in query_groups.items():
+            try:
+                # Prepare documents for this query
+                documents = []
+                indices = []
+                
+                for idx, document in doc_pairs:
+                    # Truncate document if too long
+                    if len(document) > self.config.max_length:
+                        document = document[:self.config.max_length - 50] + "..."
+                    documents.append(document)
+                    indices.append(idx)
+                
+                # Use HuggingFace API for cross-encoder text ranking
+                # Format: {"inputs": {"source_sentence": "query", "sentences": ["doc1", "doc2", ...]}}
+                import requests
+                
+                api_url = f"https://api-inference.huggingface.co/models/{self.api_model_name}"
+                headers = {"Authorization": f"Bearer {self.config.api_token}"}
+                
+                payload = {
+                    "inputs": {
+                        "source_sentence": query,
+                        "sentences": documents
+                    }
+                }
+                
+                response = requests.post(api_url, headers=headers, json=payload, timeout=self.config.timeout)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    
+                    # Extract scores from response
+                    if isinstance(result, list) and len(result) == len(documents):
+                        for i, score in enumerate(result):
+                            if isinstance(score, dict) and 'score' in score:
+                                all_scores[indices[i]] = float(score['score'])
+                            elif isinstance(score, (int, float)):
+                                all_scores[indices[i]] = float(score)
+                            else:
+                                all_scores[indices[i]] = 0.0
+                    else:
+                        logger.warning(f"Unexpected API response format: {result}")
+                        for idx in indices:
+                            all_scores[idx] = 0.0
+                else:
+                    logger.warning(f"API request failed: {response.status_code} - {response.text}")
+                    for idx in indices:
+                        all_scores[idx] = 0.0
+                
+            except Exception as e:
+                logger.warning(f"API prediction failed for query '{query}': {e}")
+                for idx in indices:
+                    all_scores[idx] = 0.0
+        
+        # Apply score threshold filtering
+        if self.config.score_threshold > 0:
+            all_scores = [max(score, self.config.score_threshold) for score in all_scores]
+        
+        return all_scores
+    
+    def _fallback_to_local(self, query_doc_pairs: List[List[str]]) -> List[float]:
+        """
+        Fallback to local model when API fails.
+        
+        Args:
+            query_doc_pairs: List of [query, document] pairs
+            
+        Returns:
+            List of relevance scores
+        """
+        logger.info("Attempting fallback to local sentence-transformers model")
+        
+        # Temporarily switch to local backend
+        original_backend = self.config.backend
+        self.config.backend = "sentence_transformers"
+        
+        try:
+            # Unload API client
+            self.model = None
+            self.info.loaded = False
+            
+            # Load local model
+            if self.load_model():
+                scores = self._predict_local(query_doc_pairs)
+                logger.info("Successfully fell back to local model")
+                return scores
+            else:
+                raise RuntimeError("Failed to load local fallback model")
+                
+        finally:
+            # Restore original backend
+            self.config.backend = original_backend
     
     def unload_model(self):
         """Unload the model to free memory."""
