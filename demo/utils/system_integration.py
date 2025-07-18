@@ -44,7 +44,7 @@ class Epic2SystemManager:
     
     def __init__(self, demo_mode: bool = True):
         self.system: Optional[PlatformOrchestrator] = None
-        self.config_path = Path("config/advanced_test.yaml")
+        self.config_path = Path("config/epic2_modular.yaml")
         self.corpus_path = Path("data/riscv_comprehensive_corpus")
         self.is_initialized = False
         self.documents_processed = 0
