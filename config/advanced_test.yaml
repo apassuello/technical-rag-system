@@ -190,6 +190,29 @@ retriever:
 answer_generator:
   type: "adaptive_modular"
   config:
+    # LLM Client Configuration - Choose between Ollama (local) or HuggingFace (API)
+    llm_client:
+      type: "ollama"  # Options: "ollama", "huggingface"
+      config:
+        # Ollama Configuration (for local LLM)
+        model_name: "llama3.2:3b"
+        base_url: "http://localhost:11434"
+        timeout: 120
+        temperature: 0.3
+        max_tokens: 1024
+        
+        # HuggingFace Configuration (uncomment and set type to "huggingface" above)
+        # api_token: "${HF_TOKEN}"  # Set via environment variable
+        # model_name: "microsoft/DialoGPT-medium"  # or other HF models
+        # use_chat_completion: true
+        # timeout: 30
+        # temperature: 0.3
+        # max_tokens: 1024
+        # fallback_models:
+        #   - "google/gemma-2-2b-it"
+        #   - "Qwen/Qwen2.5-1.5B-Instruct"
+    
+    # Legacy parameters for backward compatibility
     model_name: "llama3.2:3b"
     api_token: null
     temperature: 0.3
