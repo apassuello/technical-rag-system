@@ -44,7 +44,7 @@ class Epic2SystemManager:
     
     def __init__(self, demo_mode: bool = True):
         self.system: Optional[PlatformOrchestrator] = None
-        self.config_path = Path("config/epic2_modular.yaml")
+        self.config_path = self._select_config_path()
         self.corpus_path = Path("data/riscv_comprehensive_corpus")
         self.is_initialized = False
         self.documents_processed = 0
@@ -53,6 +53,46 @@ class Epic2SystemManager:
         self.knowledge_cache = KnowledgeCache()
         self.db_manager = get_database_manager()
         self.demo_mode = demo_mode  # Use reduced corpus for faster testing
+        
+    def _select_config_path(self) -> Path:
+        """
+        Select configuration file based on environment variables
+        
+        Returns:
+            Path to appropriate config file
+        """
+        # Check for HuggingFace API token
+        hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_API_TOKEN")
+        
+        if hf_token and not hf_token.startswith("dummy_"):
+            # Use HuggingFace API configuration
+            config_path = Path("config/epic2_hf_api.yaml")
+            logger.info(f"🤗 HuggingFace API token detected, using Epic 2 HF API config: {config_path}")
+            return config_path
+        else:
+            # Use local Ollama configuration
+            config_path = Path("config/epic2_modular.yaml")
+            logger.info(f"🦙 Using local Ollama Epic 2 config: {config_path}")
+            return config_path
+    
+    def get_llm_backend_info(self) -> Dict[str, Any]:
+        """Get information about the current LLM backend"""
+        hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_API_TOKEN")
+        
+        if hf_token and not hf_token.startswith("dummy_"):
+            return {
+                "backend": "HuggingFace API",
+                "model": "microsoft/DialoGPT-medium",
+                "api_available": True,
+                "config_file": "epic2_hf_api.yaml"
+            }
+        else:
+            return {
+                "backend": "Local Ollama",
+                "model": "llama3.2:3b",
+                "api_available": False,
+                "config_file": "epic2_modular.yaml"
+            }
         
     def initialize_system(self, progress_callback=None, status_callback=None) -> bool:
         """
