@@ -1760,7 +1760,7 @@ class PlatformOrchestrator:
             gen_config = self.config.answer_generator
             self._components['answer_generator'] = ComponentFactory.create_generator(
                 gen_config.type,
-                **gen_config.config
+                config=gen_config.config
             )
             logger.debug(f"Answer generator initialized: {gen_config.type}")
             

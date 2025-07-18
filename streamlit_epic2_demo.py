@@ -212,20 +212,42 @@ def main():
     # Model specifications in sidebar
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🤖 Model Stack")
-    st.sidebar.markdown("""
+    
+    # Get dynamic backend information
+    backend_info = system_manager.get_llm_backend_info()
+    
+    # Create dynamic model stack display
+    backend_icon = "🤗" if backend_info['backend'] == "HuggingFace API" else "🦙"
+    backend_color = "#ff6b35" if backend_info['backend'] == "HuggingFace API" else "#4CAF50"
+    
+    st.sidebar.markdown(f"""
     <div style="font-size: 0.8rem;">
         <div class="model-badge">Embedder: multi-qa-MiniLM-L6-cos-v1</div><br>
         <div class="model-badge">Reranker: ms-marco-MiniLM-L6-v2</div><br>
-        <div class="model-badge">Generator: llama3.2:3b</div><br>
+        <div class="model-badge" style="background-color: {backend_color}; color: white;">
+            {backend_icon} Generator: {backend_info['model']}
+        </div><br>
         <div class="model-badge">Graph: NetworkX + spaCy</div>
     </div>
     """, unsafe_allow_html=True)
     
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🌐 API Compatibility")
-    st.sidebar.markdown("✅ HuggingFace APIs Ready")
-    st.sidebar.markdown("✅ Local Inference Support")
-    st.sidebar.markdown("✅ Cloud Deployment Ready")
+    st.sidebar.markdown("### 🌐 Backend Status")
+    
+    # Dynamic backend status display
+    if backend_info['backend'] == "HuggingFace API":
+        st.sidebar.markdown("🤗 **Active**: HuggingFace API")
+        st.sidebar.markdown(f"📋 **Config**: {backend_info['config_file']}")
+        st.sidebar.markdown("🌐 **Cloud**: Ready for deployment")
+    else:
+        st.sidebar.markdown("🦙 **Active**: Local Ollama")
+        st.sidebar.markdown(f"📋 **Config**: {backend_info['config_file']}")
+        st.sidebar.markdown("🏠 **Local**: Development mode")
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔄 Switch Backend")
+    st.sidebar.markdown("**HF API**: Set HF_TOKEN environment variable")
+    st.sidebar.markdown("**Local**: Unset HF_TOKEN or use dummy token")
     
     # Cache information
     if system_manager.is_initialized:
@@ -296,6 +318,54 @@ def show_system_overview():
                 feature_count = len(epic2_features)
                 st.info(f"✨ **Epic 2 Features**: {feature_count} active features enabled")
     
+    # Backend Information Panel
+    st.subheader("🤖 LLM Backend Configuration")
+    
+    backend_info = system_manager.get_llm_backend_info()
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if backend_info['backend'] == "HuggingFace API":
+            st.markdown("""
+            <div class="metric-card">
+                <h4>🤗 HuggingFace API</h4>
+                <p><strong>Status:</strong> Active</p>
+                <p><strong>Model:</strong> {}</p>
+                <p><strong>Deployment:</strong> Cloud Ready</p>
+            </div>
+            """.format(backend_info['model']), unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="metric-card">
+                <h4>🦙 Local Ollama</h4>
+                <p><strong>Status:</strong> Active</p>
+                <p><strong>Model:</strong> {}</p>
+                <p><strong>Deployment:</strong> Development</p>
+            </div>
+            """.format(backend_info['model']), unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div class="metric-card">
+            <h4>📋 Configuration</h4>
+            <p><strong>Config File:</strong> {}</p>
+            <p><strong>Auto-Selected:</strong> ✅</p>
+            <p><strong>Epic 2 Features:</strong> Preserved</p>
+        </div>
+        """.format(backend_info['config_file']), unsafe_allow_html=True)
+    
+    with col3:
+        api_status = "✅ Connected" if backend_info['api_available'] else "🔄 Local Mode"
+        st.markdown("""
+        <div class="metric-card">
+            <h4>🌐 API Status</h4>
+            <p><strong>Connection:</strong> {}</p>
+            <p><strong>Switching:</strong> Automatic</p>
+            <p><strong>Fallback:</strong> Available</p>
+        </div>
+        """.format(api_status), unsafe_allow_html=True)
+    
     # Architecture overview
     st.subheader("🏗️ Architecture Overview")
     
@@ -327,7 +397,11 @@ def show_system_overview():
         """)
     
     with col2:
-        st.markdown("""
+        # Get dynamic backend info for architecture display
+        backend_info = system_manager.get_llm_backend_info()
+        backend_name = "HuggingFaceAdapter" if backend_info['backend'] == "HuggingFace API" else "OllamaAdapter"
+        
+        st.markdown(f"""
         #### 🔧 Component Architecture
         
         **📄 Document Processor**
@@ -347,7 +421,7 @@ def show_system_overview():
         
         **🎯 Answer Generator**
         - Type: AnswerGenerator
-        - LLM: OllamaAdapter (llama3.2:3b)
+        - LLM: {backend_name} ({backend_info['model']})
         - Parser: MarkdownParser
         """)
     
@@ -729,6 +803,11 @@ response = requests.post(
     system_status = system_manager.get_system_status()
     
     # Component details with real status
+    # Get dynamic backend info
+    backend_info = system_manager.get_llm_backend_info()
+    backend_adapter = "HuggingFaceAdapter" if backend_info['backend'] == "HuggingFace API" else "OllamaAdapter"
+    backend_description = f"Generates contextual answers using {backend_info['backend']} with confidence scoring"
+    
     components = {
         "Platform Orchestrator": {
             "status": "✅ Operational",
@@ -762,8 +841,8 @@ response = requests.post(
             "status": "✅ Operational",
             "type": "AnswerGenerator",
             "implementation": "Modular with adapters",
-            "sub_components": ["SimplePromptBuilder", "OllamaAdapter", "MarkdownParser", "SemanticScorer"],
-            "description": "Generates contextual answers using Ollama LLM with confidence scoring"
+            "sub_components": ["SimplePromptBuilder", backend_adapter, "MarkdownParser", "SemanticScorer"],
+            "description": backend_description
         },
         "Query Processor": {
             "status": "✅ Operational",
@@ -957,7 +1036,13 @@ def initialize_epic2_system():
         progress_bar.empty()
         status_text.empty()
         st.error(f"❌ Initialization failed: {str(e)}")
-        st.info("💡 **Tip**: Ensure Ollama is running with llama3.2:3b model")
+        
+        # Dynamic tip based on backend
+        backend_info = system_manager.get_llm_backend_info()
+        if backend_info['backend'] == "HuggingFace API":
+            st.info("💡 **Tip**: Ensure HF_TOKEN environment variable is set with valid HuggingFace API token")
+        else:
+            st.info(f"💡 **Tip**: Ensure Ollama is running with {backend_info['model']} model")
         logger.error(f"System initialization error: {e}")
 
 def process_query_with_visualization(query: str):
