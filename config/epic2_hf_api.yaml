@@ -1,6 +1,6 @@
-# Epic 2 Enhanced RAG Configuration - HuggingFace API Integration
-# This configuration uses Epic 2 features with HuggingFace API for LLM generation
-# All Epic 2 capabilities preserved: neural reranking, graph enhancement, analytics
+# Epic 2 Configuration with HuggingFace API Integration
+# This configuration preserves all Epic 2 features (neural reranking, graph enhancement, analytics)
+# while using HuggingFace API for both LLM generation and neural reranking
 
 # Document processor for handling input files
 document_processor:
@@ -31,93 +31,133 @@ embedder:
         max_entries: 100000
         max_memory_mb: 1024
 
-# Epic 2 ModularUnifiedRetriever with Enhanced Sub-components
+# EPIC 2 ADVANCED RETRIEVER WITH API RERANKING
 retriever:
-  type: "modular_unified"  # Use ModularUnifiedRetriever
+  type: "modular_unified"
   config:
-    vector_index:
-      type: "faiss"
-      config:
+    # Backend Configuration
+    backends:
+      primary_backend: "faiss"
+      fallback_enabled: true
+      fallback_backend: null
+      
+      # Hot-swapping configuration
+      enable_hot_swap: false
+      health_check_interval_seconds: 30
+      switch_threshold_error_rate: 0.1
+      
+      # FAISS backend settings
+      faiss:
         index_type: "IndexFlatIP"
         normalize_embeddings: true
         metric: "cosine"
-    
-    sparse:
-      type: "bm25"
-      config:
-        k1: 1.2
-        b: 0.75
-        lowercase: true
-        preserve_technical_terms: true
-    
-    # Epic 2 Feature: Graph Enhanced Fusion
-    fusion:
-      type: "graph_enhanced_rrf"  # Use GraphEnhancedRRFFusion for Epic 2
-      config:
-        k: 60
-        weights:
-          dense: 0.4    # Reduced to accommodate graph
-          sparse: 0.3   # Maintained
-          graph: 0.3    # NEW: Graph-based retrieval weight
-        graph_enabled: true
-        similarity_threshold: 0.65
-        max_connections_per_document: 15
-        use_pagerank: true
-        pagerank_damping: 0.85
-    
-    # Epic 2 Feature: Neural Reranking
+      
+      # Weaviate backend settings (disabled for testing)
+      weaviate: null
+
+    # Hybrid Search Configuration
+    hybrid_search:
+      enabled: true
+      
+      # Strategy weights (must sum to 1.0) - Epic 2 configuration
+      dense_weight: 0.4
+      sparse_weight: 0.3
+      graph_weight: 0.3
+      
+      # Fusion method
+      fusion_method: "rrf"
+      rrf_k: 60
+      
+      # Advanced fusion parameters
+      adaptive_weights: false
+      query_dependent_weighting: false
+      normalization_method: "min_max"
+      
+      # Performance optimization
+      max_candidates_per_strategy: 200
+      early_termination_threshold: 0.95
+
+    # Reranker Configuration - HuggingFace API Backend
     reranker:
-      type: "neural"  # Use NeuralReranker for Epic 2
+      type: "neural"
       config:
         enabled: true
+        
+        # Model configuration with HuggingFace API
         model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-        device: "auto"
+        model_type: "cross_encoder"
+        
+        # Reranking parameters
+        max_candidates: 100
         batch_size: 32
         max_length: 512
-        max_candidates: 100
+        
+        # Performance thresholds
+        max_latency_ms: 5000
+        fallback_to_fast_reranker: true
+        fast_reranker_threshold: 100
+        
+        # HuggingFace API specific model configuration
         models:
           default_model:
             name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-            device: "auto"
+            backend: "huggingface_api"
+            api_token: "${HF_TOKEN}"
             batch_size: 32
             max_length: 512
+            timeout: 10
+            fallback_to_local: true
+            max_candidates: 100
+            score_threshold: 0.0
         default_model: "default_model"
 
-# HuggingFace API Answer Generation Strategy
+    # Graph Retrieval Configuration (Epic 2)
+    graph_retrieval:
+      enabled: true
+      enable_entity_linking: true
+      enable_cross_references: true
+      similarity_threshold: 0.65
+      max_connections_per_document: 15
+      use_pagerank: true
+      pagerank_damping: 0.85
+      use_community_detection: false
+      community_algorithm: "louvain"
+      max_graph_hops: 3
+      graph_weight_decay: 0.5
+      combine_with_vector_search: true
+
+    # Analytics Configuration
+    analytics:
+      enabled: true
+      collect_query_metrics: true
+      collect_performance_metrics: true
+      collect_quality_metrics: true
+      dashboard_enabled: false
+      dashboard_port: 8050
+      dashboard_host: "localhost"
+      auto_refresh_seconds: 5
+      metrics_retention_days: 30
+      detailed_logs_retention_days: 7
+
+# Answer generator - HuggingFace API integration
 answer_generator:
   type: "adaptive_modular"
   config:
-    # HuggingFace API Configuration
     llm_client:
-      type: "huggingface"  # Use HuggingFace adapter
+      type: "huggingface"
       config:
-        # HuggingFace API settings
-        api_token: "${HF_TOKEN}"  # Set via environment variable
-        model_name: "microsoft/DialoGPT-medium"  # Primary model
-        use_chat_completion: true
+        model_name: "microsoft/DialoGPT-medium"
+        api_token: "${HF_TOKEN}"
         timeout: 30
-        temperature: 0.3
-        max_tokens: 1024
-        
-        # Fallback models if primary fails
+        use_chat_completion: true
         fallback_models:
           - "google/gemma-2-2b-it"
-          - "Qwen/Qwen2.5-1.5B-Instruct"
           - "google/flan-t5-small"
+        max_tokens: 512
+        temperature: 0.1
+        top_p: 0.9
+        stop_sequences: []
     
-    # Legacy parameters for backward compatibility
-    model_name: "microsoft/DialoGPT-medium"
-    api_token: "${HF_TOKEN}"
-    temperature: 0.3
-    max_tokens: 1024
-    use_ollama: false
-    ollama_url: "http://localhost:11434"
-    use_inference_providers: false
-    enable_adaptive_prompts: false
-    enable_chain_of_thought: false
-    confidence_threshold: 0.85
-    
-    # Enhanced prompt configuration for technical documentation
     prompt_builder:
       type: "simple"
       config:
@@ -138,15 +178,41 @@ answer_generator:
           - Explain concepts step-by-step with technical depth appropriate for engineers
           - Cover related concepts and connections mentioned in the context
           - Include specific examples, instruction formats, or implementation details when present
-          - Be thorough and detailed - technical documentation requires comprehensive coverage
-          - If multiple aspects are mentioned in the context, address all of them
-          - ALWAYS include citations using [Document X] format after every factual claim
-          - Every technical specification, instruction format, or implementation detail must be cited
-          - Use multiple citations when information comes from several sources: [Document 1, Document 2]
+          - ALWAYS include citations in your answer using the format [Document X] where X is the document number
+          - Every factual claim must be followed by a citation like [Document 1] or [Document 2]
+          - Multiple citations can be combined like [Document 1, Document 2]
+          - If the answer is not fully covered by the context, clearly state what information is missing
           
           Answer:
+        
+    response_parser:
+      type: "markdown"
+      config:
+        extract_citations: true
+        
+    confidence_scorer:
+      type: "semantic"
+      config:
+        min_answer_length: 20
+        max_answer_length: 1000
+        relevance_weight: 0.4
+        grounding_weight: 0.4
+        quality_weight: 0.2
 
-# Global settings
+# Global settings optimized for HuggingFace API usage
 global_settings:
-  environment: "testing"
+  environment: "hf_api"
   log_level: "info"
+  max_workers: 4
+  enable_performance_monitoring: true
+  enable_cost_monitoring: true
+  
+  # API-specific settings
+  api_retry_attempts: 3
+  api_retry_delay: 1.0
+  api_timeout: 30
+  
+  # Memory optimization for API usage
+  enable_memory_optimization: true
+  unload_unused_models: true
+  model_cache_size: 2

@@ -85,9 +85,14 @@ retriever:
       models:
         default_model:
           name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-          device: "auto"
+          backend: "huggingface_api"
+          api_token: "${HF_TOKEN}"
           batch_size: 32
           max_length: 512
+          timeout: 10
+          fallback_to_local: true
+          max_candidates: 100
+          score_threshold: 0.0
       default_model: "default_model"
 
     # Graph Retrieval Configuration (Epic 2)
