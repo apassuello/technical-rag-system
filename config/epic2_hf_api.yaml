@@ -55,6 +55,27 @@ retriever:
       # Weaviate backend settings (disabled for testing)
       weaviate: null
 
+    # BM25 Sparse Retrieval Configuration
+    sparse:
+      type: "bm25"
+      config:
+        k1: 1.2
+        b: 0.75
+        lowercase: true
+        preserve_technical_terms: true
+        filter_stop_words: true  # Enable stop word filtering
+        custom_stop_words: []    # Additional stop words if needed
+
+    # Score-Aware Fusion (preserves semantic relevance)
+    fusion:
+      type: "score_aware"  # Use ScoreAwareFusion 
+      config:
+        score_weight: 0.9      # α - semantic score importance (very high)
+        rank_weight: 0.1       # β - rank stability factor (minimal)
+        overlap_weight: 0.0    # γ - both-retriever bonus (disabled)
+        normalize_scores: false # Score normalization disabled
+        k: 60                  # RRF constant for rank component
+
     # Hybrid Search Configuration
     hybrid_search:
       enabled: true
