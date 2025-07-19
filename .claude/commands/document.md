@@ -1,22 +1,27 @@
-# Record Session Accomplishments
+# Record Verified Session Work
 
-Record current session's accomplishments, progress, and key decisions.
+**v2.0 Reality Verification**: Create accurate record of what was actually accomplished based on git analysis and test verification.
 
 ## Instructions
 
-1. **Read planned work**
-   - Read @current_plan.md for planned tasks and expected outcomes
-   - Review current_task, progress, and milestone information
+**v2.0 Reality-Based Documentation**: Only document work verified by passing tests and git commits - no recording of attempted or partially completed work.
 
-2. **Analyze actual work accomplished**
-   - Review recent git commits to understand work completed
-   - Analyze changes made during current session
-   - Compare planned vs actual work accomplished
+### Core Workflow
 
-3. **Execute validation for current state**
-   - Run validation commands from current_plan.md
-   - Capture current system state and quality metrics
-   - Document validation results and compliance status
+1. **Analyze git diff to verify actual work**
+   - Run `git diff` and `git log` to see exactly what changed
+   - Compare file modifications against claimed accomplishments
+   - Identify actual code changes, not just attempts
+
+2. **Run tests to verify claims**
+   - Execute validation commands from current_plan.md
+   - Only record accomplishments if tests actually pass
+   - Document test-verified functionality, not "should work" claims
+
+3. **Update progress tracking based on verification**
+   - Calculate real completion percentage from test results
+   - Update current_plan.md only with verified progress
+   - Record actual blockers from failing tests
 
 4. **Create structured session documentation**
    - Document session accomplishments using existing session template patterns
@@ -43,16 +48,17 @@ Record current session's accomplishments, progress, and key decisions.
 - Focus: [Primary objectives and activities]
 - Status: [COMPLETED/IN_PROGRESS based on session state]
 
-**Planned vs Actual Work**:
-- **Planned Tasks**: [From current_plan.md - what was intended]
-- **Accomplished**: [From git analysis - what was actually completed]
-- **Variance**: [Differences between planned and actual work]
+**Git-Verified Work**:
+- **Files Changed**: [Actual git diff results]
+- **Commits Made**: [git log --oneline results]
+- **Code Added/Modified**: [Specific function/class changes]
+- **Tests Updated**: [Test file modifications]
 
-**Progress Summary**:
-- **Before**: [Previous progress percentage]
-- **After**: [Current progress percentage]
-- **Change**: [Progress made during session]
-- **Milestone Progress**: [Progress toward next_milestone]
+**Test-Verified Accomplishments**:
+- **Tests Passing**: [Only features with passing tests]
+- **Functionality Verified**: [What actually works according to tests]
+- **Progress**: [Before → After based on test results]
+- **Blockers**: [What's actually broken according to test failures]
 
 **Key Accomplishments**:
 - [List major achievements and implementations]
@@ -88,9 +94,29 @@ Record current session's accomplishments, progress, and key decisions.
 - [Contribution to project milestones]
 - [Quality and compliance improvements]
 
+## v2.0 Enhanced Documentation Features
+
+### Reality Verification Rules
+- **No aspirational claims**: Only document what tests confirm works
+- **Git-verified changes**: Match documentation to actual commits  
+- **Test-verified functionality**: Features must pass tests to be recorded
+- **Actual blockers**: Based on failing tests, not assumptions
+
+### State Updates
+```
+📝 Updated: current_plan.md
+   - Progress: [old%] → [new%] (test-verified)
+   - Status: [verified current status]
+   - Blockers: [actual test failures]
+
+📝 Updated: sessions/recent-work.md  
+   - Added: [git-verified work]
+   - Status: [test-confirmed functionality]
+```
+
 **Files Updated**:
 - Session Record: `sessions/session-[YYYY-MM-DD-HHMMSS].md`
-- Recent Work: `sessions/recent-work.md`
-- Project Plan: `current_plan.md` (if progress updated)
+- Recent Work: `sessions/recent-work.md` (reality-verified)
+- Project Plan: `current_plan.md` (test-verified progress only)
 
-**Session documentation complete. Ready for handoff or next session preparation.**
+**Remember**: Only record work that has passing tests. Attempted work without test verification should not be documented as accomplishments.
