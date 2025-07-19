@@ -59,13 +59,13 @@ retriever:
     hybrid_search:
       enabled: true
       
-      # Strategy weights (must sum to 1.0) - Epic 2 configuration
-      dense_weight: 0.4
-      sparse_weight: 0.3
-      graph_weight: 0.3
+      # Strategy weights (must sum to 1.0) - Semantic-focused configuration
+      dense_weight: 0.8
+      sparse_weight: 0.2
+      graph_weight: 0.0
       
       # Fusion method
-      fusion_method: "rrf"
+      fusion_method: "score_aware"
       rrf_k: 60
       
       # Advanced fusion parameters
@@ -113,7 +113,7 @@ retriever:
 
     # Graph Retrieval Configuration (Epic 2)
     graph_retrieval:
-      enabled: true
+      enabled: false
       enable_entity_linking: true
       enable_cross_references: true
       similarity_threshold: 0.65
