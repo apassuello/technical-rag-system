@@ -1,18 +1,23 @@
-# Create Session Handoff
+# Create Next Session Prompt
 
-Create comprehensive session handoff with next session preparation and ready-to-use prompt.
+**v2.0 Session Continuity**: Generate ready-to-use prompt for next session based on verified reality.
 
 ## Instructions
 
-1. **Read session documentation**
-   - Read latest session documentation from @sessions/
-   - Review @sessions/recent-work.md for current session summary
-   - Understand session accomplishments and current state
+**v2.0 Reality-Based Handoff**: Create self-contained session continuation based on actual verified state, not aspirational progress.
 
-2. **Analyze current project state**
-   - Read @current_plan.md for current task, progress, and next steps
-   - Determine next logical work based on session outcomes
-   - Identify context requirements for next session
+### Core Workflow
+
+1. **Analyze current verified state**
+   - Read @current_plan.md for reality-verified progress and current task
+   - Check @sessions/recent-work.md for git-verified accomplishments
+   - Review @sessions/validation-results.md for latest test-verified status
+   - Note any git status or uncommitted changes
+
+2. **Identify next logical steps**
+   - Determine concrete next actions based on actual state
+   - Prioritize based on test results and blockers
+   - Ensure next steps are specific and actionable
 
 3. **Create handoff document**
    - Use @session-templates/SESSION_HANDOFF.md format as template
@@ -59,33 +64,49 @@ Create comprehensive session handoff with next session preparation and ready-to-
 - **Role Recommendation**: [architect/implementer/optimizer/validator]
 - **Validation Commands**: [Commands to run at session start]
 
-**Ready-to-Use Next Session Prompt**:
+## v2.0 Handoff Output Format
+
 ```
+🤝 CREATING HANDOFF
+
+📄 Created: sessions/handoff-[YYYY-MM-DD-HHMMSS].md
+
+=== COPY THIS PROMPT FOR NEXT SESSION ===
+
 Continue [current_task] development for RAG Portfolio Project 1.
 
-CONTEXT SETUP:
-1. Run /context to load current project context
-2. Run /status to validate current system state
-3. Run /[role] to switch to appropriate development mode
+QUICK START (v2.0):
+/status              # Verify reality and auto-update state
+/focus [area]        # Load minimal context (<500 tokens)
 
-CURRENT STATE:
-- Task: [current_task] ([progress]% complete)
-- Phase: [current_phase]
-- Next Milestone: [next_milestone]
-- Focus: [next session focus area]
+CURRENT VERIFIED STATE:
+- Task: [current_task] ([actual%] complete - test verified)
+- Focus: [current_focus_area]
+- Blocker: [actual blocker based on test results]
+- Last Sync: [timestamp]
 
-IMMEDIATE OBJECTIVES:
-- [Specific next actions for next session]
-- [Success criteria and validation requirements]
-- [Context requirements and role recommendations]
+NEXT ACTION:
+[Specific next step based on verified reality]
 
 VALIDATION:
-- [Key validation commands to run]
-- [Expected outcomes and success criteria]
-- [Quality gates and compliance checks]
+[Specific test command to run]
 
-Please start by running /context and /status to understand current state, then proceed with the planned work.
+===
 ```
+
+## v2.0 Enhanced Features
+
+### Reality Verification Integration
+- **Verified Progress**: Only include test-confirmed accomplishments
+- **Actual Blockers**: Based on failing tests, not assumptions
+- **Git-Verified Work**: Match handoff to actual commit history
+- **Fresh Context**: Use `/focus` for minimal token loading
+
+### Self-Contained Continuity  
+- **Minimal Context**: Use `/focus [area]` instead of comprehensive loading
+- **Reality Check**: Start with `/status` to verify current state
+- **Specific Actions**: Concrete next steps, not general directions
+- **Token Management**: Prevent conversation compaction with minimal loading
 
 **Handoff Documentation**:
 - Handoff File: `sessions/handoff-[YYYY-MM-DD-HHMMSS].md`
