@@ -37,6 +37,8 @@ class SemanticScorer(ConfidenceScorer, ConfigurableComponent):
     - relevance_weight: Weight for query-answer relevance (default: 0.4)
     - grounding_weight: Weight for context grounding (default: 0.4)
     - quality_weight: Weight for answer quality metrics (default: 0.2)
+    - low_retrieval_penalty: Penalty when few documents retrieved (default: 0.3)
+    - min_context_documents: Minimum documents for full confidence (default: 3)
     """
     
     def __init__(self,
@@ -45,6 +47,8 @@ class SemanticScorer(ConfidenceScorer, ConfigurableComponent):
                  relevance_weight: float = 0.4,
                  grounding_weight: float = 0.4,
                  quality_weight: float = 0.2,
+                 low_retrieval_penalty: float = 0.3,
+                 min_context_documents: int = 3,
                  embedder=None,
                  config: Optional[Dict[str, Any]] = None):
         """
@@ -56,6 +60,8 @@ class SemanticScorer(ConfidenceScorer, ConfigurableComponent):
             relevance_weight: Weight for query-answer relevance
             grounding_weight: Weight for context grounding
             quality_weight: Weight for answer quality metrics
+            low_retrieval_penalty: Penalty applied when few documents retrieved (default: 0.3)
+            min_context_documents: Minimum documents needed for full confidence (default: 3)
             embedder: Optional embedder for semantic similarity (uses simple if None)
             config: Additional configuration
         """
@@ -66,6 +72,8 @@ class SemanticScorer(ConfidenceScorer, ConfigurableComponent):
             'relevance_weight': relevance_weight,
             'grounding_weight': grounding_weight,
             'quality_weight': quality_weight,
+            'low_retrieval_penalty': low_retrieval_penalty,
+            'min_context_documents': min_context_documents,
             **(config or {})
         }
         
@@ -77,6 +85,8 @@ class SemanticScorer(ConfidenceScorer, ConfigurableComponent):
         self.relevance_weight = scorer_config['relevance_weight']
         self.grounding_weight = scorer_config['grounding_weight']
         self.quality_weight = scorer_config['quality_weight']
+        self.low_retrieval_penalty = scorer_config['low_retrieval_penalty']
+        self.min_context_documents = scorer_config['min_context_documents']
         
         # Normalize weights
         total_weight = self.relevance_weight + self.grounding_weight + self.quality_weight
@@ -86,6 +96,10 @@ class SemanticScorer(ConfidenceScorer, ConfigurableComponent):
             self.quality_weight /= total_weight
         
         # Embedder for semantic similarity (optional)
+        self.embedder = embedder
+    
+    def set_embedder(self, embedder):
+        """Set the embedder for semantic similarity calculations."""
         self.embedder = embedder
     
     def score(self, query: str, answer: str, context: List[Document]) -> float:
@@ -112,10 +126,19 @@ class SemanticScorer(ConfidenceScorer, ConfigurableComponent):
             self.quality_weight * quality_score
         )
         
+        # Apply low retrieval penalty if insufficient context documents
+        retrieval_penalty = 0.0
+        if len(context) < self.min_context_documents:
+            # Linear penalty based on how many documents are missing
+            penalty_factor = 1.0 - (len(context) / self.min_context_documents)
+            retrieval_penalty = self.low_retrieval_penalty * penalty_factor
+            final_score = final_score * (1.0 - retrieval_penalty)
+        
         # Log component scores for debugging
         logger.debug(
             f"Semantic scores - Relevance: {relevance_score:.3f}, "
             f"Grounding: {grounding_score:.3f}, Quality: {quality_score:.3f}, "
+            f"Context docs: {len(context)}, Retrieval penalty: {retrieval_penalty:.3f}, "
             f"Final: {final_score:.3f}"
         )
         
@@ -139,6 +162,10 @@ class SemanticScorer(ConfidenceScorer, ConfigurableComponent):
                 'min_answer_length': self.min_answer_length,
                 'max_answer_length': self.max_answer_length
             },
+            'retrieval_penalty': {
+                'low_retrieval_penalty': self.low_retrieval_penalty,
+                'min_context_documents': self.min_context_documents
+            },
             'uses_embeddings': self.embedder is not None
         }
     
@@ -159,8 +186,8 @@ class SemanticScorer(ConfidenceScorer, ConfigurableComponent):
         # If we have an embedder, use semantic similarity
         if self.embedder:
             try:
-                query_emb = self.embedder.embed_text(query)
-                answer_emb = self.embedder.embed_text(answer)
+                query_emb = np.array(self.embedder.embed([query])[0])
+                answer_emb = np.array(self.embedder.embed([answer])[0])
                 similarity = cosine_similarity(
                     query_emb.reshape(1, -1),
                     answer_emb.reshape(1, -1)
@@ -211,8 +238,8 @@ class SemanticScorer(ConfidenceScorer, ConfigurableComponent):
         # If we have embedder, use semantic similarity
         if self.embedder:
             try:
-                answer_emb = self.embedder.embed_text(answer)
-                context_emb = self.embedder.embed_text(context_text[:2000])  # Limit context length
+                answer_emb = np.array(self.embedder.embed([answer])[0])
+                context_emb = np.array(self.embedder.embed([context_text[:2000]])[0])  # Limit context length
                 similarity = cosine_similarity(
                     answer_emb.reshape(1, -1),
                     context_emb.reshape(1, -1)
