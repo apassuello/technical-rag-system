@@ -20,7 +20,7 @@ Load only essential context for specific work area to preserve conversation spac
    - Default to current task from current_plan.md if no area specified
 
 2. **Read current task from state**
-   - Read @current_plan.md for current_task and specific focus
+   - Read .claude/current_plan.md for current_task and specific focus
    - Identify specific component/function being worked on
    - Note any active blockers or next steps
 
@@ -33,7 +33,7 @@ Load only essential context for specific work area to preserve conversation spac
    - NO architecture files unless specifically needed
 
 4. **Update focus tracking**
-   - Update current_focus in @current_plan.md
+   - Update current_focus in .claude/current_plan.md
    - Add timestamp for focus session
    - Note specific work area
 

@@ -14,10 +14,10 @@ Load implementation context and provide implementation guidance for the specifie
 ## Context Loading
 
 **Base Implementation Context**:
-- @context-templates/IMPLEMENTER_MODE.md - Implementation standards and patterns
-- @memory-bank/performance-optimizations.md - Apple Silicon optimization patterns
-- @memory-bank/swiss-engineering-standards.md - Code quality standards
-- @context/key_files.md - Core system file references
+- .claude/context-templates/IMPLEMENTER_MODE.md - Implementation standards and patterns
+- .claude/memory-bank/performance-optimizations.md - Apple Silicon optimization patterns
+- .claude/memory-bank/swiss-engineering-standards.md - Code quality standards
+- .claude/context/key_files.md - Core system file references
 
 **Key Implementation Areas**:
 - `src/components/` - All modular component implementations

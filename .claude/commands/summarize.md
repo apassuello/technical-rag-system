@@ -5,12 +5,12 @@ Create concise session summary for quick reference and executive overview.
 ## Instructions
 
 1. **Read session documentation**
-   - Read latest session documentation from @sessions/
-   - Review @sessions/recent-work.md for current session activity
+   - Read latest session documentation from .claude/sessions/
+   - Review .claude/sessions/recent-work.md for current session activity
    - Understand session scope and accomplishments
 
 2. **Read current project state**
-   - Read @current_plan.md for current task context and progress
+   - Read .claude/current_plan.md for current task context and progress
    - Review progress changes and milestone advancement
    - Identify key project state changes
 
@@ -25,7 +25,7 @@ Create concise session summary for quick reference and executive overview.
    - Identify significant technical or process improvements
 
 5. **Update session tracking**
-   - Update @sessions/recent-work.md with summary
+   - Update .claude/sessions/recent-work.md with summary
    - Ensure summary is accessible for quick reference
    - Record summary timestamp for tracking
 

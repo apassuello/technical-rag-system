@@ -29,13 +29,13 @@
    - Create comprehensive session record for future reference
 
 5. **Update project progress**
-   - Update @current_plan.md with progress changes if applicable
+   - Update .claude/current_plan.md with progress changes if applicable
    - Record any new blockers or resolved issues
    - Update last_updated timestamp
 
 6. **Save session record**
-   - Save session documentation to @sessions/session-[YYYY-MM-DD-HHMMSS].md
-   - Update @sessions/recent-work.md with session summary
+   - Save session documentation to .claude/sessions/session-[YYYY-MM-DD-HHMMSS].md
+   - Update .claude/sessions/recent-work.md with session summary
    - Ensure session is properly tracked for continuity
 
 ## Output Format
@@ -104,19 +104,19 @@
 
 ### State Updates
 ```
-📝 Updated: current_plan.md
+📝 Updated: .claude/current_plan.md
    - Progress: [old%] → [new%] (test-verified)
    - Status: [verified current status]
    - Blockers: [actual test failures]
 
-📝 Updated: sessions/recent-work.md  
+📝 Updated: .claude/sessions/recent-work.md  
    - Added: [git-verified work]
    - Status: [test-confirmed functionality]
 ```
 
 **Files Updated**:
-- Session Record: `sessions/session-[YYYY-MM-DD-HHMMSS].md`
-- Recent Work: `sessions/recent-work.md` (reality-verified)
-- Project Plan: `current_plan.md` (test-verified progress only)
+- Session Record: `.claude/sessions/session-[YYYY-MM-DD-HHMMSS].md`
+- Recent Work: `.claude/sessions/recent-work.md` (reality-verified)
+- Project Plan: `.claude/current_plan.md` (test-verified progress only)
 
 **Remember**: Only record work that has passing tests. Attempted work without test verification should not be documented as accomplishments.

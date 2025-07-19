@@ -5,7 +5,7 @@ Create a git backup checkpoint with descriptive naming and recovery instructions
 ## Instructions
 
 1. **Read current project state**
-   - Read @current_plan.md for current task context and progress
+   - Read .claude/current_plan.md for current task context and progress
    - Review current_task and progress for backup naming
 
 2. **Create backup branch**
@@ -24,7 +24,7 @@ Create a git backup checkpoint with descriptive naming and recovery instructions
    - Provide verification steps to confirm backup success
 
 5. **Update session tracking**
-   - Update @sessions/recent-work.md with backup information
+   - Update .claude/sessions/recent-work.md with backup information
    - Record backup timestamp, branch name, and recovery commands
    - Track backup history for session management
 

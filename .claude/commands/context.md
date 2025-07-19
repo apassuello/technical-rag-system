@@ -14,9 +14,9 @@ Load appropriate context fragments based on the specified task area or current p
 ## Context Loading Strategy
 
 **Base Project Context** (always loaded):
-- @memory-bank/portfolio-insights.md - Project overview and Swiss tech market positioning
-- @memory-bank/swiss-engineering-standards.md - Quality standards and requirements
-- @context/key_files.md - Core system file references
+- .claude/memory-bank/portfolio-insights.md - Project overview and Swiss tech market positioning
+- .claude/memory-bank/swiss-engineering-standards.md - Quality standards and requirements
+- .claude/context/key_files.md - Core system file references
 
 **Task-Specific Context** (based on task area):
 - **Epic 2 Demo**: Epic 2 features, demo requirements, Streamlit patterns

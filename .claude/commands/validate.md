@@ -5,7 +5,7 @@ Execute validation commands to assess current project state and quality.
 ## Instructions
 
 1. **Read validation configuration**
-   - Read @current_plan.md for validation_commands array
+   - Read .claude/current_plan.md for validation_commands array
    - Review validation commands specified for current project state
 
 2. **Execute validation commands**
@@ -19,7 +19,7 @@ Execute validation commands to assess current project state and quality.
    - Identify any critical issues or failures
 
 4. **Update validation tracking**
-   - Update @sessions/validation-results.md with current validation status
+   - Update .claude/sessions/validation-results.md with current validation status
    - Record timestamp, commands executed, and results summary
    - Track validation history and trends
 
