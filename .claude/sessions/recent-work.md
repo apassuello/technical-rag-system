@@ -15,6 +15,51 @@
 
 ## Latest Session Accomplishments
 
+### 🔧 Retrieval Architecture Analysis & Composite Filtering Design (July 19, 2025)
+
+**TECHNICAL BREAKTHROUGH**: Root cause analysis of semantic alignment inefficiency leading to composite score-based individual document filtering strategy (Option 3).
+
+#### Key Achievements
+- ✅ **Performance Issue Discovery**: RV32/RV64 legitimate queries blocked despite 0.507 similarity documents
+- ✅ **Root Cause Analysis**: Average-based semantic filtering wastes good documents due to poor neighbors
+- ✅ **Architecture Investigation**: Current pipeline gets k*2 documents (40 total) to return 0 due to global blocking
+- ✅ **Strategic Solution Design**: Composite scoring combining fusion scores + semantic similarity per document
+- ✅ **Efficiency Strategy**: Reduce candidates (k*2 → k*1.5) while improving quality assessment
+- ✅ **Implementation Plan**: Individual document filtering vs wasteful all-or-nothing approach
+
+#### Technical Discovery Details
+```
+Current Inefficient Pipeline:
+- Dense search: 20 results + Sparse search: 20 results → 38 after fusion
+- Semantic similarities: [0.113, 0.113, 0.507, 0.322, 0.322] → avg=0.276 < 0.3
+- Result: ALL documents rejected including 0.507 high-quality match
+- Impact: Legitimate RISC-V queries return 0 documents
+```
+
+#### New Composite Filtering Strategy
+```
+Proposed Efficient Pipeline:
+- Dense search: 15 results + Sparse search: 15 results → ~25 after fusion
+- Per-document scoring: composite_score = α * fusion_score + β * semantic_similarity
+- Individual filtering: Include documents with composite_score >= threshold
+- Result: High-quality documents (0.507) pass, poor documents filtered individually
+```
+
+#### Implementation Architecture
+- **Core Method**: `_calculate_composite_scores()` in ModularUnifiedRetriever
+- **Configuration**: Composite filtering parameters (fusion_weight, semantic_weight, threshold)
+- **Integration**: Replace global semantic gap detection with individual assessment
+- **Compatibility**: Leverage existing ScoreAwareFusion investment with enhanced validation
+
+#### Expected System Improvements
+- **Quality**: RV32/RV64 queries return relevant documents (0.507 similarity passes)
+- **Efficiency**: 25% fewer candidates processed (k*2 → k*1.5)
+- **Reliability**: Irrelevant queries still blocked by low composite scores
+- **Confidence**: Higher confidence scores from better input document quality
+- **Architecture**: Maintains Epic 2 functionality and 100% compliance
+
+---
+
 ### 🚀 Cross-Encoder API Investigation & Phase 2 Strategic Decision (July 18, 2025)
 
 **STRATEGIC ACHIEVEMENT**: Comprehensive investigation of HuggingFace API limitations for cross-encoder models, leading to informed strategic decision to use hybrid approach (API LLM + local reranker).

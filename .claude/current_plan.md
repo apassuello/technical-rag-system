@@ -241,6 +241,37 @@ answer_generator:
 - **Benefits**: Additional ~150MB memory savings, 2 API calls per query
 - **Requirements**: Docker infrastructure, GPU support, monitoring
 
+### ⚡ Phase 2.5: Retrieval Efficiency Enhancement (CURRENT PRIORITY)
+**Status**: 🔄 IN PROGRESS - 2025-07-19  
+**Duration**: 2-3 hours estimated  
+**Priority**: HIGH (Quality & Efficiency)  
+**Architecture Confidence**: 95%  
+
+#### Problem Discovered
+- **Issue**: Current semantic gap detection uses inefficient all-or-nothing approach
+- **Evidence**: RV32/RV64 legitimate queries blocked despite 0.507 similarity documents  
+- **Root Cause**: Average-based filtering rejects good documents due to poor neighbors
+- **Impact**: Legitimate technical queries return 0 documents, confidence scores artificially low
+
+#### Solution: Composite Score-Based Individual Document Filtering
+- **Strategy**: Replace global semantic blocking with per-document quality assessment
+- **Algorithm**: `composite_score = α * fusion_score + β * semantic_similarity`
+- **Benefits**: Leverage existing ScoreAwareFusion investment + semantic validation
+- **Efficiency**: Reduce candidates from k*2 to k*1.5 (25% improvement)
+
+#### Implementation Plan
+1. **Configuration Enhancement**: Add composite filtering parameters
+2. **Core Method**: `_calculate_composite_scores()` in ModularUnifiedRetriever  
+3. **Pipeline Replacement**: Individual filtering vs global blocking
+4. **Backward Compatibility**: Graceful fallback with deprecation warnings
+
+#### Expected Outcomes
+- ✅ RV32/RV64 queries return relevant documents (0.507 similarity passes)
+- ✅ Napoleon/Paris queries still blocked by low composite scores
+- ✅ 25% efficiency improvement (fewer candidates processed)
+- ✅ Higher confidence scores from better document quality
+- ✅ Maintains Epic 2 functionality and architecture compliance
+
 ### Phase 3: Embedder Integration (2-3 hours)
 - Create `HuggingFaceEmbeddingAdapter` for sentence-transformers API
 - Update embedder configuration for HF embeddings

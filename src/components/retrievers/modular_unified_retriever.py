@@ -91,6 +91,17 @@ class ModularUnifiedRetriever(Retriever):
         self.embedder = embedder
         self.documents: List[Document] = []
         
+        # Composite filtering configuration (NEW)
+        composite_config = config.get("composite_filtering", {})
+        self.composite_filtering_enabled = composite_config.get("enabled", False)
+        self.fusion_weight = composite_config.get("fusion_weight", 0.7)
+        self.semantic_weight = composite_config.get("semantic_weight", 0.3)
+        self.min_composite_score = composite_config.get("min_composite_score", 0.4)
+        self.max_candidates_multiplier = composite_config.get("max_candidates", 15) / 10.0  # Convert to multiplier (1.5x)
+        
+        # Legacy semantic gap detection configuration (DEPRECATED)
+        self.min_semantic_alignment = config.get("min_semantic_alignment", 0.3)
+        
         # Initialize sub-components
         self.vector_index = self._create_vector_index(config.get("vector_index", {}))
         self.sparse_retriever = self._create_sparse_retriever(config.get("sparse", {}))
@@ -209,14 +220,34 @@ class ModularUnifiedRetriever(Retriever):
             # Step 1: Generate query embeddings
             query_embedding = np.array(self.embedder.embed([query])[0])
             
-            # Step 2: Dense vector search
-            dense_results = self.vector_index.search(query_embedding, k=k*2)  # Get more for fusion
+            # Step 2: Dense vector search (with efficiency optimization)
+            candidate_multiplier = int(self.max_candidates_multiplier * k) if self.composite_filtering_enabled else k*2
+            dense_results = self.vector_index.search(query_embedding, k=candidate_multiplier)
+            logger.debug(f"Dense search: {len(dense_results)} results (k={candidate_multiplier})")
             
-            # Step 3: Sparse keyword search
-            sparse_results = self.sparse_retriever.search(query, k=k*2)  # Get more for fusion
+            # Step 3: Sparse keyword search (with efficiency optimization)
+            sparse_results = self.sparse_retriever.search(query, k=candidate_multiplier)
+            logger.debug(f"Sparse search: {len(sparse_results)} results (k={candidate_multiplier})")
             
             # Step 4: Fuse results
             fused_results = self.fusion_strategy.fuse_results(dense_results, sparse_results)
+            logger.debug(f"Fusion results: {len(fused_results)} documents after fusion")
+            
+            # Step 4.5: Composite filtering (NEW) or semantic gap detection (LEGACY)
+            if self.composite_filtering_enabled:
+                # NEW: Individual document composite scoring
+                filtered_results = self._calculate_composite_scores(query_embedding, fused_results)
+                if not filtered_results:
+                    logger.info("Composite filtering: No documents passed quality threshold")
+                    return []
+                fused_results = filtered_results  # Use filtered results for reranking
+            else:
+                # LEGACY: Global semantic gap detection (DEPRECATED)
+                if fused_results and self.min_semantic_alignment > 0:
+                    semantic_alignment = self._calculate_semantic_alignment(query_embedding, fused_results[:5])
+                    if semantic_alignment < self.min_semantic_alignment:
+                        logger.info(f"Query-document semantic alignment too low: {semantic_alignment:.3f} < {self.min_semantic_alignment}")
+                        return []  # No semantically relevant documents found
             
             # Step 5: Apply reranking if enabled
             if self.reranker.is_enabled() and fused_results:
@@ -660,3 +691,134 @@ class ModularUnifiedRetriever(Retriever):
             debug_info["error"] = str(e)
         
         return debug_info
+    
+    def _calculate_composite_scores(self, query_embedding: np.ndarray, fused_results: List[Tuple[int, float]]) -> List[Tuple[int, float]]:
+        """
+        Calculate composite scores for individual documents combining fusion scores and semantic similarity.
+        
+        This method replaces the global semantic gap detection with per-document quality assessment.
+        Each document gets a composite score: α * fusion_score + β * semantic_similarity
+        Only documents above the composite threshold are included.
+        
+        Args:
+            query_embedding: Query embedding vector
+            fused_results: List of (document_index, fusion_score) from fusion strategy
+            
+        Returns:
+            List of (document_index, composite_score) for documents that pass the threshold
+        """
+        if not fused_results:
+            return []
+        
+        try:
+            # Normalize fusion scores to 0-1 range for fair combination
+            fusion_scores = [score for _, score in fused_results]
+            if len(set(fusion_scores)) > 1:  # Only normalize if there's variation
+                min_score, max_score = min(fusion_scores), max(fusion_scores)
+                score_range = max_score - min_score
+                if score_range > 0:
+                    normalized_fusion = [(score - min_score) / score_range for score in fusion_scores]
+                else:
+                    normalized_fusion = [1.0] * len(fusion_scores)  # All scores identical
+            else:
+                normalized_fusion = [1.0] * len(fusion_scores)  # All scores identical
+            
+            # Get document texts and embeddings
+            doc_indices = [doc_idx for doc_idx, _ in fused_results]
+            documents = [self.documents[idx] for idx in doc_indices if idx < len(self.documents)]
+            
+            if not documents:
+                return []
+            
+            doc_texts = [doc.content for doc in documents]
+            doc_embeddings = self.embedder.embed(doc_texts)
+            
+            # Calculate composite scores for each document
+            composite_results = []
+            for i, (doc_idx, original_fusion_score) in enumerate(fused_results):
+                if i >= len(doc_embeddings) or doc_idx >= len(self.documents):
+                    continue
+                    
+                # Calculate semantic similarity
+                doc_emb_array = np.array(doc_embeddings[i])
+                query_norm = query_embedding / np.linalg.norm(query_embedding)
+                doc_norm = doc_emb_array / np.linalg.norm(doc_emb_array)
+                semantic_similarity = np.dot(query_norm, doc_norm)
+                
+                # Calculate composite score
+                normalized_fusion_score = normalized_fusion[i]
+                composite_score = (self.fusion_weight * normalized_fusion_score + 
+                                 self.semantic_weight * semantic_similarity)
+                
+                # Apply threshold filter
+                if composite_score >= self.min_composite_score:
+                    composite_results.append((doc_idx, composite_score))
+                
+                # Debug logging for first few documents
+                if i < 3:
+                    logger.info(f"COMPOSITE DEBUG - Doc {i+1}: fusion={original_fusion_score:.3f}, "
+                               f"norm_fusion={normalized_fusion_score:.3f}, semantic={semantic_similarity:.3f}, "
+                               f"composite={composite_score:.3f}, threshold={self.min_composite_score}")
+            
+            # Sort by composite score (descending) and return
+            composite_results.sort(key=lambda x: x[1], reverse=True)
+            
+            logger.info(f"COMPOSITE FILTERING - {len(fused_results)} input → {len(composite_results)} passed threshold")
+            return composite_results
+            
+        except Exception as e:
+            logger.warning(f"Error in composite scoring: {e}")
+            # Fallback to original fusion results
+            return fused_results
+    
+    def _calculate_semantic_alignment(self, query_embedding: np.ndarray, fused_results: List[Tuple[int, float]]) -> float:
+        """
+        Calculate semantic alignment between query and top retrieved documents.
+        
+        Args:
+            query_embedding: Query embedding vector
+            fused_results: List of (document_index, score) from fusion
+            
+        Returns:
+            Average cosine similarity between query and top documents
+        """
+        if not fused_results:
+            return 0.0
+        
+        try:
+            # Get embeddings for top documents
+            top_doc_indices = [doc_idx for doc_idx, _ in fused_results]
+            top_documents = [self.documents[idx] for idx in top_doc_indices if idx < len(self.documents)]
+            
+            if not top_documents:
+                return 0.0
+            
+            # Extract text content for embedding
+            doc_texts = [doc.content for doc in top_documents]
+            
+            # Get document embeddings
+            doc_embeddings = self.embedder.embed(doc_texts)
+            
+            # Calculate cosine similarities
+            similarities = []
+            for i, doc_embedding in enumerate(doc_embeddings):
+                doc_emb_array = np.array(doc_embedding)
+                # Normalize vectors for cosine similarity
+                query_norm = query_embedding / np.linalg.norm(query_embedding)
+                doc_norm = doc_emb_array / np.linalg.norm(doc_emb_array)
+                similarity = np.dot(query_norm, doc_norm)
+                similarities.append(similarity)
+                
+                # Debug: Log individual document similarities for investigation
+                if i < 3:  # Only log first 3 docs to avoid spam
+                    doc_preview = doc_texts[i][:100] + "..." if len(doc_texts[i]) > 100 else doc_texts[i]
+                    logger.debug(f"Doc {i+1} similarity: {similarity:.3f} - {doc_preview}")
+            
+            # Return average similarity
+            avg_similarity = np.mean(similarities) if similarities else 0.0
+            logger.debug(f"Semantic alignment: {len(similarities)} docs, similarities={[f'{s:.3f}' for s in similarities[:5]]}, avg={avg_similarity:.3f}")
+            return float(avg_similarity)
+            
+        except Exception as e:
+            logger.warning(f"Error calculating semantic alignment: {e}")
+            return 0.0  # Conservative fallback
