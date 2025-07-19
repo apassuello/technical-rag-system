@@ -1,0 +1,211 @@
+# Epic 2 Configuration for HF Deployment
+# Self-contained configuration for standalone Epic 2 features
+# Compatible with HuggingFace Spaces deployment
+
+# Global deployment settings
+deployment:
+  environment: "hf_spaces"
+  mode: "epic2"
+  features:
+    neural_reranking: true
+    graph_enhancement: true
+    analytics: true
+    hybrid_search: true
+
+# Document processing settings
+document_processing:
+  chunk_size: 1024
+  chunk_overlap: 128
+  max_document_size_mb: 50
+
+# Embedding configuration (local models for HF Spaces)
+embeddings:
+  model: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+  normalize: true
+  batch_size: 32
+  device: "cpu"  # Force CPU for HF Spaces compatibility
+
+# Advanced retrieval configuration
+retrieval:
+  # Hybrid search weights (must sum to 1.0)
+  dense_weight: 0.4
+  sparse_weight: 0.3
+  graph_weight: 0.3
+  
+  # Fusion settings
+  fusion_method: "rrf"
+  rrf_k: 60
+  
+  # Performance optimization
+  max_candidates_per_strategy: 200
+  early_termination_threshold: 0.95
+  
+  # Neural reranking configuration
+  reranker:
+    enabled: true
+    config:
+      model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
+      max_length: 512
+      batch_size: 32
+      max_candidates: 100
+      max_latency_ms: 5000
+      fallback_to_fast_reranker: true
+      initialize_immediately: false  # Lazy loading for faster startup
+  
+  # Graph enhancement configuration
+  graph_retrieval:
+    enabled: true
+    similarity_threshold: 0.65
+    max_connections_per_document: 15
+    use_pagerank: true
+    pagerank_damping: 0.85
+    max_graph_hops: 3
+    graph_weight_decay: 0.5
+
+# LLM generation configuration (HuggingFace API)
+generation:
+  # Auto-detect HF API mode based on environment variables
+  auto_detect_backend: true
+  
+  # HuggingFace API settings
+  huggingface_api:
+    use_inference_providers: true  # Prefer new Inference Providers API
+    use_classic_api: false
+    model_name: "microsoft/DialoGPT-medium"
+    fallback_models:
+      - "google/gemma-2-2b-it"
+      - "google/flan-t5-small"
+    temperature: 0.1
+    max_tokens: 512
+    timeout: 30
+  
+  # Ollama settings (fallback for local development)
+  ollama:
+    enabled: false  # Disabled by default for HF Spaces
+    model_name: "llama3.2:1b"
+    base_url: "http://localhost:11434"
+    temperature: 0.3
+    max_tokens: 512
+
+# Prompt engineering
+prompts:
+  system_prompt: |
+    You are an expert technical assistant specializing in RISC-V architecture and computer systems.
+    
+    Instructions:
+    - Provide comprehensive, detailed technical answers based ONLY on the provided context
+    - Include technical specifications, encoding details, and implementation information when available
+    - Explain concepts step-by-step with technical depth appropriate for engineers
+    - Cover related concepts and connections mentioned in the context
+    - Include specific examples, instruction formats, or implementation details when present
+    - ALWAYS include citations in your answer using the format [Document X] where X is the document number
+    - Every factual claim must be followed by a citation like [Document 1] or [Document 2]
+    - Multiple citations can be combined like [Document 1, Document 2]
+    - If the answer is not fully covered by the context, clearly state what information is missing
+  
+  max_context_length: 12000
+  include_instructions: true
+  citation_style: "inline"
+
+# Analytics and monitoring
+analytics:
+  enabled: true
+  collect_query_metrics: true
+  collect_performance_metrics: true
+  collect_quality_metrics: true
+  
+  # Performance tracking
+  track_component_times: true
+  track_memory_usage: false  # Disabled for HF Spaces
+  
+  # Dashboard settings
+  dashboard_enabled: false  # Disabled for HF Spaces to save resources
+  
+  # Data retention
+  metrics_retention_hours: 24  # Shorter retention for HF Spaces
+  detailed_logs_retention_hours: 6
+
+# Performance optimization for HF Spaces
+performance:
+  # Memory optimization
+  enable_memory_optimization: true
+  unload_unused_models: true
+  model_cache_size: 2
+  
+  # Lazy loading
+  lazy_component_initialization: true
+  defer_heavy_computations: true
+  
+  # Request optimization
+  max_workers: 2  # Conservative for HF Spaces CPU limits
+  enable_request_queuing: true
+  max_queue_size: 10
+  
+  # Caching
+  enable_embedding_cache: true
+  enable_retrieval_cache: true
+  cache_ttl_minutes: 60
+
+# HuggingFace Spaces specific settings
+huggingface_spaces:
+  # Resource constraints
+  max_memory_gb: 16
+  max_cpu_cores: 2
+  max_storage_gb: 50
+  
+  # Startup optimization
+  fast_startup_mode: true
+  preload_test_documents: true
+  skip_model_validation: false
+  
+  # Environment detection
+  auto_detect_spaces: true
+  spaces_optimizations: true
+
+# Feature toggles (environment variable override support)
+feature_toggles:
+  # Core features
+  neural_reranking: "${ENABLE_NEURAL_RERANKING:true}"
+  graph_enhancement: "${ENABLE_GRAPH_ENHANCEMENT:true}"
+  hybrid_search: "${ENABLE_HYBRID_SEARCH:true}"
+  analytics: "${ENABLE_ANALYTICS:true}"
+  
+  # LLM backend selection
+  use_inference_providers: "${USE_INFERENCE_PROVIDERS:true}"
+  use_ollama: "${USE_OLLAMA:false}"
+  
+  # Performance features
+  enable_caching: "${ENABLE_CACHING:true}"
+  enable_batching: "${ENABLE_BATCHING:true}"
+
+# Error handling and fallbacks
+error_handling:
+  # Component fallbacks
+  neural_reranker_fallback: "identity"  # Use identity reranker if neural fails
+  graph_enhancement_fallback: "disabled"  # Disable if graph fails
+  retrieval_fallback: "dense_only"  # Use only dense search if hybrid fails
+  
+  # Error thresholds
+  max_component_failures: 3
+  failure_recovery_time_minutes: 5
+  
+  # Graceful degradation
+  enable_graceful_degradation: true
+  fallback_to_basic_rag: true
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # Component-specific logging
+  components:
+    neural_reranker: "INFO"
+    graph_retriever: "INFO"
+    advanced_retriever: "INFO"
+    generation: "INFO"
+  
+  # Performance logging
+  log_performance_metrics: true
+  log_component_times: true
+  log_memory_usage: false  # Disabled for HF Spaces
