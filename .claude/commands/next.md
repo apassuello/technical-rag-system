@@ -5,11 +5,11 @@ Determine the next logical development task based on current project state and p
 ## Instructions
 
 1. **Read current project state**
-   - Read @current_plan.md for current task, progress, and milestone information
+   - Read .claude/current_plan.md for current task, progress, and milestone information
    - Review current_task completion status and progress percentage
 
 2. **Read recent session activity**
-   - Read @sessions/recent-work.md for recent development activity
+   - Read .claude/sessions/recent-work.md for recent development activity
    - Understand what work has been completed recently
 
 3. **Execute validation commands**
@@ -21,7 +21,7 @@ Determine the next logical development task based on current project state and p
    - Identify logical next task based on project milestones and dependencies
 
 5. **Update project plan if transitioning**
-   - If current task is complete, update @current_plan.md with next task
+   - If current task is complete, update .claude/current_plan.md with next task
    - Update progress, current_phase, and next_milestone as appropriate
    - Specify new context_requirements for next task
 

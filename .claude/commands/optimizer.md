@@ -5,16 +5,16 @@ Switch to performance optimization mode for system tuning and efficiency improve
 ## Instructions
 
 1. **Read current project state**
-   - Read @current_plan.md for current task context and progress
+   - Read .claude/current_plan.md for current task context and progress
    - Review current_task and current_phase for optimization focus area
 
 2. **Load optimization context**
-   - Load @context-templates/OPTIMIZER_MODE.md as base optimization context
-   - Load @memory-bank/performance-optimizations.md for optimization patterns
-   - Load @memory-bank/swiss-engineering-standards.md for performance standards
+   - Load .claude/context-templates/OPTIMIZER_MODE.md as base optimization context
+   - Load .claude/memory-bank/performance-optimizations.md for optimization patterns
+   - Load .claude/memory-bank/swiss-engineering-standards.md for performance standards
 
 3. **Update session tracking**
-   - Update @sessions/recent-work.md with role switch to optimizer mode
+   - Update .claude/sessions/recent-work.md with role switch to optimizer mode
    - Record optimization focus and context loaded
 
 4. **Set optimization focus**

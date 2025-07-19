@@ -5,11 +5,11 @@ Display current development plan with progress visualization and management opti
 ## Instructions
 
 1. **Read complete project state**
-   - Read @current_plan.md for comprehensive project information
+   - Read .claude/current_plan.md for comprehensive project information
    - Review all project fields including tasks, milestones, and progress
 
 2. **Read session history**
-   - Read @sessions/recent-work.md for recent progress updates
+   - Read .claude/sessions/recent-work.md for recent progress updates
    - Review session accomplishments and progress changes
 
 3. **Format plan information**

@@ -14,9 +14,9 @@ Load validation context and provide testing guidance for the specified test suit
 ## Context Loading
 
 **Base Validation Context**:
-- @context-templates/VALIDATOR_MODE.md - Testing and validation patterns
-- @memory-bank/swiss-engineering-standards.md - Quality standards and metrics
-- @memory-bank/architecture-patterns.md - Architecture compliance patterns
+- .claude/context-templates/VALIDATOR_MODE.md - Testing and validation patterns
+- .claude/memory-bank/swiss-engineering-standards.md - Quality standards and metrics
+- .claude/memory-bank/architecture-patterns.md - Architecture compliance patterns
 
 **Key Validation Areas**:
 - `tests/run_comprehensive_tests.py` - Complete system validation

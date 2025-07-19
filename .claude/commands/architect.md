@@ -13,10 +13,10 @@ Load architectural context and provide architectural guidance for the specified 
 ## Context Loading
 
 **Base Architectural Context**:
-- @context-templates/ARCHITECT_MODE.md - Architectural thinking patterns
-- @memory-bank/architecture-patterns.md - 6-component modular architecture patterns
-- @memory-bank/swiss-engineering-standards.md - Quality and compliance standards
-- @ARCHITECTURE_SAFEGUARDS.md - Critical architectural violation prevention
+- .claude/context-templates/ARCHITECT_MODE.md - Architectural thinking patterns
+- .claude/memory-bank/architecture-patterns.md - 6-component modular architecture patterns
+- .claude/memory-bank/swiss-engineering-standards.md - Quality and compliance standards
+- .claude/ARCHITECTURE_SAFEGUARDS.md - Critical architectural violation prevention
 
 **Key Architecture Files**:
 - `docs/architecture/MASTER-ARCHITECTURE.md` - Complete system specification

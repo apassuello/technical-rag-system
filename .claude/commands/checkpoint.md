@@ -5,11 +5,11 @@ Guide comprehensive checkpoint process for clean session transition and project 
 ## Instructions
 
 1. **Read current project state**
-   - Read @current_plan.md for current task, progress, and validation requirements
+   - Read .claude/current_plan.md for current task, progress, and validation requirements
    - Review session context and milestone status
 
 2. **Use checkpoint template**
-   - Load @session-templates/PROGRESS_CHECKPOINT.md as checklist template
+   - Load .claude/session-templates/PROGRESS_CHECKPOINT.md as checklist template
    - Follow established checkpoint procedures and quality gates
    - Ensure all checkpoint criteria are met
 
@@ -64,10 +64,10 @@ Guide comprehensive checkpoint process for clean session transition and project 
 - [ ] **Session documentation created**
   - Command: Use `/document` command
   - Status: [PENDING/COMPLETE]
-  - Location: `sessions/session-[timestamp].md`
+  - Location: `.claude/sessions/session-[timestamp].md`
   
 - [ ] **Progress updated in plan**
-  - Target: Update @current_plan.md with current progress
+  - Target: Update .claude/current_plan.md with current progress
   - Status: [PENDING/COMPLETE]
   - Changes: [Progress percentage and milestone updates]
 
@@ -86,7 +86,7 @@ Guide comprehensive checkpoint process for clean session transition and project 
 - [ ] **Handoff document created**
   - Command: Use `/handoff` command
   - Status: [PENDING/COMPLETE]
-  - Location: `sessions/handoff-[timestamp].md`
+  - Location: `.claude/sessions/handoff-[timestamp].md`
   
 - [ ] **Next session prompt prepared**
   - Ready-to-use prompt for next session startup
@@ -95,12 +95,12 @@ Guide comprehensive checkpoint process for clean session transition and project 
 
 **5. Context State Management**
 - [ ] **Context requirements updated**
-  - Current context needs documented in @current_plan.md
+  - Current context needs documented in .claude/current_plan.md
   - Status: [PENDING/COMPLETE]
   - Requirements: [List current context_requirements]
   
 - [ ] **Session tracking updated**
-  - Recent work documented in @sessions/recent-work.md
+  - Recent work documented in .claude/sessions/recent-work.md
   - Status: [PENDING/COMPLETE]
   - Summary: Session outcomes and next steps
 
