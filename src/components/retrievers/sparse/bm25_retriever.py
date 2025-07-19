@@ -55,12 +55,35 @@ class BM25Retriever(SparseRetriever):
                 - b: Document length normalization factor (default: 0.75)
                 - lowercase: Whether to lowercase text (default: True)
                 - preserve_technical_terms: Whether to preserve technical terms (default: True)
+                - filter_stop_words: Whether to filter common stop words (default: True)
+                - custom_stop_words: Additional stop words to filter (default: empty list)
         """
         self.config = config
         self.k1 = config.get("k1", 1.2)
         self.b = config.get("b", 0.75)
         self.lowercase = config.get("lowercase", True)
         self.preserve_technical_terms = config.get("preserve_technical_terms", True)
+        self.filter_stop_words = config.get("filter_stop_words", True)
+        self.custom_stop_words = set(config.get("custom_stop_words", []))
+        
+        # Standard English stop words for BM25 filtering
+        self.standard_stop_words = {
+            'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it',
+            'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with', 'the', 'this', 'but',
+            'they', 'have', 'had', 'what', 'said', 'each', 'which', 'she', 'do', 'how', 'their', 'if',
+            'up', 'out', 'many', 'then', 'them', 'these', 'so', 'some', 'her', 'would', 'make', 'like',
+            'into', 'him', 'time', 'two', 'more', 'go', 'no', 'way', 'could', 'my', 'than', 'first',
+            'been', 'call', 'who', 'oil', 'sit', 'now', 'find', 'down', 'day', 'did', 'get', 'come',
+            'made', 'may', 'part', 'where', 'much', 'too', 'any', 'after', 'back', 'other', 'see',
+            'want', 'just', 'also', 'when', 'here', 'all', 'well', 'can', 'should', 'must', 'might',
+            'shall', 'about', 'before', 'through', 'over', 'under', 'above', 'below', 'between', 'among'
+        }
+        
+        # Combine standard and custom stop words
+        if self.filter_stop_words:
+            self.stop_words = self.standard_stop_words | self.custom_stop_words
+        else:
+            self.stop_words = self.custom_stop_words
         
         # Validation
         if self.k1 <= 0:
@@ -86,7 +109,7 @@ class BM25Retriever(SparseRetriever):
             self._tech_pattern = re.compile(r'\b\w+\b')
             self._punctuation_pattern = re.compile(r'[^\w\s]')
         
-        logger.info(f"BM25Retriever initialized with k1={self.k1}, b={self.b}")
+        logger.info(f"BM25Retriever initialized with k1={self.k1}, b={self.b}, stop_words={len(self.stop_words) if self.stop_words else 0}")
     
     def enable_deferred_indexing(self) -> None:
         """Enable deferred indexing mode to avoid rebuilding index on every batch"""
@@ -257,6 +280,8 @@ class BM25Retriever(SparseRetriever):
             "b": self.b,
             "lowercase": self.lowercase,
             "preserve_technical_terms": self.preserve_technical_terms,
+            "filter_stop_words": self.filter_stop_words,
+            "stop_words_count": len(self.stop_words) if self.stop_words else 0,
             "total_documents": len(self.documents),
             "valid_documents": len(self.chunk_mapping),
             "is_indexed": self.bm25 is not None
@@ -296,6 +321,10 @@ class BM25Retriever(SparseRetriever):
         
         # Filter out single characters and empty strings
         tokens = [token for token in tokens if len(token) > 1]
+        
+        # Filter out stop words if enabled
+        if self.stop_words:
+            tokens = [token for token in tokens if token.lower() not in self.stop_words]
         
         return tokens
     
