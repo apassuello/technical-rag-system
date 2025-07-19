@@ -9,9 +9,9 @@
 ### Core Workflow
 
 1. **Analyze current verified state**
-   - Read @current_plan.md for reality-verified progress and current task
-   - Check @sessions/recent-work.md for git-verified accomplishments
-   - Review @sessions/validation-results.md for latest test-verified status
+   - Read .claude/current_plan.md for reality-verified progress and current task
+   - Check .claude/sessions/recent-work.md for git-verified accomplishments
+   - Review .claude/sessions/validation-results.md for latest test-verified status
    - Note any git status or uncommitted changes
 
 2. **Identify next logical steps**
@@ -20,7 +20,7 @@
    - Ensure next steps are specific and actionable
 
 3. **Create handoff document**
-   - Use @session-templates/SESSION_HANDOFF.md format as template
+   - Use .claude/session-templates/SESSION_HANDOFF.md format as template
    - Fill in session accomplishments, current state, and next steps
    - Include validation results and quality metrics
 
@@ -30,8 +30,8 @@
    - Specify validation commands and success criteria
 
 5. **Save handoff documentation**
-   - Save handoff document to @sessions/handoff-[YYYY-MM-DD-HHMMSS].md
-   - Update @sessions/recent-work.md with handoff summary
+   - Save handoff document to .claude/sessions/handoff-[YYYY-MM-DD-HHMMSS].md
+   - Update .claude/sessions/recent-work.md with handoff summary
    - Ensure handoff is accessible for next session
 
 ## Output Format
@@ -69,7 +69,7 @@
 ```
 🤝 CREATING HANDOFF
 
-📄 Created: sessions/handoff-[YYYY-MM-DD-HHMMSS].md
+📄 Created: .claude/sessions/handoff-[YYYY-MM-DD-HHMMSS].md
 
 === COPY THIS PROMPT FOR NEXT SESSION ===
 
@@ -109,8 +109,8 @@ VALIDATION:
 - **Token Management**: Prevent conversation compaction with minimal loading
 
 **Handoff Documentation**:
-- Handoff File: `sessions/handoff-[YYYY-MM-DD-HHMMSS].md`
-- Session Summary: Updated in `sessions/recent-work.md`
+- Handoff File: `.claude/sessions/handoff-[YYYY-MM-DD-HHMMSS].md`
+- Session Summary: Updated in `.claude/sessions/recent-work.md`
 - Next Session Prompt: Ready for immediate use
 
 **Session Continuity**:

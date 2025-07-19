@@ -14,8 +14,8 @@
 ### Core Workflow
 
 1. **Read current state files**
-   - Read @current_plan.md for claimed progress and current task
-   - Read @sessions/recent-work.md for recent activity
+   - Read .claude/current_plan.md for claimed progress and current task
+   - Read .claude/sessions/recent-work.md for recent activity
    - Note last update timestamps
 
 2. **Execute validation to verify reality**
@@ -29,10 +29,10 @@
    - Calculate actual completion percentage
 
 4. **UPDATE state files to match reality**
-   - Update progress in @current_plan.md based on test results
+   - Update progress in .claude/current_plan.md based on test results
    - Update current task description if needed
    - Update blockers based on failing tests
-   - Update @sessions/recent-work.md with actual status
+   - Update .claude/sessions/recent-work.md with actual status
 
 5. **Show explicit changes made**
    - Display each file updated with before/after values
@@ -59,8 +59,8 @@
 🔍 STATUS CHECK - Verifying Project Reality
 
 Reading state files...
-✓ current_plan.md (last updated: [time ago])
-✓ sessions/recent-work.md (last session: [when])
+✓ .claude/current_plan.md (last updated: [time ago])
+✓ .claude/sessions/recent-work.md (last session: [when])
 
 Running validation...
 $ [validation command from current_plan.md]
@@ -69,12 +69,12 @@ $ [validation command from current_plan.md]
 Comparing claimed vs actual:
 [✓ or ❌] [Comparison of each major claim]
 
-📝 Updated: current_plan.md
+📝 Updated: .claude/current_plan.md
    - Progress: [old%] → [new%] (based on actual tests)
    - Current task: "[updated task description]"
    - Blockers: [updated based on failures]
 
-📝 Updated: sessions/recent-work.md
+📝 Updated: .claude/sessions/recent-work.md
    - Status: "[actual current status]"
    - Next: "[specific next action]"
 
