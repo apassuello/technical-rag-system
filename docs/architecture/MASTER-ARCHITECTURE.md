@@ -275,3 +275,7 @@ Key types:
 - [Interface Specifications](./rag-interface-reference.md)
 - [Sequence Diagrams](./rag-main-sequences.md)
 - [Adapter Pattern Analysis](./rag-adapter-pattern-analysis.md)
+
+## Appendices
+
+- [Appendix A: LangChain Integration Strategy](./APPENDIX_LANGCHAIN_INTEGRATION_STRATEGY.md)
