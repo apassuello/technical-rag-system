@@ -49,20 +49,15 @@ retriever:
         lowercase: true
         preserve_technical_terms: true
     
-    # Epic 2 Feature: Graph Enhanced Fusion
+    # Score-Aware Fusion (preserves semantic relevance)
     fusion:
-      type: "graph_enhanced_rrf"  # Use GraphEnhancedRRFFusion for Epic 2
+      type: "score_aware"  # Use ScoreAwareFusion 
       config:
-        k: 60
-        weights:
-          dense: 0.4    # Reduced to accommodate graph
-          sparse: 0.3   # Maintained
-          graph: 0.3    # NEW: Graph-based retrieval weight
-        graph_enabled: true
-        similarity_threshold: 0.65
-        max_connections_per_document: 15
-        use_pagerank: true
-        pagerank_damping: 0.85
+        score_weight: 0.9      # α - semantic score importance (very high)
+        rank_weight: 0.1       # β - rank stability factor (minimal)
+        overlap_weight: 0.0    # γ - both-retriever bonus (disabled)
+        normalize_scores: false # Score normalization disabled
+        k: 60                  # RRF constant for rank component
     
     # Epic 2 Feature: Neural Reranking
     reranker:
