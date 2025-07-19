@@ -6,20 +6,9 @@ Self-contained implementation without external dependencies.
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Tuple
-from dataclasses import dataclass, field
 
-
-@dataclass
-class Document:
-    """Represents a processed document chunk."""
-    content: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    embedding: List[float] = None
-
-    def __post_init__(self):
-        """Validate document data."""
-        if not self.content:
-            raise ValueError("Document content cannot be empty")
+# Use unified Document from core interfaces
+from ..core.interfaces import Document
 
 
 class Reranker(ABC):

@@ -23,6 +23,9 @@ from .neural_reranker import NeuralReranker, IdentityReranker
 from .graph_retriever import GraphRetriever
 from .base_reranker import Document
 
+# Import Epic 2 core interfaces
+from ..core.interfaces import Retriever, RetrievalResult, HealthStatus
+
 # Import existing HF deployment utilities
 sys.path.append(str(Path(__file__).parent.parent))
 from shared_utils.embeddings.generator import generate_embeddings
@@ -30,7 +33,7 @@ from shared_utils.embeddings.generator import generate_embeddings
 logger = logging.getLogger(__name__)
 
 
-class AdvancedRetriever:
+class AdvancedRetriever(Retriever):
     """
     Advanced retriever combining hybrid search, neural reranking, and graph enhancement.
     
@@ -219,7 +222,7 @@ class AdvancedRetriever:
             # Generate embeddings for dense retrieval
             if FAISS_AVAILABLE:
                 print(f"🔤 Generating embeddings...", file=sys.stderr, flush=True)
-                embeddings = generate_embeddings(doc_texts, model=self.embedding_model)
+                embeddings = generate_embeddings(doc_texts, model_name=self.embedding_model)
                 self.document_embeddings = np.array(embeddings)
                 
                 # Build FAISS index
@@ -233,7 +236,7 @@ class AdvancedRetriever:
                 print(f"✅ FAISS index built with {len(documents)} documents", file=sys.stderr, flush=True)
             else:
                 print(f"⚠️ FAISS not available, using embedding similarity", file=sys.stderr, flush=True)
-                embeddings = generate_embeddings(doc_texts, model=self.embedding_model)
+                embeddings = generate_embeddings(doc_texts, model_name=self.embedding_model)
                 self.document_embeddings = np.array(embeddings)
             
             # Index documents in BM25
@@ -365,7 +368,7 @@ class AdvancedRetriever:
         """Perform dense semantic search."""
         try:
             # Generate query embedding
-            query_embedding = generate_embeddings([query], model=self.embedding_model)[0]
+            query_embedding = generate_embeddings([query], model_name=self.embedding_model)[0]
             query_embedding = np.array([query_embedding])
             
             if FAISS_AVAILABLE and self.faiss_index:
@@ -455,3 +458,92 @@ class AdvancedRetriever:
         })
         
         return stats
+    
+    # ComponentBase interface methods
+    def retrieve(self, query: str, k: int = 5) -> List[RetrievalResult]:
+        """
+        Retrieve relevant documents for a query (Retriever interface).
+        
+        Args:
+            query: Search query string
+            k: Number of results to return
+            
+        Returns:
+            List of RetrievalResult objects
+        """
+        # Call the main search method
+        search_results = self.search(query, top_k=k)
+        
+        # Convert to RetrievalResult format
+        retrieval_results = []
+        for result in search_results:
+            doc_idx = result.get('doc_index', 0)
+            score = result.get('score', 0.0)
+            
+            # Get document
+            if doc_idx < len(self.documents):
+                document = self.documents[doc_idx]
+                
+                retrieval_result = RetrievalResult(
+                    document=document,
+                    score=min(max(score, 0.0), 1.0),  # Normalize score to 0-1
+                    retrieval_method="epic2_advanced",
+                    metadata={
+                        "neural_reranking_used": result.get('neural_reranking_used', False),
+                        "graph_enhancement_used": result.get('graph_enhancement_used', False),
+                        "fusion_method": result.get('fusion_method', 'rrf')
+                    }
+                )
+                retrieval_results.append(retrieval_result)
+        
+        return retrieval_results
+    
+    def get_health_status(self) -> HealthStatus:
+        """Get the current health status of the component."""
+        issues = []
+        metrics = {}
+        
+        # Check FAISS availability
+        if not FAISS_AVAILABLE:
+            issues.append("FAISS not available - dense search disabled")
+        
+        # Check neural reranker
+        if self.neural_reranker and not self.neural_reranker.is_enabled():
+            issues.append("Neural reranker disabled")
+        
+        # Check graph retriever
+        if self.graph_retriever and not self.graph_retriever.is_enabled():
+            issues.append("Graph retriever disabled")
+        
+        # Add performance metrics
+        if self.stats["total_queries"] > 0:
+            metrics["success_rate"] = self.stats["successful_queries"] / self.stats["total_queries"]
+            metrics["avg_latency_ms"] = self.stats["total_latency_ms"] / self.stats["total_queries"]
+        
+        metrics["total_documents"] = len(self.documents)
+        metrics["components_enabled"] = len([c for c in [self.neural_reranker, self.graph_retriever, self.faiss_index] if c])
+        
+        is_healthy = len(issues) == 0 and len(self.documents) > 0
+        
+        return HealthStatus(
+            is_healthy=is_healthy,
+            issues=issues,
+            metrics=metrics,
+            component_name="AdvancedRetriever"
+        )
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get component-specific metrics."""
+        return self.get_stats()
+    
+    def get_capabilities(self) -> List[str]:
+        """Get list of component capabilities."""
+        capabilities = ["hybrid_search", "dense_search", "sparse_search", "rrf_fusion"]
+        
+        if self.neural_reranker and self.neural_reranker.is_enabled():
+            capabilities.append("neural_reranking")
+        
+        if self.graph_retriever and self.graph_retriever.is_enabled():
+            capabilities.append("graph_enhancement")
+        
+        return capabilities
