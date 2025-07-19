@@ -57,6 +57,7 @@ class BM25Retriever(SparseRetriever):
                 - preserve_technical_terms: Whether to preserve technical terms (default: True)
                 - filter_stop_words: Whether to filter common stop words (default: True)
                 - custom_stop_words: Additional stop words to filter (default: empty list)
+                - min_score: Minimum normalized score threshold for results (default: 0.0)
         """
         self.config = config
         self.k1 = config.get("k1", 1.2)
@@ -65,6 +66,7 @@ class BM25Retriever(SparseRetriever):
         self.preserve_technical_terms = config.get("preserve_technical_terms", True)
         self.filter_stop_words = config.get("filter_stop_words", True)
         self.custom_stop_words = set(config.get("custom_stop_words", []))
+        self.min_score = config.get("min_score", 0.0)
         
         # Standard English stop words for BM25 filtering
         self.standard_stop_words = {
@@ -251,6 +253,14 @@ class BM25Retriever(SparseRetriever):
             for i in range(len(scores))
         ]
         
+        # Apply minimum score threshold
+        if self.min_score > 0:
+            filtered_results = [(doc_idx, score) for doc_idx, score in results if score >= self.min_score]
+            if not filtered_results:
+                logger.debug(f"No BM25 results above minimum score threshold {self.min_score}")
+                return []
+            results = filtered_results
+        
         # Sort by score (descending) and return top_k
         results.sort(key=lambda x: x[1], reverse=True)
         
@@ -282,6 +292,7 @@ class BM25Retriever(SparseRetriever):
             "preserve_technical_terms": self.preserve_technical_terms,
             "filter_stop_words": self.filter_stop_words,
             "stop_words_count": len(self.stop_words) if self.stop_words else 0,
+            "min_score": self.min_score,
             "total_documents": len(self.documents),
             "valid_documents": len(self.chunk_mapping),
             "is_indexed": self.bm25 is not None

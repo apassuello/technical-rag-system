@@ -1764,6 +1764,10 @@ class PlatformOrchestrator:
             )
             logger.debug(f"Answer generator initialized: {gen_config.type}")
             
+            # Connect embedder to answer generator for semantic confidence scoring
+            if hasattr(self._components['answer_generator'], 'set_embedder'):
+                self._components['answer_generator'].set_embedder(self._components['embedder'])
+            
             # Note: Query processor will be created in the next step
             # For now, we'll handle query processing directly
             
