@@ -93,8 +93,8 @@ Load context restoration guidance and provide quick restart commands for the spe
 ## Emergency Recovery
 
 If unsure of previous work area:
-1. Check `@current_plan.md` for current task
-2. Check `@sessions/recent-work.md` for latest activity  
+1. Check `.claude/current_plan.md` for current task
+2. Check `.claude/sessions/recent-work.md` for latest activity  
 3. Use `/status` for overall system state
 4. Use `/context` for general project context
 

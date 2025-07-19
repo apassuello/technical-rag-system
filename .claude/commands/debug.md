@@ -31,7 +31,7 @@ Activate extreme skepticism for systematic debugging of difficult problems.
    - Verify all assumptions with actual tests
 
 4. **Update debug tracking**
-   - Record investigation findings in sessions/debug-log.md
+   - Record investigation findings in .claude/sessions/debug-log.md
    - Track what was tested and ruled out
    - Document actual root causes when found
 
@@ -69,7 +69,7 @@ Loading debug context...
    3. [test_file]::test_method (current status)
    4. Recent changes: [git log --oneline -5]
 
-📝 Updated: sessions/debug-log.md
+📝 Updated: .claude/sessions/debug-log.md
    - Investigation started: "[timestamp]"
    - Problem scope: "[specific component/function]"
    - Hypothesis: "[initial theory]"
@@ -134,7 +134,7 @@ Remember: Nothing works until you prove it works.
 
 ## Debug Session Documentation
 
-All debug findings get recorded in `sessions/debug-log.md`:
+All debug findings get recorded in `.claude/sessions/debug-log.md`:
 
 ```markdown
 # Debug Session: [Timestamp]

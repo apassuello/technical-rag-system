@@ -5,8 +5,8 @@ Create reusable template from current work patterns for future development sessi
 ## Instructions
 
 1. **Read current work patterns**
-   - Read @current_plan.md for current task and approach patterns
-   - Review @sessions/recent-work.md for successful work patterns
+   - Read .claude/current_plan.md for current task and approach patterns
+   - Review .claude/sessions/recent-work.md for successful work patterns
    - Analyze current session approaches and methodologies
 
 2. **Analyze successful patterns**
@@ -20,7 +20,7 @@ Create reusable template from current work patterns for future development sessi
    - Maintain template flexibility for various use cases
 
 4. **Create template file**
-   - Create new template file in appropriate @session-templates/ or @context-templates/ directory
+   - Create new template file in appropriate .claude/session-templates/ or .claude/context-templates/ directory
    - Use consistent naming and structure patterns
    - Include usage instructions and customization points
 
@@ -71,7 +71,7 @@ Create reusable template from current work patterns for future development sessi
 ```
 
 **Template File Created**:
-- **Location**: [@session-templates/[template-name].md or @context-templates/[template-name].md]
+- **Location**: [.claude/session-templates/[template-name].md or .claude/context-templates/[template-name].md]
 - **File Size**: [Template file size]
 - **Format**: [Markdown with Claude Code command structure]
 
