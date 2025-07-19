@@ -1,0 +1,83 @@
+# RAG Pipeline Configuration - Score Aware Fusion Test
+# This configuration tests the new score-aware fusion strategy
+
+# Document processor for handling input files
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 1024
+    chunk_overlap: 128
+
+# Embedding generator for converting text to vectors  
+embedder:
+  type: "modular"
+  config:
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        device: "auto"
+        normalize_embeddings: true
+    batch_processor:
+      type: "dynamic"
+      config:
+        initial_batch_size: 32
+        max_batch_size: 128
+        optimize_for_memory: true
+    cache:
+      type: "memory"
+      config:
+        max_entries: 100000
+        max_memory_mb: 1024
+
+# Retrieval strategy with Score-Aware Fusion
+retriever:
+  type: "modular_unified"
+  config:
+    vector_index:
+      type: "faiss"
+      config:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+        metric: "cosine"
+    sparse:
+      type: "bm25"
+      config:
+        k1: 1.2
+        b: 0.75
+        lowercase: true
+        preserve_technical_terms: true
+        filter_stop_words: true  # Enable stop word filtering
+        custom_stop_words: []    # Additional stop words if needed
+    fusion:
+      type: "score_aware"  # Using the new score-aware fusion
+      config:
+        score_weight: 0.9      # α - semantic score importance (very high)
+        rank_weight: 0.1       # β - rank stability factor (minimal)
+        overlap_weight: 0.0    # γ - both-retriever bonus (disabled)
+        normalize_scores: false # Score normalization disabled
+        k: 60                  # RRF constant for rank component
+    reranker:
+      type: "identity"
+      config:
+        enabled: true
+
+# Answer generation strategy (Local Ollama)
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    model_name: "llama3.2:3b"
+    api_token: null
+    temperature: 0.3
+    max_tokens: 512
+    use_ollama: true
+    ollama_url: "http://localhost:11434"
+    use_inference_providers: false
+    enable_adaptive_prompts: false
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
+
+# Global settings
+global_settings:
+  environment: "development"
+  log_level: "info"
