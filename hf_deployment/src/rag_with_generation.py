@@ -12,15 +12,13 @@ from typing import Dict, List, Optional, Union, Generator
 import sys
 
 # Import from same directory
-from src.core.pipeline import RAGPipeline
+from .basic_rag import BasicRAG
 
 # Import from shared utils - Support HF API, Ollama, and Inference Providers
-from src.shared_utils.generation.hf_answer_generator import HuggingFaceAnswerGenerator, GeneratedAnswer
-from src.shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
-from src.shared_utils.generation.inference_providers_generator import InferenceProvidersGenerator
-from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates
-from src.shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
-from src.shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
+from .shared_utils.generation.hf_answer_generator import HuggingFaceAnswerGenerator, GeneratedAnswer
+from .shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
+from .shared_utils.generation.inference_providers_generator import InferenceProvidersGenerator
+from .shared_utils.generation.prompt_templates import TechnicalPromptTemplates
 
 
 class RAGWithGeneration(BasicRAG):
@@ -125,8 +123,8 @@ class RAGWithGeneration(BasicRAG):
         
         # Initialize prompt engineering components
         self.prompt_templates = TechnicalPromptTemplates()
-        self.adaptive_engine = AdaptivePromptEngine() if enable_adaptive_prompts else None
-        self.cot_engine = ChainOfThoughtEngine() if enable_chain_of_thought else None
+        self.adaptive_engine = None  # Simplified for HF deployment
+        self.cot_engine = None  # Simplified for HF deployment
         self.enable_adaptive_prompts = enable_adaptive_prompts
         self.enable_chain_of_thought = enable_chain_of_thought
         self.enable_streaming = False  # HF API doesn't support streaming in this implementation

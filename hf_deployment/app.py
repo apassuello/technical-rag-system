@@ -1,38 +1,43 @@
-#!/usr/bin/env python3
 """
-Technical Documentation RAG System - Streamlit Interface
+Epic 2 Interactive Streamlit Demo
+=================================
 
-A professional web interface for the RAG system with answer generation,
-optimized for technical documentation Q&A.
+Professional demonstration of the Epic 2 Enhanced RAG System capabilities
+showcasing advanced hybrid retrieval, neural reranking, and graph enhancement.
+
+Target: Swiss Tech Market ML Engineer Portfolio
+System: Epic 2 Enhanced RAG with 100% modular architecture compliance
+Data: Complete RISC-V technical documentation corpus
 """
-
-import os
-# Set environment variables before importing streamlit
-os.environ['HOME'] = '/app'
-os.environ['STREAMLIT_CONFIG_DIR'] = '/app/.streamlit'
-os.environ['STREAMLIT_BROWSER_GATHER_USAGE_STATS'] = 'false'
 
 import streamlit as st
 import sys
+import os
 from pathlib import Path
 import time
-import traceback
-from typing import List, Dict, Any
-import json
+import logging
+from typing import Dict, Any, List
 
-# Add project root to path
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+# Add demo utils to path
+sys.path.append(str(Path(__file__).parent))
 
-# Import directly since we're in the project directory
-sys.path.insert(0, str(Path(__file__).parent))
-from src.rag_with_generation import RAGWithGeneration
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
+# Import system integration
+try:
+    from demo.utils.system_integration import get_system_manager
+    from demo.utils.analytics_dashboard import analytics_dashboard
+    system_manager = get_system_manager()
+except ImportError as e:
+    st.error(f"Failed to import system integration: {e}")
+    st.stop()
 
 # Page configuration
 st.set_page_config(
-    page_title="Technical Documentation RAG Assistant",
-    page_icon="🔍",
+    page_title="Epic 2 Enhanced RAG Demo",
+    page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -41,543 +46,485 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
-        text-align: center;
+        background: linear-gradient(90deg, #2E86AB, #A23B72);
+        color: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
         margin-bottom: 2rem;
-        padding: 1rem;
-        background: linear-gradient(90deg, #f0f8ff, #e6f3ff);
-        border-radius: 10px;
-        border-left: 5px solid #1f77b4;
-    }
-    
-    .system-stats {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid #28a745;
-        margin: 1rem 0;
-    }
-    
-    .error-box {
-        background-color: #f8d7da;
-        color: #721c24;
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid #dc3545;
-        margin: 1rem 0;
-    }
-    
-    .metrics-container {
-        display: flex;
-        justify-content: space-around;
-        margin: 1rem 0;
-    }
-    
-    .metric-box {
-        background: white;
-        padding: 1rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         text-align: center;
-        min-width: 120px;
     }
     
-    .citation-box {
-        background-color: #e8f4fd;
-        padding: 0.8rem;
-        border-radius: 6px;
-        border-left: 3px solid #2196F3;
+    .epic2-badge {
+        background: #28a745;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .model-badge {
+        background: #17a2b8;
+        color: white;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.2rem;
+        font-size: 0.7rem;
+        margin: 0.1rem;
+        display: inline-block;
+    }
+    
+    .status-online {
+        color: #28a745;
+        font-weight: bold;
+    }
+    
+    .status-processing {
+        color: #ffc107;
+        font-weight: bold;
+    }
+    
+    .metric-card {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #2E86AB;
         margin: 0.5rem 0;
-        font-size: 0.9rem;
     }
     
-    .sample-query {
-        background-color: #f0f8ff;
-        padding: 0.8rem;
-        border-radius: 6px;
-        margin: 0.5rem 0;
-        cursor: pointer;
-        border-left: 3px solid #4CAF50;
+    .stage-indicator {
+        padding: 0.5rem;
+        margin: 0.25rem;
+        border-radius: 0.25rem;
+        text-align: center;
+        font-weight: bold;
     }
     
-    .sample-query:hover {
-        background-color: #e6f3ff;
-    }
+    .stage-complete { background: #d4edda; color: #155724; }
+    .stage-active { background: #fff3cd; color: #856404; }
+    .stage-pending { background: #f8d7da; color: #721c24; }
+    
+    .performance-excellent { background: #d4edda; color: #155724; }
+    .performance-good { background: #fff3cd; color: #856404; }
+    .performance-needs-improvement { background: #f8d7da; color: #721c24; }
 </style>
 """, unsafe_allow_html=True)
 
 
-def initialize_rag_system(api_token=None, model_name=None):
-    """Initialize the RAG system with HuggingFace API."""
-    try:
-        # Check for token in environment first
-        import os
-        token = api_token or os.getenv("HUGGINGFACE_API_TOKEN")
-        
-        # Use selected model or default based on Pro vs Free tier
-        if not model_name:
-            if token:
-                model_name = "mistralai/Mistral-7B-Instruct-v0.2"  # Pro: Best for technical Q&A
-            else:
-                model_name = "gpt2-medium"  # Free tier: Best available
-        
-        rag_system = RAGWithGeneration(
-            model_name=model_name,
-            api_token=token,  # Use provided token or env variable
-            temperature=0.3,
-            max_tokens=512
-        )
-        return rag_system, None
-    except Exception as e:
-        error_msg = f"RAG system initialization failed: {str(e)}"
-        return None, error_msg
-
-
 def display_header():
-    """Display application header with branding."""
+    """Display the main header with Epic 2 branding"""
     st.markdown("""
     <div class="main-header">
-        🔍 Technical Documentation RAG Assistant
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="text-align: center; margin-bottom: 2rem; color: #666;">
-        Advanced hybrid retrieval with local LLM answer generation<br>
-        <strong>Built for Swiss ML Engineering Excellence</strong>
+        <h1>🚀 Epic 2 Enhanced RAG System</h1>
+        <p>Neural Intelligence meets Graph Enhancement • Professional ML Portfolio Demo</p>
+        <span class="epic2-badge">EPIC 2 ENABLED</span>
+        <span class="epic2-badge">NEURAL RERANKING</span>
+        <span class="epic2-badge">GRAPH ENHANCEMENT</span>
+        <span class="epic2-badge">HYBRID SEARCH</span>
     </div>
     """, unsafe_allow_html=True)
 
 
-def display_system_status(rag_system):
-    """Display system status and metrics in sidebar."""
+def display_system_status():
+    """Display comprehensive system status in sidebar"""
     with st.sidebar:
-        st.markdown("### 🏥 System Status")
+        st.header("🎯 System Status")
         
-        # Basic system info
-        chunk_count = len(rag_system.chunks) if rag_system.chunks else 0
-        source_count = len(set(chunk.get('source', '') for chunk in rag_system.chunks)) if rag_system.chunks else 0
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("📄 Documents", source_count)
-        with col2:
-            st.metric("🧩 Chunks", chunk_count)
-        
-        # Model info
-        st.markdown("### 🤖 Model Status")
-        if rag_system.answer_generator.api_token:
-            st.success("✅ HuggingFace API (Authenticated)")
-        else:
-            st.info("ℹ️ HuggingFace API (Free Tier)")
-        st.info("🔍 Hybrid Search Active")
-        
-        # API Configuration
-        st.markdown("### ⚙️ API Configuration")
-        with st.expander("HuggingFace Configuration"):
-            st.markdown("""
-            **Using HF Token:**
-            1. Set as Space Secret: `HUGGINGFACE_API_TOKEN`
-            2. Or paste token below
+        # Get system status from manager
+        if system_manager.is_initialized:
+            status = system_manager.get_system_status()
+            backend_info = system_manager.get_llm_backend_info()
             
-            **Benefits of token:**
-            - Higher rate limits
-            - Better models (Llama 2, Falcon)
-            - Faster response times
-            """)
+            # Main status
+            st.markdown('<p class="status-online">✅ System Online</p>', unsafe_allow_html=True)
+            st.info(f"📄 {status.get('documents', 0)} documents indexed")
+            st.info(f"🏗️ Architecture: {status.get('architecture', 'Unknown').upper()}")
             
-            token_input = st.text_input(
-                "HF Token", 
-                type="password", 
-                help="Your HuggingFace API token",
-                key="hf_token_input"
-            )
-            
-            # Model selection - Pro tier models from your guide
-            if rag_system.answer_generator.api_token:
-                model_options = [
-                    "mistralai/Mistral-7B-Instruct-v0.2",    # Best for technical Q&A
-                    "codellama/CodeLlama-7b-Instruct-hf",    # Perfect for code docs
-                    "meta-llama/Llama-2-7b-chat-hf",        # Well-rounded
-                    "codellama/CodeLlama-13b-Instruct-hf",   # Higher quality (slower)
-                    "meta-llama/Llama-2-13b-chat-hf",       # Better reasoning
-                    "microsoft/DialoGPT-large",              # Conversational fallback
-                    "tiiuae/falcon-7b-instruct",             # Efficient option
-                    "gpt2-medium"                            # Emergency fallback
-                ]
+            # LLM Backend info
+            st.subheader("🤖 LLM Backend")
+            if backend_info['using_hf_api']:
+                st.markdown("🤗 **HuggingFace API**")
+                st.markdown(f"⚡ **Model**: {backend_info['model_name']}")
+                if backend_info.get('api_available'):
+                    st.success("✅ API Available")
+                else:
+                    st.warning("⚠️ API Limited")
             else:
-                model_options = [
-                    "gpt2-medium",  # Best bet for free tier  
-                    "gpt2",         # Always available
-                    "distilgpt2"    # Fastest option
-                ]
+                st.markdown("🦙 **Local Ollama**")
+                st.markdown(f"🏠 **Model**: {backend_info['model_name']}")
+                if backend_info.get('ollama_available'):
+                    st.success("✅ Ollama Connected")
+                else:
+                    st.error("❌ Ollama Offline")
             
-            current_model = rag_system.answer_generator.model_name
-            selected_model = st.selectbox(
-                "Model",
-                model_options,
-                index=model_options.index(current_model) if current_model in model_options else 0,
-                key="model_select"
-            )
+            # Performance metrics
+            if 'performance' in status:
+                perf = status['performance']
+                st.subheader("📊 Performance")
+                
+                # Query processing time
+                avg_time = perf.get('average_query_time', 0)
+                if avg_time < 2:
+                    time_class = "performance-excellent"
+                    time_icon = "🟢"
+                elif avg_time < 5:
+                    time_class = "performance-good"  
+                    time_icon = "🟡"
+                else:
+                    time_class = "performance-needs-improvement"
+                    time_icon = "🔴"
+                
+                st.markdown(f"""
+                <div class="stage-indicator {time_class}">
+                    {time_icon} Avg Query: {avg_time:.1f}s
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Component status
+                components = perf.get('components', {})
+                st.write("**Component Status:**")
+                for component, active in components.items():
+                    icon = "✅" if active else "❌"
+                    st.write(f"{icon} {component.replace('_', ' ').title()}")
             
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Update Configuration"):
-                    if token_input or selected_model != current_model:
-                        # Reinitialize with new settings
-                        st.session_state['api_token'] = token_input if token_input else st.session_state.get('api_token')
-                        st.session_state['selected_model'] = selected_model
-                        st.session_state['rag_system'] = None
-                        st.rerun()
-            
-            with col2:
-                if st.button("Test Pro Models"):
-                    # Test all Pro models from your guide
-                    pro_models = [
-                        "mistralai/Mistral-7B-Instruct-v0.2",
-                        "codellama/CodeLlama-7b-Instruct-hf", 
-                        "meta-llama/Llama-2-7b-chat-hf",
-                        "codellama/CodeLlama-13b-Instruct-hf",
-                        "meta-llama/Llama-2-13b-chat-hf",
-                        "microsoft/DialoGPT-large",
-                        "tiiuae/falcon-7b-instruct"
-                    ]
-                    
-                    test_token = token_input if token_input else st.session_state.get('api_token')
-                    
-                    with st.spinner("Testing Pro models..."):
-                        results = {}
-                        for model in pro_models:
-                            try:
-                                import requests
-                                import os
-                                token = test_token or os.getenv("HUGGINGFACE_API_TOKEN")
-                                
-                                headers = {"Content-Type": "application/json"}
-                                if token:
-                                    headers["Authorization"] = f"Bearer {token}"
-                                
-                                response = requests.post(
-                                    f"https://api-inference.huggingface.co/models/{model}",
-                                    headers=headers,
-                                    json={"inputs": "What is RISC-V?", "parameters": {"max_new_tokens": 50}},
-                                    timeout=15
-                                )
-                                
-                                if response.status_code == 200:
-                                    results[model] = "✅ Available"
-                                elif response.status_code == 404:
-                                    results[model] = "❌ Not found"
-                                elif response.status_code == 503:
-                                    results[model] = "⏳ Loading"
-                                else:
-                                    results[model] = f"❌ Error {response.status_code}"
-                                    
-                            except Exception as e:
-                                results[model] = f"❌ Failed: {str(e)[:30]}"
+        else:
+            st.markdown('<p class="status-processing">⚡ Initializing...</p>', unsafe_allow_html=True)
+            st.info("Loading Epic 2 system components")
+
+
+def handle_document_upload():
+    """Handle document upload and processing"""
+    st.header("📄 Document Management")
+    
+    # Document upload
+    uploaded_file = st.file_uploader(
+        "Upload PDF Document",
+        type="pdf",
+        help="Upload technical documentation for Epic 2 processing"
+    )
+    
+    if uploaded_file is not None:
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            st.info(f"Selected: {uploaded_file.name} ({uploaded_file.size:,} bytes)")
+        
+        with col2:
+            if st.button("🚀 Process Document", type="primary"):
+                try:
+                    with st.spinner("Processing with Epic 2 features..."):
+                        # Save uploaded file temporarily
+                        temp_path = Path(f"/tmp/{uploaded_file.name}")
+                        with open(temp_path, "wb") as f:
+                            f.write(uploaded_file.getvalue())
+                        
+                        # Process document
+                        start_time = time.time()
+                        result = system_manager.process_document(temp_path)
+                        processing_time = time.time() - start_time
+                        
+                        # Clean up
+                        temp_path.unlink()
                         
                         # Display results
-                        st.subheader("🧪 Pro Model Test Results:")
-                        for model, status in results.items():
-                            model_short = model.split('/')[-1]
-                            st.write(f"**{model_short}**: {status}")
-        
-        if chunk_count > 0:
-            st.markdown("### 📊 Index Statistics")
-            st.markdown(f"""
-            - **Indexed Documents**: {source_count}
-            - **Total Chunks**: {chunk_count}
-            - **Search Method**: Hybrid (Semantic + BM25)
-            - **Embeddings**: 384-dim MiniLM-L6
-            """)
+                        st.success(f"✅ Document processed successfully!")
+                        st.info(f"📊 {result['chunks']} chunks created in {processing_time:.2f}s")
+                        st.info(f"🚀 Epic 2 features: Neural reranking + Graph enhancement active")
+                        
+                        st.rerun()
+                        
+                except Exception as e:
+                    st.error(f"Processing failed: {e}")
+    
+    # Quick load test documents
+    st.subheader("📚 Test Documents")
+    
+    test_docs = [
+        ("RISC-V Base Instructions", "data/test/riscv-base-instructions.pdf"),
+        ("RISC-V Quick Reference", "data/test/riscv-card.pdf"),
+        ("GMLP Guiding Principles", "data/test/GMLP_Guiding_Principles.pdf")
+    ]
+    
+    for doc_name, doc_path in test_docs:
+        doc_file = Path(doc_path)
+        if doc_file.exists():
+            if st.button(f"📖 Load {doc_name}", key=f"load_{doc_name}"):
+                try:
+                    with st.spinner(f"Loading {doc_name} with Epic 2..."):
+                        result = system_manager.process_document(doc_file)
+                        st.success(f"✅ {doc_name} loaded! {result['chunks']} chunks processed.")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to load {doc_name}: {e}")
+        else:
+            st.info(f"📄 {doc_name}: File not found ({doc_path})")
 
 
-def handle_query_interface(rag_system):
-    """Handle the main query interface."""
-    if not rag_system.chunks:
-        st.warning("⚠️ No documents indexed yet. Please upload documents in the 'Manage Documents' tab.")
+def handle_query_interface():
+    """Handle the main query interface"""
+    st.header("🧠 Epic 2 Intelligent Query")
+    
+    # Check if system is ready
+    if not system_manager.is_initialized:
+        st.warning("⚠️ System is still initializing. Please wait...")
+        return
+    
+    status = system_manager.get_system_status()
+    if status.get('documents', 0) == 0:
+        st.warning("⚠️ Please upload and process a document first to enable querying.")
         return
     
     # Query input
-    query = st.text_input(
-        "Enter your question:",
-        placeholder="e.g., What is RISC-V and what are its main features?",
-        key="main_query"
-    )
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        query = st.text_input(
+            "Ask your question:",
+            placeholder="e.g., How does RISC-V handle atomic operations?",
+            help="Epic 2 will enhance your query with neural intelligence and graph relationships"
+        )
+    
+    with col2:
+        mode = st.selectbox(
+            "Processing Mode:",
+            ["🚀 Epic 2 Enhanced", "📚 Basic RAG"],
+            help="Choose between Epic 2 advanced features or basic retrieval"
+        )
     
     # Advanced options
     with st.expander("🔧 Advanced Options"):
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            top_k = st.slider("Results to retrieve", 3, 10, 5)
-        with col2:
-            dense_weight = st.slider("Semantic weight", 0.5, 1.0, 0.7, 0.1)
-        with col3:
-            use_fallback = st.checkbox("Use fallback model", False)
-    
-    if st.button("🔍 Search & Generate Answer", type="primary"):
-        if not query.strip():
-            st.error("Please enter a question.")
-            return
-        
-        try:
-            # Execute query with timing
-            start_time = time.time()
+            top_k = st.slider("Results Count", 3, 20, 8)
+            use_reranking = st.checkbox("Neural Reranking", value=True)
             
-            with st.spinner("🔍 Searching documents and generating answer..."):
-                result = rag_system.query_with_answer(
+        with col2:
+            use_graph = st.checkbox("Graph Enhancement", value=True)
+            similarity_threshold = st.slider("Quality Threshold", 0.0, 1.0, 0.3)
+            
+        with col3:
+            include_context = st.checkbox("Show Context", value=False)
+            use_hybrid = st.checkbox("Hybrid Search", value=True)
+    
+    # Process query
+    if query and st.button("🚀 Process Query", type="primary"):
+        try:
+            use_epic2 = "Epic 2" in mode
+            
+            with st.spinner("🧠 Epic 2 Processing: Neural reranking + Graph analysis..." if use_epic2 else "📚 Basic processing..."):
+                start_time = time.time()
+                
+                result = system_manager.query_with_analytics(
                     question=query,
                     top_k=top_k,
-                    use_hybrid=True,
-                    dense_weight=dense_weight,
-                    use_fallback_llm=use_fallback
+                    use_epic2=use_epic2,
+                    use_reranking=use_reranking,
+                    use_graph=use_graph,
+                    similarity_threshold=similarity_threshold,
+                    include_context=include_context,
+                    use_hybrid=use_hybrid
                 )
-            
-            total_time = time.time() - start_time
+                
+                total_time = time.time() - start_time
             
             # Display results
-            display_query_results(result, total_time)
+            display_query_results(result, total_time, use_epic2)
             
         except Exception as e:
-            st.error(f"❌ Query failed: {str(e)}")
-            st.markdown(f"**Error details:** {traceback.format_exc()}")
+            st.error(f"Query processing failed: {e}")
+            with st.expander("🔍 Technical Details"):
+                import traceback
+                st.code(traceback.format_exc())
 
 
-def display_query_results(result: Dict, total_time: float):
-    """Display query results with metrics and citations."""
+def display_query_results(result: Dict[str, Any], total_time: float, epic2_used: bool):
+    """Display query results with Epic 2 enhancements"""
     
-    # Performance metrics
-    col1, col2, col3, col4 = st.columns(4)
+    # Main answer
+    answer_style = "performance-excellent" if epic2_used else "metric-card"
+    mode_indicator = "🚀 **Epic 2 Enhanced Answer**" if epic2_used else "📚 **Basic RAG Answer**"
     
-    with col1:
-        st.metric("⏱️ Total Time", f"{total_time:.2f}s")
-    with col2:
-        st.metric("🎯 Confidence", f"{result['confidence']:.1%}")
-    with col3:
-        st.metric("📄 Sources", len(result['sources']))
-    with col4:
-        retrieval_time = result['retrieval_stats']['retrieval_time']
-        st.metric("🔍 Retrieval", f"{retrieval_time:.2f}s")
-    
-    # Answer
-    st.markdown("### 💬 Generated Answer")
     st.markdown(f"""
-    <div style="background-color: #f8f9fa; padding: 1.5rem; border-radius: 10px; border-left: 5px solid #28a745; color: #333333;">
+    <div class="{answer_style}" style="padding: 1.5rem; margin: 1rem 0;">
+        {mode_indicator}<br><br>
         {result['answer']}
     </div>
     """, unsafe_allow_html=True)
     
+    # Performance metrics
+    st.subheader("⚡ Performance Metrics")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        confidence = result.get('confidence', 0)
+        conf_color = "🟢" if confidence > 0.7 else "🟡" if confidence > 0.4 else "🔴"
+        st.metric("Confidence", f"{confidence:.1%}", delta=conf_color)
+    
+    with col2:
+        st.metric("Total Time", f"{total_time*1000:.0f}ms")
+    
+    with col3:
+        citations_count = len(result.get('citations', []))
+        st.metric("Sources Found", citations_count)
+    
+    with col4:
+        method = result.get('retrieval_method', 'unknown')
+        st.metric("Method", method.replace('_', ' ').title())
+    
+    # Epic 2 specific performance breakdown
+    if epic2_used and 'epic2_analytics' in result:
+        analytics = result['epic2_analytics']
+        
+        st.subheader("🚀 Epic 2 Performance Breakdown")
+        
+        if 'component_times' in analytics:
+            times = analytics['component_times']
+            
+            cols = st.columns(len(times))
+            for i, (component, time_ms) in enumerate(times.items()):
+                with cols[i]:
+                    if time_ms < 500:
+                        perf_class = "performance-excellent"
+                        icon = "🟢"
+                    elif time_ms < 1500:
+                        perf_class = "performance-good"
+                        icon = "🟡"
+                    else:
+                        perf_class = "performance-needs-improvement"
+                        icon = "🔴"
+                    
+                    st.markdown(f"""
+                    <div class="stage-indicator {perf_class}">
+                        {icon} {component.replace('_', ' ').title()}<br>{time_ms:.0f}ms
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        # Epic 2 features status
+        if analytics.get('epic2_features_used'):
+            st.info("✨ **Epic 2 Features Active**: Neural reranking, graph enhancement, and hybrid search optimized this response.")
+    
     # Citations
-    if result['citations']:
-        st.markdown("### 📚 Sources & Citations")
+    if result.get('citations'):
+        st.subheader("📚 Source Citations")
         
         for i, citation in enumerate(result['citations'], 1):
+            epic2_enhanced = citation.get('epic2_enhanced', False)
+            enhancement_text = "🚀 Epic 2 Enhanced" if epic2_enhanced else "📚 Standard"
+            
+            citation_style = "performance-excellent" if epic2_enhanced else "metric-card"
+            
             st.markdown(f"""
-            <div class="citation-box">
-                <strong>[{i}]</strong> {citation['source']} (Page {citation['page']})<br>
-                <small><em>Relevance: {citation['relevance']:.1%}</em></small><br>
-                <small>"{citation['snippet']}"</small>
+            <div class="{citation_style}" style="margin: 0.5rem 0;">
+                <strong>{i}. {citation['source']}</strong> (Page {citation['page']}) - {enhancement_text}<br>
+                <small>Relevance: {citation['relevance']:.1%}</small><br>
+                <em>"{citation['snippet']}"</em>
             </div>
             """, unsafe_allow_html=True)
     
-    # Technical details
-    with st.expander("🔬 Technical Details"):
-        st.json({
-            "retrieval_method": result['retrieval_stats']['method'],
-            "chunks_retrieved": result['retrieval_stats']['chunks_retrieved'],
-            "dense_weight": result['retrieval_stats'].get('dense_weight', 'N/A'),
-            "model_used": result['generation_stats']['model'],
-            "generation_time": f"{result['generation_stats']['generation_time']:.3f}s"
-        })
-
-
-def handle_document_upload(rag_system):
-    """Handle document upload and indexing."""
-    st.subheader("📤 Upload Documents")
-    
-    uploaded_files = st.file_uploader(
-        "Upload PDF documents",
-        type=['pdf'],
-        accept_multiple_files=True,
-        help="Upload technical documentation, manuals, or research papers"
-    )
-    
-    if uploaded_files:
-        for uploaded_file in uploaded_files:
-            if st.button(f"Index {uploaded_file.name}", key=f"index_{uploaded_file.name}"):
-                try:
-                    # Save uploaded file temporarily in app directory
-                    import tempfile
-                    import os
-                    
-                    # Create temp directory in app folder
-                    temp_dir = Path("/app/temp_uploads")
-                    temp_dir.mkdir(exist_ok=True)
-                    
-                    temp_path = temp_dir / uploaded_file.name
-                    with open(temp_path, "wb") as f:
-                        f.write(uploaded_file.getvalue())
-                    
-                    # Index the document
-                    st.write(f"🔄 Starting to process {uploaded_file.name}...")
-                    st.write(f"📁 File saved to: {temp_path}")
-                    st.write(f"📏 File size: {temp_path.stat().st_size} bytes")
-                    
-                    # Capture print output for debugging
-                    import io
-                    import sys
-                    
-                    captured_output = io.StringIO()
-                    sys.stdout = captured_output
-                    
-                    try:
-                        with st.spinner(f"Processing {uploaded_file.name}..."):
-                            chunk_count = rag_system.index_document(temp_path)
-                            
-                    finally:
-                        # Restore stdout
-                        sys.stdout = sys.__stdout__
-                        
-                        # Show captured output
-                        output = captured_output.getvalue()
-                        if output:
-                            st.text_area("Processing Log:", output, height=150)
-                    
-                    st.success(f"✅ {uploaded_file.name} indexed! {chunk_count} chunks added.")
-                    
-                    # Clean up temp file
-                    try:
-                        temp_path.unlink()
-                    except:
-                        pass
-                        
-                    st.rerun()
-                        
-                except Exception as e:
-                    st.error(f"❌ Failed to index {uploaded_file.name}: {str(e)}")
-                    import traceback
-                    st.error(f"Details: {traceback.format_exc()}")
+    # Context (if requested)
+    if 'context' in result and result['context']:
+        st.subheader("🔍 Retrieved Context")
+        
+        for i, chunk in enumerate(result['context'], 1):
+            epic2_info = ""
+            if chunk.get('epic2_enhanced'):
+                epic2_details = []
+                if chunk.get('graph_connections', 0) > 0:
+                    epic2_details.append(f"{chunk['graph_connections']} graph connections")
+                if chunk.get('related_entities'):
+                    epic2_details.append(f"{len(chunk['related_entities'])} entities")
+                
+                if epic2_details:
+                    epic2_info = f" - 🚀 Epic 2: {', '.join(epic2_details)}"
+            
+            with st.expander(f"Context {i}: {chunk.get('source', 'Unknown')} (Score: {chunk.get('score', 0):.3f}){epic2_info}"):
+                st.write(f"**Text**: {chunk.get('text', '')[:800]}...")
+                if chunk.get('related_entities'):
+                    st.write(f"**Entities**: {', '.join(chunk['related_entities'][:8])}")
 
 
 def display_sample_queries():
-    """Display sample queries for demonstration."""
-    st.subheader("💡 Sample Questions")
-    st.markdown("Click on any question to try it:")
+    """Display sample queries optimized for Epic 2"""
+    st.header("💡 Sample Queries")
     
-    sample_queries = [
-        "What is RISC-V and what are its main features?",
-        "How does RISC-V compare to ARM and x86 architectures?",
-        "What are the different RISC-V instruction formats?",
-        "Explain RISC-V base integer instructions",
-        "What are the benefits of using RISC-V in embedded systems?",
-        "How does RISC-V handle memory management?",
-        "What are RISC-V privileged instructions?",
-        "Describe RISC-V calling conventions"
+    st.markdown("These queries showcase Epic 2's advanced capabilities:")
+    
+    samples = [
+        ("🧠 Neural Precision", "What is RISC-V and what are its main architectural advantages?"),
+        ("🕸️ Graph Relations", "How do atomic operations relate to memory ordering in RISC-V?"),
+        ("🔍 Deep Analysis", "Compare RV32I and RV64I instruction sets with implementation details"),
+        ("📊 Technical Deep-dive", "Explain RISC-V privileged architecture and security features"),
+        ("🚀 Complex Reasoning", "How does RISC-V vector extension work with memory constraints?"),
     ]
     
-    for query in sample_queries:
-        if st.button(query, key=f"sample_{hash(query)}"):
-            st.session_state['sample_query'] = query
-            st.rerun()
+    col1, col2 = st.columns(2)
+    
+    for i, (category, query) in enumerate(samples):
+        col = col1 if i % 2 == 0 else col2
+        
+        with col:
+            if st.button(f"{category}: {query[:35]}...", key=f"sample_{i}"):
+                st.session_state["sample_query"] = query
+                st.rerun()
 
 
 def main():
-    """Main Streamlit application."""
-    
-    # Initialize session state
-    if 'rag_system' not in st.session_state:
-        st.session_state['rag_system'] = None
-        st.session_state['init_error'] = None
-    if 'api_token' not in st.session_state:
-        st.session_state['api_token'] = None
+    """Main Streamlit application"""
     
     # Display header
     display_header()
     
-    # Initialize RAG system
-    if st.session_state['rag_system'] is None:
-        with st.spinner("Initializing RAG system..."):
-            selected_model = st.session_state.get('selected_model')
-            rag_system, error = initialize_rag_system(
-                st.session_state.get('api_token'),
-                selected_model
-            )
-            st.session_state['rag_system'] = rag_system
-            st.session_state['init_error'] = error
+    # Display system status
+    display_system_status()
     
-    rag_system = st.session_state['rag_system']
-    init_error = st.session_state['init_error']
-    
-    # Check for initialization errors
-    if init_error:
-        st.markdown(f"""
-        <div class="error-box">
-            ❌ <strong>Failed to initialize RAG system:</strong><br>
-            {init_error}<br><br>
-            <strong>System uses HuggingFace Inference API</strong><br>
-            If you see network errors, please check your internet connection.
-        </div>
-        """, unsafe_allow_html=True)
-        return
-    
-    if rag_system is None:
-        st.error("Failed to initialize RAG system. Please check the logs.")
-        return
-    
-    # Display system status in sidebar
-    display_system_status(rag_system)
+    # Initialize system
+    if not system_manager.is_initialized:
+        with st.spinner("🚀 Initializing Epic 2 system..."):
+            try:
+                system_manager.initialize_system()
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to initialize Epic 2 system: {e}")
+                st.info("💡 **Troubleshooting**: Check that all dependencies are installed and models are accessible")
+                return
     
     # Main interface
-    tab1, tab2, tab3 = st.tabs(["🤔 Ask Questions", "📄 Manage Documents", "💡 Examples"])
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["🧠 Query", "📄 Documents", "💡 Samples", "📊 Analytics"]
+    )
     
     with tab1:
         # Handle sample query selection
-        if 'sample_query' in st.session_state:
+        if "sample_query" in st.session_state:
             st.text_input(
-                "Enter your question:",
-                value=st.session_state['sample_query'],
-                key="main_query"
+                "Ask your question:",
+                value=st.session_state["sample_query"],
+                key="main_query_input"
             )
-            del st.session_state['sample_query']
+            del st.session_state["sample_query"]
         
-        handle_query_interface(rag_system)
+        handle_query_interface()
     
     with tab2:
-        handle_document_upload(rag_system)
-        
-        # Option to load test document
-        st.subheader("📖 Test Document")
-        test_pdf_path = Path("data/test/riscv-base-instructions.pdf")
-        
-        if test_pdf_path.exists():
-            if st.button("Load RISC-V Test Document"):
-                try:
-                    with st.spinner("Loading test document..."):
-                        st.write(f"🔄 Processing test document: {test_pdf_path}")
-                        st.write(f"📏 File size: {test_pdf_path.stat().st_size} bytes")
-                        
-                        chunk_count = rag_system.index_document(test_pdf_path)
-                        st.success(f"✅ Test document loaded! {chunk_count} chunks indexed.")
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Failed to load test document: {e}")
-                    import traceback
-                    st.error(f"Details: {traceback.format_exc()}")
-        else:
-            st.info("Test document not found at data/test/riscv-base-instructions.pdf")
+        handle_document_upload()
     
     with tab3:
         display_sample_queries()
+    
+    with tab4:
+        if system_manager.is_initialized:
+            analytics_dashboard(system_manager)
+        else:
+            st.info("📊 Analytics will be available after system initialization")
     
     # Footer
     st.markdown("---")
     st.markdown("""
     <div style="text-align: center; color: #666; font-size: 0.9rem;">
-        Technical Documentation RAG Assistant | Powered by HuggingFace API & RISC-V Documentation<br>
-        Built for ML Engineer Portfolio | Swiss Tech Market Focus
+        🚀 <strong>Epic 2 Enhanced RAG System</strong> | Neural Intelligence + Graph Enhancement<br>
+        Swiss Engineering Standards • Production-Ready Architecture<br>
+        Built for ML Engineer Portfolio Demonstration
     </div>
     """, unsafe_allow_html=True)
 
