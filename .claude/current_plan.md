@@ -335,9 +335,25 @@ pip install huggingface-hub>=0.33.1
   "config/hf_spaces.yaml"
 ]
 
+## Validation Commands
+
+**validation_commands**:
+  - "python tests/run_comprehensive_tests.py"
+  - "python tests/diagnostic/run_all_diagnostics.py"
+  - "python final_epic2_proof.py"
+  - "python test_hf_api_manual.py"
+  - "python test_epic2_hf_api_init.py"
+
+## State Tracking
+
+**last_sync**: "2025-07-19T15:40:00Z"
+**current_focus**: "migration"  
+**focus_since**: "2025-07-19T15:40:00Z"
+
 ## Notes
 - Comprehensive 47KB migration plan document created
 - Existing HF infrastructure provides 40% foundation
 - Architecture assessment shows 85% confidence level
 - Ready for immediate Phase 1 implementation
 - Context restoration system fully configured
+- v2.0 command system with reality verification active
