@@ -34,6 +34,17 @@ embedder:
 retriever:
   type: "modular_unified"  # Use ModularUnifiedRetriever
   config:
+    # Composite filtering configuration (NEW - replaces semantic gap detection)
+    composite_filtering:
+      enabled: true
+      fusion_weight: 0.7          # α - weight for fusion score importance
+      semantic_weight: 0.3        # β - weight for semantic similarity
+      min_composite_score: 0.4    # threshold for document inclusion
+      max_candidates: 15          # reduce from k*2 to k*1.5 for efficiency
+    
+    # Legacy semantic gap detection (DEPRECATED - use composite_filtering)
+    min_semantic_alignment: 0.3  # Minimum query-document semantic similarity
+    
     vector_index:
       type: "faiss"
       config:
@@ -50,6 +61,7 @@ retriever:
         preserve_technical_terms: true
         filter_stop_words: true  # Enable stop word filtering
         custom_stop_words: []    # Additional stop words if needed
+        min_score: 0.1          # Minimum normalized score threshold
     
     # Score-Aware Fusion (preserves semantic relevance)
     fusion:
@@ -121,6 +133,17 @@ answer_generator:
           - Use multiple citations when information comes from several sources: [Document 1, Document 2]
           
           Answer:
+    
+    confidence_scorer:
+      type: "semantic"
+      config:
+        min_answer_length: 20
+        max_answer_length: 1000
+        relevance_weight: 0.4
+        grounding_weight: 0.4
+        quality_weight: 0.2
+        low_retrieval_penalty: 0.3  # Penalty when few documents retrieved
+        min_context_documents: 3    # Minimum documents for full confidence
 
 # Global settings
 global_settings:

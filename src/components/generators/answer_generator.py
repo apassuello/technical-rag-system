@@ -537,6 +537,9 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
         scorer_type = self.config['confidence_scorer']['type']
         scorer_config = self.config['confidence_scorer'].get('config', {})
         scorer_class = get_scorer_class(scorer_type)
+        
+        # For semantic scorer, we'll pass embedder after platform initialization
+        # For now, initialize without embedder
         self.confidence_scorer = scorer_class(**scorer_config)
     
     def _get_generation_params(self) -> GenerationParams:
@@ -581,6 +584,12 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
         metadata['provider'] = model_info.get('provider', 'unknown')
         
         return metadata
+    
+    def set_embedder(self, embedder):
+        """Set embedder for semantic confidence scoring."""
+        if hasattr(self.confidence_scorer, 'set_embedder'):
+            self.confidence_scorer.set_embedder(embedder)
+            logger.info("Embedder set for semantic confidence scoring")
     
     def _merge_configs(self, default: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Deep merge configuration dictionaries."""
