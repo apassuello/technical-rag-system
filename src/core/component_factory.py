@@ -698,10 +698,16 @@ class ComponentFactory:
                 "config": graph_enhanced_config
             }
         else:
-            # Use standard fusion
+            # Use standard fusion - check for explicit fusion.type first, then fall back to hybrid_search
+            explicit_fusion = config.get("fusion", {})
+            fusion_type = explicit_fusion.get("type") or hybrid_search.get("fusion_method", "rrf")
+            
+            # If explicit fusion config exists, use it; otherwise use base config
+            fusion_config = explicit_fusion.get("config", base_fusion_config) if explicit_fusion.get("type") else base_fusion_config
+            
             return {
-                "type": hybrid_search.get("fusion_method", "rrf"),
-                "config": base_fusion_config
+                "type": fusion_type,
+                "config": fusion_config
             }
     
     @classmethod

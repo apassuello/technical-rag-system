@@ -140,7 +140,20 @@ class ScoreAwareFusion(FusionStrategy):
             # Component 1: Normalized scores (semantic relevance)
             dense_score = dense_scores.get(doc_id, 0.0)
             sparse_score = sparse_scores.get(doc_id, 0.0)
-            avg_score = (dense_score + sparse_score) / 2.0 if doc_id in dense_scores and doc_id in sparse_scores else max(dense_score, sparse_score)
+            
+            # Use max instead of average to prevent negative sparse scores from dragging down positive dense scores
+            if doc_id in dense_scores and doc_id in sparse_scores:
+                # Take the maximum of the two scores, but weight them appropriately
+                if dense_score >= 0 and sparse_score >= 0:
+                    avg_score = (dense_score + sparse_score) / 2.0  # Both positive: average
+                elif dense_score >= 0 and sparse_score < 0:
+                    avg_score = dense_score  # Dense positive, sparse negative: use dense
+                elif dense_score < 0 and sparse_score >= 0:
+                    avg_score = sparse_score  # Dense negative, sparse positive: use sparse
+                else:
+                    avg_score = max(dense_score, sparse_score)  # Both negative: use less negative
+            else:
+                avg_score = max(dense_score, sparse_score)
             
             # Component 2: Rank-based boost (stability)
             rank_boost = 0.0

@@ -26,6 +26,7 @@ from .fusion.base import FusionStrategy
 from .fusion.rrf_fusion import RRFFusion
 from .fusion.weighted_fusion import WeightedFusion
 from .fusion.graph_enhanced_fusion import GraphEnhancedRRFFusion
+from .fusion.score_aware_fusion import ScoreAwareFusion
 from .rerankers.base import Reranker
 from .rerankers.semantic_reranker import SemanticReranker
 from .rerankers.identity_reranker import IdentityReranker
@@ -147,8 +148,10 @@ class ModularUnifiedRetriever(Retriever):
             return WeightedFusion(fusion_config)
         elif fusion_type == "graph_enhanced_rrf":
             return GraphEnhancedRRFFusion(fusion_config)
+        elif fusion_type == "score_aware":
+            return ScoreAwareFusion(fusion_config)
         else:
-            raise ValueError(f"Unknown fusion strategy type: {fusion_type}")
+            raise ValueError(f"Unknown fusion strategy type: {fusion_type}. Available options: rrf, weighted, graph_enhanced_rrf, score_aware")
     
     def _create_reranker(self, config: Dict[str, Any]) -> Reranker:
         """Create reranker sub-component."""
