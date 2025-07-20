@@ -56,7 +56,10 @@ class BM25Retriever(SparseRetriever):
                 - lowercase: Whether to lowercase text (default: True)
                 - preserve_technical_terms: Whether to preserve technical terms (default: True)
                 - filter_stop_words: Whether to filter common stop words (default: True)
+                - stop_word_sets: List of predefined stopword sets to use (default: ["english_common"])
                 - custom_stop_words: Additional stop words to filter (default: empty list)
+                - min_word_length: Minimum word length to preserve (default: 2)
+                - debug_stop_words: Enable debug logging for stopword filtering (default: False)
                 - min_score: Minimum normalized score threshold for results (default: 0.0)
         """
         self.config = config
@@ -65,27 +68,29 @@ class BM25Retriever(SparseRetriever):
         self.lowercase = config.get("lowercase", True)
         self.preserve_technical_terms = config.get("preserve_technical_terms", True)
         self.filter_stop_words = config.get("filter_stop_words", True)
+        self.stop_word_sets = config.get("stop_word_sets", ["english_common"])
         self.custom_stop_words = set(config.get("custom_stop_words", []))
+        self.min_word_length = config.get("min_word_length", 2)
+        self.debug_stop_words = config.get("debug_stop_words", False)
         self.min_score = config.get("min_score", 0.0)
         
-        # Standard English stop words for BM25 filtering
-        self.standard_stop_words = {
-            'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it',
-            'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with', 'the', 'this', 'but',
-            'they', 'have', 'had', 'what', 'said', 'each', 'which', 'she', 'do', 'how', 'their', 'if',
-            'up', 'out', 'many', 'then', 'them', 'these', 'so', 'some', 'her', 'would', 'make', 'like',
-            'into', 'him', 'time', 'two', 'more', 'go', 'no', 'way', 'could', 'my', 'than', 'first',
-            'been', 'call', 'who', 'oil', 'sit', 'now', 'find', 'down', 'day', 'did', 'get', 'come',
-            'made', 'may', 'part', 'where', 'much', 'too', 'any', 'after', 'back', 'other', 'see',
-            'want', 'just', 'also', 'when', 'here', 'all', 'well', 'can', 'should', 'must', 'might',
-            'shall', 'about', 'before', 'through', 'over', 'under', 'above', 'below', 'between', 'among'
-        }
+        # Initialize stopword sets
+        self._initialize_stopword_sets()
         
-        # Combine standard and custom stop words
+        # Combine all stopword sets
+        self.stop_words = set()
         if self.filter_stop_words:
-            self.stop_words = self.standard_stop_words | self.custom_stop_words
+            for set_name in self.stop_word_sets:
+                if set_name in self.available_stop_word_sets:
+                    self.stop_words.update(self.available_stop_word_sets[set_name])
+                else:
+                    logger.warning(f"Unknown stopword set: {set_name}")
+            
+            # Add custom stop words
+            self.stop_words.update(self.custom_stop_words)
         else:
-            self.stop_words = self.custom_stop_words
+            # Only use custom stop words if filtering is disabled
+            self.stop_words = self.custom_stop_words.copy()
         
         # Validation
         if self.k1 <= 0:
@@ -111,7 +116,54 @@ class BM25Retriever(SparseRetriever):
             self._tech_pattern = re.compile(r'\b\w+\b')
             self._punctuation_pattern = re.compile(r'[^\w\s]')
         
-        logger.info(f"BM25Retriever initialized with k1={self.k1}, b={self.b}, stop_words={len(self.stop_words) if self.stop_words else 0}")
+        logger.info(f"BM25Retriever initialized with k1={self.k1}, b={self.b}, stop_word_sets={self.stop_word_sets}, stop_words={len(self.stop_words)}")
+    
+    def _initialize_stopword_sets(self) -> None:
+        """
+        Initialize predefined stopword sets for different filtering strategies.
+        """
+        # Standard English stop words (articles, prepositions, common verbs)
+        english_common = {
+            'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it',
+            'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with', 'this', 'but',
+            'they', 'have', 'had', 'what', 'said', 'each', 'which', 'she', 'do', 'how', 'their', 'if',
+            'up', 'out', 'many', 'then', 'them', 'these', 'so', 'some', 'her', 'would', 'make', 'like',
+            'into', 'him', 'time', 'two', 'more', 'go', 'no', 'way', 'could', 'my', 'than', 'first',
+            'been', 'call', 'who', 'sit', 'now', 'find', 'down', 'day', 'did', 'get', 'come',
+            'made', 'may', 'part', 'much', 'too', 'any', 'after', 'back', 'other', 'see',
+            'want', 'just', 'also', 'when', 'here', 'all', 'well', 'can', 'should', 'must', 'might',
+            'shall', 'about', 'before', 'through', 'over', 'under', 'above', 'below', 'between', 'among'
+        }
+        
+        # NOTE: Removed interrogative_words and irrelevant_entities sets
+        # These contained discriminative terms that should be preserved for proper BM25 behavior
+        # BM25 is designed for lexical matching only, not semantic analysis
+        
+        # Extended set for comprehensive filtering
+        english_extended = english_common | {
+            'very', 'quite', 'really', 'actually', 'basically', 'essentially', 'generally',
+            'specifically', 'particularly', 'especially', 'exactly', 'precisely', 'approximately',
+            'roughly', 'mostly', 'mainly', 'primarily', 'largely', 'completely', 'totally',
+            'absolutely', 'definitely', 'certainly', 'probably', 'possibly', 'perhaps',
+            'maybe', 'sometimes', 'often', 'usually', 'always', 'never', 'rarely', 'seldom',
+            'frequently', 'occasionally', 'constantly', 'continuously', 'immediately', 'suddenly',
+            'quickly', 'slowly', 'carefully', 'easily', 'simply', 'clearly', 'obviously'
+        }
+        
+        # Minimal set for technical domains (preserves more terms)
+        technical_minimal = {
+            'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
+            'by', 'from', 'up', 'out', 'down', 'off', 'over', 'under', 'again', 'further',
+            'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any',
+            'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor',
+            'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very'
+        }
+        
+        self.available_stop_word_sets = {
+            "english_common": english_common,
+            "english_extended": english_extended,
+            "technical_minimal": technical_minimal
+        }
     
     def enable_deferred_indexing(self) -> None:
         """Enable deferred indexing mode to avoid rebuilding index on every batch"""
@@ -240,12 +292,28 @@ class BM25Retriever(SparseRetriever):
         if len(scores) == 0:
             return []
         
+        # Fix for rank_bm25 library bug: BM25 scores can be negative when they shouldn't be
+        # Ensure all scores are non-negative by shifting them if needed
+        min_raw_score = np.min(scores)
+        if min_raw_score < 0:
+            scores = scores - min_raw_score  # Shift all scores to be non-negative
+            logger.debug(f"Shifted negative BM25 scores by {-min_raw_score:.6f}")
+        
         # Normalize scores to [0,1] range for fusion compatibility
         max_score = np.max(scores)
-        if max_score > 0:
-            normalized_scores = scores / max_score
+        min_score = np.min(scores)
+        
+        if max_score > min_score:
+            # Standard min-max normalization to [0,1]
+            normalized_scores = (scores - min_score) / (max_score - min_score)
         else:
-            normalized_scores = scores
+            # All scores are the same - check if any actual matches exist
+            if np.any(scores != 0):
+                # Scores are equal and non-zero (all docs equally relevant)
+                normalized_scores = np.ones_like(scores)
+            else:
+                # All scores are exactly zero (no matches)
+                normalized_scores = np.zeros_like(scores)
         
         # Create results with original document indices
         results = [
@@ -253,13 +321,15 @@ class BM25Retriever(SparseRetriever):
             for i in range(len(scores))
         ]
         
-        # Apply minimum score threshold
-        if self.min_score > 0:
-            filtered_results = [(doc_idx, score) for doc_idx, score in results if score >= self.min_score]
-            if not filtered_results:
-                logger.debug(f"No BM25 results above minimum score threshold {self.min_score}")
-                return []
-            results = filtered_results
+        # Filter out zero scores (no matches) and apply minimum score threshold
+        threshold = max(self.min_score, 0.001)  # Always filter scores <= 0
+        filtered_results = [(doc_idx, score) for doc_idx, score in results if score >= threshold]
+        
+        if not filtered_results:
+            logger.debug(f"No BM25 results above score threshold {threshold}")
+            return []
+        
+        results = filtered_results
         
         # Sort by score (descending) and return top_k
         results.sort(key=lambda x: x[1], reverse=True)
@@ -291,7 +361,10 @@ class BM25Retriever(SparseRetriever):
             "lowercase": self.lowercase,
             "preserve_technical_terms": self.preserve_technical_terms,
             "filter_stop_words": self.filter_stop_words,
+            "stop_word_sets": self.stop_word_sets,
             "stop_words_count": len(self.stop_words) if self.stop_words else 0,
+            "min_word_length": self.min_word_length,
+            "debug_stop_words": self.debug_stop_words,
             "min_score": self.min_score,
             "total_documents": len(self.documents),
             "valid_documents": len(self.chunk_mapping),
@@ -307,9 +380,10 @@ class BM25Retriever(SparseRetriever):
         
         return stats
     
+    
     def _preprocess_text(self, text: str) -> List[str]:
         """
-        Preprocess text preserving technical terms and acronyms.
+        Preprocess text with standard BM25 stopword filtering.
         
         Args:
             text: Raw text to tokenize
@@ -319,6 +393,8 @@ class BM25Retriever(SparseRetriever):
         """
         if not text or not text.strip():
             return []
+        
+        original_text = text
         
         # Convert to lowercase while preserving structure
         if self.lowercase:
@@ -330,14 +406,40 @@ class BM25Retriever(SparseRetriever):
         # Extract tokens using appropriate pattern
         tokens = self._tech_pattern.findall(text)
         
-        # Filter out single characters and empty strings
-        tokens = [token for token in tokens if len(token) > 1]
+        # Filter out tokens shorter than minimum length
+        if self.min_word_length > 1:
+            length_filtered = [token for token in tokens if len(token) >= self.min_word_length]
+        else:
+            length_filtered = [token for token in tokens if len(token) > 0]
         
-        # Filter out stop words if enabled
+        # Apply standard stopword filtering (linguistic noise words only)
         if self.stop_words:
-            tokens = [token for token in tokens if token.lower() not in self.stop_words]
-        
-        return tokens
+            filtered_tokens = []
+            stop_words_removed = []
+            
+            for token in length_filtered:
+                token_lower = token.lower()
+                
+                # Simple standard stopword filtering - no semantic analysis
+                if token_lower in self.stop_words:
+                    stop_words_removed.append(token)
+                else:
+                    filtered_tokens.append(token)
+            
+            # Debug logging if enabled
+            if self.debug_stop_words and stop_words_removed:
+                logger.info(f"[BM25_DEBUG] Text: \"{original_text[:50]}{'...' if len(original_text) > 50 else ''}\"")
+                logger.info(f"[BM25_DEBUG] Tokens before filtering: {length_filtered}")
+                logger.info(f"[BM25_DEBUG] Stop words removed: {stop_words_removed}")
+                logger.info(f"[BM25_DEBUG] Tokens after filtering: {filtered_tokens}")
+                if length_filtered:
+                    filter_rate = len(stop_words_removed) / len(length_filtered) * 100
+                    logger.info(f"[BM25_DEBUG] Filtering impact: {filter_rate:.1f}% tokens removed")
+                logger.info(f"[BM25_DEBUG] ---")
+            
+            return filtered_tokens
+        else:
+            return length_filtered
     
     def get_query_tokens(self, query: str) -> List[str]:
         """
