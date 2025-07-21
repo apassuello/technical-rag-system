@@ -209,6 +209,197 @@ Validate complete 4-stage Epic 2 pipeline execution.
 
 ---
 
+## 🎯 Critical Quality Tests
+
+### Purpose
+Validate that Epic 2 components provide actual retrieval quality improvements, not just mechanical functionality. These tests focus on scoring accuracy, relevance improvements, and mathematical correctness.
+
+### 6. BM25 Scoring Validation
+
+#### Test Focus
+Verify BM25 algorithm produces correct scores according to the mathematical formula, properly handles edge cases, and filters irrelevant queries.
+
+#### Test Cases
+1. **Technical Query Scoring**: 
+   - Verify technical queries score >0.7 for relevant documents
+   - Example: "What is RISC-V?" on RISC-V documentation should score >0.7
+   
+2. **Irrelevant Query Filtering**:
+   - Verify off-topic queries score <0.3
+   - Example: "Where is Paris?" on technical docs should score <0.3
+   
+3. **TF-IDF Behavior**:
+   - Verify term frequency saturation (diminishing returns)
+   - Test: Repeated terms should not linearly increase score
+   
+4. **Document Length Normalization**:
+   - Verify similar content scores similarly regardless of doc length
+   - Test: Same term frequency ratio in short vs long docs
+
+#### Expected Behavior
+```python
+# Correct BM25 behavior examples
+assert bm25_score("RISC-V", riscv_doc) > 0.7
+assert bm25_score("Paris tourism", riscv_doc) < 0.3
+assert bm25_score("RISC-V RISC-V", doc) < 2 * bm25_score("RISC-V", doc)
+```
+
+### 7. Vector Similarity Validation
+
+#### Test Focus
+Verify embeddings capture semantic relationships correctly and produce appropriate similarity ranges.
+
+#### Test Cases
+1. **Semantic Similarity Ranges**:
+   - Related concepts: similarity >0.8
+   - Unrelated concepts: similarity <0.3
+   - Clear separation between related/unrelated
+   
+2. **Synonym Detection**:
+   - "RISC-V architecture" vs "RISC V instruction set" >0.8
+   - Technical synonyms properly captured
+   
+3. **Concept Hierarchies**:
+   - Parent-child concepts show moderate similarity (0.5-0.7)
+   - Sibling concepts show higher similarity (0.6-0.8)
+
+#### Expected Behavior
+```python
+# Semantic validation examples
+sim_related = cosine_similarity("RISC-V ISA", "RISC-V architecture")
+sim_unrelated = cosine_similarity("RISC-V ISA", "French cuisine")
+assert sim_related > 0.8
+assert sim_unrelated < 0.3
+assert sim_related > sim_unrelated + 0.4  # Clear separation
+```
+
+### 8. Fusion Algorithm Correctness
+
+#### Test Focus
+Verify fusion algorithms (RRF, weighted) implement correct mathematical formulas and produce expected score distributions.
+
+#### Test Cases
+1. **RRF Formula Verification**:
+   - Verify RRF score = Σ(weight * 1/(k + rank))
+   - Test with known inputs and expected outputs
+   
+2. **Weight Impact Validation**:
+   - Different weights produce different rankings
+   - Weights correctly influence final scores
+   
+3. **Score Normalization**:
+   - Fused scores in expected range [0, 1]
+   - No score inflation or deflation
+
+#### Expected Behavior
+```python
+# RRF formula validation
+# Doc appears at rank 0 in dense, rank 1 in sparse
+expected_rrf = 0.7 * (1/(60+1)) + 0.3 * (1/(60+2))
+actual_rrf = rrf_fusion(dense_results, sparse_results, k=60)
+assert abs(actual_rrf - expected_rrf) < 0.001
+```
+
+### 9. Neural Reranking Quality
+
+#### Test Focus
+Verify neural reranking actually improves relevance, not just changes scores arbitrarily.
+
+#### Test Cases
+1. **Relevance Improvement**:
+   - More relevant documents move up in ranking
+   - Cross-encoder scores align with human judgment
+   
+2. **Score Calibration**:
+   - High-relevance pairs score >0.8
+   - Low-relevance pairs score <0.3
+   - Scores interpretable as probabilities
+   
+3. **Ranking Stability**:
+   - Similar documents maintain relative order
+   - No random shuffling of results
+
+#### Expected Behavior
+```python
+# Neural reranking quality validation
+initial_order = ["generic_pipeline.pdf", "riscv_pipeline.pdf", "arm_pipeline.pdf"]
+reranked = neural_reranker("RISC-V pipeline", initial_order)
+assert reranked[0] == "riscv_pipeline.pdf"  # Most relevant moved to top
+assert reranker.score("RISC-V pipeline", "riscv_pipeline.pdf") > 0.9
+```
+
+### 10. End-to-End Retrieval Quality
+
+#### Test Focus
+Validate complete retrieval pipeline produces relevant results with appropriate scores.
+
+#### Test Cases
+1. **Precision@K Metrics**:
+   - Measure % of relevant docs in top K results
+   - Target: Precision@5 >0.8, Precision@10 >0.7
+   
+2. **Ranking Quality**:
+   - Most relevant document in top 3
+   - No irrelevant documents in top 5
+   
+3. **Score Distribution**:
+   - Clear score gaps between relevant/irrelevant
+   - Scores decrease monotonically
+   
+4. **Query Coverage**:
+   - Technical queries find technical content
+   - Off-topic queries return empty or low-score results
+
+#### Expected Behavior
+```python
+# End-to-end quality validation
+results = rag.retrieve("RISC-V vector instructions", k=10)
+relevant_docs = ["riscv_vector.pdf", "riscv_simd.pdf"]
+
+# Calculate precision@5
+top_5_ids = [r.document.id for r in results[:5]]
+precision_at_5 = len(set(top_5_ids) & set(relevant_docs)) / 5
+assert precision_at_5 >= 0.4  # At least 2/5 relevant
+
+# Verify top result is relevant
+assert results[0].document.id in relevant_docs
+```
+
+### 11. Epic 2 vs Basic Comparison
+
+#### Test Focus
+Quantify and validate the claimed improvements of Epic 2 features over basic configuration.
+
+#### Test Cases
+1. **Score Improvement Validation**:
+   - Measure score increases with Epic 2
+   - Verify claimed 60x improvement scenarios
+   
+2. **Ranking Quality Comparison**:
+   - Compare precision@K metrics
+   - Measure nDCG improvements
+   
+3. **Component Ablation**:
+   - Test each Epic 2 component's contribution
+   - Verify cumulative improvements
+
+#### Expected Behavior
+```python
+# Epic 2 improvement validation
+basic_results = basic_rag.retrieve(query)
+epic2_results = epic2_rag.retrieve(query)
+
+# Verify score improvement
+assert epic2_results[0].score > basic_results[0].score * 10  # Significant improvement
+
+# Verify ranking improvement  
+epic2_precision = calculate_precision_at_k(epic2_results, relevant_docs, k=5)
+basic_precision = calculate_precision_at_k(basic_results, relevant_docs, k=5)
+assert epic2_precision > basic_precision + 0.15  # 15% improvement
+```
+
+---
+
 ## 🧪 Component-Specific Testing Strategy
 
 ### Testing Principles
