@@ -1,0 +1,187 @@
+# Test Configuration with Mock LLM Adapter
+# This configuration uses the MockLLMAdapter for testing without external dependencies
+
+# Global logging configuration
+global_settings:
+  logging:
+    level: "INFO"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    handlers:
+      console:
+        enabled: true
+      file:
+        enabled: false
+        path: "logs/rag_test.log"
+
+# Pipeline configuration
+pipeline:
+  # Components to use in the pipeline
+  components:
+    - document_processor
+    - embedder  
+    - retriever
+    - answer_generator
+    - query_processor
+
+# Document processor configuration
+document_processor:
+  type: "modular"
+  config:
+    parser:
+      implementation: "pymupdf"
+      config:
+        extract_images: false
+        extract_tables: true
+    chunker:
+      implementation: "sentence_boundary"
+      config:
+        chunk_size: 512
+        chunk_overlap: 50
+        min_chunk_size: 100
+        preserve_headings: true
+    cleaner:
+      implementation: "technical_content"
+      config:
+        remove_headers_footers: true
+        normalize_whitespace: true
+        preserve_code_blocks: true
+        preserve_technical_terms: true
+
+# Embedder configuration
+embedder:
+  type: "modular"
+  config:
+    model:
+      implementation: "sentence_transformer"
+      config:
+        model_name: "all-MiniLM-L6-v2"
+        device: "cpu"
+        normalize_embeddings: true
+    batch_processor:
+      implementation: "dynamic"
+      config:
+        initial_batch_size: 32
+        max_batch_size: 128
+        memory_threshold: 0.8
+    cache:
+      implementation: "memory"
+      config:
+        max_size: 10000
+        ttl_seconds: 3600
+
+# Retriever configuration (basic, no Epic 2 features)
+retriever:
+  type: "modular_unified"
+  config:
+    vector_index:
+      type: "faiss"
+      config:
+        index_type: "IndexFlatIP"
+        normalize_vectors: true
+    sparse:
+      type: "bm25"
+      config:
+        k1: 1.2
+        b: 0.75
+        lowercase: true
+        preserve_technical_terms: true
+        filter_stop_words: true
+        stop_word_sets: ["english_common", "interrogative", "irrelevant_entities"]
+    fusion:
+      type: "rrf"
+      config:
+        k: 60
+        dense_weight: 0.7
+        sparse_weight: 0.3
+    reranker:
+      type: "identity"
+      config: {}
+    # Search parameters
+    search_params:
+      initial_k: 20
+      final_k: 10
+      score_threshold: 0.0
+
+# Answer generator configuration using MockLLMAdapter
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    prompt_builder:
+      type: "simple"
+      config:
+        system_prompt: "You are a helpful technical documentation assistant."
+        context_window: 4000
+        include_metadata: true
+    llm_client:
+      type: "mock"  # Using MockLLMAdapter
+      config:
+        model_name: "mock-test-model"
+        response_pattern: "technical"  # technical, simple, or detailed
+        include_citations: true
+        simulate_errors: false
+        # Optional: fixed_response for deterministic testing
+        # fixed_response: "This is a fixed test response [Document 1]."
+    response_parser:
+      type: "markdown"
+      config:
+        extract_citations: true
+        citation_formats: ["[Document N]", "[chunk_N]", "[N]", "[Document N, Page M]"]
+        clean_formatting: true
+    confidence_scorer:
+      type: "semantic"
+      config:
+        factors:
+          - name: "retrieval_score"
+            weight: 0.3
+          - name: "source_diversity" 
+            weight: 0.2
+          - name: "answer_relevance"
+            weight: 0.3
+          - name: "citation_coverage"
+            weight: 0.2
+        score_threshold: 0.7
+
+# Query processor configuration
+query_processor:
+  type: "modular"
+  config:
+    analyzer:
+      implementation: "nlp"
+      config:
+        model: "en_core_web_sm"
+        extract_entities: true
+        extract_keywords: true
+        max_keywords: 5
+    selector:
+      implementation: "mmr"
+      config:
+        lambda_param: 0.5
+        max_tokens: 2048
+        min_relevance: 0.3
+    assembler:
+      implementation: "standard"
+      config:
+        include_sources: true
+        format_citations: true
+        max_sources: 5
+
+# Data paths
+data:
+  documents_path: "data/test"
+  cache_path: "cache/test"
+  index_path: "data/test/test.index"
+
+# Performance settings
+performance:
+  batch_size: 32
+  num_workers: 4
+  use_gpu: false
+  cache_embeddings: true
+  parallel_processing: true
+
+# Test-specific settings
+test_settings:
+  mock_responses: true
+  deterministic: true
+  fast_mode: true
+  skip_validation: false

@@ -1,5 +1,5 @@
-# Epic 2 Test Configuration Base - For EPIC 2 Validation Tests
-# This configuration provides a working base for all EPIC 2 features for testing
+# Epic 2 Enhanced RAG Configuration - Proper ModularUnifiedRetriever with Epic 2 Features
+# This configuration uses ModularUnifiedRetriever with Epic 2 sub-components
 
 # Document processor for handling input files
 document_processor:
@@ -16,7 +16,7 @@ embedder:
       type: "sentence_transformer"
       config:
         model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        device: "mps"
+        device: "auto"
         normalize_embeddings: true
     batch_processor:
       type: "dynamic"
@@ -34,6 +34,17 @@ embedder:
 retriever:
   type: "modular_unified"  # Use ModularUnifiedRetriever
   config:
+    # Composite filtering configuration (NEW - replaces semantic gap detection)
+    composite_filtering:
+      enabled: true
+      fusion_weight: 0.7          # α - weight for fusion score importance
+      semantic_weight: 0.3        # β - weight for semantic similarity
+      min_composite_score: 0.4    # threshold for document inclusion
+      max_candidates: 15          # reduce from k*2 to k*1.5 for efficiency
+    
+    # Legacy semantic gap detection (DEPRECATED - use composite_filtering)
+    min_semantic_alignment: 0.3  # Minimum query-document semantic similarity
+    
     vector_index:
       type: "faiss"
       config:
@@ -48,21 +59,19 @@ retriever:
         b: 0.75
         lowercase: true
         preserve_technical_terms: true
+        filter_stop_words: true  # Enable stop word filtering
+        custom_stop_words: []    # Additional stop words if needed
+        min_score: 0.1          # Minimum normalized score threshold
     
-    # Epic 2 Feature: Graph Enhanced Fusion
+    # Score-Aware Fusion (preserves semantic relevance)
     fusion:
-      type: "graph_enhanced_rrf"  # Use GraphEnhancedRRFFusion for Epic 2
+      type: "score_aware"  # Use ScoreAwareFusion 
       config:
-        k: 60
-        weights:
-          dense: 0.4    # Reduced to accommodate graph
-          sparse: 0.3   # Maintained
-          graph: 0.3    # NEW: Graph-based retrieval weight
-        graph_enabled: true
-        similarity_threshold: 0.65
-        max_connections_per_document: 15
-        use_pagerank: true
-        pagerank_damping: 0.85
+        score_weight: 0.9      # α - semantic score importance (very high)
+        rank_weight: 0.1       # β - rank stability factor (minimal)
+        overlap_weight: 0.0    # γ - both-retriever bonus (disabled)
+        normalize_scores: false # Score normalization disabled
+        k: 60                  # RRF constant for rank component
     
     # Epic 2 Feature: Neural Reranking
     reranker:
@@ -70,14 +79,14 @@ retriever:
       config:
         enabled: true
         model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-        device: "mps"
+        device: "auto"
         batch_size: 32
         max_length: 512
         max_candidates: 100
         models:
           default_model:
             name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-            device: "mps"
+            device: "auto"
             batch_size: 32
             max_length: 512
         default_model: "default_model"
@@ -86,15 +95,15 @@ retriever:
 answer_generator:
   type: "adaptive_modular"
   config:
-    model_name: "llama3.2:3b"
-    api_token: null
+    llm_client:
+      type: "mock"
+      config:
+        response_pattern: "technical"
+        include_citations: true
+        max_response_length: 1024
+        mock_delay: 0.1
     temperature: 0.3
     max_tokens: 1024
-    use_ollama: true
-    ollama_url: "http://localhost:11434"
-    use_inference_providers: false
-    enable_adaptive_prompts: false
-    enable_chain_of_thought: false
     confidence_threshold: 0.85
     
     prompt_builder:
@@ -124,6 +133,17 @@ answer_generator:
           - Use multiple citations when information comes from several sources: [Document 1, Document 2]
           
           Answer:
+    
+    confidence_scorer:
+      type: "semantic"
+      config:
+        min_answer_length: 20
+        max_answer_length: 1000
+        relevance_weight: 0.4
+        grounding_weight: 0.4
+        quality_weight: 0.2
+        low_retrieval_penalty: 0.3  # Penalty when few documents retrieved
+        min_context_documents: 3    # Minimum documents for full confidence
 
 # Global settings
 global_settings:

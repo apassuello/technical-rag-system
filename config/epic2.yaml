@@ -1,5 +1,6 @@
-# Epic 2 Test Configuration - All Features Enabled
-# For testing complete EPIC 2 functionality with all features
+# Epic 2 RAG Configuration  
+# Full Epic 2 features: Neural reranking, Graph enhancement, Analytics
+# Production configuration with Ollama LLM
 
 # Document processor for handling input files
 document_processor:
@@ -8,7 +9,7 @@ document_processor:
     chunk_size: 1024
     chunk_overlap: 128
 
-# Embedding generator for converting text to vectors  
+# High-performance embedder for Epic 2
 embedder:
   type: "modular"
   config:
@@ -30,7 +31,7 @@ embedder:
         max_entries: 100000
         max_memory_mb: 1024
 
-# Epic 2 ModularUnifiedRetriever with ALL Features Enabled
+# Epic 2 ModularUnifiedRetriever with all advanced features
 retriever:
   type: "modular_unified"
   config:
@@ -47,24 +48,26 @@ retriever:
         k1: 1.2
         b: 0.75
         lowercase: true
+        filter_stop_words: true
+        stop_word_sets: ["english_common", "irrelevant_entities"]
         preserve_technical_terms: true
     
-    # Epic 2 Feature: Graph Enhanced Fusion - ENABLED
+    # Epic 2 Feature: Graph Enhanced Fusion
     fusion:
       type: "graph_enhanced_rrf"
       config:
         k: 60
         weights:
-          dense: 0.4    # Reduced to accommodate graph
-          sparse: 0.3   # Maintained
-          graph: 0.3    # NEW: Graph-based retrieval weight
+          dense: 0.4
+          sparse: 0.3
+          graph: 0.3
         graph_enabled: true
         similarity_threshold: 0.65
         max_connections_per_document: 15
         use_pagerank: true
         pagerank_damping: 0.85
     
-    # Epic 2 Feature: Neural Reranking - ENABLED
+    # Epic 2 Feature: Neural Reranking
     reranker:
       type: "neural"
       config:
@@ -82,19 +85,19 @@ retriever:
             max_length: 512
         default_model: "default_model"
 
-# Answer generation strategy
+# Production answer generation with Ollama
 answer_generator:
   type: "adaptive_modular"
   config:
-    model_name: "llama3.2:3b"
-    api_token: null
+    llm_client:
+      type: "ollama"
+      config:
+        model_name: "llama3.2:3b"
+        base_url: "http://localhost:11434"
+        timeout: 30
+        max_retries: 3
     temperature: 0.3
     max_tokens: 1024
-    use_ollama: true
-    ollama_url: "http://localhost:11434"
-    use_inference_providers: false
-    enable_adaptive_prompts: false
-    enable_chain_of_thought: false
     confidence_threshold: 0.85
     
     prompt_builder:
@@ -103,8 +106,22 @@ answer_generator:
         max_context_length: 12000
         include_instructions: true
         citation_style: "inline"
+    
+    response_parser:
+      type: "markdown"
+      config:
+        preserve_formatting: true
+        extract_citations: true
+    
+    confidence_scorer:
+      type: "semantic"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        score_threshold: 0.6
 
-# Global settings
+# Global settings for Epic 2
 global_settings:
-  environment: "testing"
-  log_level: "info"
+  log_level: "INFO"
+  cache_enabled: true
+  performance_monitoring: true
+  max_concurrent_requests: 8

@@ -1,0 +1,75 @@
+document_processor:
+  type: hybrid_pdf
+  config:
+    chunk_size: 1024
+    chunk_overlap: 128
+embedder:
+  type: modular
+  config:
+    model:
+      type: sentence_transformer
+      config:
+        model_name: sentence-transformers/multi-qa-MiniLM-L6-cos-v1
+        device: auto
+        normalize_embeddings: true
+    batch_processor:
+      type: dynamic
+      config:
+        initial_batch_size: 32
+        max_batch_size: 128
+        optimize_for_memory: true
+    cache:
+      type: memory
+      config:
+        max_entries: 100000
+        max_memory_mb: 1024
+retriever:
+  type: modular_unified
+  config:
+    vector_index:
+      type: faiss
+      config:
+        index_type: IndexFlatIP
+        normalize_embeddings: true
+        metric: cosine
+    sparse:
+      type: bm25
+      config:
+        k1: 1.2
+        b: 0.75
+        lowercase: true
+        preserve_technical_terms: true
+    fusion:
+      type: rrf
+      config:
+        k: 60
+        weights:
+          dense: 0.7
+          sparse: 0.3
+    reranker:
+      type: identity
+      config:
+        enabled: true
+answer_generator:
+  type: adaptive_modular
+  config:
+    model_name: llama3.2:3b
+    api_token: null
+    temperature: 0.3
+    max_tokens: 512
+    use_ollama: true
+    ollama_url: http://localhost:11434
+    use_inference_providers: false
+    enable_adaptive_prompts: false
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
+    llm_client:
+      type: mock
+      config:
+        model_name: mock-test-model
+        response_pattern: technical
+        include_citations: true
+        simulate_errors: false
+global_settings:
+  environment: production
+  log_level: info
