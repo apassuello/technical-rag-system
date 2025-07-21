@@ -1,0 +1,108 @@
+# Basic RAG Configuration
+# Simple retrieval without Epic 2 advanced features
+# Uses MockLLMAdapter for testing without external dependencies
+
+# Document processor for handling input files
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 512
+    chunk_overlap: 64
+
+# Embedding generator for converting text to vectors  
+embedder:
+  type: "modular"
+  config:
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        device: "mps"
+        normalize_embeddings: true
+    batch_processor:
+      type: "dynamic"
+      config:
+        initial_batch_size: 32
+        max_batch_size: 128
+        optimize_for_memory: true
+    cache:
+      type: "memory"
+      config:
+        max_entries: 50000
+        max_memory_mb: 512
+
+# Basic ModularUnifiedRetriever without Epic 2 features
+retriever:
+  type: "modular_unified"
+  config:
+    vector_index:
+      type: "faiss"
+      config:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+        metric: "cosine"
+    
+    sparse:
+      type: "bm25"
+      config:
+        k1: 1.2
+        b: 0.75
+        lowercase: true
+        filter_stop_words: true
+        stop_word_sets: ["english_common"]
+    
+    # Basic fusion (no graph enhancement)
+    fusion:
+      type: "rrf"
+      config:
+        k: 60
+        weights:
+          dense: 0.7
+          sparse: 0.3
+    
+    # Basic reranking (no neural models)
+    reranker:
+      type: "identity"
+      config:
+        enabled: true
+
+# Answer generation with MockLLMAdapter
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    llm_client:
+      type: "mock"
+      config:
+        response_pattern: "technical"
+        include_citations: true
+        max_response_length: 512
+        mock_delay: 0.05
+    temperature: 0.3
+    max_tokens: 512
+    confidence_threshold: 0.8
+    
+    prompt_builder:
+      type: "simple"
+      config:
+        max_context_length: 8000
+        include_instructions: true
+        citation_style: "inline"
+    
+    response_parser:
+      type: "markdown"
+      config:
+        preserve_formatting: true
+        extract_citations: true
+    
+    confidence_scorer:
+      type: "semantic"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        score_threshold: 0.5
+
+# Global settings
+global_settings:
+  log_level: "INFO"
+  cache_enabled: true
+  performance_monitoring: false
+  max_concurrent_requests: 4
