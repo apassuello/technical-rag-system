@@ -1,0 +1,85 @@
+# RAG Pipeline Configuration for Testing with Mock LLM
+# This configuration uses MockLLMAdapter to avoid external dependencies
+
+# Document processor for handling input files
+document_processor:
+  type: "hybrid_pdf"  # Options: hybrid_pdf, simple_pdf
+  config:
+    chunk_size: 1024
+    chunk_overlap: 128
+
+# Embedding generator for converting text to vectors  
+embedder:
+  type: "modular"  # Options: modular, sentence_transformer, openai
+  config:
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        device: "cpu"
+        normalize_embeddings: true
+    batch_processor:
+      type: "dynamic"
+      config:
+        initial_batch_size: 32
+        max_batch_size: 128
+        optimize_for_memory: true
+    cache:
+      type: "memory"
+      config:
+        max_entries: 100000
+        max_memory_mb: 1024
+
+# Retrieval strategy (Modular Architecture)
+retriever:
+  type: "modular_unified"  # Modular: decomposed into sub-components for better architecture compliance
+  config:
+    vector_index:
+      type: "faiss"
+      config:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+        metric: "cosine"
+    sparse:
+      type: "bm25"
+      config:
+        k1: 1.2
+        b: 0.75
+        lowercase: true
+        preserve_technical_terms: true
+    fusion:
+      type: "rrf"
+      config:
+        k: 60
+        dense_weight: 0.7
+        sparse_weight: 0.3
+    reranker:
+      type: "identity"
+      config:
+        enabled: true
+
+# Answer generation strategy using Mock LLM
+answer_generator:
+  type: "adaptive_modular"  
+  config:
+    # Mock LLM configuration
+    model_name: "mock-test-model"
+    api_token: null
+    temperature: 0.3
+    max_tokens: 512
+    use_ollama: false  # Don't use Ollama
+    use_mock: true     # Use mock adapter
+    mock_config:
+      response_pattern: "technical"
+      include_citations: true
+      simulate_errors: false
+    # Other settings
+    use_inference_providers: false
+    enable_adaptive_prompts: false
+    enable_chain_of_thought: false
+    confidence_threshold: 0.85
+
+# Global settings (optional)
+global_settings:
+  environment: "test"
+  log_level: "info"
