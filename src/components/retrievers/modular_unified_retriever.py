@@ -229,6 +229,10 @@ class ModularUnifiedRetriever(Retriever):
             sparse_results = self.sparse_retriever.search(query, k=candidate_multiplier)
             logger.debug(f"Sparse search: {len(sparse_results)} results (k={candidate_multiplier})")
             
+            # Step 3.5: Set documents and query for graph enhancement (if supported)
+            if hasattr(self.fusion_strategy, 'set_documents_and_query'):
+                self.fusion_strategy.set_documents_and_query(self.documents, query)
+            
             # Step 4: Fuse results
             fused_results = self.fusion_strategy.fuse_results(dense_results, sparse_results)
             logger.debug(f"Fusion results: {len(fused_results)} documents after fusion")
@@ -662,6 +666,10 @@ class ModularUnifiedRetriever(Retriever):
                 "results_count": len(sparse_results),
                 "top_scores": [score for _, score in sparse_results[:5]]
             }
+            
+            # Step 3.5: Set documents and query for graph enhancement (if supported)
+            if hasattr(self.fusion_strategy, 'set_documents_and_query'):
+                self.fusion_strategy.set_documents_and_query(self.documents, query)
             
             # Step 4: Fusion
             fused_results = self.fusion_strategy.fuse_results(dense_results, sparse_results)

@@ -19,6 +19,22 @@ from .base import FusionStrategy
 from .rrf_fusion import RRFFusion
 from src.core.interfaces import Document, RetrievalResult
 
+# Import spaCy for entity extraction
+try:
+    import spacy
+    SPACY_AVAILABLE = True
+    # Try to load the English model
+    try:
+        _nlp = spacy.load("en_core_web_sm")
+        NLP_MODEL_AVAILABLE = True
+    except IOError:
+        NLP_MODEL_AVAILABLE = False
+        _nlp = None
+except ImportError:
+    SPACY_AVAILABLE = False
+    NLP_MODEL_AVAILABLE = False
+    _nlp = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -112,7 +128,30 @@ class GraphEnhancedRRFFusion(FusionStrategy):
         self.entity_cache = {}
         self.relationship_cache = {}
         
+        # Document store for entity/relationship analysis
+        self.documents = []
+        self.query_cache = {}
+        
+        # Entity extraction setup
+        self.nlp = _nlp if NLP_MODEL_AVAILABLE else None
+        if not NLP_MODEL_AVAILABLE and self.graph_config.get("enabled", True):
+            logger.warning("spaCy model not available, falling back to keyword matching for entity extraction")
+        
         logger.info(f"GraphEnhancedRRFFusion initialized with graph_enabled={self.graph_config['enabled']}")
+    
+    def set_documents_and_query(self, documents: List[Document], query: str) -> None:
+        """
+        Set the documents and current query for entity/relationship analysis.
+        
+        Args:
+            documents: List of documents being processed
+            query: Current query string
+        """
+        self.documents = documents
+        self.current_query = query
+        
+        # Clear query-specific caches
+        self.query_cache = {}
     
     def fuse_results(
         self, 
@@ -227,10 +266,10 @@ class GraphEnhancedRRFFusion(FusionStrategy):
     
     def _calculate_entity_boosts(self, doc_indices: List[int]) -> Dict[int, float]:
         """
-        Calculate entity-based scoring boosts for documents.
+        Calculate entity-based scoring boosts for documents using real entity extraction.
         
-        This is a lightweight implementation that could be enhanced
-        with actual entity extraction in the future.
+        Uses spaCy NLP to extract entities from query and documents, then calculates
+        overlap-based boost scores. Falls back to keyword matching if spaCy unavailable.
         
         Args:
             doc_indices: List of document indices to analyze
@@ -241,19 +280,43 @@ class GraphEnhancedRRFFusion(FusionStrategy):
         entity_boosts = {}
         
         try:
-            # Simple heuristic: boost documents that appear in multiple result sets
-            # This simulates entity-based relationships
             entity_boost_value = self.graph_config.get("entity_boost", 0.15)
+            
+            # Extract query entities once per query
+            query_cache_key = f"query_entities:{getattr(self, 'current_query', '')}"
+            if query_cache_key in self.query_cache:
+                query_entities = self.query_cache[query_cache_key]
+            else:
+                query_entities = self._extract_entities(getattr(self, 'current_query', ''))
+                self.query_cache[query_cache_key] = query_entities
+            
+            # Skip if no query entities found
+            if not query_entities:
+                return {doc_idx: 0.0 for doc_idx in doc_indices}
             
             for doc_idx in doc_indices:
                 # Check cache first
-                cache_key = f"entity:{doc_idx}"
+                cache_key = f"entity:{doc_idx}:{hash(frozenset(query_entities))}"
                 if cache_key in self.entity_cache:
                     entity_boosts[doc_idx] = self.entity_cache[cache_key]
                     continue
                 
-                # Simple boost calculation (could be enhanced with real entity analysis)
-                boost = entity_boost_value * 0.5  # Conservative base boost
+                # Get document content
+                if doc_idx < len(self.documents):
+                    doc_content = self.documents[doc_idx].content
+                    
+                    # Extract document entities
+                    doc_entities = self._extract_entities(doc_content)
+                    
+                    # Calculate entity overlap score
+                    if query_entities and doc_entities:
+                        overlap = len(query_entities & doc_entities)
+                        overlap_ratio = overlap / len(query_entities)
+                        boost = overlap_ratio * entity_boost_value
+                    else:
+                        boost = 0.0
+                else:
+                    boost = 0.0
                 
                 # Cache the result
                 self.entity_cache[cache_key] = boost
@@ -265,12 +328,74 @@ class GraphEnhancedRRFFusion(FusionStrategy):
             logger.warning(f"Entity boost calculation failed: {e}")
             return {doc_idx: 0.0 for doc_idx in doc_indices}
     
+    def _extract_entities(self, text: str) -> set:
+        """
+        Extract entities from text using spaCy or fallback to keyword matching.
+        
+        Args:
+            text: Text to extract entities from
+            
+        Returns:
+            Set of entity strings (normalized to lowercase)
+        """
+        if not text:
+            return set()
+        
+        entities = set()
+        
+        try:
+            if self.nlp and NLP_MODEL_AVAILABLE:
+                # Use spaCy for real entity extraction
+                doc = self.nlp(text)
+                for ent in doc.ents:
+                    # Focus on relevant entity types for technical documents
+                    if ent.label_ in ['ORG', 'PRODUCT', 'PERSON', 'GPE', 'MONEY', 'CARDINAL']:
+                        entities.add(ent.text.lower().strip())
+                
+                # Also extract technical terms (capitalized words, acronyms, etc.)
+                for token in doc:
+                    # Technical terms: all caps (>=2 chars), camelCase, or specific patterns
+                    if (token.text.isupper() and len(token.text) >= 2) or \
+                       (token.text[0].isupper() and any(c.isupper() for c in token.text[1:])) or \
+                       any(tech_pattern in token.text.lower() for tech_pattern in 
+                           ['risc', 'cisc', 'cpu', 'gpu', 'arm', 'x86', 'isa', 'api']):
+                        entities.add(token.text.lower().strip())
+            else:
+                # Fallback: extract technical keywords and patterns
+                import re
+                
+                # Technical acronyms and terms
+                tech_patterns = [
+                    r'\b[A-Z]{2,}\b',  # All caps 2+ chars (RISC, CISC, ARM, x86)
+                    r'\b[A-Z][a-z]*[A-Z][A-Za-z]*\b',  # CamelCase
+                    r'\bRV\d+[A-Z]*\b',  # RISC-V variants (RV32I, RV64I)
+                    r'\b[Aa]rm[vV]\d+\b',  # ARM versions
+                    r'\b[Xx]86\b',  # x86 variants
+                ]
+                
+                for pattern in tech_patterns:
+                    matches = re.findall(pattern, text)
+                    entities.update(match.lower().strip() for match in matches)
+                
+                # Common technical terms
+                tech_terms = ['risc', 'cisc', 'arm', 'intel', 'amd', 'qualcomm', 'apple', 
+                             'samsung', 'berkeley', 'processor', 'cpu', 'gpu', 'architecture',
+                             'instruction', 'set', 'pipelining', 'cache', 'memory']
+                
+                words = text.lower().split()
+                entities.update(term for term in tech_terms if term in words)
+            
+        except Exception as e:
+            logger.warning(f"Entity extraction failed: {e}")
+        
+        return entities
+    
     def _calculate_relationship_boosts(self, doc_indices: List[int]) -> Dict[int, float]:
         """
-        Calculate relationship-based scoring boosts for documents.
+        Calculate relationship-based scoring boosts using semantic similarity analysis.
         
-        This is a lightweight implementation that could be enhanced
-        with actual relationship mapping in the future.
+        Uses document embeddings to calculate centrality scores in the semantic
+        similarity graph, boosting documents that are central to the result set.
         
         Args:
             doc_indices: List of document indices to analyze
@@ -281,22 +406,74 @@ class GraphEnhancedRRFFusion(FusionStrategy):
         relationship_boosts = {}
         
         try:
-            # Simple heuristic: boost documents based on co-occurrence patterns
             relationship_boost_value = self.graph_config.get("relationship_boost", 0.1)
+            similarity_threshold = self.graph_config.get("similarity_threshold", 0.7)
+            
+            # Need at least 2 documents for relationship analysis
+            if len(doc_indices) < 2:
+                return {doc_idx: 0.0 for doc_idx in doc_indices}
+            
+            # Get document embeddings for similarity calculation
+            doc_embeddings = []
+            valid_indices = []
             
             for doc_idx in doc_indices:
+                if doc_idx < len(self.documents) and hasattr(self.documents[doc_idx], 'embedding'):
+                    doc_embeddings.append(self.documents[doc_idx].embedding)
+                    valid_indices.append(doc_idx)
+            
+            # Skip if we don't have enough embeddings
+            if len(doc_embeddings) < 2:
+                return {doc_idx: 0.0 for doc_idx in doc_indices}
+            
+            # Calculate similarity matrix
+            embeddings_array = np.array(doc_embeddings)
+            if embeddings_array.ndim == 1:
+                embeddings_array = embeddings_array.reshape(1, -1)
+            
+            # Normalize embeddings for cosine similarity
+            norms = np.linalg.norm(embeddings_array, axis=1, keepdims=True)
+            norms[norms == 0] = 1  # Avoid division by zero
+            normalized_embeddings = embeddings_array / norms
+            
+            # Calculate cosine similarity matrix
+            similarity_matrix = np.dot(normalized_embeddings, normalized_embeddings.T)
+            
+            # Calculate centrality scores (sum of similarities above threshold)
+            centrality_scores = []
+            for i in range(len(similarity_matrix)):
+                # Count strong connections (similarity above threshold)
+                strong_connections = np.sum(similarity_matrix[i] > similarity_threshold)
+                # Weight by average similarity to other documents
+                avg_similarity = np.mean(similarity_matrix[i])
+                centrality_score = (strong_connections * 0.6) + (avg_similarity * 0.4)
+                centrality_scores.append(centrality_score)
+            
+            # Normalize centrality scores
+            if centrality_scores:
+                max_centrality = max(centrality_scores)
+                if max_centrality > 0:
+                    centrality_scores = [score / max_centrality for score in centrality_scores]
+            
+            # Apply relationship boosts
+            for i, doc_idx in enumerate(valid_indices):
                 # Check cache first
-                cache_key = f"relationship:{doc_idx}"
+                cache_key = f"relationship:{doc_idx}:{len(valid_indices)}"
                 if cache_key in self.relationship_cache:
                     relationship_boosts[doc_idx] = self.relationship_cache[cache_key]
                     continue
                 
-                # Simple boost calculation (could be enhanced with real relationship analysis)
-                boost = relationship_boost_value * 0.3  # Conservative base boost
+                centrality_score = centrality_scores[i] if i < len(centrality_scores) else 0.0
+                boost = centrality_score * relationship_boost_value
                 
                 # Cache the result
                 self.relationship_cache[cache_key] = boost
                 relationship_boosts[doc_idx] = boost
+            
+            # Fill in zero boosts for documents without embeddings
+            for doc_idx in doc_indices:
+                if doc_idx not in relationship_boosts:
+                    relationship_boosts[doc_idx] = 0.0
             
             return relationship_boosts
             
