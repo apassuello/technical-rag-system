@@ -35,6 +35,8 @@ embedder:
 retriever:
   type: "modular_unified"
   config:
+    # Reduced semantic alignment threshold for better technical query recall
+    min_semantic_alignment: 0.2  # Reduced from default 0.3
     vector_index:
       type: "faiss"
       config:
@@ -52,20 +54,30 @@ retriever:
         stop_word_sets: ["english_common", "irrelevant_entities"]
         preserve_technical_terms: true
     
-    # Epic 2 Feature: Graph Enhanced Fusion
+    # Epic 2 Feature: Score-Aware Fusion (preserves BM25 perfect matches)
     fusion:
-      type: "graph_enhanced_rrf"
+      type: "score_aware"
       config:
-        k: 60
-        weights:
-          dense: 0.4
-          sparse: 0.3
-          graph: 0.3
-        graph_enabled: true
-        similarity_threshold: 0.65
-        max_connections_per_document: 15
-        use_pagerank: true
-        pagerank_damping: 0.85
+        score_weight: 0.8      # α - preserve semantic/BM25 scores (high importance)
+        rank_weight: 0.2       # β - add rank stability (moderate importance)
+        overlap_weight: 0.1    # γ - bonus for documents in both retrievers
+        normalize_scores: true # Enable score normalization
+        k: 60                  # RRF constant for rank component
+    
+    # Backup: Graph Enhanced Fusion (comment out score_aware and uncomment this to revert)
+    # fusion:
+    #   type: "graph_enhanced_rrf"  
+    #   config:
+    #     k: 60
+    #     weights:
+    #       dense: 0.4
+    #       sparse: 0.3
+    #       graph: 0.3
+    #     graph_enabled: true
+    #     similarity_threshold: 0.65
+    #     max_connections_per_document: 15
+    #     use_pagerank: true
+    #     pagerank_damping: 0.85
     
     # Epic 2 Feature: Neural Reranking
     reranker:
