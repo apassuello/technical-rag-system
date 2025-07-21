@@ -113,11 +113,23 @@ class ScoreAwareFusion(FusionStrategy):
         """
         # Handle empty results
         if not dense_results and not sparse_results:
+            logger.info("🔄 SCORE-AWARE FUSION: No results to fuse")
             return []
         if not dense_results:
+            logger.info("🔄 SCORE-AWARE FUSION: Only sparse results available, returning sparse results")
             return sparse_results[:] if sparse_results else []
         if not sparse_results:
+            logger.info("🔄 SCORE-AWARE FUSION: Only dense results available, returning dense results") 
             return dense_results[:] if dense_results else []
+        
+        # Log input scores for debugging
+        logger.info(f"🔄 SCORE-AWARE FUSION: Processing {len(dense_results)} dense + {len(sparse_results)} sparse results")
+        if dense_results:
+            top_dense = dense_results[0]
+            logger.info(f"📊 INPUT DENSE TOP: [{top_dense[0]}] → {top_dense[1]:.4f}")
+        if sparse_results:
+            top_sparse = sparse_results[0] 
+            logger.info(f"📊 INPUT SPARSE TOP: [{top_sparse[0]}] → {top_sparse[1]:.4f}")
         
         # Normalize scores if requested
         normalized_dense = self._normalize_scores(dense_results) if self.normalize_scores else dense_results
@@ -176,6 +188,21 @@ class ScoreAwareFusion(FusionStrategy):
         
         # Sort by final score (descending)
         fused_results.sort(key=lambda x: x[1], reverse=True)
+        
+        # Log score preservation results
+        if fused_results:
+            top_fused = fused_results[0]
+            logger.info(f"📊 SCORE PRESERVATION RESULTS:")
+            logger.info(f"   📈 TOP FUSED: [{top_fused[0]}] → {top_fused[1]:.4f}")
+            
+            # Show score preservation ratio
+            max_input_score = max(
+                max([score for _, score in dense_results], default=0),
+                max([score for _, score in sparse_results], default=0)
+            )
+            preservation_ratio = top_fused[1] / max_input_score if max_input_score > 0 else 0
+            logger.info(f"   🔄 SCORE PRESERVATION: {preservation_ratio:.1%} of max input score")
+            logger.info(f"   ⚖️ FUSION WEIGHTS: score={self.score_weight:.2f}, rank={self.rank_weight:.2f}, overlap={self.overlap_weight:.2f}")
         
         return fused_results
     
