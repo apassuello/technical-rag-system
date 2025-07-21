@@ -97,17 +97,35 @@ retriever:
             max_length: 512
         default_model: "default_model"
 
-# Production answer generation with Ollama
+# Production answer generation - Multiple LLM options
 answer_generator:
   type: "adaptive_modular"
   config:
+    # Current: Local Ollama LLM for production (uncomment to use)
+    # llm_client:
+    #   type: "ollama"
+    #   config:
+    #     model_name: "llama3.2:3b"
+    #     base_url: "http://localhost:11434"
+    #     timeout: 30
+    #     max_retries: 3
+    
+    # Alternative: HuggingFace API LLM (currently active)
     llm_client:
-      type: "ollama"
+      type: "huggingface"
       config:
-        model_name: "llama3.2:3b"
-        base_url: "http://localhost:11434"
+        model_name: "microsoft/DialoGPT-medium"
+        api_token: "${HF_TOKEN}"  # Set HF_TOKEN environment variable
         timeout: 30
-        max_retries: 3
+        use_chat_completion: true
+        fallback_models:
+          - "google/gemma-2-2b-it"  
+          - "meta-llama/Llama-3.2-3B-Instruct"
+          - "Qwen/Qwen2.5-1.5B-Instruct"
+        max_tokens: 1024
+        temperature: 0.1
+        top_p: 0.9
+    
     temperature: 0.3
     max_tokens: 1024
     confidence_threshold: 0.85

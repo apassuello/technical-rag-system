@@ -66,10 +66,11 @@ retriever:
       config:
         enabled: true
 
-# Answer generation with MockLLMAdapter
+# Answer generation - Multiple LLM options
 answer_generator:
   type: "adaptive_modular"
   config:
+    # Current: Mock LLM for testing without dependencies
     llm_client:
       type: "mock"
       config:
@@ -77,6 +78,31 @@ answer_generator:
         include_citations: true
         max_response_length: 512
         mock_delay: 0.05
+    
+    # Alternative 1: Local Ollama LLM (comment out mock, uncomment this)
+    # llm_client:
+    #   type: "ollama"
+    #   config:
+    #     model_name: "llama3.2:3b"
+    #     base_url: "http://localhost:11434"
+    #     timeout: 30
+    #     max_retries: 2
+    
+    # Alternative 2: HuggingFace API LLM (comment out mock, uncomment this)
+    # llm_client:
+    #   type: "huggingface"
+    #   config:
+    #     model_name: "microsoft/DialoGPT-medium"
+    #     api_token: "${HF_TOKEN}"  # Set HF_TOKEN environment variable
+    #     timeout: 30
+    #     use_chat_completion: true
+    #     fallback_models:
+    #       - "google/gemma-2-2b-it"
+    #       - "google/flan-t5-small"
+    #     max_tokens: 512
+    #     temperature: 0.1
+    #     top_p: 0.9
+    
     temperature: 0.3
     max_tokens: 512
     confidence_threshold: 0.8
