@@ -139,39 +139,59 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
             }
         }
         
-        # Handle legacy parameters
-        if model_name or temperature or max_tokens or use_ollama is not None:
+        # Handle both ComponentFactory style (config=None, all params as kwargs) 
+        # and direct instantiation style (config=dict, minimal kwargs)
+        
+        # Check if we have structured config passed directly
+        if config is not None and 'llm_client' in config:
+            # Direct instantiation with structured config - use as-is
+            logger.debug("Using provided structured configuration")
+            final_config = config
+        elif (config is None and 
+              'llm_client' in kwargs and 
+              isinstance(kwargs['llm_client'], dict) and
+              'type' in kwargs['llm_client']):
+            # ComponentFactory style - all params in kwargs including structured llm_client
+            logger.debug("Converting ComponentFactory parameters to structured config")
+            final_config = kwargs.copy()
+        else:
+            # Legacy parameters - convert to structured format
             logger.info("Converting legacy parameters to new configuration format")
+            final_config = default_config.copy()
             
-            # Override LLM config with legacy parameters
-            if not config:
-                config = default_config.copy()
+            # Process legacy parameters
+            has_legacy_params = (model_name is not None or 
+                               temperature is not None or 
+                               max_tokens is not None or 
+                               use_ollama is not None or
+                               ollama_url is not None)
             
-            # Ensure proper nested structure
-            config.setdefault('llm_client', {})
-            config['llm_client'].setdefault('config', {})
-            
-            # Handle different LLM providers
-            if use_ollama is False:
-                # Check if we have a configured LLM client type
-                if 'llm_client' in config and 'type' in config['llm_client']:
-                    # Use the configured LLM client type
-                    logger.info(f"Using configured LLM client: {config['llm_client']['type']}")
-                else:
-                    # Default to Ollama if no alternative is configured
-                    logger.warning("Non-Ollama providers not configured, using Ollama")
-            
-            if model_name:
-                config['llm_client']['config']['model_name'] = model_name
-            if temperature is not None:
-                config['llm_client']['config']['temperature'] = temperature
-            if max_tokens is not None:
-                config['llm_client']['config']['max_tokens'] = max_tokens
-            if ollama_url:
-                config['llm_client']['config']['base_url'] = ollama_url
+            if has_legacy_params:
+                # Ensure proper nested structure
+                final_config.setdefault('llm_client', {})
+                final_config['llm_client'].setdefault('config', {})
+                
+                # Handle different LLM providers
+                if use_ollama is False:
+                    # Check if we have a configured LLM client type
+                    if 'llm_client' in final_config and 'type' in final_config['llm_client']:
+                        # Use the configured LLM client type
+                        logger.info(f"Using configured LLM client: {final_config['llm_client']['type']}")
+                    else:
+                        # Default to Ollama if no alternative is configured
+                        logger.warning("Non-Ollama providers not configured, using Ollama")
+                
+                if model_name:
+                    final_config['llm_client']['config']['model_name'] = model_name
+                if temperature is not None:
+                    final_config['llm_client']['config']['temperature'] = temperature
+                if max_tokens is not None:
+                    final_config['llm_client']['config']['max_tokens'] = max_tokens
+                if ollama_url:
+                    final_config['llm_client']['config']['base_url'] = ollama_url
         
         # Merge with defaults
-        self.config = self._merge_configs(default_config, config or {})
+        self.config = self._merge_configs(default_config, final_config)
         
         # Initialize sub-components
         self._initialize_components()
