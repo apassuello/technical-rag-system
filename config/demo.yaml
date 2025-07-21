@@ -111,8 +111,11 @@ answer_generator:
     confidence_scorer:
       type: "semantic"
       config:
-        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        score_threshold: 0.55
+        relevance_weight: 0.4
+        grounding_weight: 0.4
+        quality_weight: 0.2
+        min_answer_length: 20
+        max_answer_length: 1000
 
 # Demo-optimized global settings
 global_settings:
