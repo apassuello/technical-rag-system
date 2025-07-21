@@ -570,6 +570,190 @@ The Retriever implements hybrid search capabilities combining vector similarity 
 
 ---
 
+### 3.9 Retrieval Quality Tests
+
+#### C4-QUAL-001: BM25 Scoring Accuracy
+**Requirement**: Algorithmic correctness  
+**Priority**: Critical  
+**Type**: Quality  
+
+**Test Steps**:
+1. Create documents with known term frequencies
+2. Calculate expected BM25 scores manually
+3. Compare with actual BM25 scores
+4. Test edge cases (empty docs, repeated terms)
+5. Verify score normalization
+
+**PASS Criteria**:
+- Mathematical accuracy:
+  - Scores match formula within 0.001
+  - TF saturation behavior correct
+  - IDF calculation accurate
+  - Document length normalization works
+- Quality thresholds:
+  - Technical queries score >0.7 on relevant docs
+  - Irrelevant queries score <0.3
+  - Clear score separation
+
+**FAIL Criteria**:
+- Formula implementation errors
+- Scores outside [0, 1] range
+- No distinction between relevant/irrelevant
+- Incorrect normalization
+
+---
+
+#### C4-QUAL-002: Vector Similarity Validation
+**Requirement**: Semantic accuracy  
+**Priority**: Critical  
+**Type**: Quality  
+
+**Test Steps**:
+1. Generate embeddings for related concepts
+2. Calculate cosine similarities
+3. Verify similarity ranges
+4. Test synonym detection
+5. Validate concept hierarchies
+
+**PASS Criteria**:
+- Similarity ranges:
+  - Related concepts: >0.8
+  - Unrelated concepts: <0.3
+  - Synonyms: >0.7
+  - Clear separation: >0.4 gap
+- Semantic validity:
+  - Technical synonyms detected
+  - Hierarchies preserved
+  - No random similarities
+
+**FAIL Criteria**:
+- Poor semantic separation
+- Random similarity values
+- Synonyms not detected
+- Inverted relationships
+
+---
+
+#### C4-QUAL-003: Fusion Algorithm Correctness
+**Requirement**: Mathematical accuracy  
+**Priority**: High  
+**Type**: Quality  
+
+**Test Steps**:
+1. Create known dense/sparse results
+2. Calculate expected fusion scores
+3. Run fusion algorithms
+4. Verify score calculations
+5. Test weight impacts
+
+**PASS Criteria**:
+- Formula accuracy:
+  - RRF: Σ(weight * 1/(k + rank))
+  - Weighted: proper normalization
+  - Scores match expected ±0.0001
+- Weight behavior:
+  - Different weights → different rankings
+  - Weights sum to 1.0
+  - No weight ignored
+
+**FAIL Criteria**:
+- Formula errors
+- Weights have no effect
+- Score overflow/underflow
+- Incorrect normalization
+
+---
+
+#### C4-QUAL-004: Reranking Quality Improvement
+**Requirement**: Relevance improvement  
+**Priority**: High  
+**Type**: Quality  
+
+**Test Steps**:
+1. Create test query-document pairs
+2. Get initial retrieval results
+3. Apply reranking
+4. Measure relevance improvement
+5. Verify score calibration
+
+**PASS Criteria**:
+- Quality improvement:
+  - Relevant docs move up >2 positions
+  - Top result relevance >0.8
+  - nDCG improvement >15%
+- Score calibration:
+  - High relevance pairs: >0.8
+  - Low relevance pairs: <0.3
+  - Monotonic decrease
+
+**FAIL Criteria**:
+- No ranking improvement
+- Random reordering
+- Score inflation
+- Relevant docs move down
+
+---
+
+#### C4-QUAL-005: End-to-End Retrieval Precision
+**Requirement**: System quality  
+**Priority**: Critical  
+**Type**: Quality  
+
+**Test Steps**:
+1. Use golden test set queries
+2. Retrieve results
+3. Calculate precision@K
+4. Measure nDCG
+5. Verify score distributions
+
+**PASS Criteria**:
+- Precision targets:
+  - Precision@5: >0.8
+  - Precision@10: >0.7
+  - MRR: >0.85
+- Quality indicators:
+  - Top result always relevant
+  - Clear score gaps
+  - Consistent performance
+
+**FAIL Criteria**:
+- Below precision targets
+- Irrelevant top results
+- Random score distribution
+- Inconsistent quality
+
+---
+
+#### C4-QUAL-006: Irrelevant Query Handling
+**Requirement**: Failure mode quality  
+**Priority**: High  
+**Type**: Quality/Negative  
+
+**Test Steps**:
+1. Submit off-topic queries
+2. Check retrieval results
+3. Verify score thresholds
+4. Test filtering behavior
+5. Validate user feedback
+
+**PASS Criteria**:
+- Appropriate handling:
+  - No results OR all scores <0.3
+  - Clear low-confidence signal
+  - No high-scoring false matches
+  - Appropriate user message
+- Consistency:
+  - All irrelevant queries handled similarly
+  - No random high scores
+
+**FAIL Criteria**:
+- High scores for irrelevant
+- Inconsistent behavior
+- False confidence
+- Poor user experience
+
+---
+
 ## 4. Test Data Requirements
 
 ### 4.1 Document Collections
