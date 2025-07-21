@@ -45,7 +45,7 @@ retriever:
       type: "bm25"
       config:
         k1: 1.2
-        b: 0.75
+        b: 0.25  # Fixed: reduced from 0.75 to reduce document length bias
         lowercase: true
         preserve_technical_terms: true
     
@@ -53,10 +53,10 @@ retriever:
     fusion:
       type: "rrf"
       config:
-        k: 60
+        k: 30  # Fixed: reduced from 60 to increase score discriminative power
         weights:
-          dense: 0.6
-          sparse: 0.4
+          dense: 0.8  # Fixed: increased from 0.6 to favor working dense component
+          sparse: 0.2  # Fixed: reduced from 0.4 to reduce impact of biased BM25
         graph_enabled: false
     
     # Epic 2 Feature: Neural Reranking - ENABLED
