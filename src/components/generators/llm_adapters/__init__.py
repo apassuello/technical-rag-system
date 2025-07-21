@@ -18,6 +18,7 @@ from .base_adapter import (
 )
 from .ollama_adapter import OllamaAdapter
 from .huggingface_adapter import HuggingFaceAdapter
+from .mock_adapter import MockLLMAdapter
 
 # Future adapters will be imported here
 # from .openai_adapter import OpenAIAdapter
@@ -26,6 +27,7 @@ __all__ = [
     'BaseLLMAdapter',
     'OllamaAdapter',
     'HuggingFaceAdapter',
+    'MockLLMAdapter',
     # 'OpenAIAdapter',
     'RateLimitError',
     'AuthenticationError',
@@ -36,6 +38,7 @@ __all__ = [
 ADAPTER_REGISTRY = {
     'ollama': OllamaAdapter,
     'huggingface': HuggingFaceAdapter,
+    'mock': MockLLMAdapter,
     # 'openai': OpenAIAdapter,
 }
 
