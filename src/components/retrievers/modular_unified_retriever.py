@@ -217,25 +217,63 @@ class ModularUnifiedRetriever(Retriever):
             if not self.documents:
                 raise RuntimeError("No documents have been indexed")
             
+            logger.info(f"🔍 MODULAR RETRIEVER: Starting retrieval for query: '{query}' (k={k})")
+            logger.info(f"📚 CORPUS STATUS: {len(self.documents)} documents indexed")
+            
             # Step 1: Generate query embeddings
             query_embedding = np.array(self.embedder.embed([query])[0])
+            logger.info(f"🔤 QUERY EMBEDDING: Generated {query_embedding.shape} dimensional vector")
             
             # Step 2: Dense vector search (with efficiency optimization)
             candidate_multiplier = int(self.max_candidates_multiplier * k) if self.composite_filtering_enabled else k*2
+            logger.info(f"🎯 DENSE SEARCH: Searching for top {candidate_multiplier} candidates")
             dense_results = self.vector_index.search(query_embedding, k=candidate_multiplier)
-            logger.debug(f"Dense search: {len(dense_results)} results (k={candidate_multiplier})")
+            logger.info(f"✅ DENSE RESULTS: {len(dense_results)} documents found")
+            
+            # Log top dense results with scores
+            if dense_results:
+                logger.info(f"📊 TOP DENSE SCORES:")
+                for i, (doc_idx, score) in enumerate(dense_results[:3]):
+                    if doc_idx < len(self.documents):
+                        doc_title = self.documents[doc_idx].metadata.get('title', f'doc_{doc_idx}')[:50]
+                        logger.info(f"   {i+1}. [{doc_idx}] {doc_title}... → {score:.4f}")
+            else:
+                logger.warning(f"⚠️ DENSE SEARCH: No results found!")
             
             # Step 3: Sparse keyword search (with efficiency optimization)
+            logger.info(f"🔎 SPARSE SEARCH: BM25 keyword search for '{query}' (k={candidate_multiplier})")
             sparse_results = self.sparse_retriever.search(query, k=candidate_multiplier)
-            logger.debug(f"Sparse search: {len(sparse_results)} results (k={candidate_multiplier})")
+            logger.info(f"✅ SPARSE RESULTS: {len(sparse_results)} documents found")
+            
+            # Log top sparse results with scores  
+            if sparse_results:
+                logger.info(f"📊 TOP SPARSE SCORES:")
+                for i, (doc_idx, score) in enumerate(sparse_results[:3]):
+                    if doc_idx < len(self.documents):
+                        doc_title = self.documents[doc_idx].metadata.get('title', f'doc_{doc_idx}')[:50]
+                        logger.info(f"   {i+1}. [{doc_idx}] {doc_title}... → {score:.4f}")
+            else:
+                logger.warning(f"⚠️ SPARSE SEARCH: No results found!")
             
             # Step 3.5: Set documents and query for graph enhancement (if supported)
             if hasattr(self.fusion_strategy, 'set_documents_and_query'):
                 self.fusion_strategy.set_documents_and_query(self.documents, query)
             
             # Step 4: Fuse results
+            fusion_name = self.fusion_strategy.__class__.__name__
+            logger.info(f"🔄 FUSION STRATEGY: Using {fusion_name} to combine results")
             fused_results = self.fusion_strategy.fuse_results(dense_results, sparse_results)
-            logger.debug(f"Fusion results: {len(fused_results)} documents after fusion")
+            logger.info(f"✅ FUSION RESULTS: {len(fused_results)} documents after fusion")
+            
+            # Log top fused results with scores
+            if fused_results:
+                logger.info(f"📊 TOP FUSED SCORES:")
+                for i, (doc_idx, score) in enumerate(fused_results[:5]):
+                    if doc_idx < len(self.documents):
+                        doc_title = self.documents[doc_idx].metadata.get('title', f'doc_{doc_idx}')[:50]
+                        logger.info(f"   {i+1}. [{doc_idx}] {doc_title}... → {score:.4f}")
+            else:
+                logger.warning(f"⚠️ FUSION: No results after fusion!")
             
             # Step 4.5: Composite filtering (NEW) or semantic gap detection (LEGACY)
             if self.composite_filtering_enabled:
@@ -255,11 +293,15 @@ class ModularUnifiedRetriever(Retriever):
             
             # Step 5: Apply reranking if enabled
             if self.reranker.is_enabled() and fused_results:
+                reranker_name = self.reranker.__class__.__name__
+                logger.info(f"🧠 RERANKING: Using {reranker_name} to improve relevance")
+                
                 # Prepare documents and scores for reranking
                 top_candidates = fused_results[:k*2]  # Rerank top candidates
                 candidate_documents = [self.documents[idx] for idx, _ in top_candidates]
                 candidate_scores = [score for _, score in top_candidates]
                 
+                logger.info(f"🔄 RERANKING: Processing {len(top_candidates)} candidates")
                 reranked_results = self.reranker.rerank(query, candidate_documents, candidate_scores)
                 
                 # Update final results with reranked scores
@@ -279,8 +321,11 @@ class ModularUnifiedRetriever(Retriever):
                 # Sort by final score and limit to k
                 final_results.sort(key=lambda x: x[1], reverse=True)
                 final_results = final_results[:k]
+                
+                logger.info(f"✅ RERANKING: Final {len(final_results)} results after reranking")
             else:
                 # No reranking, use fused results directly
+                logger.info(f"⏭️ RERANKING: Skipped (reranker disabled or no results)")
                 final_results = fused_results[:k]
             
             # Convert to RetrievalResult objects
@@ -295,6 +340,16 @@ class ModularUnifiedRetriever(Retriever):
                     )
                     retrieval_results.append(retrieval_result)
             
+            # Log final results summary
+            logger.info(f"🎯 FINAL RETRIEVAL RESULTS: {len(retrieval_results)} documents")
+            if retrieval_results:
+                logger.info(f"📊 FINAL RANKING:")
+                for i, result in enumerate(retrieval_results):
+                    doc_title = result.document.metadata.get('title', f'doc_{result.document.content[:30]}')[:50]
+                    logger.info(f"   {i+1}. {doc_title}... → {result.score:.4f}")
+            else:
+                logger.warning(f"❌ NO RESULTS: Query '{query}' returned no relevant documents!")
+            
             # Update performance stats
             elapsed_time = time.time() - start_time
             self.retrieval_stats["total_retrievals"] += 1
@@ -303,6 +358,10 @@ class ModularUnifiedRetriever(Retriever):
                 self.retrieval_stats["total_time"] / self.retrieval_stats["total_retrievals"]
             )
             self.retrieval_stats["last_retrieval_time"] = elapsed_time
+            
+            # Log performance summary
+            logger.info(f"⚡ RETRIEVAL PERFORMANCE: {elapsed_time*1000:.1f}ms total, {len(retrieval_results)}/{k} results")
+            logger.info(f"🏁 RETRIEVAL COMPLETE: Query '{query}' processed successfully")
             
             # Track performance using platform services
             if self.platform:
