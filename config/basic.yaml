@@ -46,7 +46,7 @@ retriever:
       type: "bm25"
       config:
         k1: 1.2
-        b: 0.75
+        b: 0.25  # Fixed: reduced from 0.75 to reduce document length bias
         lowercase: true
         filter_stop_words: true
         stop_word_sets: ["english_common"]
@@ -55,10 +55,10 @@ retriever:
     fusion:
       type: "rrf"
       config:
-        k: 60
+        k: 30  # Fixed: reduced from 60 to increase score discriminative power
         weights:
-          dense: 0.7
-          sparse: 0.3
+          dense: 0.8  # Fixed: increased from 0.7 to favor working dense component
+          sparse: 0.2  # Fixed: reduced from 0.3 to reduce impact of biased BM25
     
     # Basic reranking (no neural models)
     reranker:
