@@ -45,7 +45,7 @@ retriever:
       type: "bm25"
       config:
         k1: 1.2
-        b: 0.75
+        b: 0.25  # Fixed: reduced from 0.75 to reduce document length bias
         lowercase: true
         preserve_technical_terms: true
     
@@ -53,11 +53,11 @@ retriever:
     fusion:
       type: "graph_enhanced_rrf"
       config:
-        k: 60
+        k: 30  # Fixed: reduced from 60 to increase score discriminative power
         weights:
-          dense: 0.4    # Reduced to accommodate graph
-          sparse: 0.3   # Maintained
-          graph: 0.3    # NEW: Graph-based retrieval weight
+          dense: 0.4    # Maintained for graph fusion balance
+          sparse: 0.2   # Fixed: reduced from 0.3 to reduce BM25 bias impact
+          graph: 0.4    # Fixed: increased from 0.3 to compensate for reduced sparse
         graph_enabled: true
         similarity_threshold: 0.65
         max_connections_per_document: 15

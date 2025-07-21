@@ -48,7 +48,7 @@ retriever:
       type: "bm25"
       config:
         k1: 1.2
-        b: 0.75
+        b: 0.25  # Fixed: reduced from 0.75 to reduce document length bias
         lowercase: true
         filter_stop_words: true
         stop_word_sets: ["english_common", "irrelevant_entities"]
@@ -59,10 +59,10 @@ retriever:
       type: "score_aware"
       config:
         score_weight: 0.8      # α - preserve semantic/BM25 scores (high importance)
-        rank_weight: 0.2       # β - add rank stability (moderate importance)
-        overlap_weight: 0.1    # γ - bonus for documents in both retrievers
+        rank_weight: 0.15      # β - reduced from 0.2 to minimize rank component impact
+        overlap_weight: 0.05   # γ - reduced from 0.1 to focus on score preservation
         normalize_scores: true # Enable score normalization
-        k: 60                  # RRF constant for rank component
+        k: 30                  # Fixed: reduced from 60 to increase score discriminative power
     
     # Backup: Graph Enhanced Fusion (comment out score_aware and uncomment this to revert)
     # fusion:

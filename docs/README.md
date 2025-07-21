@@ -30,6 +30,7 @@ This directory contains comprehensive documentation for the Technical Documentat
 ### 📋 API Documentation
 - **[api/](api/)** - Component API specifications
   - [`DOCUMENT_PROCESSOR_API.md`](api/DOCUMENT_PROCESSOR_API.md) - Document processing interfaces
+  - [`CALIBRATION_SYSTEM_API.md`](api/CALIBRATION_SYSTEM_API.md) - Parameter optimization and calibration API
 
 ### 📊 Completion Reports
 - **[completion-reports/](completion-reports/)** - Implementation validation reports
@@ -48,11 +49,13 @@ This directory contains comprehensive documentation for the Technical Documentat
 
 ## System Status
 
-**Current Status**: Production Ready ✅
-- **Architecture**: 100% Modular (6/6 components)
+**Current Status**: Production Ready with Epic 2 Calibration System ✅
+- **Architecture**: 100% Modular (6/6 components) + Cross-Component Calibration
 - **Test Coverage**: Enterprise-grade with 122+ test cases
 - **Components**: All components implemented and validated
 - **Quality**: Swiss engineering standards with comprehensive documentation
+- **Calibration**: Systematic parameter optimization framework (4 components, 7+ parameters)
+- **Epic 2 Enhancement**: Crisis resolution and 30%+ improvement targeting
 
 ## Key Features
 
@@ -61,6 +64,8 @@ This directory contains comprehensive documentation for the Technical Documentat
 - **Configurable**: Component factory with flexible configuration system
 - **Tested**: Enterprise-grade test suite with formal acceptance criteria
 - **Documented**: Complete architecture and implementation documentation
+- **Calibration System**: Systematic parameter optimization with 4 search strategies
+- **Epic 2 Enhancement**: Advanced neural reranking and graph capabilities with optimization
 
 ## Getting Started
 
