@@ -169,6 +169,59 @@ class ParameterRegistry:
             description="Maximum candidates for neural reranking"
         ))
 
+        # Graph enhancement parameters - for Epic 2 graph-based retrieval
+        self.register_parameter(Parameter(
+            name="graph_weight",
+            component="fusion_strategy",
+            path="retriever.fusion.config.weights.graph",
+            current=0.3,
+            min_value=0.1,
+            max_value=0.5,
+            step=0.05,
+            param_type="float",
+            impacts=["graph_quality", "fusion_balance"],
+            description="Weight for graph-based retrieval in fusion"
+        ))
+
+        self.register_parameter(Parameter(
+            name="similarity_threshold",
+            component="fusion_strategy", 
+            path="retriever.fusion.config.similarity_threshold",
+            current=0.65,
+            min_value=0.5,
+            max_value=0.8,
+            step=0.05,
+            param_type="float",
+            impacts=["graph_connectivity", "graph_quality"],
+            description="Similarity threshold for document connections in graph"
+        ))
+
+        self.register_parameter(Parameter(
+            name="max_connections_per_document",
+            component="fusion_strategy",
+            path="retriever.fusion.config.max_connections_per_document", 
+            current=15,
+            min_value=5,
+            max_value=25,
+            step=5,
+            param_type="int",
+            impacts=["graph_density", "computation_time"],
+            description="Maximum connections per document in graph"
+        ))
+
+        self.register_parameter(Parameter(
+            name="pagerank_damping",
+            component="fusion_strategy",
+            path="retriever.fusion.config.pagerank_damping",
+            current=0.85,
+            min_value=0.7,
+            max_value=0.95,
+            step=0.05,
+            param_type="float",
+            impacts=["pagerank_quality", "graph_convergence"],
+            description="PageRank damping factor for graph ranking"
+        ))
+
         # Confidence scoring parameters
         self.register_parameter(Parameter(
             name="confidence_threshold",

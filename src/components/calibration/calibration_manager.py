@@ -248,6 +248,24 @@ class CalibrationManager:
                 # Initialize platform orchestrator with new config
                 po = PlatformOrchestrator(str(config_path))
                 
+                # Index test documents if they exist
+                if hasattr(self, 'test_documents') and self.test_documents:
+                    po.index_documents(self.test_documents)
+                else:
+                    # Create minimal test documents for evaluation
+                    from src.core.interfaces import Document
+                    test_docs = [
+                        Document(
+                            content="RISC-V is an open-source instruction set architecture (ISA) based on reduced instruction set computing (RISC) principles. It provides a complete instruction set specification designed to support computer research and education.",
+                            metadata={"source": "risc_v_intro.pdf", "page": 1, "title": "RISC-V Introduction"}
+                        ),
+                        Document(
+                            content="The RISC-V vector extension (RVV) provides vector processing capabilities for parallel computation. Vector instructions operate on vectors of data elements, enabling efficient SIMD operations for scientific and machine learning applications.",
+                            metadata={"source": "risc_v_vector.pdf", "page": 5, "title": "RISC-V Vector Extension"}
+                        )
+                    ]
+                    po.index_documents(test_docs)
+                
                 # Use provided queries or default test set
                 queries_to_test = target_queries if target_queries else self.test_queries
                 
@@ -333,23 +351,117 @@ class CalibrationManager:
     ) -> Path:
         """Create temporary configuration file with specified parameters."""
         
-        # Load base config
+        # Load base config or use complete default
         if base_config and base_config.exists():
             with open(base_config, 'r') as f:
                 config = yaml.safe_load(f)
         else:
-            # Use default config structure
+            # Use complete default config structure that works
             config = {
-                "document_processor": {"type": "hybrid_pdf", "config": {"chunk_size": 1024}},
-                "embedder": {"type": "modular", "config": {}},
-                "retriever": {"type": "modular_unified", "config": {}},
-                "answer_generator": {"type": "adaptive_modular", "config": {}}
+                "document_processor": {
+                    "type": "hybrid_pdf", 
+                    "config": {
+                        "chunk_size": 1024,
+                        "chunk_overlap": 128
+                    }
+                },
+                "embedder": {
+                    "type": "modular",
+                    "config": {
+                        "model": {
+                            "type": "sentence_transformer",
+                            "config": {
+                                "model_name": "sentence-transformers/multi-qa-MiniLM-L6-cos-v1",
+                                "device": "mps",
+                                "normalize_embeddings": True
+                            }
+                        },
+                        "batch_processor": {
+                            "type": "dynamic",
+                            "config": {
+                                "initial_batch_size": 32,
+                                "max_batch_size": 128,
+                                "optimize_for_memory": False
+                            }
+                        },
+                        "cache": {
+                            "type": "memory",
+                            "config": {
+                                "max_entries": 10000,
+                                "max_memory_mb": 512
+                            }
+                        }
+                    }
+                },
+                "retriever": {
+                    "type": "modular_unified",
+                    "config": {
+                        "min_semantic_alignment": 0.2,
+                        "vector_index": {
+                            "type": "faiss",
+                            "config": {
+                                "index_type": "IndexFlatIP",
+                                "normalize_embeddings": True,
+                                "metric": "cosine"
+                            }
+                        },
+                        "sparse": {
+                            "type": "bm25",
+                            "config": {
+                                "k1": 1.2,
+                                "b": 0.75,
+                                "lowercase": True
+                            }
+                        },
+                        "fusion": {
+                            "type": "rrf",
+                            "config": {
+                                "k": 60,
+                                "weights": {
+                                    "dense": 0.7,
+                                    "sparse": 0.3
+                                }
+                            }
+                        }
+                    }
+                },
+                "answer_generator": {
+                    "type": "adaptive_modular",
+                    "config": {
+                        "prompt_builder": {
+                            "type": "simple",
+                            "config": {}
+                        },
+                        "llm_client": {
+                            "type": "ollama",
+                            "config": {
+                                "model_name": "llama3.2:3b",
+                                "base_url": "http://localhost:11434",
+                                "timeout": 30
+                            }
+                        },
+                        "response_parser": {
+                            "type": "markdown",
+                            "config": {}
+                        },
+                        "confidence_scorer": {
+                            "type": "semantic",
+                            "config": {}
+                        }
+                    }
+                }
             }
         
         # Apply parameter updates
         for param_name, value in parameters.items():
             param = self.parameter_registry.get_parameter(param_name)
             if param:
+                # Convert numpy values to native Python types for YAML serialization
+                if hasattr(value, 'item'):  # numpy scalar
+                    value = value.item()
+                elif hasattr(value, 'tolist'):  # numpy array
+                    value = value.tolist()
+                
                 # Update config using parameter path
                 self._update_nested_config(config, param.path, value)
             else:
