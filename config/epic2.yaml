@@ -54,30 +54,35 @@ retriever:
         stop_word_sets: ["english_common", "irrelevant_entities"]
         preserve_technical_terms: true
     
-    # Epic 2 Feature: Score-Aware Fusion (preserves BM25 perfect matches)
+    # Epic 2 Feature: Graph Enhanced Fusion (main feature)
     fusion:
-      type: "score_aware"
+      type: "graph_enhanced_rrf"  
       config:
-        score_weight: 0.8      # α - preserve semantic/BM25 scores (high importance)
-        rank_weight: 0.15      # β - reduced from 0.2 to minimize rank component impact
-        overlap_weight: 0.05   # γ - reduced from 0.1 to focus on score preservation
-        normalize_scores: true # Enable score normalization
-        k: 30                  # Fixed: reduced from 60 to increase score discriminative power
+        base_fusion:
+          k: 60
+          weights:
+            dense: 0.4
+            sparse: 0.3
+        graph_enhancement:
+          enabled: true
+          graph_weight: 0.3
+          entity_boost: 0.15
+          relationship_boost: 0.1
+          similarity_threshold: 0.65
+          max_connections_per_document: 15
+          use_pagerank: true
+          pagerank_damping: 0.85
+          max_graph_hops: 3
     
-    # Backup: Graph Enhanced Fusion (comment out score_aware and uncomment this to revert)
+    # Alternative: Score-Aware Fusion (comment out graph_enhanced_rrf and uncomment this)
     # fusion:
-    #   type: "graph_enhanced_rrf"  
+    #   type: "score_aware"
     #   config:
-    #     k: 60
-    #     weights:
-    #       dense: 0.4
-    #       sparse: 0.3
-    #       graph: 0.3
-    #     graph_enabled: true
-    #     similarity_threshold: 0.65
-    #     max_connections_per_document: 15
-    #     use_pagerank: true
-    #     pagerank_damping: 0.85
+    #     score_weight: 0.8      # α - preserve semantic/BM25 scores (high importance)
+    #     rank_weight: 0.15      # β - reduced from 0.2 to minimize rank component impact
+    #     overlap_weight: 0.05   # γ - reduced from 0.1 to focus on score preservation
+    #     normalize_scores: true # Enable score normalization
+    #     k: 30                  # Fixed: reduced from 60 to increase score discriminative power
     
     # Epic 2 Feature: Neural Reranking
     reranker:

@@ -74,23 +74,21 @@ retriever:
 answer_generator:
   type: "adaptive_modular"
   config:
-    model_name: "llama3.2:3b"
-    api_token: null
-    temperature: 0.3
-    max_tokens: 1024
-    use_ollama: true
-    ollama_url: "http://localhost:11434"
-    use_inference_providers: false
-    enable_adaptive_prompts: false
-    enable_chain_of_thought: false
-    confidence_threshold: 0.85
-    
     prompt_builder:
       type: "simple"
+      config: {}
+    llm_client:
+      type: "ollama"
       config:
-        max_context_length: 12000
-        include_instructions: true
-        citation_style: "inline"
+        model_name: "llama3.2:3b"
+        base_url: "http://localhost:11434"
+        timeout: 30
+    response_parser:
+      type: "markdown"
+      config: {}
+    confidence_scorer:
+      type: "semantic"
+      config: {}
 
 # Global settings
 global_settings:

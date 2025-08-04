@@ -52,45 +52,20 @@ retriever:
         stop_word_sets: ["english_common"]
         preserve_technical_terms: true
     
-    # Epic 2 Feature: Graph Enhanced Fusion with All Calibration Parameters
+    # Basic RRF Fusion (default configuration)
     fusion:
-      type: "graph_enhanced_rrf"
+      type: "rrf"
       config:
-        # Base RRF configuration
-        base_fusion:
-          k: 60                    # Calibration parameter (RRF discriminative power)
-          weights:
-            dense: 0.4             # Calibration parameter
-            sparse: 0.3            # Calibration parameter
-        # Graph enhancement configuration
-        graph_enhancement:
-          enabled: true
-          graph_weight: 0.3        # Calibration parameter (NEW)
-          entity_boost: 0.15
-          relationship_boost: 0.1
-          similarity_threshold: 0.65   # Calibration parameter (NEW)
-          max_connections_per_document: 15  # Calibration parameter (NEW)
-          use_pagerank: true
-          pagerank_damping: 0.85   # Calibration parameter (NEW)
-          max_graph_hops: 3
+        k: 60                    # RRF discriminative power
+        weights:
+          dense: 0.7             # Dense weight
+          sparse: 0.3            # Sparse weight
     
-    # Epic 2 Feature: Neural Reranking
+    # Basic Identity Reranker (no reranking)
     reranker:
-      type: "neural"
+      type: "identity"
       config:
-        enabled: true
-        model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-        device: "mps"
-        batch_size: 32             # Calibration parameter
-        max_length: 512
-        max_candidates: 100        # Calibration parameter
-        models:
-          default_model:
-            name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-            device: "mps"
-            batch_size: 32
-            max_length: 512
-        default_model: "default_model"
+        enabled: false
 
 # Mock answer generation for testing
 answer_generator:
