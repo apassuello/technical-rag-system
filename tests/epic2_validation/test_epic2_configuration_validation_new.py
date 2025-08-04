@@ -74,38 +74,38 @@ class Epic2ConfigurationValidator:
 
         # Define Epic 2 test configuration files
         self.config_files = {
-            "base": "test_epic2_base.yaml",
-            "neural_enabled": "test_epic2_neural_enabled.yaml",
-            "graph_enabled": "test_epic2_graph_enabled.yaml",
-            "all_features": "test_epic2_all_features.yaml",
-            "minimal": "test_epic2_minimal.yaml",
+            "base": "default.yaml",
+            "neural_enabled": "epic2.yaml", 
+            "graph_enabled": "epic2.yaml",
+            "all_features": "epic2.yaml",
+            "minimal": "default.yaml",
         }
 
         # Expected sub-component mappings
         self.expected_mappings = {
             "base": {
-                "reranker": "NeuralReranker",  # base config has neural enabled
-                "fusion": "GraphEnhancedRRFFusion",  # base config has graph enabled
+                "reranker": "IdentityReranker",  # default.yaml has identity reranker
+                "fusion": "RRFFusion",  # default.yaml has basic RRF fusion
                 "vector_index": "FAISSIndex",
             },
             "neural_enabled": {
-                "reranker": "NeuralReranker",
-                "fusion": "RRFFusion",  # graph disabled
+                "reranker": "NeuralReranker",  # epic2.yaml has neural reranker
+                "fusion": "GraphEnhancedRRFFusion",  # epic2.yaml has graph enhanced fusion
                 "vector_index": "FAISSIndex",
             },
             "graph_enabled": {
-                "reranker": "IdentityReranker",  # neural disabled
-                "fusion": "GraphEnhancedRRFFusion",
+                "reranker": "NeuralReranker",  # epic2.yaml has neural reranker
+                "fusion": "GraphEnhancedRRFFusion",  # epic2.yaml has graph enhanced fusion
                 "vector_index": "FAISSIndex",
             },
             "all_features": {
-                "reranker": "NeuralReranker",
-                "fusion": "GraphEnhancedRRFFusion",
+                "reranker": "NeuralReranker",  # epic2.yaml has neural reranker
+                "fusion": "GraphEnhancedRRFFusion",  # epic2.yaml has graph enhanced fusion
                 "vector_index": "FAISSIndex",
             },
             "minimal": {
-                "reranker": "IdentityReranker",  # neural disabled
-                "fusion": "RRFFusion",  # graph disabled
+                "reranker": "IdentityReranker",  # default.yaml has identity reranker
+                "fusion": "RRFFusion",  # default.yaml has basic RRF fusion
                 "vector_index": "FAISSIndex",
             },
         }

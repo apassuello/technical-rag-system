@@ -282,11 +282,11 @@ class Epic2ConfigurationManager:
     def __init__(self):
         """Initialize configuration manager."""
         self.config_files = {
-            "minimal": "test_epic2_minimal.yaml",
-            "neural": "test_epic2_neural_enabled.yaml",
-            "graph": "test_epic2_graph_enabled.yaml",
-            "complete": "test_epic2_all_features.yaml",
-            "base": "test_epic2_base.yaml",
+            "minimal": "default.yaml",
+            "neural": "epic2.yaml",
+            "graph": "epic2.yaml",
+            "complete": "epic2.yaml",
+            "base": "epic2.yaml",
         }
 
         self.expected_features = {
@@ -659,10 +659,8 @@ class Epic2TestEnvironment:
 
         # Check configuration files
         config_files = [
-            "test_epic2_minimal.yaml",
-            "test_epic2_neural_enabled.yaml",
-            "test_epic2_graph_enabled.yaml",
-            "test_epic2_all_features.yaml",
+            "default.yaml",
+            "epic2.yaml",
         ]
 
         config_status = {}
