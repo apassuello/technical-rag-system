@@ -51,7 +51,7 @@ retriever:
         b: 0.25  # Fixed: reduced from 0.75 to reduce document length bias
         lowercase: true
         filter_stop_words: true
-        stop_word_sets: ["english_common", "irrelevant_entities"]
+        stop_word_sets: ["english_common"]
         preserve_technical_terms: true
     
     # Epic 2 Feature: Graph Enhanced Fusion (main feature)
