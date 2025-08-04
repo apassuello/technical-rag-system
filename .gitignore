@@ -102,3 +102,32 @@ outputs/
 *.json
 *.csv
 !requirements.txt
+
+# Development artifacts
+debug_*.py
+*_analysis.py
+*_calibration*.py
+optimize_*.py
+test_*_verification.py
+test_*_fixed.py
+run_*_demo.py
+run_*_calibration*.py
+validate_*.py
+EPIC2_*.md
+CRITICAL_BUGS_*.md
+DEMO_*.md
+GRAPH_*.md
+RAGAS_*.md
+SCORE_*.md
+STREAMLIT_*.md
+comprehensive_test_results_*.json
+epic2_portfolio_assessment_*.txt
+*.log
+
+# Session records
+.claude/sessions/handoff-*.md
+.claude/sessions/session-*.md
+
+# Validation results
+validation_results/
+sessions/
