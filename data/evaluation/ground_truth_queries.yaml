@@ -1,0 +1,378 @@
+# Ground Truth Query Dataset for Retrieval Quality Evaluation
+# 30 carefully crafted queries across RISC-V technical domains
+# Each query has manually identified relevant documents
+
+queries:
+  # SIMPLE FACTUAL QUERIES (High precision expected)
+  - id: "FACT_001"
+    query: "What is RISC-V?"
+    difficulty: "simple"
+    category: "factual_basic"
+    relevant_docs:
+      - "riscv-base-instructions.pdf"
+      - "unpriv-isa-20240411.pdf"
+      - "riscv-card.pdf"
+    expected_precision: 0.8  # Most results should be relevant
+    expected_recall: 0.7     # Should find most relevant docs
+
+  - id: "FACT_002"
+    query: "What are the basic RISC-V instruction formats?"
+    difficulty: "simple"
+    category: "factual_technical"
+    relevant_docs:
+      - "riscv-base-instructions.pdf"
+      - "unpriv-isa-20240411.pdf"
+      - "riscv-card.pdf"
+    expected_precision: 0.9
+    expected_recall: 0.8
+
+  - id: "FACT_003"
+    query: "What is the RISC-V vector extension?"
+    difficulty: "simple"
+    category: "factual_technical"
+    relevant_docs:
+      - "riscv-v-spec-1.0.pdf"
+      - "15.20-15.55-18.05.06.VEXT-bcn-v1.pdf"
+      - "RISC-V-VectorExtension-1-1.pdf"
+      - "Communications_Signal_Processing_Using_RISC-V_Vector_Extension.pdf"
+    expected_precision: 0.8
+    expected_recall: 0.6
+
+  - id: "FACT_004"
+    query: "What are RISC-V privileged instructions?"
+    difficulty: "simple"
+    category: "factual_technical"
+    relevant_docs:
+      - "riscv-privileged.pdf"
+      - "unpriv-isa-20240411.pdf"
+    expected_precision: 0.9
+    expected_recall: 0.8
+
+  - id: "FACT_005"
+    query: "What is software validation for medical devices?"
+    difficulty: "simple"
+    category: "factual_regulatory"
+    relevant_docs:
+      - "General-Principles-of-Software-Validation---Final-Guidance-for-Industry-and-FDA-Staff.pdf"
+      - "Premarket-Software-Functions-Guidance.pdf"
+      - "AIML-SaMD-Action-Plan.pdf"
+    expected_precision: 0.8
+    expected_recall: 0.7
+
+  # MODERATE TECHNICAL QUERIES (Good precision/recall balance)
+  - id: "TECH_001"
+    query: "How do RISC-V vector instructions handle different element widths?"
+    difficulty: "moderate"
+    category: "technical_detailed"
+    relevant_docs:
+      - "riscv-v-spec-1.0.pdf"
+      - "RISC-V-VectorExtension-1-1.pdf"
+      - "Communications_Signal_Processing_Using_RISC-V_Vector_Extension.pdf"
+    expected_precision: 0.7
+    expected_recall: 0.7
+
+  - id: "TECH_002"
+    query: "What are the addressing modes in RISC-V base instruction set?"
+    difficulty: "moderate"
+    category: "technical_detailed"
+    relevant_docs:
+      - "riscv-base-instructions.pdf"
+      - "unpriv-isa-20240411.pdf"
+    expected_precision: 0.8
+    expected_recall: 0.8
+
+  - id: "TECH_003"
+    query: "How does RISC-V handle floating point operations?"
+    difficulty: "moderate"
+    category: "technical_detailed"
+    relevant_docs:
+      - "riscv-base-instructions.pdf"
+      - "unpriv-isa-20240411.pdf"
+      - "riscv-card.pdf"
+    expected_precision: 0.7
+    expected_recall: 0.6
+
+  - id: "TECH_004"
+    query: "What are the memory ordering constraints in RISC-V?"
+    difficulty: "moderate"
+    category: "technical_detailed"
+    relevant_docs:
+      - "unpriv-isa-20240411.pdf"
+      - "riscv-privileged.pdf"
+    expected_precision: 0.8
+    expected_recall: 0.7
+
+  - id: "TECH_005"
+    query: "How do you implement signal processing algorithms using RISC-V vector extension?"
+    difficulty: "moderate"
+    category: "application_specific"
+    relevant_docs:
+      - "Communications_Signal_Processing_Using_RISC-V_Vector_Extension.pdf"
+      - "riscv-v-spec-1.0.pdf"
+      - "RISC-V-VectorExtension-1-1.pdf"
+    expected_precision: 0.6
+    expected_recall: 0.6
+
+  - id: "TECH_006"
+    query: "What are the FDA requirements for AI/ML software in medical devices?"
+    difficulty: "moderate"
+    category: "regulatory_technical"
+    relevant_docs:
+      - "AIML-SaMD-Action-Plan.pdf"
+      - "GMLP_Guiding_Principles.pdf"
+      - "Premarket-Software-Functions-Guidance.pdf"
+    expected_precision: 0.7
+    expected_recall: 0.7
+
+  - id: "TECH_007"
+    query: "How does RISC-V support virtualization and hypervisors?"
+    difficulty: "moderate"
+    category: "technical_detailed"
+    relevant_docs:
+      - "riscv-privileged.pdf"
+    expected_precision: 0.8
+    expected_recall: 0.8
+
+  - id: "TECH_008"
+    query: "What are the different RISC-V privilege levels?"
+    difficulty: "moderate"
+    category: "technical_detailed"
+    relevant_docs:
+      - "riscv-privileged.pdf"
+      - "unpriv-isa-20240411.pdf"
+    expected_precision: 0.9
+    expected_recall: 0.8
+
+  # COMPLEX ANALYTICAL QUERIES (Lower precision expected, focus on recall)
+  - id: "COMPLEX_001"
+    query: "Compare RISC-V vector extension performance with traditional SIMD approaches"
+    difficulty: "complex"
+    category: "comparative_analysis"
+    relevant_docs:
+      - "riscv-v-spec-1.0.pdf"
+      - "RISC-V-VectorExtension-1-1.pdf"
+      - "Communications_Signal_Processing_Using_RISC-V_Vector_Extension.pdf"
+      - "EECS-2014-54.pdf"
+      - "EECS-2015-49.pdf"
+    expected_precision: 0.5  # Complex queries may retrieve broader context
+    expected_recall: 0.6
+
+  - id: "COMPLEX_002"
+    query: "What are the security implications of RISC-V's open-source nature?"
+    difficulty: "complex"
+    category: "analytical_security"
+    relevant_docs:
+      - "riscv-privileged.pdf"
+      - "EECS-2016-1.pdf"
+      - "EECS-2016-118.pdf"
+    expected_precision: 0.4
+    expected_recall: 0.5
+
+  - id: "COMPLEX_003"
+    query: "How do different RISC-V implementations handle branch prediction and speculation?"
+    difficulty: "complex"
+    category: "implementation_analysis"
+    relevant_docs:
+      - "EECS-2011-62.pdf"
+      - "EECS-2014-54.pdf"
+      - "EECS-2015-49.pdf"
+      - "EECS-2016-129.pdf"
+    expected_precision: 0.5
+    expected_recall: 0.4
+
+  - id: "COMPLEX_004"
+    query: "What are the trade-offs between RISC-V modular extensions and monolithic ISAs?"
+    difficulty: "complex"
+    category: "architectural_analysis"
+    relevant_docs:
+      - "riscv-base-instructions.pdf"
+      - "EECS-2011-62.pdf"
+      - "EECS-2016-1.pdf"
+      - "2107.04175.pdf"
+    expected_precision: 0.4
+    expected_recall: 0.5
+
+  - id: "COMPLEX_005"
+    query: "How should medical device manufacturers approach software validation for RISC-V based systems?"
+    difficulty: "complex"
+    category: "regulatory_implementation"
+    relevant_docs:
+      - "General-Principles-of-Software-Validation---Final-Guidance-for-Industry-and-FDA-Staff.pdf"
+      - "Premarket-Software-Functions-Guidance.pdf"
+      - "GMLP_Guiding_Principles.pdf"
+      - "AIML-SaMD-Action-Plan.pdf"
+    expected_precision: 0.5
+    expected_recall: 0.6
+
+  # SPECIFIC TECHNICAL IMPLEMENTATION QUERIES
+  - id: "IMPL_001"
+    query: "How do you implement matrix multiplication using RISC-V vector instructions?"
+    difficulty: "moderate"
+    category: "implementation_specific"
+    relevant_docs:
+      - "riscv-v-spec-1.0.pdf"
+      - "RISC-V-VectorExtension-1-1.pdf"
+      - "Communications_Signal_Processing_Using_RISC-V_Vector_Extension.pdf"
+    expected_precision: 0.6
+    expected_recall: 0.7
+
+  - id: "IMPL_002"
+    query: "What are the performance characteristics of RISC-V atomic operations?"
+    difficulty: "moderate"
+    category: "performance_analysis"
+    relevant_docs:
+      - "unpriv-isa-20240411.pdf"
+      - "EECS-2014-54.pdf"
+      - "EECS-2015-49.pdf"
+    expected_precision: 0.6
+    expected_recall: 0.6
+
+  - id: "IMPL_003"
+    query: "How do you optimize memory access patterns for RISC-V vector code?"
+    difficulty: "moderate"
+    category: "optimization_techniques"
+    relevant_docs:
+      - "riscv-v-spec-1.0.pdf"
+      - "Communications_Signal_Processing_Using_RISC-V_Vector_Extension.pdf"
+      - "EECS-2015-49.pdf"
+    expected_precision: 0.6
+    expected_recall: 0.5
+
+  # RESEARCH AND ACADEMIC QUERIES
+  - id: "RESEARCH_001"
+    query: "What research has been done on RISC-V compiler optimizations?"
+    difficulty: "complex"
+    category: "research_survey"
+    relevant_docs:
+      - "EECS-2014-54.pdf"
+      - "EECS-2015-49.pdf"
+      - "EECS-2016-129.pdf"
+      - "2107.04175.pdf"
+    expected_precision: 0.5
+    expected_recall: 0.6
+
+  - id: "RESEARCH_002"
+    query: "What are the latest developments in RISC-V vector architecture research?"
+    difficulty: "complex"
+    category: "research_current"
+    relevant_docs:
+      - "2505.24363.pdf"
+      - "2507.01457.pdf"
+      - "RISC-V-VectorExtension-1-1.pdf"
+      - "riscv-v-spec-1.0.pdf"
+    expected_precision: 0.6
+    expected_recall: 0.5
+
+  - id: "RESEARCH_003"
+    query: "How do RISC-V implementations compare in terms of power efficiency?"
+    difficulty: "complex"
+    category: "comparative_research"
+    relevant_docs:
+      - "EECS-2015-49.pdf"
+      - "EECS-2016-1.pdf"
+      - "EECS-2016-118.pdf"
+      - "2107.04175.pdf"
+    expected_precision: 0.4
+    expected_recall: 0.5
+
+  # REGULATORY AND COMPLIANCE QUERIES
+  - id: "REG_001"
+    query: "What documentation is required for RISC-V software in FDA submissions?"
+    difficulty: "moderate"
+    category: "regulatory_requirements"
+    relevant_docs:
+      - "General-Principles-of-Software-Validation---Final-Guidance-for-Industry-and-FDA-Staff.pdf"
+      - "Premarket-Software-Functions-Guidance.pdf"
+      - "GMLP_Guiding_Principles.pdf"
+    expected_precision: 0.7
+    expected_recall: 0.7
+
+  - id: "REG_002"
+    query: "How do you validate AI/ML algorithms running on RISC-V processors for medical use?"
+    difficulty: "complex"
+    category: "regulatory_technical"
+    relevant_docs:
+      - "AIML-SaMD-Action-Plan.pdf"
+      - "GMLP_Guiding_Principles.pdf"
+      - "General-Principles-of-Software-Validation---Final-Guidance-for-Industry-and-FDA-Staff.pdf"
+    expected_precision: 0.6
+    expected_recall: 0.6
+
+  # EDGE CASES AND CORNER CASES
+  - id: "EDGE_001"
+    query: "What happens during RISC-V exception handling in vector operations?"
+    difficulty: "complex"
+    category: "edge_case_technical"
+    relevant_docs:
+      - "riscv-v-spec-1.0.pdf"
+      - "riscv-privileged.pdf"
+      - "RISC-V-VectorExtension-1-1.pdf"
+    expected_precision: 0.6
+    expected_recall: 0.5
+
+  - id: "EDGE_002"
+    query: "How does RISC-V handle unaligned memory accesses in different implementation variants?"
+    difficulty: "complex"
+    category: "implementation_variants"
+    relevant_docs:
+      - "unpriv-isa-20240411.pdf"
+      - "riscv-privileged.pdf"
+      - "EECS-2014-54.pdf"
+    expected_precision: 0.5
+    expected_recall: 0.5
+
+  - id: "EDGE_003"
+    query: "What are the debugging and profiling capabilities for RISC-V vector code?"
+    difficulty: "moderate"
+    category: "development_tools"
+    relevant_docs:
+      - "riscv-v-spec-1.0.pdf"
+      - "riscv-privileged.pdf"
+      - "EECS-2016-129.pdf"
+    expected_precision: 0.5
+    expected_recall: 0.4
+
+  # INTEGRATION AND ECOSYSTEM QUERIES
+  - id: "ECO_001"
+    query: "What software tools are available for RISC-V vector development?"
+    difficulty: "moderate"
+    category: "ecosystem_tools"
+    relevant_docs:
+      - "EECS-2016-129.pdf"
+      - "Communications_Signal_Processing_Using_RISC-V_Vector_Extension.pdf"
+      - "riscv-v-spec-1.0.pdf"
+    expected_precision: 0.6
+    expected_recall: 0.5
+
+  - id: "ECO_002"
+    query: "How do you integrate RISC-V processors with existing medical device architectures?"
+    difficulty: "complex"
+    category: "integration_medical"
+    relevant_docs:
+      - "General-Principles-of-Software-Validation---Final-Guidance-for-Industry-and-FDA-Staff.pdf"
+      - "Premarket-Software-Functions-Guidance.pdf"
+      - "EECS-2016-1.pdf"
+    expected_precision: 0.4
+    expected_recall: 0.5
+
+# Metadata for evaluation
+evaluation_metadata:
+  total_queries: 30
+  difficulty_distribution:
+    simple: 5
+    moderate: 13
+    complex: 12
+  category_distribution:
+    factual: 5
+    technical: 8
+    implementation: 3
+    research: 3
+    regulatory: 2
+    analytical: 5
+    edge_case: 3
+    ecosystem: 2
+  expected_performance:
+    avg_context_precision: 0.65  # Target for system
+    avg_context_recall: 0.62
+    avg_mrr: 0.58
+    avg_ndcg_at_5: 0.60
