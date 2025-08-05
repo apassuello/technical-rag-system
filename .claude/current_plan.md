@@ -1,390 +1,198 @@
-# Current Implementation Plan: HuggingFace API Migration
+# Epic 1: Query Processor Enhancement - Modular Epic1QueryAnalyzer
 
-## Project Overview
-**Project**: Technical Documentation RAG System (Project 1)  
-**Status**: Production Ready - 100% Architecture Compliance  
-**Current Focus**: HuggingFace API Migration for HF Spaces Deployment
+## Current Status
+- **Task**: epic1-query-analyzer
+- **Phase**: implementation
+- **Progress**: Starting implementation with proper modular architecture
+- **Next Milestone**: epic1-phase1-complete
+- **Status**: ACTIVE
+- **Last Updated**: 2025-01-22
 
-## Current Task Details
-**current_task**: "huggingface-api-migration"  
-**current_phase**: "phase-2-reranker-integration"  
-**progress**: 50  
-**next_milestone**: "phase-3-embedder-integration"  
-**status**: "PHASE_2_COMPLETE_HYBRID"  
-**last_updated**: "2025-07-18T20:35:00Z"
+## Architecture Compliance ✅
 
-## Migration Objectives
-- **Primary**: Enable HuggingFace Spaces deployment with resource constraints (16GB RAM, 2 CPU cores)
-- **Secondary**: Reduce memory footprint from ~3-4GB to ~1-1.5GB (50-70% reduction) - **REQUIRES PHASES 2-4**
-- **Tertiary**: Improve reliability and eliminate local model management complexity - **REQUIRES PHASES 2-4**
+### Component Placement
+- **Target Component**: Query Processor (C6) - Query Workflow
+- **Rationale**: Query analysis and complexity classification belong in Query Processor
+- **Pattern**: Modular sub-component architecture (following Document Processor pattern)
+- **Architecture Safeguards**: All validated - proper component boundaries maintained
 
-## Context Restoration Instructions
+## Implementation Structure
 
-### For Fresh Conversation Implementation Sessions
-
-#### 🚀 Quick Start Commands
-```bash
-# Primary implementation command
-/implementer huggingface-migration
-
-# Phase-specific commands
-/implementer phase1-llm-integration
-/implementer huggingface-llm-adapter
-/implementer phase2-reranker-integration
-/implementer phase3-embedder-integration
+### Directory Layout
+```
+src/components/query_processors/analyzers/
+├── __init__.py                        # Update with Epic1QueryAnalyzer
+├── base_analyzer.py                   # Already exists
+├── nlp_analyzer.py                    # Existing NLP-based analyzer
+├── rule_based_analyzer.py            # Existing rule-based analyzer
+├── epic1_query_analyzer.py           # NEW - Main Epic 1 analyzer orchestrator
+├── components/                        # NEW - Sub-components for Epic 1
+│   ├── __init__.py
+│   ├── feature_extractor.py          # Linguistic feature extraction
+│   ├── complexity_classifier.py      # Classification logic (simple/medium/complex)
+│   └── model_recommender.py          # Model routing recommendations
+└── utils/                             # NEW - Shared utilities
+    ├── __init__.py
+    ├── technical_terms.py            # Domain vocabulary management
+    └── syntactic_parser.py           # Lightweight syntax analysis
 ```
 
-#### 📋 Manual Context Restoration (if needed)
-```bash
-# 1. Load migration context
-/context hf-migration
+## Component Architecture
 
-# 2. Load architecture context
-/architect huggingface-migration
+### 1. Epic1QueryAnalyzer (Orchestrator)
+Main analyzer that coordinates sub-components:
+- Orchestrates feature extraction, classification, and recommendation
+- Follows modular pattern like ModularDocumentProcessor
+- Direct implementation (no external adapters)
+- Configuration-driven thresholds and mappings
 
-# 3. Load specific phase context
-/context phase1-llm-integration
+### 2. FeatureExtractor (Sub-component)
+Extracts linguistic and structural features:
+- Length metrics (words, tokens, characters)
+- Syntactic complexity (clauses, nesting depth)
+- Technical vocabulary density
+- Question type classification
+- Entity detection
+- Ambiguity indicators
 
-# 4. Check system status
-/status generators
-/status migration-progress
-```
+### 3. ComplexityClassifier (Sub-component)
+Classifies query complexity:
+- Weighted scoring from features
+- Three levels: simple (0-0.35), medium (0.35-0.70), complex (0.70-1.0)
+- Configurable weights and thresholds
+- Confidence scoring
 
-### 📄 Required Context Files
-- `docs/architecture/HUGGINGFACE_API_MIGRATION_PLAN.md` - Complete migration strategy (47KB)
-- `hf_deployment/src/shared_utils/generation/inference_providers_generator.py` - Existing LLM implementation
-- `src/components/generators/llm_adapters/` - Adapter architecture
-- `config/advanced_test.yaml` - Current configuration structure
+### 4. ModelRecommender (Sub-component)
+Recommends optimal model:
+- Maps complexity levels to models
+- Supports multiple strategies (cost_optimized, quality_first, balanced)
+- Provides cost and latency estimates
+- Includes fallback recommendations
 
-## Implementation Session Kickoff
+### 5. Utilities
+Shared functionality:
+- **TechnicalTermManager**: Domain vocabulary management
+- **SyntacticParser**: Lightweight syntax analysis without heavy dependencies
 
-### ✅ Phase 1: LLM Integration (COMPLETED)
-**Status**: ✅ COMPLETED - 2025-07-18  
-**Duration**: 3 hours actual  
-**Priority**: High  
-**Architecture Confidence**: 100%
+## Configuration Schema
 
-#### Completed Implementation
-1. **HuggingFace LLM Adapter** ✅ DONE
-   - **File**: `src/components/generators/llm_adapters/huggingface_adapter.py`
-   - **Size**: 16,680 bytes - comprehensive implementation
-   - **Features**: Chat completion + text generation APIs, model fallback, error handling
-   - **Architecture**: 100% compliant - extends `BaseLLMAdapter`
-
-2. **Adapter Registry Integration** ✅ DONE
-   - **File**: `src/components/generators/llm_adapters/__init__.py`
-   - **Action**: HuggingFaceAdapter registered in `ADAPTER_REGISTRY`
-   - **Status**: Full integration complete
-
-3. **Configuration Integration** ✅ DONE
-   - **Enhanced**: `config/advanced_test.yaml` with HF API option
-   - **Created**: `config/hf_api_test.yaml` - dedicated HF API configuration
-   - **Environment**: Full `HF_TOKEN` support
-
-4. **AnswerGenerator Integration** ✅ DONE
-   - **File**: `src/components/generators/answer_generator.py`
-   - **Enhancement**: Dynamic adapter parameter detection
-   - **Compatibility**: 100% backward compatibility maintained
-
-### 🎯 Phase 1.5: Epic 2 Demo Integration (COMPLETED ✅)
-**Status**: ✅ COMPLETED - 2025-07-18  
-**Duration**: 2 hours actual  
-**Priority**: High  
-**Architecture Confidence**: 100%
-**Scope**: LLM integration only - embedder and reranker still use local models
-
-#### Completed Implementation
-1. **Epic 2 HF API Configuration** ✅ DONE
-   - **File**: `config/epic2_hf_api.yaml`
-   - **Achievement**: LLM switched to HF API, other components remain local
-   - **Features**: Neural reranking and graph enhancement use LOCAL models
-   - **Integration**: Hybrid local/API mode (LLM via API, embedder/reranker local)
-
-2. **System Manager Enhancement** ✅ DONE
-   - **File**: `demo/utils/system_integration.py`
-   - **Features**: Environment-based config selection, HF_TOKEN detection
-   - **Methods**: `_select_config_path()`, `get_llm_backend_info()`
-   - **Achievement**: Automatic backend switching for LLM only
-
-3. **Streamlit Demo Enhancement** ✅ DONE
-   - **File**: `streamlit_epic2_demo.py`
-   - **Features**: Dynamic backend display, real-time status
-   - **UI**: Professional backend indicators, context-aware error messages
-   - **Achievement**: Epic 2 demo with HF API LLM integration
-
-4. **Configuration System Fix** ✅ DONE
-   - **Files**: `src/core/config.py`, `src/core/platform_orchestrator.py`
-   - **Feature**: Environment variable substitution (`${HF_TOKEN}`)
-   - **Fix**: Component factory parameter passing for answer generator
-   - **Achievement**: Proper HuggingFace adapter initialization
-
-### Technical Specifications
-
-#### HuggingFace LLM Adapter Structure
-```python
-class HuggingFaceAdapter(BaseLLMAdapter):
-    """
-    HuggingFace Inference API adapter for LLM integration.
-    
-    Features:
-    - OpenAI-compatible chat completion format
-    - Model auto-selection with fallback chain
-    - Comprehensive error handling
-    - Citation extraction and formatting
-    """
-    
-    SUPPORTED_MODELS = [
-        "microsoft/DialoGPT-medium",
-        "google/gemma-2-2b-it", 
-        "meta-llama/Llama-3.2-3B-Instruct",
-        "Qwen/Qwen2.5-1.5B-Instruct"
-    ]
-```
-
-#### Configuration Structure
 ```yaml
-answer_generator:
-  type: "adaptive_modular"
-  config:
-    llm_client:
-      type: "huggingface"  # NEW: HF API adapter
-      config:
-        model_name: "microsoft/DialoGPT-medium"
-        api_token: "${HF_TOKEN}"
-        temperature: 0.3
-        max_tokens: 512
-        timeout: 30
-        fallback_models:
-          - "google/gemma-2-2b-it"
-          - "Qwen/Qwen2.5-1.5B-Instruct"
+query_processor:
+  type: "modular"
+  analyzer:
+    implementation: "epic1"  # NEW analyzer type
+    config:
+      feature_extractor:
+        technical_terms_file: "config/technical_vocabulary.txt"
+        enable_entity_extraction: true
+        
+      complexity_classifier:
+        weights:
+          length: 0.20
+          syntactic: 0.25
+          vocabulary: 0.30
+          question: 0.15
+          ambiguity: 0.10
+        thresholds:
+          simple: 0.35
+          complex: 0.70
+          
+      model_recommender:
+        strategy: "balanced"
+        model_mappings:
+          simple:
+            provider: "ollama"
+            model: "llama3.2:3b"
+            max_cost: 0.001
+          medium:
+            provider: "mistral"
+            model: "mistral-small"
+            max_cost: 0.01
+          complex:
+            provider: "openai"
+            model: "gpt-4-turbo"
+            max_cost: 0.10
 ```
 
-### Success Criteria for Phase 1 ✅ ALL ACHIEVED
-- ✅ HF API adapter successfully registers in ComponentFactory
-- ✅ Answer generation works with HF API models
-- ✅ Fallback to local Ollama works in development
-- ✅ Citations maintain format consistency
-- ✅ Response times < 10s for typical queries
-- ✅ All integration tests passing
+## Data Flow
 
-### Files Created/Modified in Phase 1 ✅ COMPLETE
-1. `src/components/generators/llm_adapters/huggingface_adapter.py` - ✅ CREATED
-2. `src/components/generators/llm_adapters/__init__.py` - ✅ MODIFIED
-3. `config/advanced_test.yaml` - ✅ ENHANCED
-4. `config/hf_api_test.yaml` - ✅ CREATED
-5. `src/components/generators/answer_generator.py` - ✅ ENHANCED
+1. **Query Input** → Epic1QueryAnalyzer
+2. **Feature Extraction** → FeatureExtractor extracts linguistic features
+3. **Complexity Classification** → ComplexityClassifier determines level
+4. **Model Recommendation** → ModelRecommender selects optimal model
+5. **QueryAnalysis Output** → Contains complexity_level and recommended_model in metadata
+6. **Metadata Flow** → Through ModularQueryProcessor to ResponseAssembler
+7. **Answer Metadata** → Final Answer contains Epic 1 routing recommendations
 
-### Success Criteria for Phase 1.5 ✅ ALL ACHIEVED
-- ✅ Epic 2 demo works with HuggingFace API for LLM
-- ✅ Epic 2 features preserved (neural reranking, graph enhancement, analytics use LOCAL models)
-- ✅ Smooth switching between local/HF API modes for LLM only
-- ✅ Proper error handling and fallback mechanisms for LLM
-- ✅ Configuration validation and environment detection
-- ✅ Professional UI with dynamic backend display
-- ✅ Environment variable substitution in configuration system
+## Integration Points
 
-### Current System State After Phase 2 (Hybrid Approach)
-- **LLM**: HuggingFace API ✅ (~50MB memory)
-- **Embedder**: Local sentence-transformers ❌ (~80-100MB memory)
-- **Reranker**: Local cross-encoder ✅ (by design, ~150-200MB memory)
-- **Total Memory**: ~2.5-3GB (major improvement from ~6-7GB)
-- **HF Spaces Ready**: 70% - deployable but not optimal
+### ModularQueryProcessor
+- Add "epic1" to available analyzer types
+- No other changes needed (uses existing analyzer pattern)
 
-### Files Created/Modified in Phase 1.5 ✅ COMPLETE
-1. `config/epic2_hf_api.yaml` - ✅ CREATED
-2. `demo/utils/system_integration.py` - ✅ ENHANCED
-3. `streamlit_epic2_demo.py` - ✅ ENHANCED
-4. `src/core/config.py` - ✅ ENHANCED
-5. `src/core/platform_orchestrator.py` - ✅ FIXED
-6. `src/components/generators/answer_generator.py` - ✅ FIXED
+### Answer Generator (Phase 2)
+- Read recommended_model from Answer.metadata
+- Switch to appropriate LLM adapter based on recommendation
 
-## Implementation Strategy
+## Implementation Tasks
 
-### ✅ Phase 2: Reranker Integration (COMPLETED - Hybrid Approach)
-**Status**: ✅ COMPLETED - 2025-07-18  
-**Duration**: 4 hours actual  
-**Priority**: High  
-**Architecture Confidence**: 100%
+1. ✅ Design modular architecture
+2. ⏳ Create utils directory structure
+3. ⏳ Implement technical_terms.py utility
+4. ⏳ Implement syntactic_parser.py utility
+5. ⏳ Create components directory structure
+6. ⏳ Implement feature_extractor.py
+7. ⏳ Implement complexity_classifier.py
+8. ⏳ Implement model_recommender.py
+9. ⏳ Create epic1_query_analyzer.py orchestrator
+10. ⏳ Update __init__.py with Epic1QueryAnalyzer
+11. ⏳ Test the implementation
+12. ⏳ Integrate with ModularQueryProcessor
+13. ⏳ Add Epic 1 configuration
 
-#### Key Finding: HuggingFace API Limitation
-- **Root Cause**: HuggingFace Inference API does not support cross-encoder text-ranking models
-- **Evidence**: All cross-encoder models return 404 "Not Found" from API
-- **Investigation**: Tested 6 different models and multiple API formats
-- **Solution**: Strategic decision to use hybrid approach (API LLM + local reranker)
+## Success Criteria
 
-#### Completed Implementation
-1. **Cross-Encoder API Research** ✅ COMPLETE
-   - **Investigation**: Comprehensive testing of HuggingFace Inference API
-   - **Findings**: Cross-encoder models not supported by standard API
-   - **Alternative**: Text Embeddings Inference (TEI) identified as production solution
-   - **Decision**: Hybrid approach chosen for operational efficiency
+- **Classification Accuracy**: >85% on test queries
+- **Performance**: <50ms analysis overhead
+- **Modularity**: Clean separation of concerns
+- **Testability**: Each component independently testable
+- **Configuration**: Fully configurable thresholds and mappings
+- **Integration**: Seamless integration with existing Query Processor
 
-2. **ModelManager API Backend** ✅ COMPLETE  
-   - **File**: `src/components/retrievers/rerankers/utils/model_manager.py`
-   - **Features**: HuggingFace API backend support with proper fallback
-   - **Status**: Implemented but falls back to local models (expected behavior)
+## Testing Strategy
 
-3. **Configuration Updates** ✅ COMPLETE
-   - **Enhanced**: All configuration files with API backend options
-   - **Fixed**: MarkdownParser and SemanticScorer parameter issues
-   - **Status**: System fully operational with hybrid approach
+### Unit Tests
+- Test each sub-component independently
+- Validate feature extraction accuracy
+- Test classification thresholds
+- Verify model recommendations
 
-#### Strategic Decision Rationale
-1. **Complexity vs. Benefit**: TEI deployment requires significant infrastructure
-2. **Operational Overhead**: Additional container orchestration and monitoring
-3. **Cost Efficiency**: Local reranking avoids API costs for every query
-4. **Reliability**: No external dependencies for reranking functionality
-5. **Performance**: Local models can be faster than API calls
+### Integration Tests
+- Test Epic1QueryAnalyzer orchestration
+- Verify metadata flow through pipeline
+- Test configuration loading
+- Validate with various query types
 
-#### Future Work: TEI Integration (Optional)
-- **Effort**: 4-7 days additional work
-- **Benefits**: Additional ~150MB memory savings, 2 API calls per query
-- **Requirements**: Docker infrastructure, GPU support, monitoring
-
-### ⚡ Phase 2.5: Retrieval Efficiency Enhancement (CURRENT PRIORITY)
-**Status**: 🔄 IN PROGRESS - 2025-07-19  
-**Duration**: 2-3 hours estimated  
-**Priority**: HIGH (Quality & Efficiency)  
-**Architecture Confidence**: 95%  
-
-#### Problem Discovered
-- **Issue**: Current semantic gap detection uses inefficient all-or-nothing approach
-- **Evidence**: RV32/RV64 legitimate queries blocked despite 0.507 similarity documents  
-- **Root Cause**: Average-based filtering rejects good documents due to poor neighbors
-- **Impact**: Legitimate technical queries return 0 documents, confidence scores artificially low
-
-#### Solution: Composite Score-Based Individual Document Filtering
-- **Strategy**: Replace global semantic blocking with per-document quality assessment
-- **Algorithm**: `composite_score = α * fusion_score + β * semantic_similarity`
-- **Benefits**: Leverage existing ScoreAwareFusion investment + semantic validation
-- **Efficiency**: Reduce candidates from k*2 to k*1.5 (25% improvement)
-
-#### Implementation Plan
-1. **Configuration Enhancement**: Add composite filtering parameters
-2. **Core Method**: `_calculate_composite_scores()` in ModularUnifiedRetriever  
-3. **Pipeline Replacement**: Individual filtering vs global blocking
-4. **Backward Compatibility**: Graceful fallback with deprecation warnings
-
-#### Expected Outcomes
-- ✅ RV32/RV64 queries return relevant documents (0.507 similarity passes)
-- ✅ Napoleon/Paris queries still blocked by low composite scores
-- ✅ 25% efficiency improvement (fewer candidates processed)
-- ✅ Higher confidence scores from better document quality
-- ✅ Maintains Epic 2 functionality and architecture compliance
-
-### Phase 3: Embedder Integration (2-3 hours)
-- Create `HuggingFaceEmbeddingAdapter` for sentence-transformers API
-- Update embedder configuration for HF embeddings
-- Implement intelligent caching
-
-### Phase 4: HF Space Configuration (1-2 hours)
-- Create `config/hf_spaces.yaml` with API-only models
-- Environment auto-detection for HF Spaces
-- Cost monitoring and controls
-
-## Migration Benefits
-
-### Memory Reduction
-| Component | Current | After Migration | Savings |
-|-----------|---------|----------------|---------|
-| LLM | 2-4GB | ~50MB | ~3.5GB |
-| Reranker | 150-200MB | ~20MB | ~150MB |
-| Embedder | 80-100MB | ~30MB | ~70MB |
-| **Total** | **~3-4GB** | **~1-1.5GB** | **50-70%** |
-
-### Cost Estimates (1K queries/month)
-- **Embeddings**: $0.50-2.00
-- **Reranking**: $1.00-5.00
-- **LLM Generation**: $5.00-20.00
-- **Total**: $6.50-27.00/month
-
-## Environment Setup Requirements
-
-### HF Token Setup
-```bash
-export HF_TOKEN="hf_your_token_here"
-export HUGGINGFACE_API_TOKEN="hf_your_token_here"
-```
-
-### Dependencies
-```bash
-pip install huggingface-hub>=0.33.1
-```
-
-## Implementation Commands
-
-### Context Restoration
-```bash
-/context hf-migration
-/implementer epic2-hf-api-integration  # NEXT SESSION
-```
-
-### Architecture Review
-```bash
-/architect adapter-patterns
-/architect huggingface-migration
-```
-
-### Implementation Focus
-```bash
-/implementer epic2-hf-api-integration  # READY NOW
-/implementer phase2-reranker-integration  # FUTURE
-```
-
-### Status Checking
-```bash
-/status generators
-/status migration-progress
-/status epic2-integration
-```
-
-## Progress Tracking
-**estimated_completion**: "CORE INTEGRATION COMPLETE"  
-**blockers**: []  
-**last_updated**: "2025-07-18T18:18:30Z"
-
-## Migration Status
-**migration_status**: "PHASE_1_COMPLETE"  
-**architecture_compliance**: "100%"  
-**confidence_level**: "100%"  
-**existing_infrastructure**: "25% complete (LLM only)"  
-**epic2_hf_api_ready**: "PARTIAL - LLM only, embedder/reranker still local"
-
-## Key System Files
-**migration_files**: [
-  "docs/architecture/HUGGINGFACE_API_MIGRATION_PLAN.md",
-  "hf_deployment/src/shared_utils/generation/inference_providers_generator.py",
-  "src/components/generators/llm_adapters/",
-  "config/default.yaml",
-  "config/advanced_test.yaml"
-]
-
-**target_files**: [
-  "src/components/generators/llm_adapters/huggingface_adapter.py",
-  "src/components/retrievers/rerankers/huggingface_reranker.py",
-  "src/components/embedders/models/huggingface_model.py",
-  "config/hf_spaces.yaml"
-]
+### Performance Tests
+- Measure analysis latency (<50ms requirement)
+- Test concurrent analysis
+- Monitor memory usage
 
 ## Validation Commands
+```bash
+# Run comprehensive tests
+python tests/run_comprehensive_tests.py
 
-**validation_commands**:
-  - "python tests/run_comprehensive_tests.py"
-  - "python tests/diagnostic/run_all_diagnostics.py"
-  - "python final_epic2_proof.py"
-  - "python test_hf_api_manual.py"
-  - "python test_epic2_hf_api_init.py"
+# Test Epic 1 analyzer (to be created)
+python tests/unit/test_epic1_query_analyzer.py
 
-## State Tracking
+# Test integration
+python tests/integration/test_query_processor_epic1.py
 
-**last_sync**: "2025-07-19T15:40:00Z"
-**current_focus**: "migration"  
-**focus_since**: "2025-07-19T15:40:00Z"
+# Ensure Epic 2 compatibility
+python final_epic2_proof.py
+```
 
-## Notes
-- Comprehensive 47KB migration plan document created
-- Existing HF infrastructure provides 40% foundation
-- Architecture assessment shows 85% confidence level
-- Ready for immediate Phase 1 implementation
-- Context restoration system fully configured
-- v2.0 command system with reality verification active
+## Next Steps
+
+Currently implementing the modular Epic1QueryAnalyzer with proper sub-component architecture in the Query Processor, maintaining architectural boundaries and following established patterns.
