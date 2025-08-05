@@ -73,89 +73,85 @@ class Epic2ConfigurationValidator:
         self.performance_metrics = {}
         self.override_config = override_config
 
-        # Define Epic 2 test configuration files
+        # Define Epic 2 test configuration files with proper feature differentiation
         if override_config:
-            # Use the specified config for all Epic 2 tests
-            self.config_files = {
-                "base": "default.yaml",
-                "neural_enabled": override_config, 
-                "graph_enabled": override_config,
-                "all_features": override_config,
-                "minimal": "default.yaml",
-            }
-        else:
-            # Use default mapping with Ollama configs
-            self.config_files = {
-                "base": "default.yaml",
-                "neural_enabled": "epic2_score_aware_ollama.yaml", 
-                "graph_enabled": "epic2_graph_enhanced_ollama.yaml",
-                "all_features": "epic2_graph_enhanced_ollama.yaml",
-                "minimal": "default.yaml",
-            }
-
-        # Expected sub-component mappings based on actual config files
-        # When using override_config, all Epic 2 scenarios use the same config file
-        if override_config:
-            # All Epic 2 scenarios use the override config - determine expected components from filename
-            if "score_aware" in override_config:
-                epic2_expectations = {
-                    "reranker": "NeuralReranker",
-                    "fusion": "ScoreAwareFusion", 
-                    "vector_index": "FAISSIndex",
+            # Create proper feature differentiation based on override config type
+            if "graph_enhanced" in override_config:
+                # Override is graph-enhanced, use score-aware for neural-only test
+                self.config_files = {
+                    "base": "default.yaml",                    # Basic RRF + Identity
+                    "neural_enabled": "epic2_score_aware_ollama.yaml",   # Neural + Score-aware (no graph)
+                    "graph_enabled": override_config,          # Neural + Graph-enhanced  
+                    "all_features": override_config,           # Neural + Graph-enhanced (complete Epic 2)
+                    "minimal": "default.yaml",                 # Basic configuration
                 }
-            elif "graph_enhanced" in override_config:
-                epic2_expectations = {
-                    "reranker": "NeuralReranker",
-                    "fusion": "GraphEnhancedRRFFusion",
-                    "vector_index": "FAISSIndex",
+            elif "score_aware" in override_config:
+                # Override is score-aware, use graph-enhanced for graph test
+                self.config_files = {
+                    "base": "default.yaml",                    # Basic RRF + Identity
+                    "neural_enabled": override_config,         # Neural + Score-aware
+                    "graph_enabled": "epic2_graph_enhanced_ollama.yaml", # Neural + Graph-enhanced
+                    "all_features": "epic2_graph_enhanced_ollama.yaml", # Complete Epic 2
+                    "minimal": "default.yaml",                 # Basic configuration
                 }
             else:
-                # Default to graph-enhanced for other Epic 2 configs
-                epic2_expectations = {
-                    "reranker": "NeuralReranker",
-                    "fusion": "GraphEnhancedRRFFusion",
-                    "vector_index": "FAISSIndex",
+                # Fallback: assume override is complete Epic 2, differentiate others
+                self.config_files = {
+                    "base": "default.yaml",                    # Basic RRF + Identity
+                    "neural_enabled": "epic2_score_aware_ollama.yaml",   # Neural + Score-aware
+                    "graph_enabled": "epic2_graph_enhanced_ollama.yaml", # Neural + Graph-enhanced
+                    "all_features": override_config,           # Use provided config
+                    "minimal": "default.yaml",                 # Basic configuration
                 }
         else:
-            # Using individual config files - create specific expectations per scenario
-            neural_enabled_expectations = {
-                "reranker": "NeuralReranker",
-                "fusion": "ScoreAwareFusion",  # epic2_score_aware_ollama.yaml uses ScoreAwareFusion
-                "vector_index": "FAISSIndex",
-            }
-            
-            graph_enabled_expectations = {
-                "reranker": "NeuralReranker",
-                "fusion": "GraphEnhancedRRFFusion",  # epic2_graph_enhanced_ollama.yaml uses GraphEnhancedRRFFusion
-                "vector_index": "FAISSIndex",
+            # Default to Ollana-based configs with proper feature differentiation
+            self.config_files = {
+                "base": "default.yaml",                    # Basic configuration
+                "neural_enabled": "epic2_score_aware_ollama.yaml",   # Neural + Score-aware (no graph)
+                "graph_enabled": "epic2_graph_enhanced_ollama.yaml", # Neural + Graph-enhanced
+                "all_features": "epic2_graph_enhanced_ollama.yaml",  # Complete Epic 2
+                "minimal": "default.yaml",                 # Basic configuration
             }
 
-        # Set expectations based on actual config files used
-        if override_config:
-            # All Epic 2 scenarios use the same override config
-            neural_expectations = epic2_expectations
-            graph_expectations = epic2_expectations  
-            all_features_expectations = epic2_expectations
-        else:
-            # Different config files for different scenarios
-            neural_expectations = neural_enabled_expectations
-            graph_expectations = graph_enabled_expectations
-            all_features_expectations = graph_enabled_expectations  # uses epic2_graph_enhanced_ollama.yaml
+        # Expected sub-component mappings for differentiated configuration approach
+        # Now each config scenario uses appropriate config files with different features
+        
+        # Default expectations for basic configuration
+        base_expectations = {
+            "reranker": "IdentityReranker",  # default.yaml uses Identity reranker
+            "fusion": "RRFFusion",          # default.yaml uses basic RRF fusion
+            "vector_index": "FAISSIndex",
+        }
+        
+        # Epic 2 Score-Aware expectations (neural reranking + score-aware fusion)
+        neural_enabled_expectations = {
+            "reranker": "NeuralReranker",
+            "fusion": "ScoreAwareFusion",  # epic2_score_aware_ollama.yaml uses ScoreAwareFusion
+            "vector_index": "FAISSIndex",
+        }
+        
+        # Epic 2 Graph-Enhanced expectations (neural reranking + graph-enhanced fusion)
+        graph_enabled_expectations = {
+            "reranker": "NeuralReranker",
+            "fusion": "GraphEnhancedRRFFusion",  # epic2_graph_enhanced_ollama.yaml uses GraphEnhancedRRFFusion
+            "vector_index": "FAISSIndex",
+        }
+        
+        # Complete Epic 2 expectations (same as graph-enhanced in current implementation)
+        all_features_expectations = {
+            "reranker": "NeuralReranker",
+            "fusion": "GraphEnhancedRRFFusion",  # Complete Epic 2 uses graph-enhanced fusion
+            "vector_index": "FAISSIndex",
+        }
 
+        # Set expectations based on differentiated configuration approach
+        # Now each scenario uses the appropriate config file with correct components
         self.expected_mappings = {
-            "base": {
-                "reranker": "IdentityReranker",  # default.yaml has identity reranker
-                "fusion": "RRFFusion",  # default.yaml has basic RRF fusion
-                "vector_index": "FAISSIndex",
-            },
-            "neural_enabled": neural_expectations,
-            "graph_enabled": graph_expectations,
-            "all_features": all_features_expectations,
-            "minimal": {
-                "reranker": "IdentityReranker",  # default.yaml has identity reranker
-                "fusion": "RRFFusion",  # default.yaml has basic RRF fusion
-                "vector_index": "FAISSIndex",
-            },
+            "base": base_expectations,                     # default.yaml
+            "neural_enabled": neural_enabled_expectations, # epic2_score_aware_ollama.yaml  
+            "graph_enabled": graph_enabled_expectations,   # epic2_graph_enhanced_ollama.yaml
+            "all_features": all_features_expectations,     # epic2_graph_enhanced_ollama.yaml
+            "minimal": base_expectations,                  # default.yaml
         }
 
     def run_all_validations(self) -> Dict[str, Any]:

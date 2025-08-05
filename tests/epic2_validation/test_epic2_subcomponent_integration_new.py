@@ -327,18 +327,15 @@ class Epic2SubComponentIntegrationValidator:
             # Test graph enhancement parameters
             graph_params_valid = True
             if has_graph_fusion:
-                threshold = getattr(
-                    retriever.fusion_strategy, "similarity_threshold", None
-                )
-                max_connections = getattr(
-                    retriever.fusion_strategy, "max_connections_per_document", None
-                )
-                use_pagerank = getattr(retriever.fusion_strategy, "use_pagerank", None)
+                # Check for actual graph config attributes
+                similarity_threshold = retriever.fusion_strategy.graph_config.get("similarity_threshold")
+                entity_boost = retriever.fusion_strategy.graph_config.get("entity_boost")
+                relationship_boost = retriever.fusion_strategy.graph_config.get("relationship_boost")
 
                 graph_params_valid = (
-                    threshold is not None
-                    and max_connections is not None
-                    and use_pagerank is not None
+                    similarity_threshold is not None
+                    and entity_boost is not None
+                    and relationship_boost is not None
                 )
 
             test_result.update(
@@ -361,18 +358,17 @@ class Epic2SubComponentIntegrationValidator:
                         "graph_params_valid": graph_params_valid,
                         "retrieval_time_ms": retrieval_time,
                         "similarity_threshold": (
-                            getattr(
-                                retriever.fusion_strategy, "similarity_threshold", None
-                            )
+                            retriever.fusion_strategy.graph_config.get("similarity_threshold")
                             if has_graph_fusion
                             else None
                         ),
-                        "max_connections": (
-                            getattr(
-                                retriever.fusion_strategy,
-                                "max_connections_per_document",
-                                None,
-                            )
+                        "entity_boost": (
+                            retriever.fusion_strategy.graph_config.get("entity_boost")
+                            if has_graph_fusion
+                            else None
+                        ),
+                        "relationship_boost": (
+                            retriever.fusion_strategy.graph_config.get("relationship_boost")
                             if has_graph_fusion
                             else None
                         ),

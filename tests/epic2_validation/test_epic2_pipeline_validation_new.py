@@ -93,20 +93,38 @@ class Epic2PipelineValidator:
 
         # Test configurations for pipeline testing (using real Epic 2 configs)
         if override_config:
-            # Use provided config for all Epic 2 scenarios
-            self.configs = {
-                "minimal": "default.yaml",  # Basic pipeline
-                "neural": override_config,  # Use provided config
-                "graph": override_config,  # Use provided config
-                "complete": override_config,  # Use provided config
-            }
+            # Create proper feature differentiation based on override config type
+            if "graph_enhanced" in override_config:
+                # Override is graph-enhanced, use score-aware for neural-only test
+                self.configs = {
+                    "minimal": "default.yaml",                    # Basic RRF + Identity
+                    "neural": "epic2_score_aware_ollama.yaml",   # Neural + Score-aware (no graph)
+                    "graph": override_config,                     # Neural + Graph-enhanced  
+                    "complete": override_config,                  # Neural + Graph-enhanced (complete Epic 2)
+                }
+            elif "score_aware" in override_config:
+                # Override is score-aware, use graph-enhanced for graph test
+                self.configs = {
+                    "minimal": "default.yaml",                    # Basic RRF + Identity
+                    "neural": override_config,                    # Neural + Score-aware
+                    "graph": "epic2_graph_enhanced_ollama.yaml", # Neural + Graph-enhanced
+                    "complete": "epic2_graph_enhanced_ollama.yaml", # Complete Epic 2
+                }
+            else:
+                # Fallback: assume override is complete Epic 2, differentiate others
+                self.configs = {
+                    "minimal": "default.yaml",                    # Basic RRF + Identity
+                    "neural": "epic2_score_aware_ollama.yaml",   # Neural + Score-aware
+                    "graph": "epic2_graph_enhanced_ollama.yaml", # Neural + Graph-enhanced
+                    "complete": override_config,                  # Use provided config
+                }
         else:
-            # Default to Ollama-based configs
+            # Default to Ollama-based configs with proper feature differentiation
             self.configs = {
-                "minimal": "default.yaml",  # Basic pipeline
-                "neural": "epic2_score_aware_ollama.yaml",  # Neural + Score-Aware
-                "graph": "epic2_graph_enhanced_ollama.yaml",  # Neural + Graph-Enhanced
-                "complete": "epic2_graph_enhanced_ollama.yaml",  # Complete Epic 2 pipeline
+                "minimal": "default.yaml",                    # Basic pipeline
+                "neural": "epic2_score_aware_ollama.yaml",   # Neural + Score-Aware (no graph)
+                "graph": "epic2_graph_enhanced_ollama.yaml", # Neural + Graph-Enhanced
+                "complete": "epic2_graph_enhanced_ollama.yaml", # Complete Epic 2 pipeline
             }
 
     def run_all_validations(self) -> Dict[str, Any]:
@@ -585,12 +603,13 @@ class Epic2PipelineValidator:
                         retriever, test_query
                     )
 
-                    # Determine expected features based on configuration
+                    # Determine expected features based on Epic 2 configuration reality
+                    # Note: All Epic 2 configs have neural reranking; they differ in fusion strategy
                     expected_features = {
-                        "minimal": {"neural": False, "graph": False},
-                        "neural": {"neural": True, "graph": False},
-                        "graph": {"neural": False, "graph": True},
-                        "complete": {"neural": True, "graph": True},
+                        "minimal": {"neural": False, "graph": False},  # default.yaml: Identity reranker + RRF
+                        "neural": {"neural": True, "graph": False},    # score_aware: Neural + Score-aware fusion (no graph)
+                        "graph": {"neural": True, "graph": True},      # graph_enhanced: Neural + Graph-enhanced fusion
+                        "complete": {"neural": True, "graph": True},   # graph_enhanced: Complete Epic 2 (Neural + Graph)
                     }
 
                     expected = expected_features.get(config_name, {})
@@ -1209,12 +1228,13 @@ class Epic2PipelineValidator:
                 if result.get("tested", False)
             )
 
-            # Verify expected feature activation patterns
+            # Verify expected feature activation patterns (updated for Epic 2 reality)
+            # Note: All Epic 2 configs have neural reranking; they differ in fusion strategy
             expected_combinations = {
-                "minimal": {"neural": False, "graph": False},
-                "neural": {"neural": True, "graph": False},
-                "graph": {"neural": False, "graph": True},
-                "complete": {"neural": True, "graph": True},
+                "minimal": {"neural": False, "graph": False},  # default.yaml: Identity reranker + RRF
+                "neural": {"neural": True, "graph": False},    # score_aware: Neural + Score-aware fusion (no graph)
+                "graph": {"neural": True, "graph": True},      # graph_enhanced: Neural + Graph-enhanced fusion
+                "complete": {"neural": True, "graph": True},   # graph_enhanced: Complete Epic 2 (Neural + Graph)
             }
 
             combinations_correct = True

@@ -274,20 +274,20 @@ class Epic2ComprehensiveTestRunner:
 
             lines.append("")
 
-        # Individual test results (only show failures)
+        # Individual test results with clear PASS/FAIL indicators
         test_results = results.get("test_results", {})
-        failed_tests = {name: result for name, result in test_results.items() 
-                       if result.get("overall_score", 0) < 80}
-        
-        if failed_tests:
-            lines.append("Failed Tests:")
-            lines.append("-" * 20)
-            for test_name, test_result in failed_tests.items():
+        if test_results:
+            lines.append("Test Results by Category:")
+            lines.append("-" * 40)
+            for test_name, test_result in test_results.items():
                 score = test_result.get("overall_score", 0)
-                lines.append(f"  {test_name}: {score:.1f}%")
-                # Show first error only
-                if test_result.get("validation_errors"):
-                    lines.append(f"    {test_result['validation_errors'][0]}")
+                status = "✅ PASS" if score >= 80 else "❌ FAIL"
+                lines.append(f"  {test_name}: {status} ({score:.1f}%)")
+                
+                # Show first error for failing tests
+                if score < 80 and test_result.get("validation_errors"):
+                    error = test_result['validation_errors'][0]
+                    lines.append(f"    → {error}")
             lines.append("")
 
         lines.append("")
