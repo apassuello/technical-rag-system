@@ -1,0 +1,144 @@
+# Epic 2 Configuration: Score Aware Fusion with HuggingFace API
+# Purpose: Cloud production with score-aware fusion
+# Epic 2 Features: Score-Aware Fusion + Neural Reranking
+# LLM Backend: HuggingFace API (cloud inference)
+
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 1024
+    chunk_overlap: 128
+
+embedder:
+  type: "modular"
+  config:
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        device: "mps"
+        normalize_embeddings: true
+    batch_processor:
+      type: "dynamic"
+      config:
+        initial_batch_size: 64
+        max_batch_size: 256
+        optimize_for_memory: false
+    cache:
+      type: "memory"
+      config:
+        max_entries: 100000
+        max_memory_mb: 1024
+
+# Epic 2 ModularUnifiedRetriever with Score Aware Fusion
+retriever:
+  type: "modular_unified"
+  config:
+    vector_index:
+      type: "faiss"
+      config:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+        metric: "cosine"
+    
+    sparse:
+      type: "bm25"
+      config:
+        k1: 1.2
+        b: 0.25  # Optimized: reduced from 0.75 to reduce document length bias
+        # Alternative values: b: 0.75 (original), b: 0.5 (moderate)
+        lowercase: true
+        filter_stop_words: true
+        stop_word_sets: ["english_common"]
+        preserve_technical_terms: true
+    
+    # Epic 2 Feature: Score Aware Fusion - ENABLED
+    fusion:
+      type: "score_aware"
+      config:
+        score_weight: 0.8      # α - preserve semantic/BM25 scores (high importance)
+        # Alternative score weights: 0.9 (very high), 0.7 (moderate), 0.6 (balanced)
+        rank_weight: 0.15      # β - rank stability weighting
+        # Alternative rank weights: 0.1 (minimal), 0.2 (higher), 0.25 (significant)
+        overlap_weight: 0.05   # γ - both-retriever bonus
+        # Alternative overlap weights: 0.0 (disabled), 0.1 (moderate), 0.15 (high)
+        normalize_scores: true # Enable score normalization
+        # Alternative: false (raw scores)
+        k: 60                  # RRF constant for rank component
+        # Alternative k values: 30 (higher discrimination), 90 (smoother)
+    
+    # Epic 2 Feature: Neural Reranking - ENABLED
+    reranker:
+      type: "neural"
+      config:
+        enabled: true
+        model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
+        device: "mps"
+        batch_size: 32
+        # Alternative batch sizes: 16 (lower memory), 64 (higher throughput)
+        max_length: 512
+        max_candidates: 100
+        # Alternative candidates: 50 (faster), 150 (more comprehensive)
+        models:
+          default_model:
+            name: "cross-encoder/ms-marco-MiniLM-L6-v2"
+            device: "mps"
+            batch_size: 32
+            max_length: 512
+        default_model: "default_model"
+
+# HuggingFace API for cloud production inference
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    llm_client:
+      type: "huggingface"
+      config:
+        model_name: "microsoft/DialoGPT-medium"
+        # Alternative models: "google/gemma-2-2b-it", "meta-llama/Llama-3.2-3B-Instruct"
+        api_token: "${HF_TOKEN}"  # Set HF_TOKEN environment variable
+        timeout: 30
+        # Alternative timeouts: 60 (patient), 15 (fast-fail)
+        use_chat_completion: true
+        fallback_models:
+          - "google/gemma-2-2b-it"  
+          - "meta-llama/Llama-3.2-3B-Instruct"
+          - "Qwen/Qwen2.5-1.5B-Instruct"
+        max_tokens: 1024
+        temperature: 0.1
+        # Alternative temperatures: 0.0 (deterministic), 0.3 (balanced)
+        top_p: 0.9
+    
+    temperature: 0.3
+    max_tokens: 1024
+    confidence_threshold: 0.85
+    
+    prompt_builder:
+      type: "simple"
+      config:
+        max_context_length: 12000
+        include_instructions: true
+        citation_style: "inline"
+    
+    response_parser:
+      type: "markdown"
+      config:
+        preserve_formatting: true
+        extract_citations: true
+    
+    confidence_scorer:
+      type: "semantic"
+      config:
+        relevance_weight: 0.4
+        grounding_weight: 0.4
+        quality_weight: 0.2
+        min_answer_length: 20
+        max_answer_length: 1000
+
+# Optimized for cloud production
+global_settings:
+  environment: "production"
+  log_level: "INFO"
+  cache_enabled: true
+  performance_monitoring: true
+  max_concurrent_requests: 10  # Higher for cloud scaling

@@ -114,7 +114,7 @@ class Epic2ComprehensiveTestRunner:
             return False
 
     def run_test_suite(
-        self, mode: str = "comprehensive", custom_tests: Optional[List[str]] = None
+        self, mode: str = "comprehensive", custom_tests: Optional[List[str]] = None, config_file: str = "epic2_graph_enhanced_mock.yaml"
     ) -> Dict[str, Any]:
         """Run Epic 2 test suite with specified mode or custom tests."""
 
@@ -160,7 +160,8 @@ class Epic2ComprehensiveTestRunner:
             try:
                 # Create and run validator
                 self.performance_metrics.start_timer(f"{test_name}_execution")
-                validator = self.validators[test_name]()
+                # Pass config_file to all validators (now all support override_config)
+                validator = self.validators[test_name](override_config=config_file)
                 results = validator.run_all_validations()
                 execution_time = self.performance_metrics.end_timer(
                     f"{test_name}_execution"
@@ -174,12 +175,10 @@ class Epic2ComprehensiveTestRunner:
                 total_tests += results.get("total_tests", 0)
                 total_passed += results.get("passed_tests", 0)
 
-                # Log results
+                # Log results (minimal)
                 score = results.get("overall_score", 0)
-                status = "✅ PASS" if score >= 80 else "❌ FAIL"
-                logger.info(
-                    f"{test_name}: {status} ({score:.1f}%, {execution_time:.1f}ms)"
-                )
+                status = "PASS" if score >= 80 else "FAIL" 
+                logger.info(f"{test_name}: {status} {score:.1f}%")
 
                 # Add test-specific metrics
                 if "performance_metrics" in results:
@@ -248,30 +247,15 @@ class Epic2ComprehensiveTestRunner:
         """Generate console-formatted test report."""
         lines = []
 
-        # Header
-        lines.append("=" * 80)
-        lines.append("EPIC 2 COMPREHENSIVE VALIDATION REPORT")
-        lines.append("=" * 80)
+        # Concise header
+        lines.append("Epic 2 Validation Results")
+        lines.append("-" * 40)
 
-        # Overall summary
+        # Overall summary (no emojis)
         overall_score = results.get("overall_score", 0)
-        status = results.get("status", "UNKNOWN")
-
-        if overall_score >= 90:
-            status_icon = "🎉 EXCELLENT"
-        elif overall_score >= 80:
-            status_icon = "✅ GOOD"
-        elif overall_score >= 60:
-            status_icon = "⚠️  NEEDS IMPROVEMENT"
-        else:
-            status_icon = "❌ FAILED"
-
-        lines.append(f"Overall Status: {status_icon}")
-        lines.append(f"Overall Score: {overall_score:.1f}%")
-        lines.append(
-            f"Tests Passed: {results['total_passed']}/{results['total_tests']}"
-        )
-        lines.append(f"Mode: {results['mode']}")
+        status = "PASS" if overall_score >= 80 else "FAIL"
+        
+        lines.append(f"Overall: {status} {overall_score:.1f}% ({results['total_passed']}/{results['total_tests']} passed)")
         lines.append("")
 
         # Performance summary
@@ -290,37 +274,21 @@ class Epic2ComprehensiveTestRunner:
 
             lines.append("")
 
-        # Individual test results
-        lines.append("Test Results:")
-        lines.append("-" * 40)
-
+        # Individual test results with clear PASS/FAIL indicators
         test_results = results.get("test_results", {})
-        for test_name, test_result in test_results.items():
-            score = test_result.get("overall_score", 0)
-            passed = test_result.get("passed_tests", 0)
-            total = test_result.get("total_tests", 0)
-
-            if score >= 80:
-                status_icon = "✅"
-            elif score >= 60:
-                status_icon = "⚠️"
-            else:
-                status_icon = "❌"
-
-            lines.append(
-                f"{status_icon} {test_name.title()}: {score:.1f}% ({passed}/{total})"
-            )
-
-            # Show errors if any
-            if test_result.get("validation_errors"):
-                for error in test_result["validation_errors"][
-                    :3
-                ]:  # Show first 3 errors
-                    lines.append(f"    • {error}")
-                if len(test_result["validation_errors"]) > 3:
-                    lines.append(
-                        f"    • ... and {len(test_result['validation_errors']) - 3} more errors"
-                    )
+        if test_results:
+            lines.append("Test Results by Category:")
+            lines.append("-" * 40)
+            for test_name, test_result in test_results.items():
+                score = test_result.get("overall_score", 0)
+                status = "✅ PASS" if score >= 80 else "❌ FAIL"
+                lines.append(f"  {test_name}: {status} ({score:.1f}%)")
+                
+                # Show first error for failing tests
+                if score < 80 and test_result.get("validation_errors"):
+                    error = test_result['validation_errors'][0]
+                    lines.append(f"    → {error}")
+            lines.append("")
 
         lines.append("")
 
@@ -347,33 +315,13 @@ class Epic2ComprehensiveTestRunner:
                             lines.append(f"  {metric_name}: {metric_value}")
             lines.append("")
 
-        # Recommendations
-        lines.append("Recommendations:")
-        lines.append("-" * 40)
-
-        if overall_score >= 90:
-            lines.append("🎯 Epic 2 system is production-ready!")
-            lines.append("   • All validation targets exceeded")
-            lines.append("   • System demonstrates advanced capabilities")
-            lines.append("   • Ready for portfolio demonstration")
-        elif overall_score >= 80:
-            lines.append("✅ Epic 2 system meets most requirements")
-            lines.append("   • Core functionality validated")
-            lines.append("   • Minor optimizations recommended")
-            lines.append("   • Suitable for demonstration with caveats")
-        elif overall_score >= 60:
-            lines.append("⚠️  Epic 2 system needs improvement")
-            lines.append("   • Several validation targets missed")
-            lines.append("   • Performance or quality issues detected")
-            lines.append("   • Requires debugging before demonstration")
+        # Simple status summary
+        if overall_score >= 80:
+            lines.append("Status: Epic 2 system meets validation requirements")
         else:
-            lines.append("❌ Epic 2 system has significant issues")
-            lines.append("   • Multiple validation failures")
-            lines.append("   • System not ready for demonstration")
-            lines.append("   • Requires comprehensive debugging")
-
+            lines.append("Status: Epic 2 system requires fixes before deployment")
+        
         lines.append("")
-        lines.append("=" * 80)
 
         return "\n".join(lines)
 
@@ -450,6 +398,11 @@ def main():
     )
 
     parser.add_argument("--quiet", action="store_true", help="Reduce logging output")
+    parser.add_argument(
+        "--config", 
+        default="epic2_graph_enhanced_mock.yaml",
+        help="Epic 2 configuration file to use for testing (default: epic2_graph_enhanced_mock.yaml)"
+    )
 
     args = parser.parse_args()
 
@@ -470,7 +423,7 @@ def main():
         logger.info("Starting Epic 2 comprehensive validation...")
         start_time = time.time()
 
-        results = runner.run_test_suite(mode=args.mode, custom_tests=custom_tests)
+        results = runner.run_test_suite(mode=args.mode, custom_tests=custom_tests, config_file=args.config)
 
         execution_time = time.time() - start_time
         results["execution_time_seconds"] = execution_time

@@ -207,7 +207,11 @@ class GraphEnhancedRRFFusion(FusionStrategy):
         sparse_results: List[Tuple[int, float]]
     ) -> List[Tuple[int, float]]:
         """
-        Apply graph-based enhancement to fusion results.
+        Apply graph-based enhancement with proper score scaling.
+        
+        Fixes the scale mismatch where tiny RRF scores (~0.016) were 
+        overwhelmed by large graph enhancements (~0.075), destroying
+        ranking discrimination.
         
         Args:
             base_results: Base RRF fusion results
@@ -215,39 +219,84 @@ class GraphEnhancedRRFFusion(FusionStrategy):
             sparse_results: Original sparse retrieval results
             
         Returns:
-            Graph-enhanced fusion results
+            Graph-enhanced fusion results with proper score scaling
         """
         try:
-            # Create a score map for efficient updates
-            enhanced_scores = {}
-            for doc_idx, score in base_results:
-                enhanced_scores[doc_idx] = score
+            if not base_results:
+                return base_results
             
-            # Extract document indices from all result sets
-            all_doc_indices = set()
-            for doc_idx, _ in base_results:
-                all_doc_indices.add(doc_idx)
+            # Extract base scores and calculate range
+            base_scores = {doc_idx: score for doc_idx, score in base_results}
+            min_base = min(base_scores.values())
+            max_base = max(base_scores.values())
+            base_range = max_base - min_base
+            
+            logger.debug(f"Base score range: {min_base:.6f} - {max_base:.6f} (spread: {base_range:.6f})")
+            
+            # If base range is too small, normalize scores to improve discrimination
+            if base_range < 0.01:  # Very small range indicates poor discrimination
+                logger.debug(f"Small base range detected, applying normalization")
+                
+                # Normalize to [0.1, 1.0] range to preserve ranking while improving discrimination
+                normalized_scores = {}
+                for doc_idx, score in base_scores.items():
+                    if base_range > 0:
+                        normalized = 0.1 + 0.9 * (score - min_base) / base_range
+                    else:
+                        normalized = 0.55  # Mid-range if all scores identical
+                    normalized_scores[doc_idx] = normalized
+                
+                base_scores = normalized_scores
+                min_base = min(base_scores.values())
+                max_base = max(base_scores.values())
+                base_range = max_base - min_base
+                
+                logger.debug(f"Normalized score range: {min_base:.6f} - {max_base:.6f} (spread: {base_range:.6f})")
+            
+            # Extract all document indices
+            all_doc_indices = set(base_scores.keys())
             for doc_idx, _ in dense_results:
                 all_doc_indices.add(doc_idx)
             for doc_idx, _ in sparse_results:
                 all_doc_indices.add(doc_idx)
             
-            # Apply entity-based scoring enhancement
+            # Calculate graph enhancements
             entity_boosts = self._calculate_entity_boosts(list(all_doc_indices))
-            
-            # Apply relationship-based scoring enhancement  
             relationship_boosts = self._calculate_relationship_boosts(list(all_doc_indices))
             
-            # Combine enhancements with base scores
+            # Scale graph enhancements proportionally to base score range
             graph_weight = self.graph_config.get("graph_weight", 0.1)
+            max_possible_enhancement = 0.25  # Max entity (0.15) + relationship (0.1) boost
             
-            for doc_idx in enhanced_scores:
+            # Scale enhancement to be proportional to base score range
+            # This ensures graph enhancement doesn't dominate but still provides meaningful boost
+            enhancement_scale = min(base_range * 0.5, max_possible_enhancement)  # Max 50% of base range
+            actual_scale_factor = enhancement_scale / max_possible_enhancement if max_possible_enhancement > 0 else 0
+            
+            logger.debug(f"Graph enhancement scaling: weight={graph_weight}, scale={enhancement_scale:.6f}, factor={actual_scale_factor:.3f}")
+            
+            # Apply scaled enhancements
+            enhanced_scores = {}
+            enhancements_applied = 0
+            
+            for doc_idx in base_scores:
+                base_score = base_scores[doc_idx]
                 entity_boost = entity_boosts.get(doc_idx, 0.0)
                 relationship_boost = relationship_boosts.get(doc_idx, 0.0)
                 
-                # Apply graph enhancement with configurable weight
-                graph_enhancement = (entity_boost + relationship_boost) * graph_weight
-                enhanced_scores[doc_idx] += graph_enhancement
+                # Scale the enhancement to be proportional to base score range
+                raw_enhancement = (entity_boost + relationship_boost) * graph_weight
+                scaled_enhancement = raw_enhancement * actual_scale_factor
+                
+                final_score = base_score + scaled_enhancement
+                
+                # Ensure scores don't exceed 1.0 to maintain compatibility
+                final_score = min(final_score, 1.0)
+                
+                enhanced_scores[doc_idx] = final_score
+                
+                if scaled_enhancement > 0:
+                    enhancements_applied += 1
                 
                 # Track statistics
                 if entity_boost > 0:
@@ -255,8 +304,20 @@ class GraphEnhancedRRFFusion(FusionStrategy):
                 if relationship_boost > 0:
                     self.stats["relationship_boosts_applied"] += 1
             
-            # Sort by enhanced scores and return
+            logger.debug(f"Applied enhancements to {enhancements_applied} documents")
+            
+            # Sort and return
             enhanced_results = sorted(enhanced_scores.items(), key=lambda x: x[1], reverse=True)
+            
+            # Final score range analysis
+            if enhanced_results:
+                final_min = min(score for _, score in enhanced_results)
+                final_max = max(score for _, score in enhanced_results)
+                final_range = final_max - final_min
+                discrimination_improvement = final_range / base_range if base_range > 0 else 1.0
+                
+                logger.debug(f"Final score range: {final_min:.6f} - {final_max:.6f} (spread: {final_range:.6f})")
+                logger.debug(f"Discrimination improvement: {discrimination_improvement:.2f}x")
             
             return enhanced_results
             
