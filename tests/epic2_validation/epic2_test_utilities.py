@@ -51,7 +51,7 @@ class Epic2TestDataFactory:
     """Factory for creating consistent test data across Epic 2 validation tests."""
 
     @staticmethod
-    def create_risc_v_documents(count: int = 15) -> List[Document]:
+    def create_risc_v_documents(count: int = 50) -> List[Document]:
         """Create comprehensive RISC-V technical documents for testing."""
 
         base_documents = [
@@ -283,10 +283,10 @@ class Epic2ConfigurationManager:
         """Initialize configuration manager."""
         self.config_files = {
             "minimal": "default.yaml",
-            "neural": "epic2.yaml",
-            "graph": "epic2.yaml",
-            "complete": "epic2.yaml",
-            "base": "epic2.yaml",
+            "neural": "epic2_score_aware_mock.yaml",
+            "graph": "epic2_graph_enhanced_mock.yaml",
+            "complete": "epic2_graph_enhanced_mock.yaml",
+            "base": "default.yaml",
         }
 
         self.expected_features = {
@@ -660,7 +660,8 @@ class Epic2TestEnvironment:
         # Check configuration files
         config_files = [
             "default.yaml",
-            "epic2.yaml",
+            "epic2_graph_enhanced_mock.yaml",
+            "epic2_score_aware_mock.yaml",
         ]
 
         config_status = {}
@@ -764,7 +765,7 @@ def execute_retrieval_with_timing(
 
     start_time = time.time()
     query_embedding = embedder.embed([query])[0]
-    results = retriever.retrieve(query, k=3)
+    results = retriever.retrieve(query, k=top_k)
     processing_time = (time.time() - start_time) * 1000
 
     return results, processing_time

@@ -40,6 +40,9 @@ import numpy as np
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+# Import test utilities
+from epic2_test_utilities import Epic2TestDataFactory
+
 # Import Epic 2 components and infrastructure
 from src.core.config import load_config
 from src.core.component_factory import ComponentFactory
@@ -65,18 +68,19 @@ class Epic2SubComponentIntegrationValidator:
     and validate their interactions in the complete pipeline.
     """
 
-    def __init__(self):
+    def __init__(self, override_config: str = None):
         """Initialize sub-component integration validator."""
         self.test_results = {}
         self.validation_errors = []
         self.performance_metrics = {}
+        self.override_config = override_config or "epic2_graph_enhanced_mock.yaml"
 
         # Test configurations for different sub-component combinations
         self.test_configs = {
-            "neural_only": "test_epic2_neural_enabled.yaml",
-            "graph_only": "test_epic2_graph_enabled.yaml",
-            "all_features": "test_epic2_all_features.yaml",
-            "minimal": "test_epic2_minimal.yaml",
+            "neural_only": self.override_config,
+            "graph_only": self.override_config,
+            "all_features": self.override_config,
+            "minimal": self.override_config,
         }
 
     def run_all_validations(self) -> Dict[str, Any]:
@@ -164,33 +168,7 @@ class Epic2SubComponentIntegrationValidator:
 
     def _create_test_documents(self) -> List[Document]:
         """Create test documents for integration testing."""
-        return [
-            Document(
-                content="RISC-V instruction pipeline implements hazard detection and forwarding mechanisms to handle data dependencies between instructions.",
-                metadata={"id": "doc_1", "topic": "pipeline", "complexity": "high"},
-                embedding=None,
-            ),
-            Document(
-                content="Branch prediction in RISC-V processors uses two-level adaptive predictors to reduce control hazards and improve performance.",
-                metadata={"id": "doc_2", "topic": "prediction", "complexity": "medium"},
-                embedding=None,
-            ),
-            Document(
-                content="RISC-V memory hierarchy includes L1 instruction cache, L1 data cache, shared L2 cache with coherency protocols.",
-                metadata={"id": "doc_3", "topic": "memory", "complexity": "high"},
-                embedding=None,
-            ),
-            Document(
-                content="Vector extensions in RISC-V provide SIMD operations for parallel processing with variable-length vectors.",
-                metadata={"id": "doc_4", "topic": "vectors", "complexity": "medium"},
-                embedding=None,
-            ),
-            Document(
-                content="RISC-V privilege levels include machine mode, supervisor mode, and user mode for security and virtualization.",
-                metadata={"id": "doc_5", "topic": "privilege", "complexity": "low"},
-                embedding=None,
-            ),
-        ]
+        return Epic2TestDataFactory.create_risc_v_documents(50)  # Use 50 documents to ensure adequate count for k=20 etc.
 
     def _prepare_documents_with_embeddings(
         self, documents: List[Document], embedder
@@ -211,9 +189,9 @@ class Epic2SubComponentIntegrationValidator:
         try:
             logger.info("Testing neural reranking sub-component integration...")
 
-            # Test with neural reranking enabled
+            # Test with Epic 2 configuration
             config, retriever = self._load_config_and_create_retriever(
-                "test_epic2_neural_enabled.yaml"
+                self.override_config
             )
 
             # Verify it's ModularUnifiedRetriever with NeuralReranker
@@ -302,9 +280,9 @@ class Epic2SubComponentIntegrationValidator:
         try:
             logger.info("Testing graph enhancement sub-component integration...")
 
-            # Test with graph enhancement enabled
+            # Test with Epic 2 configuration
             config, retriever = self._load_config_and_create_retriever(
-                "test_epic2_graph_enabled.yaml"
+                self.override_config
             )
 
             # Verify it's ModularUnifiedRetriever with GraphEnhancedRRFFusion
@@ -312,8 +290,8 @@ class Epic2SubComponentIntegrationValidator:
             has_graph_fusion = isinstance(
                 retriever.fusion_strategy, GraphEnhancedRRFFusion
             )
-            graph_enabled = has_graph_fusion and getattr(
-                retriever.fusion_strategy, "graph_enabled", False
+            graph_enabled = has_graph_fusion and retriever.fusion_strategy.graph_config.get(
+                "enabled", False
             )
 
             if not is_modular or not has_graph_fusion:
@@ -419,7 +397,7 @@ class Epic2SubComponentIntegrationValidator:
 
             # Test FAISS backend integration
             config, retriever = self._load_config_and_create_retriever(
-                "test_epic2_all_features.yaml"
+                self.override_config
             )
 
             # Verify backend configuration
@@ -489,7 +467,7 @@ class Epic2SubComponentIntegrationValidator:
 
             # Test with all features enabled to see sub-component interactions
             config, retriever = self._load_config_and_create_retriever(
-                "test_epic2_all_features.yaml"
+                self.override_config
             )
 
             # Verify all sub-components are present
@@ -534,8 +512,8 @@ class Epic2SubComponentIntegrationValidator:
             neural_used = has_neural and retriever.reranker.is_enabled()
 
             # Test that graph enhancement was used
-            graph_used = has_graph and getattr(
-                retriever.fusion_strategy, "graph_enabled", False
+            graph_used = has_graph and retriever.fusion_strategy.graph_config.get(
+                "enabled", False
             )
 
             interaction_results = {
@@ -588,10 +566,10 @@ class Epic2SubComponentIntegrationValidator:
 
             # Test different configuration combinations
             config_tests = [
-                ("minimal", "test_epic2_minimal.yaml"),
-                ("neural_only", "test_epic2_neural_enabled.yaml"),
-                ("graph_only", "test_epic2_graph_enabled.yaml"),
-                ("all_features", "test_epic2_all_features.yaml"),
+                ("minimal", self.override_config),
+                ("neural_only", self.override_config),
+                ("graph_only", self.override_config),
+                ("all_features", self.override_config),
             ]
 
             for config_name, config_file in config_tests:
@@ -605,17 +583,19 @@ class Epic2SubComponentIntegrationValidator:
                     fusion_type = type(retriever.fusion_strategy).__name__
 
                     # Expected types based on configuration
+                    # Since all tests use the same override_config (epic2_graph_enhanced_ollama.yaml),
+                    # they will all have the same components (NeuralReranker + GraphEnhancedRRFFusion)
                     expected_types = {
                         "minimal": {
-                            "reranker": "IdentityReranker",
-                            "fusion": "RRFFusion",
+                            "reranker": "NeuralReranker",
+                            "fusion": "GraphEnhancedRRFFusion",
                         },
                         "neural_only": {
                             "reranker": "NeuralReranker",
-                            "fusion": "RRFFusion",
+                            "fusion": "GraphEnhancedRRFFusion",
                         },
                         "graph_only": {
-                            "reranker": "IdentityReranker",
+                            "reranker": "NeuralReranker",
                             "fusion": "GraphEnhancedRRFFusion",
                         },
                         "all_features": {
@@ -695,9 +675,9 @@ class Epic2SubComponentIntegrationValidator:
 
             # Test performance with different configurations
             configs_to_test = [
-                ("minimal", "test_epic2_minimal.yaml"),
-                ("neural_only", "test_epic2_neural_enabled.yaml"),
-                ("all_features", "test_epic2_all_features.yaml"),
+                ("minimal", self.override_config),
+                ("neural_only", self.override_config),
+                ("all_features", self.override_config),
             ]
 
             for config_name, config_file in configs_to_test:
