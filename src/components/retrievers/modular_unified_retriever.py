@@ -821,11 +821,6 @@ class ModularUnifiedRetriever(Retriever):
                 if composite_score >= self.min_composite_score:
                     composite_results.append((doc_idx, composite_score))
                 
-                # Debug logging for first few documents
-                if i < 3:
-                    logger.info(f"COMPOSITE DEBUG - Doc {i+1}: fusion={original_fusion_score:.3f}, "
-                               f"norm_fusion={normalized_fusion_score:.3f}, semantic={semantic_similarity:.3f}, "
-                               f"composite={composite_score:.3f}, threshold={self.min_composite_score}")
             
             # Sort by composite score (descending) and return
             composite_results.sort(key=lambda x: x[1], reverse=True)
