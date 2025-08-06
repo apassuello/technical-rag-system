@@ -1,12 +1,23 @@
-"""Simplified OpenAI Adapter Tests - Epic 1 Phase 2.
+"""Production OpenAI Adapter Tests - Epic 1 Phase 2.
 
-Simple mock-based tests for OpenAI adapter functionality.
+Integration tests for production OpenAI adapter with real API support.
+Falls back to mock for CI/CD environments without API keys.
 """
 
 import os
 import pytest
 from decimal import Decimal
 from unittest.mock import Mock, MagicMock
+
+# Try to import the production adapter
+try:
+    from src.components.generators.llm_adapters.openai_adapter import OpenAIAdapter
+    from src.components.generators.base import GenerationParams
+    PRODUCTION_ADAPTER_AVAILABLE = True
+except ImportError:
+    PRODUCTION_ADAPTER_AVAILABLE = False
+    OpenAIAdapter = None
+    GenerationParams = None
 
 
 class MockOpenAIAdapter:
@@ -58,8 +69,43 @@ class MockOpenAIAdapter:
         })()
 
 
+@pytest.mark.skipif(not PRODUCTION_ADAPTER_AVAILABLE, reason="Production adapter not available")
+class TestProductionOpenAIAdapter:
+    """Test suite for production OpenAI adapter with real API integration."""
+    
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.has_real_api_key = bool(os.getenv('OPENAI_API_KEY'))
+        self.test_model = "gpt-3.5-turbo"  # Use cheaper model for tests
+        self.test_query = "What is 2+2?"
+        self.test_context = ["Basic arithmetic operations"]
+    
+    @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="No OpenAI API key provided")
+    def test_real_openai_integration(self):
+        """Test real OpenAI API integration when key is available."""
+        adapter = OpenAIAdapter(model_name=self.test_model)
+        
+        # Test basic generation
+        params = GenerationParams(temperature=0.0, max_tokens=10)
+        response = adapter.generate(self.test_query, params)
+        
+        assert isinstance(response, str)
+        assert len(response) > 0
+        assert "4" in response  # Should contain the answer
+        
+        # Test cost tracking
+        cost_summary = adapter.get_cost_summary()
+        assert cost_summary['total_cost_usd'] > 0
+        assert cost_summary['total_requests'] > 0
+        
+        # Test model info
+        model_info = adapter.get_model_info()
+        assert model_info['provider'] == 'OpenAI'
+        assert model_info['model'] == self.test_model
+
+
 class TestOpenAIAdapter:
-    """Test suite for OpenAI adapter functionality."""
+    """Test suite for OpenAI adapter functionality (mock-based)."""
     
     def setup_method(self):
         """Set up test fixtures."""
