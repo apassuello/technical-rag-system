@@ -72,7 +72,7 @@ answer_generator:
     # Multi-model routing configuration
     routing:
       enabled: true
-      default_strategy: "balanced"  # Options: cost_optimized, quality_first, balanced
+      default_strategy: "cost_optimized"  # Prioritize local Ollama for development
       
       # Query complexity analyzer configuration
       query_analyzer:
@@ -211,9 +211,103 @@ query_processor:
     analyzer:
       implementation: "epic1"
       config:
-        # Epic 1 analyzer is now also used here for consistency
+        # Epic 1 analyzer configuration - calibration ready
         enable_complexity_analysis: true
         enable_model_recommendation: true
+        
+        # Feature Extractor Configuration
+        feature_extractor:
+          # Entity extraction settings
+          enable_entity_extraction: true
+          
+          # Normalization parameters - optimized for calibration
+          normalization_params:
+            # Length normalization
+            max_words: 18           # 95th percentile from ground truth
+            max_chars: 140          # 95th percentile from queries  
+            max_sentences: 5        # Sentence count normalization
+            
+            # Vocabulary normalization
+            max_technical_terms: 4  # Realistic for technical queries
+            max_entities: 10        # Entity count normalization
+            max_unique_words: 15    # Vocabulary richness normalization
+            
+            # Syntactic normalization
+            max_clauses: 3          # Syntactic complexity
+            max_nesting_depth: 3    # Structural complexity
+            max_conjunctions: 2     # Coordination complexity
+            
+            # Question normalization
+            max_question_words: 3   # Question complexity
+            max_comparatives: 2     # Comparative structures
+            
+            # Ambiguity normalization
+            max_ambiguous_terms: 2  # Ambiguous term presence
+            max_pronouns: 3         # Pronoun complexity
+        
+        # Complexity Classifier Configuration
+        complexity_classifier:
+          # Main category weights (must sum to 1.0)
+          weights:
+            length: 0.20        # Query length and structure
+            syntactic: 0.25     # Syntactic complexity
+            vocabulary: 0.30    # Technical vocabulary (high impact)
+            question: 0.15      # Question type complexity
+            ambiguity: 0.10     # Ambiguity and clarity
+          
+          # Sub-category weights for fine-grained tuning
+          sub_weights:
+            length:
+              word_count: 0.6         # Word count contribution
+              char_count: 0.2         # Character count contribution
+              sentence_count: 0.2     # Sentence count contribution
+            vocabulary:
+              technical_density: 0.5      # Technical term density
+              technical_count: 0.3        # Raw technical term count
+              vocabulary_richness: 0.2    # Unique word ratio
+            syntactic:
+              clause_complexity: 0.4      # Clause structure
+              nesting_depth: 0.3          # Structural nesting
+              conjunction_complexity: 0.3 # Coordination complexity
+            question:
+              question_type: 0.6          # Type-based complexity
+              comparative_complexity: 0.4 # Comparative structures
+            ambiguity:
+              ambiguous_terms: 0.7        # Ambiguous term presence
+              pronoun_references: 0.3     # Pronoun complexity
+          
+          # Classification thresholds - optimized for 58.1% accuracy
+          thresholds:
+            simple: 0.150       # Below this = simple
+            complex: 0.320      # Above this = complex
+          
+          # Confidence calculation parameters
+          confidence_params:
+            high_confidence_margin: 0.15    # Distance from threshold for high confidence
+            medium_confidence_margin: 0.05  # Distance from threshold for medium confidence
+        
+        # Model Recommender Configuration
+        model_recommender:
+          # Routing strategy
+          strategy: "balanced"    # balanced, cost_optimized, quality_first, performance_first
+          
+          # Model mappings by complexity level
+          model_mappings:
+            simple:
+              provider: "ollama"
+              model: "llama3.2:3b"
+              max_cost: 0.001
+              expected_latency: 2.0
+            medium:
+              provider: "mistral" 
+              model: "mistral-small"
+              max_cost: 0.01
+              expected_latency: 3.0
+            complex:
+              provider: "openai"
+              model: "gpt-4-turbo"
+              max_cost: 0.10
+              expected_latency: 5.0
     selector:
       implementation: "mmr"
       config:

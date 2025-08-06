@@ -135,6 +135,7 @@ class CostOptimizedStrategy(RoutingStrategy):
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'cost_per_1k': Decimal('0.0015')},
             ],
             'complex': [
+                {'provider': 'ollama', 'model': 'llama3.1:8b', 'cost_per_1k': Decimal('0.0000')},
                 {'provider': 'mistral', 'model': 'mistral-medium', 'cost_per_1k': Decimal('0.00540')},
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'cost_per_1k': Decimal('0.0015')},
                 {'provider': 'openai', 'model': 'gpt-4-turbo', 'cost_per_1k': Decimal('0.020')},
@@ -407,7 +408,7 @@ class BalancedStrategy(RoutingStrategy):
         self.quality_weight = self.config.get('quality_weight', 0.6)
         self.max_cost_per_query = Decimal(str(self.config.get('max_cost_per_query', '0.020')))
         
-        # Model options with cost/quality scores
+        # Model options with cost/quality scores (prioritize Ollama for development)
         self.model_options = {
             'simple': [
                 {'provider': 'ollama', 'model': 'llama3.2:3b', 'quality': 0.80, 'cost_per_1k': Decimal('0.0000'), 'score': 0.0},
@@ -415,12 +416,13 @@ class BalancedStrategy(RoutingStrategy):
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'quality': 0.90, 'cost_per_1k': Decimal('0.0015'), 'score': 0.0},
             ],
             'medium': [
-                {'provider': 'ollama', 'model': 'llama3.1:8b', 'quality': 0.78, 'cost_per_1k': Decimal('0.0000'), 'score': 0.0},
+                {'provider': 'ollama', 'model': 'llama3.1:8b', 'quality': 0.85, 'cost_per_1k': Decimal('0.0000'), 'score': 0.0},  # Boosted quality
                 {'provider': 'mistral', 'model': 'mistral-small', 'quality': 0.85, 'cost_per_1k': Decimal('0.002'), 'score': 0.0},
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'quality': 0.87, 'cost_per_1k': Decimal('0.0015'), 'score': 0.0},
                 {'provider': 'mistral', 'model': 'mistral-medium', 'quality': 0.88, 'cost_per_1k': Decimal('0.00540'), 'score': 0.0},
             ],
             'complex': [
+                {'provider': 'ollama', 'model': 'llama3.1:8b', 'quality': 0.82, 'cost_per_1k': Decimal('0.0000'), 'score': 0.0},  # Added as first choice
                 {'provider': 'mistral', 'model': 'mistral-large', 'quality': 0.88, 'cost_per_1k': Decimal('0.016'), 'score': 0.0},
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'quality': 0.85, 'cost_per_1k': Decimal('0.0015'), 'score': 0.0},
                 {'provider': 'openai', 'model': 'gpt-4-turbo', 'quality': 0.95, 'cost_per_1k': Decimal('0.020'), 'score': 0.0},

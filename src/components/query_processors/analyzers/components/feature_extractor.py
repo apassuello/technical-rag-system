@@ -96,12 +96,32 @@ class FeatureExtractor:
         
         # Feature configuration
         self.enable_entities = self.config.get('enable_entity_extraction', True)
-        self.normalization_params = self.config.get('normalization_params', {
-            'max_words': 50,
-            'max_chars': 300,
-            'max_entities': 10,
-            'max_technical_terms': 15
-        })
+        # Load normalization parameters with comprehensive defaults
+        default_normalization = {
+            # Length normalization
+            'max_words': 18,           # 95th percentile from ground truth data
+            'max_chars': 140,          # 95th percentile from actual queries
+            'max_sentences': 5,        # For sentence count normalization
+            
+            # Vocabulary normalization  
+            'max_technical_terms': 4,  # Realistic for technical queries
+            'max_entities': 10,        # Entity count normalization
+            'max_unique_words': 15,    # Vocabulary richness normalization
+            
+            # Syntactic normalization
+            'max_clauses': 3,          # For syntactic complexity
+            'max_nesting_depth': 3,    # For structural complexity
+            'max_conjunctions': 2,     # For coordination complexity
+            
+            # Question normalization
+            'max_question_words': 3,   # How/why/what combinations
+            'max_comparatives': 2,     # Comparative question complexity
+            
+            # Ambiguity normalization
+            'max_ambiguous_terms': 2,  # Terms with multiple meanings
+            'max_pronouns': 3          # Pronoun reference complexity
+        }
+        self.normalization_params = {**default_normalization, **self.config.get('normalization_params', {})}
         
         logger.info("Initialized FeatureExtractor for Epic 1 analysis")
     

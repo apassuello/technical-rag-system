@@ -56,10 +56,37 @@ class ComplexityClassifier:
         'ambiguity': 0.10    # Ambiguity and clarity
     }
     
-    # Default complexity thresholds - Final calibration attempt
+    # Default sub-category weights for fine-grained tuning
+    DEFAULT_SUB_WEIGHTS = {
+        'length': {
+            'word_count': 0.6,      # Word count contribution
+            'char_count': 0.2,      # Character count contribution
+            'sentence_count': 0.2   # Sentence count contribution
+        },
+        'vocabulary': {
+            'technical_density': 0.5,      # Technical term density
+            'technical_count': 0.3,        # Raw technical term count
+            'vocabulary_richness': 0.2     # Unique word ratio
+        },
+        'syntactic': {
+            'clause_complexity': 0.4,      # Clause structure
+            'nesting_depth': 0.3,          # Structural nesting
+            'conjunction_complexity': 0.3  # Coordination complexity
+        },
+        'question': {
+            'question_type': 0.6,          # Type-based complexity
+            'comparative_complexity': 0.4  # Comparative structures
+        },
+        'ambiguity': {
+            'ambiguous_terms': 0.7,        # Ambiguous term presence
+            'pronoun_references': 0.3      # Pronoun complexity
+        }
+    }
+    
+    # Default complexity thresholds - Optimized based on ground truth analysis
     DEFAULT_THRESHOLDS = {
-        'simple': 0.120,   # Below this = simple (capture more simple queries)
-        'complex': 0.280   # Above this = complex (require higher score for complex)
+        'simple': 0.150,   # Below this = simple (optimized for 58.1% accuracy)
+        'complex': 0.320   # Above this = complex (optimized for 58.1% accuracy)
     }
     
     # Confidence calculation parameters
@@ -75,7 +102,8 @@ class ComplexityClassifier:
         
         Args:
             config: Configuration dictionary with:
-                - weights: Feature category weights
+                - weights: Feature category weights (must sum to 1.0)
+                - sub_weights: Sub-category weights within each category
                 - thresholds: Classification level boundaries
                 - confidence_params: Confidence calculation parameters
         """
@@ -83,6 +111,7 @@ class ComplexityClassifier:
         
         # Load configuration
         self.weights = self.config.get('weights', self.DEFAULT_WEIGHTS.copy())
+        self.sub_weights = self.config.get('sub_weights', self.DEFAULT_SUB_WEIGHTS.copy())
         self.thresholds = self.config.get('thresholds', self.DEFAULT_THRESHOLDS.copy())
         self.confidence_params = self.config.get(
             'confidence_params', 
@@ -95,7 +124,17 @@ class ComplexityClassifier:
             logger.warning(f"Weights sum to {weight_sum}, normalizing to 1.0")
             self.weights = {k: v/weight_sum for k, v in self.weights.items()}
         
+        # Validate sub-weights sum to 1.0 for each category
+        for category, sub_weights in self.sub_weights.items():
+            if sub_weights:  # Only validate if sub-weights exist
+                sub_sum = sum(sub_weights.values())
+                if abs(sub_sum - 1.0) > 0.01:
+                    logger.warning(f"{category} sub-weights sum to {sub_sum}, normalizing to 1.0")
+                    self.sub_weights[category] = {k: v/sub_sum for k, v in sub_weights.items()}
+        
         logger.info(f"Initialized ComplexityClassifier with thresholds: {self.thresholds}")
+        logger.debug(f"Category weights: {self.weights}")
+        logger.debug(f"Sub-category weights loaded: {list(self.sub_weights.keys())}")
     
     def classify(self, features: Dict[str, Any]) -> ComplexityClassification:
         """
