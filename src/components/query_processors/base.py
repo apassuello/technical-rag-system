@@ -31,6 +31,7 @@ class QueryAnalysis:
     
     query: str
     complexity_score: float = 0.0
+    complexity_level: str = "medium"  # simple, medium, complex
     technical_terms: List[str] = field(default_factory=list)
     entities: List[str] = field(default_factory=list)
     intent_category: str = "general"

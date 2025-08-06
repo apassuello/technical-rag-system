@@ -17,7 +17,7 @@ platform_orchestrator:
 
 # Document processor configuration (existing)
 document_processor:
-  type: "processor_hybrid_pdf"
+  type: "hybrid_pdf"
   config:
     chunk_size: 512
     chunk_overlap: 50

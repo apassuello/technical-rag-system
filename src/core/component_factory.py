@@ -83,6 +83,8 @@ class ComponentFactory:
         "adaptive": "src.components.generators.adaptive_generator.AdaptiveAnswerGenerator",
         "adaptive_generator": "src.components.generators.adaptive_generator.AdaptiveAnswerGenerator",  # Alias for compatibility
         "adaptive_modular": "src.components.generators.answer_generator.AnswerGenerator",  # New modular implementation
+        "epic1": "src.components.generators.epic1_answer_generator.Epic1AnswerGenerator",  # Epic 1 Multi-Model Generator
+        "epic1_multi_model": "src.components.generators.epic1_answer_generator.Epic1AnswerGenerator",  # Alias for Epic 1
     }
     
     _QUERY_PROCESSORS: Dict[str, str] = {

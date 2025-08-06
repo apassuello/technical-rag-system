@@ -241,6 +241,7 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
         return QueryAnalysis(
             query=query,
             complexity_score=classification.score,
+            complexity_level=classification.level,
             technical_terms=vocabulary_features.get('technical_terms', []),
             entities=features.get('entity_features', {}).get('entities', []),
             intent_category=intent_category,
@@ -265,6 +266,7 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
         return QueryAnalysis(
             query=query,
             complexity_score=0.5,  # Default to medium
+            complexity_level="medium",  # Default to medium
             technical_terms=[],
             entities=[],
             intent_category='general',

@@ -143,18 +143,23 @@ class AdaptiveRouter:
         self.enable_fallback = enable_fallback
         self.enable_cost_tracking = enable_cost_tracking
         
+        # Initialize performance metrics first (needed by _initialize_strategies)
+        self._total_routing_decisions = 0
+        self._total_routing_time_ms = 0.0
+        self._strategy_usage_count: Dict[str, int] = {}
+        
         # Initialize routing strategies
         self.strategies: Dict[str, RoutingStrategy] = {}
-        self._initialize_strategies()
+        try:
+            self._initialize_strategies()
+        except Exception as e:
+            logger.error(f"Failed to initialize routing strategies: {str(e)}")
+            # Initialize with empty strategies to prevent further errors
+            self.strategies = {}
         
         # Routing decision history
         self.routing_history: List[RoutingDecision] = []
         self.max_history_size = self.config.get('max_history_size', 1000)
-        
-        # Performance metrics
-        self._total_routing_decisions = 0
-        self._total_routing_time_ms = 0.0
-        self._strategy_usage_count: Dict[str, int] = {}
         
         # Cost tracking
         if self.enable_cost_tracking:
@@ -414,7 +419,7 @@ class AdaptiveRouter:
         
         try:
             # Use Epic1QueryAnalyzer for sophisticated analysis
-            analysis_result = self.query_analyzer.analyze_query(query, query_metadata or {})
+            analysis_result = self.query_analyzer.analyze(query)
             return analysis_result.metadata
             
         except Exception as e:

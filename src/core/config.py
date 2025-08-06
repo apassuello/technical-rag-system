@@ -51,7 +51,7 @@ class PipelineConfig(BaseModel):
     # Optional global settings
     global_settings: Dict[str, Any] = Field(default_factory=dict)
     
-    model_config = ConfigDict(extra='forbid')  # Prevent unknown fields
+    model_config = ConfigDict(extra='allow')  # Allow additional fields for Epic1 and future extensions
     
     @model_validator(mode='after')
     def validate_component_types(self):
