@@ -162,14 +162,47 @@ class SyntacticParser:
         # Start with 1 for the main clause
         count = 1
         
+        # Handle compound verb phrases that shouldn't be counted as separate clauses
+        text_processed = text
+        compound_phrases = [
+            r'\bcompare\s+and\s+contrast\b',
+            r'\bback\s+and\s+forth\b', 
+            r'\bup\s+and\s+down\b',
+            r'\bin\s+and\s+out\b'
+        ]
+        for phrase in compound_phrases:
+            text_processed = re.sub(phrase, lambda m: m.group(0).replace(' and ', ' AND_COMPOUND '), text_processed, flags=re.IGNORECASE)
+        
         # Coordinating conjunctions that often separate independent clauses
         # Look for ", and", ", but", ", or" etc. AND standalone "and", "but", "or"
         coord_pattern = r'(?:,\s+(?:and|but|or|nor|for|yet|so)\s+|\s+(?:and|but|or)\s+)'
-        count += len(re.findall(coord_pattern, text, re.IGNORECASE))
+        coord_matches = re.findall(coord_pattern, text_processed, re.IGNORECASE)
+        # Filter out compound phrase markers
+        coord_matches = [m for m in coord_matches if 'AND_COMPOUND' not in m]
+        count += len(coord_matches)
         
-        # Subordinating conjunctions that introduce dependent clauses
-        subord_pattern = r'\b(?:because|since|although|though|if|when|while|where|after|before|until|unless|whereas|whether|considering|given)\s+'
-        count += len(re.findall(subord_pattern, text, re.IGNORECASE))
+        # Handle conditional structures (if...then...otherwise) as a unit
+        has_conditional = bool(re.search(r'\bif\b', text, re.IGNORECASE))
+        has_then = bool(re.search(r'\bthen\b', text, re.IGNORECASE))
+        has_otherwise = bool(re.search(r'\botherwise\b', text, re.IGNORECASE))
+        
+        if has_conditional and (has_then or has_otherwise):
+            # If-then-otherwise is a conditional structure with 2 main parts:
+            # 1. The condition (if X)
+            # 2. The consequence (then Y, otherwise Z)
+            conditional_clauses = 1  # One additional clause for the conditional
+            if has_then and has_otherwise:
+                conditional_clauses += 1  # Extra for "otherwise" alternative
+            count += conditional_clauses
+        else:
+            # Regular subordinating conjunctions
+            subord_pattern = r'\b(?:because|since|although|though|when|while|where|after|before|until|unless|whereas|whether|considering|given)\s+'
+            subord_matches = re.findall(subord_pattern, text, re.IGNORECASE)
+            count += len(subord_matches)
+            
+            # Handle standalone "if" without then/otherwise
+            if has_conditional and not (has_then or has_otherwise):
+                count += 1
         
         # Semicolons and colons can separate clauses
         count += text.count(';')
