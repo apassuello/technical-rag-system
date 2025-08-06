@@ -248,9 +248,35 @@ class FeatureExtractor:
         # Classify question type
         question_type = self.syntactic_parser._classify_question_type(query)
         
+        # Question complexity by type
+        type_complexity_map = {
+            'what': 0.2,      # Simple factual
+            'when': 0.2,      # Simple temporal
+            'where': 0.2,     # Simple location
+            'who': 0.2,       # Simple identification
+            'how': 0.5,       # Process/mechanism
+            'why': 0.6,       # Reasoning required
+            'compare': 0.8,   # Analysis required
+            'implement': 0.9, # Action/creation required
+            'explain': 0.7,   # Explanation required
+            'list': 0.3,      # Enumeration
+            'statement': 0.3, # Not a question
+            'other_question': 0.4, # Unknown question type
+        }
+        type_complexity = type_complexity_map.get(question_type, 0.3)
+        
+        # Complex question indicators
+        complex_indicators = [
+            'compare', 'contrast', 'analyze', 'evaluate', 'implement',
+            'optimize', 'design', 'develop', 'assess', 'determine'
+        ]
+        is_complex = any(indicator in query_lower for indicator in complex_indicators)
+        
         # Check for specific question patterns
         features = {
             'question_type': question_type,
+            'type_complexity': type_complexity,
+            'is_complex_question': 1.0 if is_complex else 0.0,
             'is_question': 1.0 if query.strip().endswith('?') else 0.0,
             'starts_with_question_word': 1.0 if words and words[0] in self.QUESTION_WORDS else 0.0,
             # Question complexity indicators
@@ -267,7 +293,7 @@ class FeatureExtractor:
             'has_subquestions': 1.0 if any(w in query_lower for w in ['also', 'additionally', 'furthermore', 'and also']) else 0.0
         }
         
-        # Calculate question complexity score
+        # Calculate question complexity score (combining type and indicators)
         complexity_indicators = [
             features['is_comparison'],
             features['is_explanation'],
@@ -276,7 +302,8 @@ class FeatureExtractor:
             features['has_multiple_questions'],
             features['has_subquestions']
         ]
-        features['question_complexity'] = sum(complexity_indicators) / len(complexity_indicators)
+        indicator_score = sum(complexity_indicators) / len(complexity_indicators)
+        features['question_complexity'] = max(type_complexity, indicator_score)
         
         return features
     
@@ -333,17 +360,38 @@ class FeatureExtractor:
         # Count ambiguous terms
         ambiguous_count = sum(1 for word in words if word in self.AMBIGUOUS_TERMS)
         
+        # Vague terms that make queries ambiguous
+        vague_terms = ['this', 'that', 'it', 'they', 'some', 'many', 'few',
+                      'good', 'bad', 'better', 'best', 'thing', 'stuff',
+                      'various', 'different', 'certain', 'several']
+        
+        # Pronouns without clear antecedents
+        pronouns = ['it', 'they', 'them', 'this', 'that', 'these', 'those']
+        
+        vague_count = sum(1 for word in words if word in vague_terms)
+        pronoun_count = sum(1 for word in words if word in pronouns)
+        
+        has_vague = vague_count > 0
+        pronoun_density = pronoun_count / max(1, len(words))
+        vague_density = vague_count / max(1, len(words))
+        
+        # Calculate ambiguity score
+        ambiguity_score = min(1.0, vague_density * 0.5 + pronoun_density * 0.5)
+        
         # Check for specific ambiguity patterns
         features = {
             'ambiguous_term_count': ambiguous_count,
             'ambiguity_ratio': ambiguous_count / max(1, len(words)),
             # Specific ambiguity types
-            'has_pronouns': 1.0 if any(w in query_lower for w in ['it', 'this', 'that', 'they']) else 0.0,
+            'has_vague_terms': 1.0 if has_vague else 0.0,
+            'pronoun_density': pronoun_density,
+            'vague_term_density': vague_density,
+            'has_pronouns': 1.0 if any(w in query_lower for w in pronouns) else 0.0,
             'has_vague_quantifiers': 1.0 if any(w in query_lower for w in ['some', 'many', 'few', 'several']) else 0.0,
             'has_unclear_references': 1.0 if any(w in query_lower for w in ['thing', 'stuff', 'something']) else 0.0,
             'has_hedging': 1.0 if any(w in query_lower for w in ['maybe', 'perhaps', 'possibly', 'might']) else 0.0,
             # Overall ambiguity score
-            'ambiguity_score': min(1.0, ambiguous_count / 5)
+            'ambiguity_score': ambiguity_score
         }
         
         return features
@@ -425,7 +473,16 @@ class FeatureExtractor:
             'requires_deep_understanding': 1.0 if (
                 vocabulary['technical_density'] > 0.3 and
                 syntactic['syntactic_complexity'] > 0.5
-            ) else 0.0
+            ) else 0.0,
+            
+            # Overall complexity (weighted combination of all factors)
+            'overall_complexity': min(1.0, (
+                length['word_count_norm'] * 0.15 +
+                syntactic['syntactic_complexity'] * 0.25 +
+                vocabulary['technical_density'] * 0.30 +
+                question.get('question_complexity', 0.3) * 0.20 +
+                ambiguity['ambiguity_score'] * 0.10
+            ))
         }
     
     def get_summary(self, features: Dict[str, Any]) -> Dict[str, Any]:

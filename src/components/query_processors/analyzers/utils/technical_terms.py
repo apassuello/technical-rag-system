@@ -46,34 +46,100 @@ class TechnicalTermManager:
     - min_term_length: Minimum length for term recognition
     """
     
-    # Default technical terms by domain
+    # Default technical terms by domain - Expanded vocabulary
     DEFAULT_TERMS = {
         'ml': {
-            'embedding', 'vector', 'transformer', 'neural', 'gradient',
-            'backpropagation', 'optimizer', 'hyperparameter', 'epoch',
-            'batch', 'tensor', 'activation', 'dropout', 'regularization',
-            'overfitting', 'underfitting', 'cross-validation', 'fine-tuning',
-            'attention', 'encoder', 'decoder', 'lstm', 'gru', 'cnn', 'rnn'
+            # Core ML concepts
+            'embedding', 'embeddings', 'vector', 'vectors', 'transformer', 'transformers',
+            'neural', 'network', 'networks', 'gradient', 'gradients', 'backpropagation',
+            'optimizer', 'optimizers', 'hyperparameter', 'hyperparameters', 'epoch', 'epochs',
+            'batch', 'batches', 'tensor', 'tensors', 'activation', 'activations',
+            'dropout', 'regularization', 'overfitting', 'underfitting', 'cross-validation',
+            'fine-tuning', 'attention', 'encoder', 'encoders', 'decoder', 'decoders',
+            'lstm', 'gru', 'cnn', 'rnn', 'bert', 'gpt', 'roberta', 't5',
+            
+            # Additional ML terms
+            'model', 'models', 'algorithm', 'algorithms', 'feature', 'features',
+            'training', 'inference', 'prediction', 'predictions', 'classification',
+            'regression', 'clustering', 'supervised', 'unsupervised', 'reinforcement',
+            'learning', 'dataset', 'datasets', 'validation', 'testing', 'accuracy',
+            'precision', 'recall', 'f1-score', 'loss', 'metric', 'metrics',
+            'parameter', 'parameters', 'weight', 'weights', 'bias', 'biases',
+            'layer', 'layers', 'convolution', 'pooling', 'normalization',
+            'backprop', 'sgd', 'adam', 'adamw', 'momentum', 'lr', 'learning-rate'
         },
         'engineering': {
-            'latency', 'throughput', 'scalability', 'pipeline', 'architecture',
-            'microservice', 'api', 'endpoint', 'cache', 'database', 'queue',
-            'async', 'synchronous', 'concurrency', 'parallelization',
-            'optimization', 'performance', 'bottleneck', 'profiling',
-            'deployment', 'container', 'orchestration', 'kubernetes', 'docker'
+            # Core engineering concepts
+            'latency', 'throughput', 'scalability', 'pipeline', 'pipelines',
+            'architecture', 'architectures', 'microservice', 'microservices',
+            'api', 'apis', 'endpoint', 'endpoints', 'cache', 'caching', 'database',
+            'databases', 'queue', 'queues', 'async', 'asynchronous', 'synchronous',
+            'concurrency', 'parallelization', 'optimization', 'performance',
+            'bottleneck', 'bottlenecks', 'profiling', 'deployment', 'container',
+            'containers', 'orchestration', 'kubernetes', 'docker', 'k8s',
+            
+            # Additional engineering terms
+            'system', 'systems', 'component', 'components', 'module', 'modules',
+            'implementation', 'implementations', 'design', 'pattern', 'patterns',
+            'infrastructure', 'integration', 'interface', 'interfaces', 'protocol',
+            'protocols', 'standard', 'standards', 'quality', 'reliability',
+            'availability', 'maintainability', 'testing', 'debugging', 'monitoring',
+            'logging', 'configuration', 'development', 'production', 'staging',
+            'service', 'services', 'load-balancing', 'scaling', 'horizontal',
+            'vertical', 'distributed', 'cloud', 'serverless', 'function'
         },
         'rag': {
-            'retrieval', 'generation', 'chunking', 'reranking', 'similarity',
-            'semantic', 'lexical', 'dense', 'sparse', 'hybrid', 'fusion',
-            'context', 'prompt', 'completion', 'augmentation', 'grounding',
-            'hallucination', 'citation', 'relevance', 'precision', 'recall',
-            'faiss', 'pinecone', 'weaviate', 'chromadb', 'langchain'
+            # Core RAG concepts
+            'retrieval', 'retriever', 'retrievers', 'generation', 'generator',
+            'generators', 'chunking', 'chunks', 'reranking', 'reranker', 'rerankers',
+            'similarity', 'semantic', 'lexical', 'dense', 'sparse', 'hybrid',
+            'fusion', 'context', 'contexts', 'prompt', 'prompts', 'completion',
+            'completions', 'augmentation', 'augmented', 'grounding', 'hallucination',
+            'hallucinations', 'citation', 'citations', 'relevance', 'precision',
+            'recall', 'faiss', 'pinecone', 'weaviate', 'chromadb', 'langchain',
+            
+            # Additional RAG terms
+            'document', 'documents', 'query', 'queries', 'search', 'searching',
+            'indexing', 'index', 'indices', 'embedding-model', 'vector-database',
+            'vector-store', 'knowledge-base', 'knowledge', 'corpus', 'metadata',
+            'chunk-size', 'overlap', 'splitting', 'preprocessing', 'postprocessing',
+            'mmr', 'bm25', 'tfidf', 'tf-idf', 'cosine', 'euclidean', 'dot-product',
+            'cross-encoder', 'bi-encoder', 'colbert', 'dpr', 'ance', 'sentence-bert'
         },
         'llm': {
-            'token', 'tokenization', 'context', 'temperature', 'top-p',
-            'top-k', 'beam', 'greedy', 'sampling', 'logit', 'perplexity',
-            'few-shot', 'zero-shot', 'chain-of-thought', 'reasoning',
-            'instruction', 'alignment', 'rlhf', 'constitutional', 'safety'
+            # Core LLM concepts
+            'token', 'tokens', 'tokenization', 'tokenizer', 'tokenizers',
+            'context', 'temperature', 'top-p', 'top-k', 'beam', 'greedy',
+            'sampling', 'logit', 'logits', 'perplexity', 'few-shot', 'zero-shot',
+            'chain-of-thought', 'cot', 'reasoning', 'instruction', 'instructions',
+            'alignment', 'rlhf', 'constitutional', 'safety', 'prompt-engineering',
+            
+            # Additional LLM terms
+            'llm', 'llms', 'language-model', 'generative', 'autoregressive',
+            'attention-mechanism', 'self-attention', 'multi-head', 'positional',
+            'encoding', 'decoding', 'pre-training', 'pretraining', 'fine-tune',
+            'adaptation', 'lora', 'qlora', 'peft', 'quantization', 'int8', 'int4',
+            'distillation', 'pruning', 'sparsity', 'kv-cache', 'flash-attention',
+            'rope', 'alibi', 'gqa', 'mqa', 'sliding-window', 'mixture-of-experts',
+            'moe', 'emergent', 'capability', 'benchmark', 'evaluation'
+        },
+        'general_technical': {
+            # General technical terms
+            'technical', 'technique', 'techniques', 'method', 'methods', 'approach',
+            'approaches', 'strategy', 'strategies', 'solution', 'solutions',
+            'implementation', 'process', 'processes', 'mechanism', 'mechanisms',
+            'framework', 'frameworks', 'library', 'libraries', 'tool', 'tools',
+            'function', 'functions', 'operation', 'operations', 'procedure',
+            'procedures', 'analysis', 'synthesis', 'evaluation', 'comparison',
+            'optimization', 'performance', 'efficiency', 'effectiveness', 'quality',
+            'accuracy', 'complexity', 'simplicity', 'robustness', 'scalability',
+            'flexibility', 'specific', 'general', 'domain', 'domains', 'context',
+            'contexts', 'input', 'output', 'processing', 'computation', 'computational',
+            'automatic', 'automated', 'manual', 'hybrid', 'adaptive', 'documentation',
+            'specification', 'specifications', 'requirement', 'requirements',
+            'constraint', 'constraints', 'trade-off', 'trade-offs', 'impact',
+            'advantage', 'disadvantage', 'benefit', 'limitation', 'challenge',
+            'improvement', 'enhancement', 'modification', 'extension', 'integration'
         }
     }
     
@@ -120,7 +186,8 @@ class TechnicalTermManager:
     
     def _load_default_terms(self) -> None:
         """Load default technical terms based on configured domains."""
-        domains = self.config.get('domains', ['ml', 'rag', 'llm'])
+        # Include general_technical by default for better coverage
+        domains = self.config.get('domains', ['ml', 'rag', 'llm', 'general_technical'])
         
         for domain in domains:
             if domain in self.DEFAULT_TERMS:

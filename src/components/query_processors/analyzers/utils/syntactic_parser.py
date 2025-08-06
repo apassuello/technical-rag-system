@@ -148,6 +148,7 @@ class SyntacticParser:
     def _count_clauses(self, text: str) -> int:
         """
         Count number of clauses in text.
+        A clause has a subject and predicate.
         
         Args:
             text: Input text
@@ -155,13 +156,45 @@ class SyntacticParser:
         Returns:
             Number of clauses detected
         """
-        # Count clause indicators
-        matches = self.clause_pattern.findall(text)
+        if not text.strip():
+            return 0
         
-        # Also count commas that likely separate clauses
-        comma_clauses = len(re.findall(r',\s*\w+', text))
+        # Start with 1 for the main clause
+        count = 1
         
-        return len(matches) + (comma_clauses // 2)  # Conservative estimate
+        # Coordinating conjunctions that often separate independent clauses
+        # Look for ", and", ", but", ", or" etc. AND standalone "and", "but", "or"
+        coord_pattern = r'(?:,\s+(?:and|but|or|nor|for|yet|so)\s+|\s+(?:and|but|or)\s+)'
+        count += len(re.findall(coord_pattern, text, re.IGNORECASE))
+        
+        # Subordinating conjunctions that introduce dependent clauses
+        subord_pattern = r'\b(?:because|since|although|though|if|when|while|where|after|before|until|unless|whereas|whether|considering|given)\s+'
+        count += len(re.findall(subord_pattern, text, re.IGNORECASE))
+        
+        # Semicolons and colons can separate clauses
+        count += text.count(';')
+        count += text.count(':') // 2  # Conservative for colons
+        
+        # Relative clauses (which, that, who) - both with and without commas
+        relative_pattern = r'(?:,\s*)?(?:which|who|whom|whose|that)\s+'
+        count += len(re.findall(relative_pattern, text, re.IGNORECASE))
+        
+        # Additional clause indicators
+        # Infinitive phrases can indicate additional clauses
+        infinitive_pattern = r'\bto\s+(?:be|have|get|make|take|give|find|show|help|allow|enable)\b'
+        count += len(re.findall(infinitive_pattern, text, re.IGNORECASE)) // 2
+        
+        # Participial phrases
+        participle_pattern = r'\b(?:considering|including|containing|involving|requiring|providing)\b'
+        count += len(re.findall(participle_pattern, text, re.IGNORECASE)) // 2
+        
+        # Question words at the beginning that create additional clauses
+        question_clause_pattern = r'\b(?:what|how|why|when|where|who)\s+(?:is|are|was|were|does|do|did|can|could|should|would)'
+        if re.search(question_clause_pattern, text, re.IGNORECASE):
+            # Question structure adds complexity but doesn't necessarily add clauses
+            pass
+            
+        return count
     
     def _calculate_nesting_depth(self, text: str) -> int:
         """
@@ -356,3 +389,39 @@ class SyntacticParser:
             'has_enumeration': 1.0 if analysis['has_enumeration'] else 0.0,
             'syntactic_score': self.calculate_complexity_score(analysis)
         }
+    
+    # Public API methods for testing
+    def count_clauses(self, text: str) -> int:
+        """Public method to count clauses."""
+        return self._count_clauses(text)
+    
+    def calculate_nesting_depth(self, text: str) -> int:
+        """Public method to calculate nesting depth."""
+        return self._calculate_nesting_depth(text)
+    
+    def count_conjunctions(self, text: str) -> int:
+        """Public method to count conjunctions."""
+        return self._count_conjunctions(text)
+    
+    def classify_question(self, text: str) -> str:
+        """Public method to classify question type."""
+        return self._classify_question_type(text)
+    
+    def calculate_punctuation_complexity(self, text: str) -> float:
+        """Calculate punctuation complexity score."""
+        punct = self._analyze_punctuation(text)
+        # Simple scoring based on punctuation diversity and count
+        score = 0.0
+        score += min(0.3, punct['commas'] * 0.05)
+        score += min(0.2, punct['semicolons'] * 0.1) 
+        score += min(0.2, punct['colons'] * 0.1)
+        score += min(0.2, punct['parentheses'] * 0.02)
+        score += min(0.1, punct['quotes'] * 0.02)
+        return min(1.0, score)
+    
+    def parse(self, text: str) -> Dict[str, Any]:
+        """Public method for comprehensive parsing (alias for analyze_complexity)."""
+        analysis = self.analyze_complexity(text)
+        # Add complexity score to the analysis
+        analysis['complexity_score'] = self.calculate_complexity_score(analysis)
+        return analysis
