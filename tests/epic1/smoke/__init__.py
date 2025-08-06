@@ -1,0 +1,1 @@
+"""Epic1 smoke tests for quick health checks of Epic1 architecture."""
