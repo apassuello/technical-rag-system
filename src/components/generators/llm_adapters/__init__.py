@@ -19,16 +19,16 @@ from .base_adapter import (
 from .ollama_adapter import OllamaAdapter
 from .huggingface_adapter import HuggingFaceAdapter
 from .mock_adapter import MockLLMAdapter
-
-# Future adapters will be imported here
-# from .openai_adapter import OpenAIAdapter
+from .openai_adapter import OpenAIAdapter
+from .mistral_adapter import MistralAdapter
 
 __all__ = [
     'BaseLLMAdapter',
     'OllamaAdapter',
     'HuggingFaceAdapter',
     'MockLLMAdapter',
-    # 'OpenAIAdapter',
+    'OpenAIAdapter',
+    'MistralAdapter',
     'RateLimitError',
     'AuthenticationError',
     'ModelNotFoundError'
@@ -39,7 +39,8 @@ ADAPTER_REGISTRY = {
     'ollama': OllamaAdapter,
     'huggingface': HuggingFaceAdapter,
     'mock': MockLLMAdapter,
-    # 'openai': OpenAIAdapter,
+    'openai': OpenAIAdapter,
+    'mistral': MistralAdapter,
 }
 
 def get_adapter_class(provider: str):
