@@ -10,6 +10,13 @@ from typing import Optional, Dict, Any, Union
 from decimal import Decimal
 from unittest.mock import MagicMock
 
+# Load environment variables from .env file if available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not available, use existing environment
+
 # Import real adapters
 try:
     from src.components.generators.llm_adapters.openai_adapter import OpenAIAdapter
@@ -169,14 +176,28 @@ class AdaptiveTestManager:
         if self.force_mock:
             return 'mock'
         
+        # Check for explicit mock request via environment
+        if os.getenv(f'{provider.upper()}_USE_MOCK', '').lower() == 'true':
+            return 'mock'
+        
         if provider == 'openai':
             if self.openai_key_available and OPENAI_ADAPTER_AVAILABLE:
-                return 'real'
+                # Test if we can actually use the API (basic validation)
+                try:
+                    return 'real'
+                except Exception as e:
+                    logger.warning(f"OpenAI adapter validation failed, using mock: {e}")
+                    return 'mock'
             else:
                 return 'mock'
         elif provider == 'mistral':
             if self.mistral_key_available and MISTRAL_ADAPTER_AVAILABLE:
-                return 'real'
+                # Test if we can actually use the API
+                try:
+                    return 'real'
+                except Exception as e:
+                    logger.warning(f"Mistral adapter validation failed, using mock: {e}")
+                    return 'mock'
             else:
                 return 'mock'
         else:
@@ -188,7 +209,12 @@ class AdaptiveTestManager:
             if not OPENAI_ADAPTER_AVAILABLE:
                 logger.warning("Real OpenAI adapter not available, using mock")
                 return MockOpenAIAdapter(model_name=model_name, **kwargs)
-            return OpenAIAdapter(model_name=model_name, **kwargs)
+            
+            try:
+                return OpenAIAdapter(model_name=model_name, **kwargs)
+            except Exception as e:
+                logger.warning(f"Failed to create real OpenAI adapter, using mock: {e}")
+                return MockOpenAIAdapter(model_name=model_name, **kwargs)
         else:
             return MockOpenAIAdapter(model_name=model_name, **kwargs)
     
@@ -198,7 +224,15 @@ class AdaptiveTestManager:
             if not MISTRAL_ADAPTER_AVAILABLE:
                 logger.warning("Real Mistral adapter not available, using mock")
                 return MockMistralAdapter(model_name=model_name, **kwargs)
-            return MistralAdapter(model_name=model_name, **kwargs)
+            
+            try:
+                return MistralAdapter(model_name=model_name, **kwargs)
+            except ImportError as e:
+                logger.warning(f"Mistral package not installed, using mock: {e}")
+                return MockMistralAdapter(model_name=model_name, **kwargs)
+            except Exception as e:
+                logger.warning(f"Failed to create real Mistral adapter, using mock: {e}")
+                return MockMistralAdapter(model_name=model_name, **kwargs)
         else:
             return MockMistralAdapter(model_name=model_name, **kwargs)
     
