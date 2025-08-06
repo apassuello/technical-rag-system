@@ -24,14 +24,28 @@ document_processor:
     enable_ocr: false
     content_cleaning: true
 
-# Embedder configuration (existing)
+# Embedder configuration (modular)
 embedder:
   type: "modular"
   config:
-    model_name: "sentence-transformers/all-MiniLM-L6-v2"
-    device: "auto"
-    batch_size: 32
-    cache_embeddings: true
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/all-MiniLM-L6-v2"
+        device: "auto"
+    
+    batch_processor:
+      type: "dynamic"
+      config:
+        base_batch_size: 32
+        max_batch_size: 256
+        enable_dynamic_sizing: true
+    
+    cache:
+      type: "memory"
+      config:
+        max_size_mb: 512
+        ttl_hours: 24
 
 # Retriever configuration (existing)
 retriever:

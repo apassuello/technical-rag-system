@@ -421,7 +421,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
             # Initialize query analyzer
             if EPIC1_AVAILABLE:
                 analyzer_config = config.get('routing', {}).get('query_analyzer', {}).get('config', {})
-                self.query_analyzer = Epic1QueryAnalyzer(**analyzer_config)
+                self.query_analyzer = Epic1QueryAnalyzer(analyzer_config)
             else:
                 self.query_analyzer = None
                 logger.warning("Epic1QueryAnalyzer not available")

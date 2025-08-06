@@ -127,9 +127,26 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
             classification = self.complexity_classifier.classify(features)
             phase_times['complexity_classification'] = time.time() - phase_start
             
+            # Handle both dictionary and object return types
+            if isinstance(classification, dict):
+                complexity_level = classification.get('complexity_level', 'medium')
+                complexity_score = classification.get('complexity_score', 0.5)
+                confidence = classification.get('confidence', 0.5)
+                breakdown = classification.get('breakdown', {})
+                # Check if dataclass is stored
+                classification_obj = classification.get('_classification_object')
+                if classification_obj:
+                    classification = classification_obj
+            else:
+                # It's already an object
+                complexity_level = classification.level
+                complexity_score = classification.score
+                confidence = classification.confidence
+                breakdown = classification.breakdown
+            
             logger.debug(
-                f"Classified as {classification.level} (score: {classification.score:.2f}, "
-                f"confidence: {classification.confidence:.2f}) in "
+                f"Classified as {complexity_level} (score: {complexity_score:.2f}, "
+                f"confidence: {confidence:.2f}) in "
                 f"{phase_times['complexity_classification']*1000:.1f}ms"
             )
             
@@ -138,10 +155,10 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
             
             # Convert classification to dict for recommender
             classification_dict = {
-                'level': classification.level,
-                'score': classification.score,
-                'confidence': classification.confidence,
-                'breakdown': classification.breakdown
+                'level': complexity_level,
+                'score': complexity_score,
+                'confidence': confidence,
+                'breakdown': breakdown
             }
             
             recommendation = self.model_recommender.recommend(
@@ -169,10 +186,20 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
                 )
             
             # Build QueryAnalysis with Epic 1 metadata
+            # Pass the processed classification data
+            classification_data = {
+                'level': complexity_level,
+                'score': complexity_score,
+                'confidence': confidence,
+                'breakdown': breakdown,
+                'reasoning': classification.get('reasoning', '') if isinstance(classification, dict) else getattr(classification, 'reasoning', ''),
+                '_original': classification  # Keep original for reference
+            }
+            
             return self._build_query_analysis(
                 query,
                 features,
-                classification,
+                classification_data,
                 recommendation,
                 phase_times
             )
@@ -186,7 +213,7 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
         self,
         query: str,
         features: Dict[str, Any],
-        classification: Any,  # ComplexityClassification
+        classification: Dict[str, Any],  # Now a dictionary
         recommendation: Any,  # ModelRecommendation
         phase_times: Dict[str, float]
     ) -> QueryAnalysis:
@@ -196,7 +223,7 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
         Args:
             query: Original query
             features: Extracted features
-            classification: Complexity classification result
+            classification: Complexity classification result (dict)
             recommendation: Model recommendation result
             phase_times: Performance timing data
             
@@ -211,15 +238,22 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
         question_type = question_features.get('question_type', 'unknown')
         intent_category = self._map_question_type_to_intent(question_type)
         
+        # Extract classification data
+        complexity_level = classification.get('level', 'medium')
+        complexity_score = classification.get('score', 0.5)
+        confidence = classification.get('confidence', 0.5)
+        breakdown = classification.get('breakdown', {})
+        reasoning = classification.get('reasoning', '')
+        
         # Suggest retrieval k based on complexity
-        suggested_k = self._suggest_retrieval_k(classification.level)
+        suggested_k = self._suggest_retrieval_k(complexity_level)
         
         # Build Epic 1 metadata
         epic1_metadata = {
-            'complexity_level': classification.level,
-            'complexity_score': classification.score,
-            'complexity_confidence': classification.confidence,
-            'complexity_breakdown': classification.breakdown,
+            'complexity_level': complexity_level,
+            'complexity_score': complexity_score,
+            'complexity_confidence': confidence,
+            'complexity_breakdown': breakdown,
             'recommended_model': recommendation.model,
             'model_provider': recommendation.provider,
             'model_name': recommendation.model_name,
@@ -229,7 +263,7 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
             'fallback_chain': recommendation.fallback_chain,
             'routing_strategy': self.model_recommender.strategy.value,
             'feature_summary': self.feature_extractor.get_summary(features),
-            'classification_reasoning': classification.reasoning,
+            'classification_reasoning': reasoning,
             'recommendation_reasoning': recommendation.reasoning,
             'analysis_time_ms': phase_times['total'] * 1000,
             'phase_times_ms': {
@@ -240,13 +274,13 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
         # Create QueryAnalysis
         return QueryAnalysis(
             query=query,
-            complexity_score=classification.score,
-            complexity_level=classification.level,
+            complexity_score=complexity_score,
+            complexity_level=complexity_level,
             technical_terms=vocabulary_features.get('technical_terms', []),
             entities=features.get('entity_features', {}).get('entities', []),
             intent_category=intent_category,
             suggested_k=suggested_k,
-            confidence=classification.confidence,
+            confidence=confidence,
             metadata={'epic1_analysis': epic1_metadata}
         )
     

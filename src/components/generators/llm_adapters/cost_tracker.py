@@ -342,7 +342,9 @@ class CostTracker:
             Total cost in USD with high precision
         """
         with self._lock:
-            total = sum(record.cost_usd for record in self._usage_records)
+            total = sum(record.cost_usd for record in self._usage_records) or Decimal('0.000000')
+            if not isinstance(total, Decimal):
+                total = Decimal(str(total))
             return total.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
     
     def get_cost_by_provider(self) -> Dict[str, Decimal]:
