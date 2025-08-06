@@ -163,7 +163,7 @@ class CostOptimizedStrategy(RoutingStrategy):
         
         # Select cheapest model within cost budget
         for model_info in model_options:
-            estimated_cost = (estimated_tokens / 1000) * model_info['cost_per_1k']
+            estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * model_info['cost_per_1k']
             
             if estimated_cost <= self.max_cost_per_query:
                 # Build fallback chain
@@ -184,7 +184,7 @@ class CostOptimizedStrategy(RoutingStrategy):
         
         # If no model fits budget, use cheapest option
         cheapest = model_options[0]
-        estimated_cost = (estimated_tokens / 1000) * cheapest['cost_per_1k']
+        estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * cheapest['cost_per_1k']
         
         logger.warning(f"Selected model exceeds cost budget: ${estimated_cost:.4f}")
         
@@ -313,7 +313,7 @@ class QualityFirstStrategy(RoutingStrategy):
         # Select highest quality model above minimum threshold
         for model_info in model_options:
             if model_info['quality'] >= self.min_quality_score:
-                estimated_cost = (estimated_tokens / 1000) * model_info['cost_per_1k']
+                estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * model_info['cost_per_1k']
                 
                 # Build fallback chain with other high-quality options
                 fallback_options = [
@@ -334,7 +334,7 @@ class QualityFirstStrategy(RoutingStrategy):
         
         # Fallback to best available option
         best_option = model_options[0]
-        estimated_cost = (estimated_tokens / 1000) * best_option['cost_per_1k']
+        estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * best_option['cost_per_1k']
         
         return ModelOption(
             provider=best_option['provider'],
@@ -455,7 +455,7 @@ class BalancedStrategy(RoutingStrategy):
         best_score = -1
         
         for model_info in model_options:
-            estimated_cost = (estimated_tokens / 1000) * model_info['cost_per_1k']
+            estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * model_info['cost_per_1k']
             
             # Check budget constraint
             if estimated_cost <= self.max_cost_per_query:
@@ -468,7 +468,7 @@ class BalancedStrategy(RoutingStrategy):
             best_option = max(model_options, key=lambda x: x['score'])
             logger.warning(f"Selected model may exceed budget: {best_option['provider']}/{best_option['model']}")
         
-        estimated_cost = (estimated_tokens / 1000) * best_option['cost_per_1k']
+        estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * best_option['cost_per_1k']
         
         # Build fallback chain with other good options
         fallback_options = [

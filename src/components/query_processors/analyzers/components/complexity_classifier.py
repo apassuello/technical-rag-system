@@ -56,10 +56,10 @@ class ComplexityClassifier:
         'ambiguity': 0.10    # Ambiguity and clarity
     }
     
-    # Default complexity thresholds - Adjusted based on testing
+    # Default complexity thresholds - Final calibration attempt
     DEFAULT_THRESHOLDS = {
-        'simple': 0.30,    # Below this = simple (lowered)
-        'complex': 0.50    # Above this = complex (lowered)
+        'simple': 0.120,   # Below this = simple (capture more simple queries)
+        'complex': 0.280   # Above this = complex (require higher score for complex)
     }
     
     # Confidence calculation parameters
