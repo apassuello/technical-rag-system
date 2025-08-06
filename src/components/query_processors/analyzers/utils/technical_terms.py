@@ -113,7 +113,7 @@ class TechnicalTermManager:
         
         # Compile patterns
         self.technical_patterns = [
-            re.compile(pattern) for pattern in TECHNICAL_PATTERNS
+            re.compile(pattern) for pattern in self.TECHNICAL_PATTERNS
         ]
         
         logger.info(f"Initialized TechnicalTermManager with {len(self.terms)} terms")
