@@ -27,10 +27,32 @@ from decimal import Decimal
 try:
     import openai
     from openai import OpenAI
+    import tiktoken
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
     OpenAI = None
+    tiktoken = None
+
+try:
+    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+    TENACITY_AVAILABLE = True
+except ImportError:
+    TENACITY_AVAILABLE = False
+    # Define dummy decorators for fallback
+    def retry(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    
+    def stop_after_attempt(*args, **kwargs):
+        return None
+    
+    def wait_exponential(*args, **kwargs):
+        return None
+    
+    def retry_if_exception_type(*args, **kwargs):
+        return None
 
 from .base_adapter import BaseLLMAdapter, RateLimitError, AuthenticationError, ModelNotFoundError
 from ..base import GenerationParams, LLMError
@@ -98,7 +120,7 @@ class OpenAIAdapter(BaseLLMAdapter):
                  config: Optional[Dict[str, Any]] = None,
                  max_retries: int = 3,
                  retry_delay: float = 1.0,
-                 timeout: float = 30.0):
+                 timeout: float = 120.0):
         """
         Initialize OpenAI adapter.
         
@@ -151,10 +173,21 @@ class OpenAIAdapter(BaseLLMAdapter):
         self.client = OpenAI(**client_kwargs)
         self.timeout = timeout
         
+        # Initialize tokenizer for accurate cost calculation
+        self.tokenizer = None
+        if tiktoken:
+            try:
+                self.tokenizer = tiktoken.encoding_for_model(model_name)
+            except KeyError:
+                # Fallback for unknown models
+                logger.warning(f"No tokenizer found for {model_name}, using cl100k_base")
+                self.tokenizer = tiktoken.get_encoding("cl100k_base")
+        
         # Cost tracking
         self._total_cost = Decimal('0.00')
         self._input_tokens = 0
         self._output_tokens = 0
+        self.cost_history = []
         
         # Validate model exists and pricing is available
         if model_name not in self.MODEL_PRICING:
@@ -162,39 +195,49 @@ class OpenAIAdapter(BaseLLMAdapter):
         
         logger.info(f"Initialized OpenAI adapter with model: {model_name}")
     
+    @retry(
+        retry=retry_if_exception_type(RateLimitError),
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=2, min=1, max=60)
+    )
     def _make_request(self, prompt: str, params: GenerationParams) -> Dict[str, Any]:
         """
-        Make a request to OpenAI API.
+        Make a request to OpenAI API with retry logic for rate limits.
         
         Args:
             prompt: The prompt to send to the model
             params: Generation parameters
             
         Returns:
-            Raw response from OpenAI API
+            Raw response from OpenAI API with cost tracking
             
         Raises:
-            RateLimitError: If rate limit is exceeded
-            AuthenticationError: If API key is invalid
-            ModelNotFoundError: If model doesn't exist
+            RateLimitError: If rate limit is exceeded (triggers retry)
+            AuthenticationError: If API key is invalid (no retry)
+            ModelNotFoundError: If model doesn't exist (no retry)
             LLMError: For other API errors
         """
         try:
             # Prepare messages in chat format
             messages = self._prepare_messages(prompt)
             
-            # Prepare request parameters
+            # Prepare request parameters - filter out None values
             request_params = {
                 'model': self.model_name,
-                'messages': messages,
-                'temperature': params.temperature,
-                'max_tokens': params.max_tokens,
-                'top_p': params.top_p,
-                'frequency_penalty': params.frequency_penalty,
-                'presence_penalty': params.presence_penalty
+                'messages': messages
             }
             
-            # Add stop sequences if provided
+            # Add generation parameters if they're not None
+            if params.temperature is not None:
+                request_params['temperature'] = params.temperature
+            if params.max_tokens is not None:
+                request_params['max_tokens'] = params.max_tokens
+            if params.top_p is not None:
+                request_params['top_p'] = params.top_p
+            if params.frequency_penalty is not None:
+                request_params['frequency_penalty'] = params.frequency_penalty
+            if params.presence_penalty is not None:
+                request_params['presence_penalty'] = params.presence_penalty
             if params.stop_sequences:
                 request_params['stop'] = params.stop_sequences
             
@@ -226,16 +269,30 @@ class OpenAIAdapter(BaseLLMAdapter):
                     'completion_tokens': response.usage.completion_tokens if response.usage else 0,
                     'total_tokens': response.usage.total_tokens if response.usage else 0
                 },
-                'created': response.created
+                'created': response.created,
+                'request_time': request_time
             }
             
-            # Track token usage and costs
-            self._track_usage(response_dict['usage'])
+            # Track token usage and costs with detailed breakdown
+            cost_breakdown = self._track_usage_with_breakdown(response_dict['usage'])
+            response_dict['cost_breakdown'] = cost_breakdown
             
             return response_dict
             
+        except openai.RateLimitError as e:
+            logger.warning(f"OpenAI rate limit exceeded: {str(e)}")
+            raise RateLimitError(f"OpenAI rate limit: {str(e)}")
+        except openai.AuthenticationError as e:
+            logger.error(f"OpenAI authentication failed: {str(e)}")
+            raise AuthenticationError(f"OpenAI authentication error: {str(e)}")
+        except openai.NotFoundError as e:
+            logger.error(f"OpenAI model not found: {str(e)}")
+            raise ModelNotFoundError(f"OpenAI model '{self.model_name}' not found: {str(e)}")
+        except openai.BadRequestError as e:
+            logger.error(f"OpenAI bad request: {str(e)}")
+            raise LLMError(f"OpenAI request error: {str(e)}")
         except Exception as e:
-            # Map OpenAI exceptions to standard errors
+            logger.error(f"Unexpected OpenAI error: {str(e)}")
             self._handle_openai_error(e)
     
     def _parse_response(self, response: Dict[str, Any]) -> str:
@@ -405,33 +462,75 @@ class OpenAIAdapter(BaseLLMAdapter):
     
     def _track_usage(self, usage: Dict[str, int]) -> None:
         """
-        Track token usage and calculate costs.
+        Track token usage and calculate costs (legacy method).
         
         Args:
             usage: Usage statistics from OpenAI response
         """
+        self._track_usage_with_breakdown(usage)
+        
+    def _track_usage_with_breakdown(self, usage: Dict[str, int]) -> Dict[str, Any]:
+        """
+        Track token usage and calculate costs with detailed breakdown.
+        
+        Args:
+            usage: Usage statistics from OpenAI response
+            
+        Returns:
+            Detailed cost breakdown dictionary
+        """
         prompt_tokens = usage.get('prompt_tokens', 0)
         completion_tokens = usage.get('completion_tokens', 0)
+        total_tokens = usage.get('total_tokens', prompt_tokens + completion_tokens)
         
         # Update totals
         self._input_tokens += prompt_tokens
         self._output_tokens += completion_tokens
         
         # Calculate costs if pricing available
+        cost_breakdown = {
+            'input_tokens': prompt_tokens,
+            'output_tokens': completion_tokens,
+            'total_tokens': total_tokens,
+            'input_cost_usd': 0.0,
+            'output_cost_usd': 0.0,
+            'total_cost_usd': 0.0,
+            'model': self.model_name,
+            'timestamp': time.time()
+        }
+        
         if self.model_name in self.MODEL_PRICING:
             pricing = self.MODEL_PRICING[self.model_name]
             
-            # Calculate cost per 1K tokens
-            input_cost = (Decimal(str(prompt_tokens)) / 1000) * pricing['input']
-            output_cost = (Decimal(str(completion_tokens)) / 1000) * pricing['output']
+            # Calculate cost per 1K tokens with Decimal precision
+            input_cost = (Decimal(str(prompt_tokens)) / Decimal('1000')) * pricing['input']
+            output_cost = (Decimal(str(completion_tokens)) / Decimal('1000')) * pricing['output']
             total_cost = input_cost + output_cost
+            
+            # Round to 6 decimal places for maximum precision
+            from decimal import ROUND_HALF_UP
+            input_cost = input_cost.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
+            output_cost = output_cost.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
+            total_cost = total_cost.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
             
             self._total_cost += total_cost
             
+            # Update breakdown with calculated costs
+            cost_breakdown.update({
+                'input_cost_usd': float(input_cost),
+                'output_cost_usd': float(output_cost),
+                'total_cost_usd': float(total_cost)
+            })
+            
+            # Add to history
+            self.cost_history.append(cost_breakdown.copy())
+            
             logger.debug(
                 f"OpenAI usage: {prompt_tokens} input + {completion_tokens} output tokens, "
-                f"cost: ${total_cost:.4f}"
+                f"cost: ${float(total_cost):.6f}"
             )
+        
+        return cost_breakdown
     
     def get_model_info(self) -> Dict[str, Any]:
         """
@@ -485,6 +584,81 @@ class OpenAIAdapter(BaseLLMAdapter):
                 'input': float(pricing['input']),
                 'output': float(pricing['output'])
             }
+        }
+    
+    def get_cost_summary(self) -> Dict[str, Any]:
+        """
+        Get comprehensive cost tracking summary with analytics.
+        
+        Returns:
+            Dictionary with cost analytics and recommendations
+        """
+        if not self.cost_history:
+            return {
+                'total_cost_usd': 0.0,
+                'total_requests': 0,
+                'total_tokens': 0,
+                'average_cost_per_request': 0.0,
+                'average_tokens_per_request': 0.0,
+                'cost_breakdown': {'input': 0.0, 'output': 0.0}
+            }
+        
+        total_requests = len(self.cost_history)
+        total_tokens = sum(c['total_tokens'] for c in self.cost_history)
+        total_input_cost = sum(c['input_cost_usd'] for c in self.cost_history)
+        total_output_cost = sum(c['output_cost_usd'] for c in self.cost_history)
+        
+        return {
+            'total_cost_usd': float(self._total_cost),
+            'total_requests': total_requests,
+            'total_tokens': total_tokens,
+            'average_cost_per_request': float(self._total_cost / total_requests),
+            'average_tokens_per_request': total_tokens / total_requests,
+            'cost_breakdown': {
+                'input': float(total_input_cost),
+                'output': float(total_output_cost)
+            },
+            'model': self.model_name,
+            'pricing_per_1k_tokens': {
+                'input': float(self.MODEL_PRICING.get(self.model_name, self.MODEL_PRICING['gpt-3.5-turbo'])['input']),
+                'output': float(self.MODEL_PRICING.get(self.model_name, self.MODEL_PRICING['gpt-3.5-turbo'])['output'])
+            }
+        }
+    
+    def estimate_cost(self, prompt: str, max_output_tokens: int = 500) -> Dict[str, Any]:
+        """
+        Estimate cost for a prompt before making the API call.
+        
+        Args:
+            prompt: Input prompt text
+            max_output_tokens: Estimated output token count
+            
+        Returns:
+            Cost estimation breakdown
+        """
+        # Count input tokens using tiktoken if available
+        if self.tokenizer:
+            input_tokens = len(self.tokenizer.encode(prompt))
+        else:
+            # Fallback: rough estimation (4 chars per token average)
+            input_tokens = len(prompt) // 4
+        
+        # Get pricing
+        pricing = self.MODEL_PRICING.get(self.model_name, self.MODEL_PRICING['gpt-3.5-turbo'])
+        
+        # Calculate estimated costs
+        input_cost = (Decimal(str(input_tokens)) / Decimal('1000')) * pricing['input']
+        output_cost = (Decimal(str(max_output_tokens)) / Decimal('1000')) * pricing['output']
+        total_cost = input_cost + output_cost
+        
+        return {
+            'estimated_input_tokens': input_tokens,
+            'estimated_output_tokens': max_output_tokens,
+            'estimated_total_tokens': input_tokens + max_output_tokens,
+            'estimated_input_cost_usd': float(input_cost.quantize(Decimal('0.000001'))),
+            'estimated_output_cost_usd': float(output_cost.quantize(Decimal('0.000001'))),
+            'estimated_total_cost_usd': float(total_cost.quantize(Decimal('0.000001'))),
+            'model': self.model_name
         }
 
 

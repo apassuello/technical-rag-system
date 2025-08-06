@@ -38,6 +38,13 @@ huggingface-hub>=0.16.0
 # Visualization (Lightweight)
 plotly>=5.17.0,<6.0.0
 
+# Epic 1 Multi-Model Integration
+openai>=1.0.0  # Official OpenAI Python client
+mistralai>=0.4.0  # Official Mistral Python client  
+tenacity>=8.0.0  # Retry logic with exponential backoff
+tiktoken>=0.5.0  # OpenAI token counting
+mistral-common>=1.0.0  # Mistral token counting
+
 # Optional dependencies for local development only
 # accelerate>=0.20.0  # Uncomment for local GPU acceleration
 # pdfplumber>=0.10.0  # Uncomment for advanced PDF parsing

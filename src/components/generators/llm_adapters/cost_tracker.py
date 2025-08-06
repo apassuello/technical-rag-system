@@ -89,35 +89,48 @@ class CostSummary:
 
 class CostTracker:
     """
-    Centralized cost tracking system for multi-model LLM usage.
+    Thread-safe cost tracking system with budget enforcement and real-time monitoring.
     
-    This system provides:
+    This enhanced system provides:
     - Real-time cost tracking with $0.001 precision
+    - Budget enforcement with configurable thresholds and alerts
     - Usage aggregation by provider, model, time period
     - Cost optimization recommendations
-    - Budget monitoring and alerts
-    - Thread-safe concurrent access
+    - Session-based cost tracking
+    - Thread-safe concurrent access for high-throughput systems
     
     Features:
     - Track costs across all LLM providers
-    - Generate detailed cost reports
+    - Generate detailed cost reports with analytics
     - Provide cost-based routing recommendations
     - Monitor usage patterns and trends
-    - Export cost data for analysis
+    - Budget alerts with customizable callbacks
+    - Export cost data for external analysis
     """
     
     def __init__(self,
+                 daily_budget: Optional[Decimal] = None,
+                 monthly_budget: Optional[Decimal] = None,
+                 alert_thresholds: List[float] = None,
                  precision_places: int = 6,
                  enable_detailed_logging: bool = True):
         """
-        Initialize cost tracking system.
+        Initialize enhanced cost tracking system.
         
         Args:
+            daily_budget: Daily spending limit (triggers alerts)
+            monthly_budget: Monthly spending limit (triggers alerts)  
+            alert_thresholds: Budget alert thresholds (0.0-1.0, e.g., [0.8, 0.95, 1.0])
             precision_places: Decimal precision for cost calculations
             enable_detailed_logging: Whether to log detailed usage info
         """
-        # Thread-safe access
+        # Thread-safe access with reentrant lock
         self._lock = Lock()
+        
+        # Budget configuration
+        self.daily_budget = daily_budget
+        self.monthly_budget = monthly_budget
+        self.alert_thresholds = alert_thresholds or [0.80, 0.95, 1.0]
         
         # Usage records storage
         self._usage_records: List[UsageRecord] = []
@@ -130,7 +143,20 @@ class CostTracker:
         self._last_aggregation_time: Optional[datetime] = None
         self._cached_summaries: Dict[str, CostSummary] = {}
         
-        logger.info(f"Initialized CostTracker with ${10**(-precision_places):.{precision_places}f} precision")
+        # Budget tracking and alerts
+        self.active_alerts: List[Dict[str, Any]] = []
+        self.alert_callbacks: List[callable] = []
+        self._last_alert_check = datetime.now()
+        
+        # Session tracking
+        self.current_session_id: Optional[str] = None
+        self.session_costs: Dict[str, Decimal] = {}
+        
+        logger.info(f"Initialized Enhanced CostTracker with ${10**(-precision_places):.{precision_places}f} precision")
+        if daily_budget:
+            logger.info(f"Daily budget set: ${float(daily_budget):.2f}")
+        if monthly_budget:
+            logger.info(f"Monthly budget set: ${float(monthly_budget):.2f}")
     
     def record_usage(self,
                      provider: str,
@@ -143,7 +169,7 @@ class CostTracker:
                      success: bool = True,
                      metadata: Optional[Dict[str, Any]] = None) -> None:
         """
-        Record usage for a single LLM request.
+        Record usage for a single LLM request with budget monitoring.
         
         Args:
             provider: LLM provider name
@@ -178,8 +204,26 @@ class CostTracker:
         # Thread-safe recording
         with self._lock:
             self._usage_records.append(record)
+            
+            # Update session costs if active
+            if self.current_session_id:
+                if self.current_session_id not in self.session_costs:
+                    self.session_costs[self.current_session_id] = Decimal('0.00')
+                self.session_costs[self.current_session_id] += cost_usd
+            
             # Invalidate cache
             self._cached_summaries.clear()
+            
+            # Check budget alerts (but don't hold the lock during callbacks)
+            alerts_to_trigger = self._check_budget_alerts()
+        
+        # Trigger alerts outside of the lock to prevent deadlocks
+        for alert in alerts_to_trigger:
+            for callback in self.alert_callbacks:
+                try:
+                    callback(alert)
+                except Exception as e:
+                    logger.error(f"Budget alert callback failed: {e}")
         
         # Detailed logging if enabled
         if self.enable_detailed_logging:
@@ -187,6 +231,108 @@ class CostTracker:
                 f"Recorded usage: {provider}/{model} - "
                 f"{input_tokens}+{output_tokens} tokens, ${cost_usd:.6f}"
             )
+    
+    def start_session(self, session_id: str) -> None:
+        """
+        Start a new cost tracking session.
+        
+        Args:
+            session_id: Unique identifier for the session
+        """
+        with self._lock:
+            self.current_session_id = session_id
+            if session_id not in self.session_costs:
+                self.session_costs[session_id] = Decimal('0.00')
+            logger.info(f"Started cost tracking session: {session_id}")
+    
+    def end_session(self) -> Optional[Dict[str, Any]]:
+        """
+        End the current session and return cost summary.
+        
+        Returns:
+            Session cost summary or None if no active session
+        """
+        with self._lock:
+            if not self.current_session_id:
+                return None
+            
+            session_cost = self.session_costs.get(self.current_session_id, Decimal('0.00'))
+            session_summary = {
+                'session_id': self.current_session_id,
+                'total_cost_usd': float(session_cost),
+                'ended_at': datetime.now().isoformat()
+            }
+            
+            logger.info(f"Ended session {self.current_session_id}: ${float(session_cost):.6f}")
+            self.current_session_id = None
+            
+            return session_summary
+    
+    def add_alert_callback(self, callback: callable) -> None:
+        """
+        Add a callback function for budget alerts.
+        
+        Args:
+            callback: Function to call when budget alert is triggered
+        """
+        with self._lock:
+            self.alert_callbacks.append(callback)
+            logger.info(f"Added budget alert callback: {callback.__name__}")
+    
+    def _check_budget_alerts(self) -> List[Dict[str, Any]]:
+        """
+        Check budget thresholds and return new alerts.
+        
+        Returns:
+            List of new alerts to trigger (called without holding lock)
+        """
+        if not self.daily_budget:
+            return []
+        
+        # Calculate current daily spend
+        daily_spend = self.get_summary_by_time_period(hours=24).total_cost_usd
+        new_alerts = []
+        
+        # Check each threshold
+        for threshold in self.alert_thresholds:
+            threshold_amount = self.daily_budget * Decimal(str(threshold))
+            
+            if daily_spend >= threshold_amount:
+                # Check if we already have a recent alert for this threshold
+                recent_alert = any(
+                    alert.get('threshold') == threshold and
+                    (datetime.now() - datetime.fromisoformat(alert.get('timestamp', '1970-01-01'))).total_seconds() < 3600
+                    for alert in self.active_alerts
+                )
+                
+                if not recent_alert:
+                    alert = {
+                        'threshold': threshold,
+                        'current_spend': float(daily_spend),
+                        'budget_limit': float(self.daily_budget),
+                        'utilization_percent': float(daily_spend / self.daily_budget * 100),
+                        'remaining_budget': float(self.daily_budget - daily_spend),
+                        'level': 'warning' if threshold < 0.90 else 'critical' if threshold < 1.0 else 'exceeded',
+                        'message': self._get_alert_message(threshold, daily_spend, self.daily_budget),
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    
+                    self.active_alerts.append(alert)
+                    new_alerts.append(alert)
+        
+        return new_alerts
+    
+    def _get_alert_message(self, threshold: float, current: Decimal, budget: Decimal) -> str:
+        """Generate appropriate alert message based on threshold."""
+        percent = float(current / budget * 100)
+        
+        if threshold < 0.90:
+            return f"Budget {percent:.1f}% utilized - monitoring recommended"
+        elif threshold < 1.0:
+            return f"Budget {percent:.1f}% utilized - consider cost optimization"
+        else:
+            overage = float(current - budget)
+            return f"Daily budget exceeded by ${overage:.2f} - immediate action required"
     
     def get_total_cost(self) -> Decimal:
         """
