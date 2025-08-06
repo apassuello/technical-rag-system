@@ -147,7 +147,7 @@ answer_generator:
           expected_latency_ms: 1500
         fallback:
           - provider: "ollama"
-            model: "llama3.1:8b"
+            model: "llama3.2:3b"
             max_cost_per_query: 0.000
           - provider: "openai"
             model: "gpt-3.5-turbo"
@@ -334,7 +334,6 @@ providers:
     keep_alive: "5m"
     models:
       - "llama3.2:3b"
-      - "llama3.1:8b"
       
   openai:
     base_url: "https://api.openai.com/v1"

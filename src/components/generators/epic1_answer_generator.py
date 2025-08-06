@@ -465,18 +465,36 @@ class Epic1AnswerGenerator(AnswerGenerator):
             
             adapter_class = get_adapter_class(selected_model.provider)
             
-            # Create new adapter instance
-            adapter_config = {
-                'model_name': selected_model.model,
-                'temperature': self.config.get('llm_client', {}).get('config', {}).get('temperature', 0.7),
-                'max_tokens': self.config.get('llm_client', {}).get('config', {}).get('max_tokens', 512),
-            }
-            
-            # Add provider-specific configuration
-            if selected_model.provider == 'openai':
-                adapter_config['timeout'] = 30.0
-            elif selected_model.provider == 'mistral':
-                adapter_config['timeout'] = 30.0
+            # Prepare configuration based on provider
+            if selected_model.provider == 'ollama':
+                # For Ollama, pass parameters through config
+                config_params = {
+                    'temperature': self.config.get('llm_client', {}).get('config', {}).get('temperature', 0.7),
+                    'max_tokens': self.config.get('llm_client', {}).get('config', {}).get('max_tokens', 512),
+                }
+                
+                adapter_config = {
+                    'model_name': selected_model.model,
+                    'config': config_params
+                }
+                
+            elif selected_model.provider in ['openai', 'mistral']:
+                # For API providers, pass temperature and max_tokens directly
+                adapter_config = {
+                    'model_name': selected_model.model,
+                    'temperature': self.config.get('llm_client', {}).get('config', {}).get('temperature', 0.7),
+                    'max_tokens': self.config.get('llm_client', {}).get('config', {}).get('max_tokens', 512),
+                    'timeout': 30.0
+                }
+            else:
+                # Fallback for unknown providers
+                adapter_config = {
+                    'model_name': selected_model.model,
+                    'config': {
+                        'temperature': self.config.get('llm_client', {}).get('config', {}).get('temperature', 0.7),
+                        'max_tokens': self.config.get('llm_client', {}).get('config', {}).get('max_tokens', 512),
+                    }
+                }
             
             # Create new adapter
             new_adapter = adapter_class(**adapter_config)
