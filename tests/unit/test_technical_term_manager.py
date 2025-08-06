@@ -73,15 +73,18 @@ class TestTechnicalTermManager:
         assert any('BERT' in term for term in terms)
         assert any('F1' in term for term in terms)
     
-    def test_calculate_metrics(self):
-        """Test metric calculation."""
+    def test_calculate_density(self):
+        """Test density calculation."""
         text = "How does transformer attention work with embeddings?"
-        metrics = self.manager.calculate_metrics(text)
+        density = self.manager.calculate_density(text)
         
-        assert 'technical_density' in metrics
-        assert 'domain_coverage' in metrics
-        assert 'pattern_matches' in metrics
-        assert 0.0 <= metrics['technical_density'] <= 1.0
+        assert isinstance(density, float)
+        assert 0.0 <= density <= 1.0
+        
+        # Test with purely technical text
+        technical_text = "transformer attention mechanism with embeddings and neural networks"
+        tech_density = self.manager.calculate_density(technical_text)
+        assert tech_density > 0.0
     
     def test_performance(self):
         """Test performance meets requirements."""

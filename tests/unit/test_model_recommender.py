@@ -122,8 +122,9 @@ class TestModelRecommender:
     
     def test_performance(self):
         """Test performance meets requirements."""
+        classification = {'complexity_level': 'medium', 'complexity_score': 0.5, 'confidence': 0.8}
         start = time.time()
-        self.recommender.recommend('medium', 0.5, 0.8)
+        self.recommender.recommend(classification)
         elapsed = (time.time() - start) * 1000
         
         assert elapsed < 5  # Should be under 5ms
