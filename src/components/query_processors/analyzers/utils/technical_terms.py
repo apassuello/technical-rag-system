@@ -297,6 +297,18 @@ class TechnicalTermManager:
         
         return found_terms
     
+    def find_terms_in_text(self, text: str) -> List[str]:
+        """
+        Find technical terms in text (alias for extract_terms).
+        
+        Args:
+            text: Input text to analyze
+            
+        Returns:
+            List of technical terms found in the text
+        """
+        return self.extract_terms(text)
+    
     def calculate_density(self, text: str) -> float:
         """
         Calculate technical term density in text.
@@ -358,6 +370,18 @@ class TechnicalTermManager:
         """
         density = self.calculate_density(text)
         return density >= threshold
+    
+    def get_domain_terms(self, domain: str) -> Set[str]:
+        """
+        Get technical terms for a specific domain.
+        
+        Args:
+            domain: Domain name (e.g., 'ml', 'engineering', 'rag')
+            
+        Returns:
+            Set of technical terms for the domain
+        """
+        return self.domain_terms.get(domain, set())
     
     def get_statistics(self) -> Dict[str, any]:
         """Get statistics about loaded terms."""

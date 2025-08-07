@@ -559,6 +559,65 @@ class ModelRecommender:
         
         return reasoning
     
+    def recommend_model(
+        self, 
+        complexity_score: float, 
+        complexity_level: str, 
+        strategy: str = 'balanced'
+    ) -> str:
+        """
+        Recommend model based on complexity score and level.
+        
+        This method provides a simplified interface for the Epic1MLAnalyzer
+        that returns just the model identifier string.
+        
+        Args:
+            complexity_score: Complexity score (0.0-1.0)
+            complexity_level: Complexity level ('simple', 'medium', 'complex')
+            strategy: Routing strategy ('balanced', 'cost_optimized', etc.)
+            
+        Returns:
+            Model identifier string (e.g., 'ollama:llama3.2:3b')
+        """
+        # Create classification dictionary for internal recommend method
+        classification = {
+            'level': complexity_level,
+            'score': complexity_score,
+            'confidence': 0.8  # Default confidence
+        }
+        
+        # Create features dictionary with basic info
+        features = {
+            'length_features': {
+                'word_count': max(10, int(complexity_score * 50))  # Rough estimate
+            },
+            'composite_features': {
+                'structural_complexity': complexity_score,
+                'technical_depth': complexity_score * 0.8,
+                'is_simple_lookup': complexity_score < 0.3,
+                'requires_deep_understanding': complexity_score > 0.7
+            }
+        }
+        
+        # Temporarily update strategy if different from default
+        original_strategy = self.strategy
+        try:
+            if strategy != self.strategy.value:
+                try:
+                    self.strategy = RoutingStrategy(strategy)
+                except ValueError:
+                    logger.warning(f"Unknown strategy {strategy}, using {original_strategy.value}")
+            
+            # Get full recommendation
+            recommendation = self.recommend(classification, features)
+            
+            # Return just the model identifier
+            return recommendation.model
+            
+        finally:
+            # Restore original strategy
+            self.strategy = original_strategy
+    
     def get_statistics(self) -> Dict[str, Any]:
         """Get recommender configuration statistics."""
         return {

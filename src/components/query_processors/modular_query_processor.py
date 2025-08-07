@@ -27,6 +27,7 @@ from .base import (
     QueryProcessorMetrics, validate_config
 )
 from .analyzers import QueryAnalyzer, NLPAnalyzer, RuleBasedAnalyzer, Epic1QueryAnalyzer
+from .analyzers.epic1_ml_analyzer import Epic1MLAnalyzer
 from .selectors import ContextSelector, MMRSelector, TokenLimitSelector
 from .assemblers import ResponseAssembler, StandardAssembler, RichAssembler
 from src.core.interfaces import Answer, QueryOptions, Document, Retriever, AnswerGenerator, HealthStatus
@@ -765,6 +766,8 @@ class ModularQueryProcessor(QueryProcessor):
             return RuleBasedAnalyzer(self._config.analyzer_config)
         elif analyzer_type == 'epic1':
             return Epic1QueryAnalyzer(self._config.analyzer_config)
+        elif analyzer_type == 'epic1_ml':
+            return Epic1MLAnalyzer(self._config.analyzer_config)
         else:
             logger.warning(f"Unknown analyzer type {analyzer_type}, using NLP analyzer")
             return NLPAnalyzer()

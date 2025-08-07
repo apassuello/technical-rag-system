@@ -92,6 +92,14 @@ class ComponentFactory:
         "modular_query_processor": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",  # Alias for compatibility
     }
     
+    # Query analyzer implementations (used by ModularQueryProcessor)
+    _QUERY_ANALYZERS: Dict[str, str] = {
+        "nlp": "src.components.query_processors.analyzers.nlp_analyzer.NLPAnalyzer",
+        "rule_based": "src.components.query_processors.analyzers.rule_based_analyzer.RuleBasedAnalyzer", 
+        "epic1": "src.components.query_processors.analyzers.epic1_query_analyzer.Epic1QueryAnalyzer",
+        "epic1_ml": "src.components.query_processors.analyzers.epic1_ml_analyzer.Epic1MLAnalyzer",  # Epic 1 ML-powered analyzer
+    }
+    
     # Phase 4: Performance monitoring and caching
     _performance_metrics: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
         "creation_count": 0,
@@ -817,6 +825,45 @@ class ComponentFactory:
             ) from e
     
     @classmethod
+    def create_query_analyzer(cls, analyzer_type: str, **kwargs):
+        """
+        Create a query analyzer instance.
+        
+        Args:
+            analyzer_type: Type of analyzer ("nlp", "rule_based", "epic1", "epic1_ml")
+            **kwargs: Arguments to pass to the analyzer constructor
+            
+        Returns:
+            Instantiated QueryAnalyzer
+            
+        Raises:
+            ValueError: If analyzer type is not supported
+            TypeError: If constructor arguments are invalid
+        """
+        if analyzer_type not in cls._QUERY_ANALYZERS:
+            available = list(cls._QUERY_ANALYZERS.keys())
+            raise ValueError(
+                f"Unknown analyzer type '{analyzer_type}'. "
+                f"Available analyzers: {available}"
+            )
+        
+        analyzer_module_path = cls._QUERY_ANALYZERS[analyzer_type]
+        analyzer_class = cls._get_component_class(analyzer_module_path)
+        
+        try:
+            logger.debug(f"Creating {analyzer_type} analyzer with args: {kwargs}")
+            return cls._create_with_tracking(
+                analyzer_class, 
+                f"analyzer_{analyzer_type}", 
+                **kwargs
+            )
+        except Exception as e:
+            raise TypeError(
+                f"Failed to create analyzer '{analyzer_type}': {e}. "
+                f"Check constructor arguments: {kwargs}"
+            ) from e
+    
+    @classmethod
     def create_query_processor(cls, processor_type: str, **kwargs) -> QueryProcessor:
         """
         Create a query processor instance.
@@ -874,7 +921,8 @@ class ComponentFactory:
             'vector_store': cls._VECTOR_STORES,
             'retriever': cls._RETRIEVERS,
             'generator': cls._GENERATORS,
-            'query_processor': cls._QUERY_PROCESSORS
+            'query_processor': cls._QUERY_PROCESSORS,
+            'query_analyzer': cls._QUERY_ANALYZERS
         }
         
         mapping = type_mappings.get(component_type)
@@ -903,6 +951,7 @@ class ComponentFactory:
             "retrievers": list(cls._RETRIEVERS.keys()),
             "generators": list(cls._GENERATORS.keys()),
             "query_processors": list(cls._QUERY_PROCESSORS.keys()),
+            "query_analyzers": list(cls._QUERY_ANALYZERS.keys()),
         }
     
     @classmethod

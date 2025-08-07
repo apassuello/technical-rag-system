@@ -161,12 +161,22 @@ class ModelManager:
                 'quantization_method': 'dynamic'
             },
             'T5-small': {
-                'model_name': 'google-t5/t5-small',
+                'model_name': 't5-small',  # Fixed: was 'google-t5/t5-small' 
                 'model_type': 'transformers',
                 'estimated_memory_mb': 240,
                 'quantization_method': 'dynamic'
             }
         }
+        
+        # Create reverse mapping from HuggingFace model names to configuration keys
+        # This allows views to use either the config key OR the HuggingFace model name
+        self._hf_name_to_config_key = {}
+        for config_key, config in self.model_configurations.items():
+            hf_name = config['model_name']
+            self._hf_name_to_config_key[hf_name] = config_key
+            
+        logger.debug(f"Initialized {len(self.model_configurations)} model configurations")
+        logger.debug(f"HuggingFace name mappings: {list(self._hf_name_to_config_key.keys())}")
     
     def register_model_factory(self, model_type: str, factory_function: Callable) -> None:
         """
@@ -338,23 +348,44 @@ class ModelManager:
         start_time = time.time()
         
         try:
-            # Get model configuration
-            config = self.model_configurations.get(model_name)
+            # Get model configuration - support both config keys and HuggingFace model names
+            config_key = model_name
+            config = self.model_configurations.get(config_key)
+            
+            # If not found by config key, try HuggingFace model name mapping
+            if not config and hasattr(self, '_hf_name_to_config_key'):
+                config_key = self._hf_name_to_config_key.get(model_name)
+                if config_key:
+                    config = self.model_configurations.get(config_key)
+                    logger.debug(f"Mapped HuggingFace model name '{model_name}' to config key '{config_key}'")
+            
             if not config:
-                raise ModelLoadingError(f"No configuration found for model: {model_name}")
+                available_names = list(self.model_configurations.keys())
+                if hasattr(self, '_hf_name_to_config_key'):
+                    available_names.extend(list(self._hf_name_to_config_key.keys()))
+                raise ModelLoadingError(
+                    f"No configuration found for model: {model_name}. "
+                    f"Available models: {available_names}"
+                )
             
             # Use registered factory or default loading
+            # Try both the original model_name and the config_key for factories
             if model_name in self._model_factories:
                 logger.debug(f"Loading {model_name} using registered factory")
                 model = self._model_factories[model_name]()
+            elif config_key != model_name and config_key in self._model_factories:
+                logger.debug(f"Loading {config_key} using registered factory (mapped from {model_name})")
+                model = self._model_factories[config_key]()
             else:
                 logger.debug(f"Loading {model_name} using default method")
                 model = self._load_model_default(model_name, config)
             
-            # Apply quantization if enabled
-            if self.enable_quantization and self.quantization_utils:
+            # Apply quantization if enabled (currently disabled for compatibility)
+            if self.enable_quantization and self.quantization_utils and False:  # Disabled for now
                 logger.debug(f"Applying quantization to {model_name}")
-                quant_result = self.quantization_utils.quantize_transformer_model(model, method='dynamic')
+                # Extract actual model from dict if needed
+                quantization_target = model.get('model', model) if isinstance(model, dict) else model
+                quant_result = self.quantization_utils.quantize_transformer_model(quantization_target, method='dynamic')
                 
                 if quant_result.success:
                     logger.info(f"Quantized {model_name}: {quant_result.compression_ratio:.2f}x compression, "
@@ -363,6 +394,9 @@ class ModelManager:
                     # model = quantized_model  # Uncomment when quantization is stable
                 else:
                     logger.warning(f"Quantization failed for {model_name}: {quant_result.error_message}")
+            else:
+                if self.enable_quantization:
+                    logger.debug(f"Quantization disabled for {model_name} (compatibility mode)")
             
             # Record loading time
             load_time = time.time() - start_time
@@ -396,7 +430,30 @@ class ModelManager:
                 from transformers import AutoModel, AutoTokenizer
                 
                 model = AutoModel.from_pretrained(hf_model_name)
-                tokenizer = AutoTokenizer.from_pretrained(hf_model_name)
+                
+                # Try to load tokenizer, with fallback for problematic models
+                try:
+                    tokenizer = AutoTokenizer.from_pretrained(hf_model_name)
+                    logger.debug(f"✅ Fast tokenizer loaded for {hf_model_name}: {type(tokenizer)}")
+                except Exception as tokenizer_error:
+                    logger.warning(f"Fast tokenizer failed for {hf_model_name}, trying slow tokenizer: {tokenizer_error}")
+                    try:
+                        tokenizer = AutoTokenizer.from_pretrained(hf_model_name, use_fast=False)
+                        logger.debug(f"✅ Slow tokenizer loaded for {hf_model_name}: {type(tokenizer)}")
+                    except Exception as slow_tokenizer_error:
+                        logger.error(f"Both tokenizers failed for {hf_model_name}: {slow_tokenizer_error}")
+                        # For some models, we might need specific approaches
+                        if 'deberta' in hf_model_name.lower():
+                            logger.info(f"Attempting DeBERTa-specific tokenizer for {hf_model_name}")
+                            try:
+                                from transformers import DebertaV2Tokenizer
+                                tokenizer = DebertaV2Tokenizer.from_pretrained(hf_model_name)
+                                logger.info(f"✅ DeBertaV2Tokenizer loaded for {hf_model_name}")
+                            except Exception as deberta_error:
+                                logger.error(f"DeBertaV2Tokenizer also failed: {deberta_error}")
+                                tokenizer = None
+                        else:
+                            tokenizer = None
                 
                 # Return a wrapper or just the model
                 return {'model': model, 'tokenizer': tokenizer}
@@ -456,6 +513,11 @@ class ModelManager:
         """Get information about a model."""
         with self._lock:
             return self.model_registry.get(model_name)
+    
+    def get_model(self, model_name: str) -> Optional[Any]:
+        """Get a loaded model instance."""
+        with self._lock:
+            return self.model_instances.get(model_name)
     
     def list_loaded_models(self) -> List[ModelInfo]:
         """Get list of all loaded models."""
