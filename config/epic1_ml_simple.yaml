@@ -1,0 +1,60 @@
+# Epic 1 ML Analyzer - Simple Configuration
+# Quick setup for ML-powered query analysis
+
+query_processor:
+  type: "modular"
+  config:
+    analyzer_type: "epic1_ml"  # Enable ML-powered analysis
+    
+    # Simple ML configuration with sensible defaults
+    analyzer_config:
+      memory_budget_gb: 1.5
+      parallel_execution: true
+      fallback_strategy: "algorithmic"
+    
+    # Standard context selection
+    selector_type: "mmr"
+    selector_config:
+      lambda_param: 0.5
+      max_tokens: 2048
+      
+    # Rich response assembly
+    assembler_type: "rich"
+    assembler_config:
+      include_sources: true
+      format_citations: true
+
+# Document processor (unchanged)
+document_processor:
+  type: "modular"
+  config:
+    chunk_size: 512
+    overlap_size: 50
+
+# Embedder (unchanged) 
+embedder:
+  type: "modular"
+  config:
+    model_name: "sentence-transformers/all-MiniLM-L6-v2"
+    use_mps: true
+    batch_size: 32
+
+# Retriever (unchanged)
+retriever:
+  type: "modular_unified"
+  config:
+    hybrid_search:
+      dense_weight: 0.7
+      sparse_weight: 0.3
+      fusion_method: "rrf"
+      rrf_k: 60
+    top_k: 10
+
+# Answer generator (unchanged)
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    llm_client:
+      type: "ollama"
+      config:
+        model_name: "llama3.2:3b"
