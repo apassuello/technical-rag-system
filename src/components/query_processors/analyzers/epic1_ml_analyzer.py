@@ -26,6 +26,9 @@ from typing import Dict, Any, Optional, List, Tuple
 from pathlib import Path
 import sys
 import numpy as np
+import torch
+import torch.nn as nn
+import joblib
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent.parent
@@ -118,6 +121,9 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         # Initialize meta-classifier
         self._initialize_meta_classifier()
         
+        # Load trained models if available
+        self._load_trained_models()
+        
         # Performance tracking
         self._analysis_count = 0
         self._total_analysis_time = 0.0
@@ -125,7 +131,8 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         self._view_performance = {}
         
         logger.info(f"Initialized Epic1MLAnalyzer with {len(self.views)} views, "
-                   f"memory budget: {self.memory_budget_gb}GB")
+                   f"memory budget: {self.memory_budget_gb}GB, "
+                   f"trained models: {'loaded' if hasattr(self, 'trained_meta_classifier') else 'not available'}")
     
     def configure(self, config: Dict[str, Any]) -> None:
         """
@@ -432,6 +439,146 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             logger.error(f"Failed to initialize meta-classifier: {e}")
             raise
     
+    def _load_trained_models(self) -> None:
+        """Load trained view models and MetaClassifier if available."""
+        models_dir = Path("models/epic1")
+        
+        if not models_dir.exists():
+            logger.warning(f"Models directory not found: {models_dir}")
+            return
+        
+        try:
+            # Load trained view models
+            self.trained_view_models = {}
+            view_model_loaded = False
+            
+            for view_name in self.views.keys():
+                model_path = models_dir / f"{view_name}_model.pth"
+                if model_path.exists():
+                    try:
+                        # Load the simple view model (matching training architecture)
+                        model = self._load_simple_view_model(model_path)
+                        self.trained_view_models[view_name] = model
+                        view_model_loaded = True
+                        logger.info(f"Loaded trained model for {view_name} view")
+                    except Exception as e:
+                        logger.warning(f"Failed to load {view_name} model: {e}")
+            
+            # Load MetaClassifier
+            meta_classifier_path = models_dir / "meta_classifier.pkl"
+            scaler_path = models_dir / "meta_classifier_scaler.pkl"
+            calibrator_path = models_dir / "confidence_calibrator.pkl"
+            
+            if meta_classifier_path.exists() and scaler_path.exists():
+                self.trained_meta_classifier = joblib.load(meta_classifier_path)
+                self.meta_feature_scaler = joblib.load(scaler_path)
+                
+                if calibrator_path.exists():
+                    self.confidence_calibrator = joblib.load(calibrator_path)
+                else:
+                    self.confidence_calibrator = None
+                
+                logger.info("Loaded trained MetaClassifier with scaler and calibrator")
+            else:
+                logger.warning("MetaClassifier not found, using default weighted combination")
+                self.trained_meta_classifier = None
+            
+            if view_model_loaded or hasattr(self, 'trained_meta_classifier'):
+                logger.info(f"Successfully loaded trained models from {models_dir}")
+                
+        except Exception as e:
+            logger.error(f"Error loading trained models: {e}")
+            self.trained_view_models = {}
+            self.trained_meta_classifier = None
+    
+    def _load_simple_view_model(self, model_path: Path):
+        """Load a simple view model matching the training architecture."""
+        
+        class SimpleViewModel(nn.Module):
+            def __init__(self, input_dim: int = 8, hidden_dim: int = 64):
+                super().__init__()
+                self.network = nn.Sequential(
+                    nn.Linear(input_dim, hidden_dim),
+                    nn.ReLU(),
+                    nn.Dropout(0.2),
+                    nn.Linear(hidden_dim, hidden_dim // 2),
+                    nn.ReLU(),
+                    nn.Dropout(0.2),
+                    nn.Linear(hidden_dim // 2, 1),
+                    nn.Sigmoid()
+                )
+            
+            def forward(self, features):
+                return self.network(features).squeeze()
+        
+        model = SimpleViewModel()
+        checkpoint = torch.load(model_path, map_location='cpu')
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.eval()
+        return model
+    
+    def _extract_simple_features(self, query: str) -> np.ndarray:
+        """Extract simple features from query (matching training feature extraction)."""
+        words = query.split()
+        
+        features = [
+            len(query),                          # Character count
+            len(words),                           # Word count
+            np.mean([len(w) for w in words]) if words else 0,    # Average word length
+            query.count('?'),                     # Question marks
+            query.count(','),                     # Commas
+            len([w for w in words if len(w) > 6]),  # Long words
+            len([w for w in words if w and w[0].isupper()]),  # Capitalized words
+            query.count(' and ') + query.count(' or '),  # Conjunctions
+        ]
+        
+        return np.array(features, dtype=np.float32)
+    
+    def _get_trained_view_predictions(self, query: str) -> Dict[str, float]:
+        """Get predictions from trained view models."""
+        if not hasattr(self, 'trained_view_models') or not self.trained_view_models:
+            return {}
+        
+        predictions = {}
+        features = self._extract_simple_features(query)
+        features_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0)
+        
+        with torch.no_grad():
+            for view_name, model in self.trained_view_models.items():
+                try:
+                    score = model(features_tensor).item()
+                    predictions[view_name] = score
+                except Exception as e:
+                    logger.warning(f"Failed to get prediction from {view_name} model: {e}")
+        
+        return predictions
+    
+    def _get_single_view_prediction(self, query: str, view_name: str) -> Optional[float]:
+        """Get prediction from a single trained view model."""
+        if not hasattr(self, 'trained_view_models') or view_name not in self.trained_view_models:
+            return None
+        
+        try:
+            features = self._extract_simple_features(query)
+            features_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0)
+            
+            with torch.no_grad():
+                model = self.trained_view_models[view_name]
+                score = model(features_tensor).item()
+                return score
+        except Exception as e:
+            logger.warning(f"Failed to get prediction from {view_name} model: {e}")
+            return None
+    
+    def _score_to_level(self, score: float) -> ComplexityLevel:
+        """Convert numeric score to ComplexityLevel."""
+        if score < 0.33:
+            return ComplexityLevel.SIMPLE
+        elif score < 0.67:
+            return ComplexityLevel.MEDIUM
+        else:
+            return ComplexityLevel.COMPLEX
+    
     async def analyze(self, query: str, mode: str = 'hybrid') -> AnalysisResult:
         """
         Analyze query complexity using all 5 ML views.
@@ -488,7 +635,8 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                     'successful_views': len([r for r in view_results.values() if r.confidence > 0]),
                     'meta_classification': {
                         'breakdown': combined_result['breakdown'],
-                        'reasoning': combined_result['reasoning']
+                        'reasoning': combined_result['reasoning'],
+                        'meta_classifier_used': combined_result.get('meta_classifier_used', False)
                     },
                     'view_weights': self.view_weights,
                     'parallel_execution': self.parallel_execution,
@@ -586,7 +734,56 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         start_time = time.time()
         
         try:
-            # Execute view analysis
+            # Check if we have a trained model for this view
+            if (hasattr(self, 'trained_view_models') and 
+                view_name in self.trained_view_models and 
+                mode in ['hybrid', 'ml']):
+                
+                # Get prediction from trained model
+                trained_score = self._get_single_view_prediction(query, view_name)
+                
+                if trained_score is not None:
+                    # Create a ViewResult from trained model prediction
+                    analysis_time = (time.time() - start_time) * 1000
+                    
+                    # Still run the view for additional features if in hybrid mode
+                    if mode == 'hybrid':
+                        original_result = await view.analyze(query, mode='algorithmic')
+                        # Combine trained score with original features
+                        result = ViewResult(
+                            view_name=view_name,
+                            score=trained_score,  # Use trained model score
+                            confidence=0.85,  # High confidence for trained models
+                            method=AnalysisMethod.ML,
+                            latency_ms=analysis_time,
+                            features=original_result.features if hasattr(original_result, 'features') else {},
+                            metadata={
+                                'trained_model_used': True,
+                                'original_score': original_result.score,
+                                'model_type': 'neural_network'
+                            }
+                        )
+                    else:
+                        # Pure ML mode - just use trained model
+                        result = ViewResult(
+                            view_name=view_name,
+                            score=trained_score,
+                            confidence=0.85,
+                            method=AnalysisMethod.ML,
+                            latency_ms=analysis_time,
+                            features={},
+                            metadata={'trained_model_used': True, 'model_type': 'neural_network'}
+                        )
+                    
+                    # Record performance
+                    if view_name not in self._view_performance:
+                        self._view_performance[view_name] = {'total_time': 0, 'count': 0, 'errors': 0}
+                    self._view_performance[view_name]['total_time'] += analysis_time
+                    self._view_performance[view_name]['count'] += 1
+                    
+                    return result
+            
+            # Fall back to original view analysis
             result = await view.analyze(query, mode)
             
             # Record view performance
@@ -615,16 +812,16 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
     ) -> ComplexityClassification:
         """Combine view results using meta-classifier."""
         try:
-            # Prepare features for meta-classifier
-            features = self._extract_meta_features(query, view_results)
-            
-            # Use existing ComplexityClassifier for meta-classification
-            classification = self.complexity_classifier.classify(features)
-            
-            # Enhance classification with view-specific insights
-            enhanced_classification = self._enhance_classification(classification, view_results)
-            
-            return enhanced_classification
+            # Check if we have trained models to use
+            if hasattr(self, 'trained_meta_classifier') and self.trained_meta_classifier:
+                # Use trained MetaClassifier (Epic 1 ML architecture)
+                return self._combine_with_trained_meta_classifier(query, view_results)
+            else:
+                # Fall back to original ComplexityClassifier
+                features = self._extract_meta_features(query, view_results)
+                classification = self.complexity_classifier.classify(features)
+                enhanced_classification = self._enhance_classification(classification, view_results)
+                return enhanced_classification
             
         except Exception as e:
             logger.error(f"View result combination failed: {e}")
@@ -636,6 +833,131 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 'breakdown': {'fallback': 1.0},
                 'reasoning': f"Meta-classification failed: {e}"
             }
+    
+    def _combine_with_trained_meta_classifier(self, query: str, view_results: Dict[str, ViewResult]) -> Dict[str, Any]:
+        """Use trained MetaClassifier to combine view results (Epic 1 ML architecture)."""
+        try:
+            # Build 15-dimensional meta-feature vector (3 features per view)
+            meta_features = self._build_trained_meta_features(view_results)
+            
+            # Scale features
+            meta_features_scaled = self.meta_feature_scaler.transform(meta_features.reshape(1, -1))
+            
+            # Get predictions from MetaClassifier
+            class_probs = self.trained_meta_classifier.predict_proba(meta_features_scaled)[0]
+            predicted_class = self.trained_meta_classifier.predict(meta_features_scaled)[0]
+            
+            # Convert class probabilities to continuous score
+            # Classes: 0=simple, 1=medium, 2=complex
+            class_centers = np.array([0.2, 0.5, 0.8])
+            final_score = np.dot(class_probs, class_centers)
+            
+            # Get calibrated confidence if available
+            raw_confidence = np.max(class_probs)
+            if hasattr(self, 'confidence_calibrator') and self.confidence_calibrator:
+                calibrated_confidence = self.confidence_calibrator.transform([raw_confidence])[0]
+            else:
+                calibrated_confidence = raw_confidence
+            
+            # Determine complexity level
+            if final_score < 0.33:
+                complexity_level = 'simple'
+            elif final_score < 0.67:
+                complexity_level = 'medium'
+            else:
+                complexity_level = 'complex'
+            
+            # Build breakdown showing view contributions
+            breakdown = {}
+            for view_name, result in view_results.items():
+                if result.confidence > 0:
+                    breakdown[f'{view_name}_score'] = result.score
+                    breakdown[f'{view_name}_confidence'] = result.confidence
+            
+            # Generate reasoning
+            successful_views = [name for name, result in view_results.items() if result.confidence > 0]
+            reasoning = (
+                f"Trained MetaClassifier analysis using {len(successful_views)} views. "
+                f"Final score: {final_score:.3f} (class probabilities: simple={class_probs[0]:.2f}, "
+                f"medium={class_probs[1]:.2f}, complex={class_probs[2]:.2f}). "
+                f"Calibrated confidence: {calibrated_confidence:.3f}"
+            )
+            
+            return {
+                'complexity_level': complexity_level,
+                'complexity_score': final_score,
+                'confidence': calibrated_confidence,
+                'breakdown': breakdown,
+                'reasoning': reasoning,
+                'meta_classifier_used': True
+            }
+            
+        except Exception as e:
+            logger.error(f"Trained MetaClassifier failed: {e}, falling back to default combination")
+            # Fall back to weighted average
+            return self._fallback_combination(view_results)
+    
+    def _build_trained_meta_features(self, view_results: Dict[str, ViewResult]) -> np.ndarray:
+        """Build 15-dimensional meta-feature vector for trained MetaClassifier."""
+        meta_features = np.zeros(15)
+        
+        for i, view_name in enumerate(['technical', 'linguistic', 'task', 'semantic', 'computational']):
+            base_idx = i * 3
+            
+            if view_name in view_results:
+                result = view_results[view_name]
+                # Feature 1: Complexity score
+                meta_features[base_idx] = result.score
+                # Feature 2: Confidence
+                meta_features[base_idx + 1] = result.confidence
+                # Feature 3: Analysis method (0=algorithmic, 0.5=hybrid, 1=ml)
+                if result.is_ml_based:
+                    meta_features[base_idx + 2] = 1.0
+                elif hasattr(result, 'method') and result.method == AnalysisMethod.HYBRID:
+                    meta_features[base_idx + 2] = 0.5
+                else:
+                    meta_features[base_idx + 2] = 0.0
+            else:
+                # Missing view - use defaults
+                meta_features[base_idx] = 0.5      # Neutral score
+                meta_features[base_idx + 1] = 0.0  # No confidence
+                meta_features[base_idx + 2] = 0.0  # Algorithmic
+        
+        return meta_features
+    
+    def _fallback_combination(self, view_results: Dict[str, ViewResult]) -> Dict[str, Any]:
+        """Fallback to weighted average when MetaClassifier fails."""
+        weighted_scores = []
+        weighted_confidences = []
+        
+        for view_name, result in view_results.items():
+            if result.confidence > 0:
+                weight = self.view_weights.get(view_name, 0.2)
+                weighted_scores.append(result.score * weight)
+                weighted_confidences.append(result.confidence * weight)
+        
+        if weighted_scores:
+            final_score = sum(weighted_scores)
+            final_confidence = min(sum(weighted_confidences), 0.95)
+        else:
+            final_score = 0.5
+            final_confidence = 0.3
+        
+        # Determine level
+        if final_score < 0.33:
+            complexity_level = 'simple'
+        elif final_score < 0.67:
+            complexity_level = 'medium'
+        else:
+            complexity_level = 'complex'
+        
+        return {
+            'complexity_level': complexity_level,
+            'complexity_score': final_score,
+            'confidence': final_confidence,
+            'breakdown': {v: r.score for v, r in view_results.items() if r.confidence > 0},
+            'reasoning': 'Fallback weighted average combination'
+        }
     
     def _extract_meta_features(self, query: str, view_results: Dict[str, ViewResult]) -> Dict[str, Any]:
         """Extract features for meta-classifier from view results."""
