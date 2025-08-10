@@ -50,6 +50,10 @@ def load_batch(file_path: Union[str, Path]) -> List[Dict[str, Any]]:
             print(f"⚠️  Skipping {file_path.name}: Not a valid training dataset")
             return []
             
+        # Add source tracking to each sample
+        for sample in data:
+            sample['_source_file'] = file_path.name
+        
         print(f"✅ Loaded {len(data)} samples from {file_path.name}")
         return data
     except json.JSONDecodeError:
@@ -79,6 +83,33 @@ def find_training_files(directory: Path) -> List[Path]:
             continue  # Skip invalid files silently
     
     return valid_files
+
+def remove_duplicates(data: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Remove duplicate queries and track their sources."""
+    seen_queries = {}
+    unique_samples = []
+    duplicates = []
+    
+    for sample in data:
+        query = sample.get("query_text", "").strip().lower()
+        
+        if query in seen_queries:
+            # Found duplicate
+            original_sample = seen_queries[query]
+            duplicate_info = {
+                "query_text": sample.get("query_text", ""),
+                "original_source": original_sample.get("_source_file", "unknown"),
+                "duplicate_source": sample.get("_source_file", "unknown"),
+                "original_score": original_sample.get("expected_complexity_score", 0),
+                "duplicate_score": sample.get("expected_complexity_score", 0)
+            }
+            duplicates.append(duplicate_info)
+        else:
+            # New unique query
+            seen_queries[query] = sample
+            unique_samples.append(sample)
+    
+    return unique_samples, duplicates
 
 def analyze_dataset(data: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Analyze the combined dataset."""
@@ -209,8 +240,39 @@ def main():
     
     print(f"\n📊 Loaded {len(all_samples)} total samples")
     
-    # Analyze before shuffling
-    print("\n🔍 Dataset Analysis:")
+    # Remove duplicates
+    print(f"\n🔍 Checking for duplicates...")
+    unique_samples, duplicates = remove_duplicates(all_samples)
+    
+    if duplicates:
+        print(f"⚠️  Found {len(duplicates)} duplicate queries:")
+        for i, dup in enumerate(duplicates[:10], 1):  # Show first 10 duplicates
+            print(f"   {i}. \"{dup['query_text'][:50]}{'...' if len(dup['query_text']) > 50 else ''}\"")
+            print(f"      Original: {dup['original_source']} (score: {dup['original_score']:.3f})")
+            print(f"      Duplicate: {dup['duplicate_source']} (score: {dup['duplicate_score']:.3f})")
+        
+        if len(duplicates) > 10:
+            print(f"   ... and {len(duplicates) - 10} more duplicates")
+        
+        print(f"✅ Removed {len(duplicates)} duplicates, {len(unique_samples)} unique samples remaining")
+        
+        # Save duplicate report
+        duplicate_report_file = f"duplicate_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(duplicate_report_file, 'w') as f:
+            json.dump({
+                "total_duplicates": len(duplicates),
+                "unique_samples_remaining": len(unique_samples),
+                "duplicates": duplicates
+            }, f, indent=2)
+        print(f"💾 Duplicate report saved: {duplicate_report_file}")
+    else:
+        print("✅ No duplicates found!")
+    
+    # Use unique samples for the rest of the process
+    all_samples = unique_samples
+    
+    # Analyze after deduplication
+    print("\n🔍 Dataset Analysis (after deduplication):")
     analysis = analyze_dataset(all_samples)
     
     print(f"   Total samples: {analysis['total_samples']}")
@@ -250,18 +312,28 @@ def main():
         "generation_timestamp": timestamp,
         "total_samples": len(all_samples),
         "generation_method": "Claude batch generation",
-        "batch_count": 4,
+        "batch_count": len(batch_files),
+        "batch_files": [str(f.name) for f in batch_files],
+        "duplicates_removed": len(duplicates),
+        "original_total_samples": len(all_samples) + len(duplicates),
         "complexity_distribution": analysis['complexity_distribution'],
         "score_statistics": analysis['score_stats'],
         "validation_issues": issues
     }
     
+    # Clean up temporary source tracking before saving
+    print(f"\n🧹 Cleaning up temporary fields...")
+    clean_samples = []
+    for sample in all_samples:
+        clean_sample = {k: v for k, v in sample.items() if not k.startswith('_')}
+        clean_samples.append(clean_sample)
+    
     # Save final dataset
-    output_file = f"epic1_claude_generated_dataset_{len(all_samples)}_samples.json"
+    output_file = f"epic1_claude_generated_dataset_{len(clean_samples)}_samples.json"
     
     final_dataset = {
         "metadata": dataset_metadata,
-        "samples": all_samples
+        "samples": clean_samples
     }
     
     with open(output_file, 'w') as f:
@@ -270,9 +342,9 @@ def main():
     print(f"\n💾 Saved final dataset: {output_file}")
     
     # Save samples only (compatible with existing training pipeline)
-    samples_only_file = f"epic1_training_dataset_{len(all_samples)}_samples.json"
+    samples_only_file = f"epic1_training_dataset_{len(clean_samples)}_samples.json"
     with open(samples_only_file, 'w') as f:
-        json.dump(all_samples, f, indent=2)
+        json.dump(clean_samples, f, indent=2)
     
     print(f"💾 Saved samples only: {samples_only_file}")
     

@@ -1,12 +1,5 @@
 # Claude Training Data Generation Prompt - Medium Complexity Focus (Batch 2)
 
-## 📝 **EASY TOPIC MODIFICATION GUIDE**
-
-**🎯 Current Focus**: RISC-V Architecture and Development (Medium Complexity - Batch 2)
-
-
-
-**Instructions**: Focus 70-80% of queries on the chosen topic, with 20-30% complementary technical areas.
 
 ## System Context
 
@@ -20,18 +13,15 @@ You are an expert in query complexity analysis and machine learning data generat
 
 Your task is to generate **25 training samples focused on MEDIUM complexity** with realistic queries and detailed complexity assessments across all 5 views. This is the SECOND batch of medium complexity samples, so ensure variety from typical patterns.
 
-## 🎯 **TOPIC FOCUS FOR THIS BATCH**
+## Medium Query Guidelines (Batch 2 Focus)
 
-**Primary Topic**: RISC-V Architecture and Development (Medium Complexity - Batch 2)
+Generate **authentic medium-complexity queries** with emphasis on different technical domains than Batch 1. Focus on real-world scenarios representing genuine developer challenges.
 
-Generate queries related to:
-- **RISC-V Ecosystem Integration**: Linux kernel, bootloaders, device drivers
-- **RISC-V Security**: TEE implementation, crypto extensions, secure boot
-- **RISC-V Debugging**: GDB usage, hardware debugging, trace analysis
-- **RISC-V Verification**: Formal methods, testing strategies, compliance
-- **RISC-V Applications**: HPC workloads, embedded systems, real-time applications
-
-**Important**: Focus on practical implementation challenges and system-level integration topics.
+### Complexity Indicators for Medium Queries:
+- **Technical Complexity**: Intermediate concepts, specialized tools, cross-platform concerns
+- **Cognitive Demand**: Application, analysis, evaluation (Bloom's levels 3-4)  
+- **User Context**: Developers working with diverse tech stacks and deployment scenarios
+- **Answer Scope**: Multi-component solutions, platform-specific implementations, integration challenges
 
 ## Critical Requirements
 
@@ -44,19 +34,22 @@ Generate queries related to:
 
 ## Target Distribution for This Batch
 
-Generate exactly 25 samples with this distribution:
+Generate exactly 50 samples with this distribution:
 - **5 samples**: Medium-simple boundary (0.32-0.40 overall complexity)
-- **15 samples**: Clearly medium (0.41-0.55 overall complexity)
-- **5 samples**: Medium-complex boundary (0.56-0.66 overall complexity)
+- **35 samples**: Clearly medium (0.41-0.55 overall complexity)
+- **10 samples**: Medium-complex boundary (0.56-0.66 overall complexity)
 
-## Focus Areas for Batch 2 (Different from Batch 1)
+### Batch 2 Domain Inspiration (diversify naturally):
+- **Data Engineering**: ETL processes, data pipelines, analytics platforms  
+- **Mobile Development**: Cross-platform challenges, native vs hybrid approaches
+- **Infrastructure**: Cloud deployment, monitoring, scalability concerns
+- **Testing & Quality**: Testing strategies, automation, quality assurance
+- **Modern Patterns**: State management, serverless, microservices
 
-To ensure diversity, this batch should emphasize:
-- **Data Engineering & Analytics**: ETL, data pipelines, warehousing, ML ops
-- **Mobile & Cross-Platform Development**: iOS, Android, React Native, Flutter
-- **Infrastructure & Networking**: Load balancing, CDNs, protocols, network optimization
-- **Testing & Quality**: Unit testing, integration testing, TDD, code quality
-- **Modern Frontend Patterns**: State management, SSR/SSG, PWAs, WebAssembly
+### Encourage Natural Diversity:
+- **Real Development Scenarios**: Focus on actual problems developers encounter
+- **Authentic Language**: Use terminology and phrasing that actual developers use  
+- **Varied Complexity**: Natural range across the medium complexity spectrum
 
 ## JSON Structure for Each Sample
 
@@ -100,66 +93,11 @@ To ensure diversity, this batch should emphasize:
   "expected_complexity_score": 0.36,
   "expected_complexity_level": "medium",
   "view_scores": {
-    "technical": {
-      "complexity_score": 0.40,
-      "confidence": 0.89,
-      "reasoning": "ETL concepts with memory optimization. Common problem but requires understanding of data processing patterns.",
-      "feature_values": {
-        "technical_terms_count": 4,
-        "domain_specificity_score": 0.38,
-        "jargon_density": 0.22,
-        "concept_depth": 2,
-        "passive_voice_ratio": 0.0
-      }
-    },
-    "linguistic": {
-      "complexity_score": 0.33,
-      "confidence": 0.91,
-      "reasoning": "Clear question structure with domain-specific terms. Straightforward but technical.",
-      "feature_values": {
-        "avg_sentence_length": 14.0,
-        "syntactic_depth": 2,
-        "clause_complexity": 0.25,
-        "abstract_concept_ratio": 0.2,
-        "lexical_diversity": 0.71
-      }
-    },
-    "task": {
-      "complexity_score": 0.37,
-      "confidence": 0.87,
-      "reasoning": "Bloom's Level 3 (Application) - applying optimization techniques to a specific problem.",
-      "feature_values": {
-        "primary_bloom_level": 3,
-        "cognitive_load": 0.35,
-        "task_scope": 0.4,
-        "solution_steps": 4,
-        "creativity_required": 0.2
-      }
-    },
-    "semantic": {
-      "complexity_score": 0.35,
-      "confidence": 0.88,
-      "reasoning": "Involves understanding data flow, memory management, and processing constraints.",
-      "feature_values": {
-        "concept_density": 0.35,
-        "relationship_complexity": 0.35,
-        "abstraction_level": 2,
-        "context_dependency": 0.35,
-        "implicit_knowledge": 0.25
-      }
-    },
-    "computational": {
-      "complexity_score": 0.36,
-      "confidence": 0.89,
-      "reasoning": "Memory optimization strategies, streaming processing. Performance considerations important.",
-      "feature_values": {
-        "algorithm_mentions": 1,
-        "complexity_class": 0.35,
-        "data_structure_count": 1,
-        "implementation_difficulty": 0.35,
-        "optimization_aspects": 0.4
-      }
-    }
+    "technical": 0.40,
+    "linguistic": 0.33,
+    "task": 0.37,
+    "semantic": 0.35,
+    "computational": 0.36
   },
   "confidence": 0.88,
   "metadata": {
@@ -172,6 +110,8 @@ To ensure diversity, this batch should emphasize:
 }
 ```
 
+**Analysis**: ETL optimization question. Technical (0.40) - ETL and memory management concepts. Linguistic (0.33) - clear technical question. Task (0.37) - Bloom's Level 3 application. Semantic (0.35) - data flow and constraints. Computational (0.36) - memory optimization strategies.
+
 ### Example 2: Clear Medium (Score: 0.49) - Mobile Development Focus
 ```json
 {
@@ -179,66 +119,11 @@ To ensure diversity, this batch should emphasize:
   "expected_complexity_score": 0.49,
   "expected_complexity_level": "medium",
   "view_scores": {
-    "technical": {
-      "complexity_score": 0.53,
-      "confidence": 0.85,
-      "reasoning": "Cross-platform mobile development with native bridge concepts. Requires understanding multiple technology layers.",
-      "feature_values": {
-        "technical_terms_count": 6,
-        "domain_specificity_score": 0.52,
-        "jargon_density": 0.30,
-        "concept_depth": 3,
-        "passive_voice_ratio": 0.0
-      }
-    },
-    "linguistic": {
-      "complexity_score": 0.45,
-      "confidence": 0.87,
-      "reasoning": "Complex technical question with multiple related concepts. Clear but requires domain knowledge.",
-      "feature_values": {
-        "avg_sentence_length": 20.0,
-        "syntactic_depth": 3,
-        "clause_complexity": 0.45,
-        "abstract_concept_ratio": 0.35,
-        "lexical_diversity": 0.75
-      }
-    },
-    "task": {
-      "complexity_score": 0.51,
-      "confidence": 0.83,
-      "reasoning": "Bloom's Level 4 (Analysis) - analyzing architectural patterns and evaluating trade-offs.",
-      "feature_values": {
-        "primary_bloom_level": 4,
-        "cognitive_load": 0.52,
-        "task_scope": 0.55,
-        "solution_steps": 6,
-        "creativity_required": 0.4
-      }
-    },
-    "semantic": {
-      "complexity_score": 0.48,
-      "confidence": 0.84,
-      "reasoning": "Complex interaction between different runtime environments and state synchronization patterns.",
-      "feature_values": {
-        "concept_density": 0.48,
-        "relationship_complexity": 0.52,
-        "abstraction_level": 3,
-        "context_dependency": 0.5,
-        "implicit_knowledge": 0.45
-      }
-    },
-    "computational": {
-      "complexity_score": 0.48,
-      "confidence": 0.85,
-      "reasoning": "Bridge communication patterns, state synchronization algorithms. Performance and consistency considerations.",
-      "feature_values": {
-        "algorithm_mentions": 1,
-        "complexity_class": 0.45,
-        "data_structure_count": 2,
-        "implementation_difficulty": 0.5,
-        "optimization_aspects": 0.4
-      }
-    }
+    "technical": 0.53,
+    "linguistic": 0.45,
+    "task": 0.51,
+    "semantic": 0.48,
+    "computational": 0.48
   },
   "confidence": 0.85,
   "metadata": {
@@ -251,6 +136,8 @@ To ensure diversity, this batch should emphasize:
 }
 ```
 
+**Analysis**: Cross-platform state management. Technical (0.53) - native bridge concepts. Linguistic (0.45) - complex multi-layer question. Task (0.51) - Bloom's Level 4 analysis. Semantic (0.48) - runtime environment interactions. Computational (0.48) - state synchronization patterns.
+
 ### Example 3: Medium-Complex Boundary (Score: 0.64) - Testing & Quality Focus
 ```json
 {
@@ -258,66 +145,11 @@ To ensure diversity, this batch should emphasize:
   "expected_complexity_score": 0.64,
   "expected_complexity_level": "medium",
   "view_scores": {
-    "technical": {
-      "complexity_score": 0.67,
-      "confidence": 0.82,
-      "reasoning": "Advanced testing concepts with microservices architecture. Multiple sophisticated patterns involved.",
-      "feature_values": {
-        "technical_terms_count": 8,
-        "domain_specificity_score": 0.68,
-        "jargon_density": 0.38,
-        "concept_depth": 4,
-        "passive_voice_ratio": 0.1
-      }
-    },
-    "linguistic": {
-      "complexity_score": 0.60,
-      "confidence": 0.84,
-      "reasoning": "Complex multi-clause sentence with specialized terminology. Requires careful parsing.",
-      "feature_values": {
-        "avg_sentence_length": 24.0,
-        "syntactic_depth": 3,
-        "clause_complexity": 0.55,
-        "abstract_concept_ratio": 0.42,
-        "lexical_diversity": 0.79
-      }
-    },
-    "task": {
-      "complexity_score": 0.66,
-      "confidence": 0.81,
-      "reasoning": "Bloom's Level 5 (Synthesis) - combining testing strategies with versioning and compatibility concerns.",
-      "feature_values": {
-        "primary_bloom_level": 5,
-        "cognitive_load": 0.64,
-        "task_scope": 0.68,
-        "solution_steps": 8,
-        "creativity_required": 0.48
-      }
-    },
-    "semantic": {
-      "complexity_score": 0.63,
-      "confidence": 0.82,
-      "reasoning": "Multiple interrelated concepts: testing, contracts, versioning, compatibility. High conceptual load.",
-      "feature_values": {
-        "concept_density": 0.62,
-        "relationship_complexity": 0.68,
-        "abstraction_level": 3,
-        "context_dependency": 0.62,
-        "implicit_knowledge": 0.55
-      }
-    },
-    "computational": {
-      "complexity_score": 0.65,
-      "confidence": 0.83,
-      "reasoning": "Contract validation algorithms, version management strategies. Complex coordination patterns.",
-      "feature_values": {
-        "algorithm_mentions": 2,
-        "complexity_class": 0.62,
-        "data_structure_count": 2,
-        "implementation_difficulty": 0.65,
-        "optimization_aspects": 0.5
-      }
-    }
+    "technical": 0.67,
+    "linguistic": 0.60,
+    "task": 0.66,
+    "semantic": 0.63,
+    "computational": 0.65
   },
   "confidence": 0.82,
   "metadata": {
@@ -329,6 +161,8 @@ To ensure diversity, this batch should emphasize:
   }
 }
 ```
+
+**Analysis**: Contract testing architecture. Technical (0.67) - advanced testing patterns. Linguistic (0.60) - complex multi-clause sentence. Task (0.66) - Bloom's Level 5 synthesis. Semantic (0.63) - multiple interrelated concepts. Computational (0.65) - contract validation algorithms.
 
 ## Domain and Query Type Distribution for Batch 2
 
@@ -424,28 +258,15 @@ Before outputting each sample, verify:
 
 ## Output Instructions
 
-Generate exactly 25 samples in a JSON array:
-```json
-[
-  { /* Sample 1 - boundary (0.32-0.40) - Data/Mobile focus */ },
-  { /* Sample 2 - boundary (0.32-0.40) - Testing focus */ },
-  { /* Sample 3 - boundary (0.32-0.40) - Infrastructure focus */ },
-  { /* Sample 4 - boundary (0.32-0.40) - Frontend focus */ },
-  { /* Sample 5 - boundary (0.32-0.40) - Mixed focus */ },
-  { /* Samples 6-20 - clear medium (0.41-0.55) - Various Batch 2 topics */ },
-  { /* Sample 21 - boundary (0.56-0.66) - Advanced data engineering */ },
-  { /* Sample 22 - boundary (0.56-0.66) - Complex mobile architecture */ },
-  { /* Sample 23 - boundary (0.56-0.66) - Sophisticated testing */ },
-  { /* Sample 24 - boundary (0.56-0.66) - Infrastructure at scale */ },
-  { /* Sample 25 - boundary (0.56-0.66) - Advanced frontend patterns */ }
-]
-```
+**Generate 25 unique, authentic medium-complexity queries as a JSON array.**
 
-Ensure:
-1. Focus on Batch 2 specific topics (data, mobile, testing, infrastructure, modern frontend)
-2. Natural progression in complexity
-3. Different question patterns from typical web/backend focus
-4. Consistent quality throughout
-5. Realistic developer concerns in these domains
+**Key Requirements**:
+- 5 samples in 0.32-0.40 range (medium-simple boundary)
+- 15 samples in 0.41-0.55 range (clearly medium)
+- 5 samples in 0.56-0.66 range (medium-complex boundary)
+- Each query must represent a genuine developer scenario
+- Emphasize different domains from Batch 1 (data, mobile, testing, infrastructure)
 
-Begin generation now, maintaining high quality throughout all 25 samples.
+**Creative Freedom**: Generate diverse, authentic queries representing real medium-complexity challenges without following rigid patterns. Focus on genuine developer problems and authentic technical language.
+
+Begin generation now, prioritizing authenticity and domain diversity.

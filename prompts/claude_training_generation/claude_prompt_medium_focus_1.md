@@ -43,36 +43,26 @@ Generate queries related to:
 
 ## Target Distribution for This Batch
 
-Generate exactly 25 samples with this distribution:
+Generate exactly 50 samples with this distribution:
 - **5 samples**: Medium-simple boundary (0.32-0.40 overall complexity)
-- **15 samples**: Clearly medium (0.41-0.55 overall complexity)
-- **5 samples**: Medium-complex boundary (0.56-0.66 overall complexity)
+- **35 samples**: Clearly medium (0.41-0.55 overall complexity)
+- **10 samples**: Medium-complex boundary (0.56-0.66 overall complexity)
 
-## Medium Query Characteristics
+## Medium Query Guidelines
 
-### Medium-Simple Boundary (0.32-0.40)
-- **Query Length**: 10-20 words
-- **Vocabulary**: Mix of common and technical terms
-- **Technical Terms**: 2-4 technical terms
-- **Task Type**: Basic debugging, simple optimizations, comparisons
-- **Cognitive Level**: Bloom's 2-3 (Comprehension, Application)
-- **Examples**: "How do I optimize database queries with indexes?", "What causes memory leaks in JavaScript?"
+Generate **authentic medium-complexity queries** that represent genuine intermediate-level developer questions. Focus on real-world scenarios that require some expertise but aren't highly advanced.
 
-### Clear Medium (0.41-0.55)
-- **Query Length**: 15-30 words
-- **Vocabulary**: Technical terminology with some domain specificity
-- **Technical Terms**: 3-6 technical terms
-- **Task Type**: Implementation questions, troubleshooting, design decisions
-- **Cognitive Level**: Bloom's 3-4 (Application, Analysis)
-- **Examples**: "How can I implement caching to reduce API calls in a React application?", "What's the best way to handle authentication in a microservices architecture?"
+### Complexity Indicators for Medium Queries:
+- **Technical Complexity**: Intermediate concepts, multiple technologies, some specialization
+- **Cognitive Demand**: Application, analysis, evaluation (Bloom's levels 3-4)
+- **User Context**: Developers with some experience, intermediate practitioners
+- **Answer Scope**: Multi-step solutions, trade-off discussions, implementation guidance
 
-### Medium-Complex Boundary (0.56-0.66)
-- **Query Length**: 20-35 words
-- **Vocabulary**: Sophisticated technical language
-- **Technical Terms**: 5-8 technical terms
-- **Task Type**: Architecture decisions, performance optimization, complex debugging
-- **Cognitive Level**: Bloom's 4-5 (Analysis, Synthesis)
-- **Examples**: "How do I implement retry logic with exponential backoff for distributed service calls?", "What are the trade-offs between event sourcing and traditional CRUD in a high-traffic system?"
+### Encourage Natural Diversity:
+- **Real Development Scenarios**: Focus on actual problems developers encounter
+- **Multiple Domains**: Web development, backend systems, databases, DevOps, mobile, etc.
+- **Authentic Language**: Use terminology and phrasing that actual developers use
+- **Varied Complexity**: Natural range from simpler medium to more complex medium questions
 
 ## JSON Structure for Each Sample
 
@@ -107,42 +97,23 @@ Generate exactly 25 samples with this distribution:
 - All scores should be in the medium range: 0.32-0.66 for expected_complexity_score
 - View scores can vary but should correlate with expected score
 
-## Feature Value Guidelines for Medium Complexity
+## Scoring Guidelines for Medium Complexity
 
-### Technical View Features
-- **technical_terms_count**: 2-8 (APIs, frameworks, patterns, protocols)
-- **domain_specificity_score**: 0.3-0.7 (moderate to high specialization)
-- **jargon_density**: 0.15-0.40 (significant technical vocabulary)
-- **concept_depth**: 2-4 (requires understanding of relationships)
-- **passive_voice_ratio**: Often higher in technical explanations
+### View Score Ranges for Medium Queries:
+- **Technical (0.30-0.70)**: Specialized terminology, domain knowledge required, multiple technical concepts
+- **Linguistic (0.25-0.65)**: Complex sentences, technical vocabulary, multi-clause constructions
+- **Task (0.30-0.68)**: Bloom's Level 2-4 (Comprehension to Analysis), multi-step solutions
+- **Semantic (0.30-0.68)**: Multiple interrelated concepts, moderate abstraction, domain context needed
+- **Computational (0.25-0.70)**: Algorithm mentions, optimization considerations, moderate implementation difficulty
 
-### Linguistic View Features
-- **avg_sentence_length**: 10-30 words (more complex constructions)
-- **syntactic_depth**: 2-3 (nested clauses, compound sentences)
-- **clause_complexity**: 0.2-0.6 (moderate subordination)
-- **abstract_concept_ratio**: 0.15-0.45 (mix of concrete and abstract)
-- **lexical_diversity**: 0.5-0.8 (varied vocabulary)
+### How to Score Each View:
+1. **Technical**: Assess domain specificity, count technical terms, evaluate concept relationships
+2. **Linguistic**: Analyze sentence complexity, vocabulary sophistication, syntactic structure
+3. **Task**: Identify Bloom's level (Application/Analysis), count solution steps, assess scope
+4. **Semantic**: Evaluate concept density, abstraction level, implicit knowledge requirements
+5. **Computational**: Consider algorithms, data structures, implementation complexity, optimization needs
 
-### Task View Features (Bloom's Taxonomy)
-- **primary_bloom_level**: 2-4 (Comprehension to Analysis)
-- **cognitive_load**: 0.3-0.65 (moderate mental effort)
-- **task_scope**: 0.3-0.65 (multi-component tasks)
-- **solution_steps**: 3-8 (multi-step solutions)
-- **creativity_required**: 0.1-0.5 (some problem-solving creativity)
-
-### Semantic View Features
-- **concept_density**: 0.3-0.65 (multiple interrelated concepts)
-- **relationship_complexity**: 0.25-0.65 (moderate interconnections)
-- **abstraction_level**: 2-3 (mix of concrete and abstract)
-- **context_dependency**: 0.3-0.65 (requires domain context)
-- **implicit_knowledge**: 0.2-0.55 (assumes some background)
-
-### Computational View Features
-- **algorithm_mentions**: 0-3 (sorting, searching, optimization)
-- **complexity_class**: 0.2-0.65 (O(n) to O(n log n) typical)
-- **data_structure_count**: 0-3 (arrays, trees, graphs mentioned)
-- **implementation_difficulty**: 0.3-0.65 (moderate coding challenge)
-- **optimization_aspects**: 0.1-0.6 (performance considerations)
+**Key Principle**: All view scores should correlate (0.6-0.9 correlation) and average to approximately the expected_complexity_score.
 
 ## Example Samples for Calibration
 
@@ -153,66 +124,11 @@ Generate exactly 25 samples with this distribution:
   "expected_complexity_score": 0.38,
   "expected_complexity_level": "medium",
   "view_scores": {
-    "technical": {
-      "complexity_score": 0.42,
-      "confidence": 0.88,
-      "reasoning": "Involves asynchronous programming concepts and error handling patterns. Requires understanding of promises and async/await syntax.",
-      "feature_values": {
-        "technical_terms_count": 4,
-        "domain_specificity_score": 0.4,
-        "jargon_density": 0.25,
-        "concept_depth": 2,
-        "passive_voice_ratio": 0.0
-      }
-    },
-    "linguistic": {
-      "complexity_score": 0.35,
-      "confidence": 0.90,
-      "reasoning": "Moderate sentence complexity with technical vocabulary. Clear structure but requires domain knowledge to fully understand.",
-      "feature_values": {
-        "avg_sentence_length": 12.0,
-        "syntactic_depth": 2,
-        "clause_complexity": 0.3,
-        "abstract_concept_ratio": 0.25,
-        "lexical_diversity": 0.75
-      }
-    },
-    "task": {
-      "complexity_score": 0.39,
-      "confidence": 0.85,
-      "reasoning": "Bloom's Level 3 (Application) - applying error handling patterns to async code. Requires understanding and practical implementation.",
-      "feature_values": {
-        "primary_bloom_level": 3,
-        "cognitive_load": 0.38,
-        "task_scope": 0.35,
-        "solution_steps": 4,
-        "creativity_required": 0.15
-      }
-    },
-    "semantic": {
-      "complexity_score": 0.37,
-      "confidence": 0.86,
-      "reasoning": "Involves understanding relationships between error handling, asynchronous execution, and control flow. Moderate abstraction.",
-      "feature_values": {
-        "concept_density": 0.35,
-        "relationship_complexity": 0.4,
-        "abstraction_level": 2,
-        "context_dependency": 0.35,
-        "implicit_knowledge": 0.3
-      }
-    },
-    "computational": {
-      "complexity_score": 0.38,
-      "confidence": 0.87,
-      "reasoning": "Understanding async execution model and error propagation. No specific algorithms but implementation patterns are important.",
-      "feature_values": {
-        "algorithm_mentions": 0,
-        "complexity_class": 0.3,
-        "data_structure_count": 0,
-        "implementation_difficulty": 0.38,
-        "optimization_aspects": 0.2
-      }
-    }
+    "technical": 0.42,
+    "linguistic": 0.35,
+    "task": 0.39,
+    "semantic": 0.37,
+    "computational": 0.38
   },
   "confidence": 0.87,
   "metadata": {
@@ -225,6 +141,8 @@ Generate exactly 25 samples with this distribution:
 }
 ```
 
+**Analysis**: Async JavaScript error handling. Technical (0.42) - async/await concepts and patterns. Linguistic (0.35) - moderate sentence complexity. Task (0.39) - Bloom's Level 3 application. Semantic (0.37) - relationships between error handling and async flow. Computational (0.38) - async execution model understanding.
+
 ### Example 2: Clear Medium (Score: 0.48)
 ```json
 {
@@ -232,66 +150,11 @@ Generate exactly 25 samples with this distribution:
   "expected_complexity_score": 0.48,
   "expected_complexity_level": "medium",
   "view_scores": {
-    "technical": {
-      "complexity_score": 0.52,
-      "confidence": 0.86,
-      "reasoning": "Involves API design, security concepts, and performance considerations. Multiple technical domains intersect.",
-      "feature_values": {
-        "technical_terms_count": 5,
-        "domain_specificity_score": 0.5,
-        "jargon_density": 0.28,
-        "concept_depth": 3,
-        "passive_voice_ratio": 0.1
-      }
-    },
-    "linguistic": {
-      "complexity_score": 0.44,
-      "confidence": 0.88,
-      "reasoning": "Complex sentence with multiple considerations. Balances technical precision with clarity.",
-      "feature_values": {
-        "avg_sentence_length": 18.0,
-        "syntactic_depth": 3,
-        "clause_complexity": 0.4,
-        "abstract_concept_ratio": 0.35,
-        "lexical_diversity": 0.72
-      }
-    },
-    "task": {
-      "complexity_score": 0.50,
-      "confidence": 0.84,
-      "reasoning": "Bloom's Level 4 (Analysis) - requires evaluating trade-offs and designing a solution balancing multiple concerns.",
-      "feature_values": {
-        "primary_bloom_level": 4,
-        "cognitive_load": 0.5,
-        "task_scope": 0.5,
-        "solution_steps": 6,
-        "creativity_required": 0.35
-      }
-    },
-    "semantic": {
-      "complexity_score": 0.47,
-      "confidence": 0.85,
-      "reasoning": "Involves balancing competing concepts (security vs usability). Requires understanding multiple domain relationships.",
-      "feature_values": {
-        "concept_density": 0.45,
-        "relationship_complexity": 0.5,
-        "abstraction_level": 3,
-        "context_dependency": 0.45,
-        "implicit_knowledge": 0.4
-      }
-    },
-    "computational": {
-      "complexity_score": 0.49,
-      "confidence": 0.86,
-      "reasoning": "Rate limiting algorithms, token bucket, sliding window. Performance implications of different approaches.",
-      "feature_values": {
-        "algorithm_mentions": 2,
-        "complexity_class": 0.45,
-        "data_structure_count": 2,
-        "implementation_difficulty": 0.48,
-        "optimization_aspects": 0.45
-      }
-    }
+    "technical": 0.52,
+    "linguistic": 0.44,
+    "task": 0.50,
+    "semantic": 0.47,
+    "computational": 0.49
   },
   "confidence": 0.86,
   "metadata": {
@@ -304,6 +167,8 @@ Generate exactly 25 samples with this distribution:
 }
 ```
 
+**Analysis**: Rate limiting architecture question. Technical (0.52) - API design, security concepts. Linguistic (0.44) - complex sentence with trade-offs. Task (0.50) - Bloom's Level 4 analysis. Semantic (0.47) - balancing competing concepts. Computational (0.49) - rate limiting algorithms.
+
 ### Example 3: Medium-Complex Boundary (Score: 0.62)
 ```json
 {
@@ -311,66 +176,11 @@ Generate exactly 25 samples with this distribution:
   "expected_complexity_score": 0.62,
   "expected_complexity_level": "medium",
   "view_scores": {
-    "technical": {
-      "complexity_score": 0.65,
-      "confidence": 0.83,
-      "reasoning": "Advanced distributed systems concepts including caching, invalidation, microservices, and high-scale considerations.",
-      "feature_values": {
-        "technical_terms_count": 7,
-        "domain_specificity_score": 0.65,
-        "jargon_density": 0.35,
-        "concept_depth": 4,
-        "passive_voice_ratio": 0.05
-      }
-    },
-    "linguistic": {
-      "complexity_score": 0.58,
-      "confidence": 0.85,
-      "reasoning": "Complex sentence structure with multiple technical concepts. Requires careful parsing to understand all requirements.",
-      "feature_values": {
-        "avg_sentence_length": 22.0,
-        "syntactic_depth": 3,
-        "clause_complexity": 0.5,
-        "abstract_concept_ratio": 0.4,
-        "lexical_diversity": 0.77
-      }
-    },
-    "task": {
-      "complexity_score": 0.64,
-      "confidence": 0.82,
-      "reasoning": "Bloom's Level 5 (Synthesis) - designing a complex system combining multiple patterns and considering scale.",
-      "feature_values": {
-        "primary_bloom_level": 5,
-        "cognitive_load": 0.62,
-        "task_scope": 0.65,
-        "solution_steps": 8,
-        "creativity_required": 0.5
-      }
-    },
-    "semantic": {
-      "complexity_score": 0.61,
-      "confidence": 0.83,
-      "reasoning": "High conceptual complexity with distributed systems, consistency models, and performance trade-offs.",
-      "feature_values": {
-        "concept_density": 0.6,
-        "relationship_complexity": 0.65,
-        "abstraction_level": 3,
-        "context_dependency": 0.6,
-        "implicit_knowledge": 0.55
-      }
-    },
-    "computational": {
-      "complexity_score": 0.63,
-      "confidence": 0.84,
-      "reasoning": "Cache algorithms, consistency protocols, distributed systems complexity. High-scale performance considerations.",
-      "feature_values": {
-        "algorithm_mentions": 2,
-        "complexity_class": 0.6,
-        "data_structure_count": 3,
-        "implementation_difficulty": 0.62,
-        "optimization_aspects": 0.6
-      }
-    }
+    "technical": 0.65,
+    "linguistic": 0.58,
+    "task": 0.64,
+    "semantic": 0.61,
+    "computational": 0.63
   },
   "confidence": 0.83,
   "metadata": {
@@ -382,6 +192,8 @@ Generate exactly 25 samples with this distribution:
   }
 }
 ```
+
+**Analysis**: Distributed caching architecture. Technical (0.65) - advanced distributed systems concepts. Linguistic (0.58) - complex multi-concept sentence. Task (0.64) - Bloom's Level 5 synthesis. Semantic (0.61) - high conceptual complexity. Computational (0.63) - cache algorithms and protocols.
 
 ## Domain and Query Type Distribution
 
@@ -423,61 +235,36 @@ Include diverse technical topics across the 25 samples:
 - Testing and quality assurance
 - Mobile development concepts
 
-## Validation Checklist
+## Quality Focus
 
-Before outputting each sample, verify:
+**Primary Goal**: Generate authentic, diverse queries representing genuine intermediate-level developer challenges
 
-✅ **Query Quality**
-- Sounds like a real developer question
-- Grammatically correct and natural
-- Appropriate complexity for the range
+✅ **Natural Language Priority**
+- Each query should reflect real problems developers encounter
+- Use authentic technical language and terminology
+- Avoid formulaic or artificial phrasing
 
-✅ **Score Consistency**
-- View scores correlate (0.6-0.9 correlation)
-- Expected complexity matches view average (±0.05)
-- Proper distribution across boundary and core samples
+✅ **Authentic Medium Complexity**
+- Ensure queries genuinely require intermediate-level knowledge (0.32-0.66)
+- Focus on multi-step problems, design decisions, implementation challenges
+- View scores should naturally correlate around the target complexity
 
-✅ **Feature Accuracy**
-- All features derivable from query text
-- Values within specified ranges for medium complexity
-- Logical relationships between features
-
-✅ **Reasoning Quality**
-- Specific references to query elements
-- Clear justification for complexity level
-- Mentions relevant technical concepts
-
-✅ **Diversity**
-- No duplicate concepts or overly similar queries
-- Good distribution across domains and types
-- Various technical topics covered
+✅ **Maximum Diversity**
+- Every query should represent a unique scenario or problem
+- Draw from varied technical domains and real-world situations
+- Think like different developers with different experience levels and needs
 
 ## Output Instructions
 
-Generate exactly 25 samples in a JSON array:
-```json
-[
-  { /* Sample 1 - boundary (0.32-0.40) */ },
-  { /* Sample 2 - boundary (0.32-0.40) */ },
-  { /* Sample 3 - boundary (0.32-0.40) */ },
-  { /* Sample 4 - boundary (0.32-0.40) */ },
-  { /* Sample 5 - boundary (0.32-0.40) */ },
-  { /* Sample 6 - clear medium (0.41-0.55) */ },
-  { /* Sample 7 - clear medium (0.41-0.55) */ },
-  /* ... samples 8-20 - clear medium ... */,
-  { /* Sample 21 - boundary (0.56-0.66) */ },
-  { /* Sample 22 - boundary (0.56-0.66) */ },
-  { /* Sample 23 - boundary (0.56-0.66) */ },
-  { /* Sample 24 - boundary (0.56-0.66) */ },
-  { /* Sample 25 - boundary (0.56-0.66) */ }
-]
-```
+**Generate 25 unique, authentic medium-complexity queries as a JSON array.**
 
-Ensure:
-1. Natural progression from simple-medium boundary to complex-medium boundary
-2. Realistic developer questions throughout
-3. Variety in technical topics and approaches
-4. Consistent quality and detail in all samples
-5. Proper calibration within medium complexity range
+**Key Requirements**:
+- 5 samples in 0.32-0.40 range (medium-simple boundary)
+- 15 samples in 0.41-0.55 range (clearly medium)
+- 5 samples in 0.56-0.66 range (medium-complex boundary)
+- Each query must represent a genuine developer scenario
+- Focus on real implementation, debugging, and architecture challenges
 
-Begin generation now, maintaining high quality throughout all 25 samples.
+**Creative Freedom**: Generate diverse, authentic queries that truly represent medium-complexity developer questions without following rigid patterns or templates.
+
+Begin generation now, prioritizing authenticity and real-world relevance.

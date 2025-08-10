@@ -40,27 +40,25 @@ Generate queries related to:
 
 ## Target Distribution for This Batch
 
-Generate exactly 25 samples with this distribution:
-- **20 samples**: Clearly simple (0.10-0.25 overall complexity)
-- **5 samples**: Simple-medium boundary (0.26-0.35 overall complexity)
+Generate exactly 50 samples with this distribution:
+- **40 samples**: Clearly simple (0.10-0.25 overall complexity)
+- **10 samples**: Simple-medium boundary (0.26-0.35 overall complexity)
 
-## Simple Query Characteristics
+## Simple Query Guidelines
 
-### Clear Simple (0.10-0.25)
-- **Query Length**: 3-10 words typically
-- **Vocabulary**: Common, everyday terms
-- **Technical Terms**: 0-2 basic technical terms
-- **Task Type**: Direct how-to, basic definitions, simple lookups
-- **Cognitive Level**: Bloom's 1-2 (Knowledge, Comprehension)
-- **Examples**: "How do I create a Python list?", "What is an API?", "How to install npm?"
+Generate **naturally diverse queries** that represent genuine beginner and basic-level questions. Focus on authentic user needs rather than following templates.
 
-### Simple-Medium Boundary (0.26-0.35)
-- **Query Length**: 8-15 words
-- **Vocabulary**: Mix of common and some technical terms
-- **Technical Terms**: 2-3 technical terms
-- **Task Type**: Basic comparisons, simple troubleshooting
-- **Cognitive Level**: Bloom's 2-3 (Comprehension, Application)
-- **Examples**: "What's the difference between let and const in JavaScript?", "How do I fix a git merge conflict?"
+### Complexity Indicators for Simple Queries:
+- **Technical Complexity**: Basic programming concepts, common tools, fundamental terminology
+- **Cognitive Demand**: Recall, understanding, basic application (Bloom's levels 1-3)
+- **User Context**: Beginners, students, developers learning new concepts
+- **Answer Scope**: Direct answers, single-step solutions, straightforward explanations
+
+### Encourage Natural Diversity:
+- **Various Question Styles**: Mix direct questions, how-to requests, definition seeking, basic troubleshooting
+- **Different Domains**: Web development, programming languages, tools, databases, basic concepts
+- **Authentic Language**: Use natural phrasing that real users would actually type
+- **Avoid Repetitive Patterns**: Each query should feel unique and genuine
 
 ## JSON Structure for Each Sample
 
@@ -191,47 +189,36 @@ Ensure variety across the 25 samples:
 - Development board basics
 - Simulator/emulator introductions
 
-## Validation Checklist
+## Quality Focus
 
-Before outputting each sample, verify:
+**Primary Goal**: Generate authentic, diverse queries that genuinely represent simple complexity level
 
-✅ **Query Quality**
-- Sounds like a real user question
-- Grammatically correct
-- Appropriate length for complexity level
+✅ **Natural Language Priority**
+- Each query should sound like something a real person would actually ask
+- Avoid formulaic or template-like phrasing
+- Use conversational, natural language
 
-✅ **Score Consistency**
-- View scores correlate (0.6-0.9 correlation)
-- Expected complexity matches view average (±0.05)
-- Boundary samples properly positioned
+✅ **Authentic Complexity**
+- Ensure queries truly match the simple complexity range (0.10-0.35)
+- Focus on beginner-level questions and basic concepts
+- View scores should naturally correlate around the target complexity
 
-✅ **Feature Accuracy**
-- All features derivable from query text
-- Values within specified ranges
-- Logical consistency between related features
-
-✅ **Reasoning Quality**
-- Clear explanation for each view score
-- References specific query elements
-- Justifies the assigned complexity level
+✅ **Maximum Diversity**
+- No two queries should be similar or follow the same pattern
+- Vary question structure, domain, and approach naturally
+- Think like different users with different backgrounds and needs
 
 ## Output Instructions
 
-Generate exactly 25 samples in a JSON array:
-```json
-[
-  { /* Sample 1 */ },
-  { /* Sample 2 */ },
-  ...
-  { /* Sample 25 */ }
-]
-```
+**Generate 25 unique, authentic simple queries as a JSON array.**
 
-Ensure:
-1. First 20 samples are clearly simple (0.10-0.25)
-2. Last 5 samples are boundary cases (0.26-0.35)
-3. Natural progression in complexity
-4. Variety in domains and query types
-5. No duplicate or overly similar queries
+**Key Requirements**:
+- 20 samples in 0.10-0.25 range (clearly simple)
+- 5 samples in 0.26-0.35 range (simple-medium boundary) 
+- Each query must be genuinely different and natural
+- Focus on authentic user questions, not artificial examples
+- Maintain proper complexity scoring for the simple level
 
-Begin generation now, maintaining high quality throughout all 25 samples.
+**Creative Freedom**: You have complete freedom in query content, structure, and domain as long as the complexity level is appropriate and the language is natural.
+
+Begin generation now, prioritizing authenticity and diversity over rigid patterns.
