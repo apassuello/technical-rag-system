@@ -1,12 +1,4 @@
-	# Claude Training Data Generation Prompt - Medium Complexity Focus (Batch 1)
-
-## 📝 **EASY TOPIC MODIFICATION GUIDE**
-
-**🎯 Current Focus**: RISC-V Architecture and Development (Medium Complexity)
-
-
-
-**Instructions**: Focus 70-80% of queries on the chosen topic, with 20-30% related technical areas for context.
+# Claude Training Data Generation Prompt - Medium Complexity Focus (Batch 1)
 
 ## System Context
 
@@ -18,20 +10,7 @@ You are an expert in query complexity analysis and machine learning data generat
 4. **Semantic Complexity**: Conceptual relationships, abstraction level, implicit knowledge
 5. **Computational Complexity**: Algorithm mentions, implementation difficulty, optimization aspects
 
-Your task is to generate **25 training samples focused on MEDIUM complexity** with realistic queries and detailed complexity assessments across all 5 views.
-
-## 🎯 **TOPIC FOCUS FOR THIS BATCH**
-
-**Primary Topic**: RISC-V Architecture and Development (Medium Complexity)
-
-Generate queries related to:
-- **RISC-V Performance**: Optimization techniques, pipeline analysis, cache behavior
-- **RISC-V Extensions**: Vector extensions (RVV), custom instructions, specialized ISAs
-- **RISC-V System Programming**: Privileged architecture, interrupts, memory management
-- **RISC-V Compiler Technology**: GCC optimizations, LLVM backend, code generation
-- **RISC-V Implementation**: Core design choices, microarchitecture considerations
-
-**Important**: Focus on intermediate-level concepts requiring some domain knowledge and multi-step reasoning.
+Your task is to generate **50 training samples focused on MEDIUM complexity** with realistic queries and detailed complexity assessments across all 5 views.
 
 ## Critical Requirements
 
@@ -199,27 +178,27 @@ Generate **authentic medium-complexity queries** that represent genuine intermed
 
 Ensure variety across the 25 samples:
 
-### Domains (distribute across samples):
-- **Technical** (15 samples): RISC-V system programming, compiler optimization, performance tuning
-- **Academic** (7 samples): RISC-V microarchitecture, ISA extensions, research topics
-- **General** (3 samples): RISC-V ecosystem integration, development workflow
+### Domains (distribute naturally across samples):
+- **Technical** (30 samples): Systems programming, performance optimization, architecture design
+- **Academic** (12 samples): Computer architecture theory, algorithms, system design
+- **General** (8 samples): Development practices, tooling, integration
 
-### Query Types (distribute across samples):
-- **implementation** (8 samples): "How to implement X in RISC-V?", "How to optimize Y?"
-- **architecture** (6 samples): "How to design RISC-V system?", "Best practices for X?"
-- **optimization** (5 samples): "How to improve RISC-V performance?", "Optimize for X metric?"
-- **troubleshooting** (4 samples): "Why is RISC-V code slow?", "Debug X issue?"
-- **comparison** (2 samples): "RISC-V vs ARM for X?", "RVV vs scalar performance?"
+### Query Types (distribute naturally across samples):
+- **implementation**: "How to implement X?", "How to optimize Y?"
+- **architecture**: "How to design system for X?", "Best practices for Y?"
+- **optimization**: "How to improve performance?", "Optimize for X constraints?"
+- **troubleshooting**: "Why is X slow?", "Debug Y issue?"
+- **comparison**: "X vs Y for Z?", "Compare approaches A and B?"
 
-### RISC-V Topic Areas for Medium Queries:
-- Vector extension programming (RVV)
-- Privileged architecture and system calls
-- Memory model and synchronization
-- Compiler optimization strategies
-- Pipeline optimization and hazards
-- Custom instruction development
-- RISC-V core implementation details
-- Performance profiling and analysis
+### Computer Architecture & Systems Topic Areas for Medium Queries:
+- CPU architecture and pipeline optimization
+- Memory systems and caching strategies  
+- Operating system internals and system calls
+- Compiler design and optimization
+- Performance analysis and profiling
+- Parallel programming and synchronization
+- Computer system design principles
+- Hardware-software interfaces
 
 ## Topic Areas to Cover
 
@@ -256,12 +235,12 @@ Include diverse technical topics across the 25 samples:
 
 ## Output Instructions
 
-**Generate 25 unique, authentic medium-complexity queries as a JSON array.**
+**Generate 50 unique, authentic medium-complexity queries as a JSON array.**
 
 **Key Requirements**:
 - 5 samples in 0.32-0.40 range (medium-simple boundary)
-- 15 samples in 0.41-0.55 range (clearly medium)
-- 5 samples in 0.56-0.66 range (medium-complex boundary)
+- 35 samples in 0.41-0.55 range (clearly medium)
+- 10 samples in 0.56-0.66 range (medium-complex boundary)
 - Each query must represent a genuine developer scenario
 - Focus on real implementation, debugging, and architecture challenges
 

@@ -1,10 +1,6 @@
 # Claude Training Data Generation Prompt - Simple Complexity Focus
 
 
-**🎯 Current Focus**: RISC-V Architecture and Development
-
-**Instructions**: If using a specific topic focus, ensure 60-70% of queries relate to that topic, with 30-40% general computing questions for variety.
-
 ## System Context
 
 You are an expert in query complexity analysis and machine learning data generation. You will generate high-quality training data for a multi-view ML system that analyzes query complexity across 5 orthogonal dimensions:
@@ -15,20 +11,7 @@ You are an expert in query complexity analysis and machine learning data generat
 4. **Semantic Complexity**: Conceptual relationships, abstraction level, implicit knowledge
 5. **Computational Complexity**: Algorithm mentions, implementation difficulty, optimization aspects
 
-Your task is to generate **25 training samples focused on SIMPLE complexity** with realistic queries and detailed complexity assessments across all 5 views.
-
-## 🎯 **TOPIC FOCUS FOR THIS BATCH**
-
-**Primary Topic**: RISC-V Architecture and Development
-
-Generate queries related to:
-- **RISC-V Basics**: ISA fundamentals, instruction sets, registers
-- **RISC-V Development**: Toolchains, compilers, assembly programming  
-- **RISC-V Hardware**: Processors, cores, implementations
-- **RISC-V Software**: Operating systems, libraries, applications
-- **RISC-V Ecosystem**: Tools, simulators, development boards
-
-**Important**: Ensure all RISC-V queries are appropriate for SIMPLE complexity level - focus on basic concepts, introductory questions, and fundamental understanding.
+Your task is to generate **50 training samples focused on SIMPLE complexity** with realistic queries and detailed complexity assessments across all 5 views.
 
 ## Critical Requirements
 
@@ -169,25 +152,25 @@ Generate **naturally diverse queries** that represent genuine beginner and basic
 
 Ensure variety across the 25 samples:
 
-### Domains (distribute across samples):
-- **Technical** (15 samples): RISC-V programming, toolchains, assembly
-- **Academic** (7 samples): RISC-V architecture theory, ISA concepts  
-- **General** (3 samples): RISC-V ecosystem, getting started topics
+### Domains (distribute naturally across samples):
+- **Technical** (30 samples): Programming, system administration, development tools
+- **Academic** (12 samples): Computer science concepts, algorithms, theory
+- **General** (8 samples): Computing basics, getting started topics
 
-### Query Types (distribute across samples):
-- **definition** (10 samples): "What is RISC-V?", "What does X instruction do?"
-- **how-to** (8 samples): "How to compile for RISC-V?", "How to use X tool?"
-- **comparison** (4 samples): "RISC-V vs ARM", "Difference between RV32 and RV64"
-- **troubleshooting** (3 samples): "Why won't my RISC-V code compile?", basic debugging
+### Query Types (distribute naturally across samples):
+- **definition**: "What is X?", "What does Y mean?"
+- **how-to**: "How to do X?", "How to use Y?"  
+- **comparison**: "X vs Y", "Difference between A and B"
+- **troubleshooting**: "Why won't X work?", basic debugging
 
-### RISC-V Topic Areas for Simple Queries:
-- Basic ISA concepts (registers, instructions, addressing)
-- Getting started with RISC-V development
-- Simple toolchain usage (GCC, binutils)
-- Basic assembly programming
-- RISC-V vs other architectures (simple comparisons)
-- Development board basics
-- Simulator/emulator introductions
+### Computer Architecture & Systems Topic Areas for Simple Queries:
+- Basic computer architecture (CPU, memory, I/O)
+- Assembly language fundamentals
+- Operating system basics
+- Computer organization concepts
+- Hardware/software interfaces
+- System programming fundamentals
+- Development tools and environments
 
 ## Quality Focus
 
@@ -210,11 +193,11 @@ Ensure variety across the 25 samples:
 
 ## Output Instructions
 
-**Generate 25 unique, authentic simple queries as a JSON array.**
+**Generate 50 unique, authentic simple queries as a JSON array.**
 
 **Key Requirements**:
-- 20 samples in 0.10-0.25 range (clearly simple)
-- 5 samples in 0.26-0.35 range (simple-medium boundary) 
+- 40 samples in 0.10-0.25 range (clearly simple)
+- 10 samples in 0.26-0.35 range (simple-medium boundary) 
 - Each query must be genuinely different and natural
 - Focus on authentic user questions, not artificial examples
 - Maintain proper complexity scoring for the simple level

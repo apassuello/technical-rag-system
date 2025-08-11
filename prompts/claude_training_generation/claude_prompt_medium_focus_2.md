@@ -166,26 +166,26 @@ Generate exactly 50 samples with this distribution:
 
 ## Domain and Query Type Distribution for Batch 2
 
-### Domains (distribute across samples):
-- **Technical** (14 samples): RISC-V system integration, kernel development, security
-- **Academic** (7 samples): RISC-V verification, formal methods, research applications
-- **General** (4 samples): RISC-V ecosystem tools, development practices
+### Domains (distribute naturally across samples):
+- **Technical** (28 samples): System integration, software development, infrastructure
+- **Academic** (14 samples): Computer science theory, algorithms, formal methods
+- **General** (8 samples): Development tools, practices, ecosystem integration
 
-### Query Types (distribute across samples):
-- **implementation** (7 samples): "How to port X to RISC-V?", "Implement Y feature?"
-- **troubleshooting** (6 samples): "Debug RISC-V kernel issue?", "Fix X problem?"
-- **optimization** (5 samples): "Optimize RISC-V for Y?", "Improve X performance?"
-- **architecture** (4 samples): "Design RISC-V system for X?", "Best approach for Y?"
-- **comparison** (3 samples): "RISC-V implementation X vs Y?", "Tool A vs B?"
+### Query Types (distribute naturally across samples):
+- **implementation**: "How to implement X?", "Build Y system?"
+- **troubleshooting**: "Debug X issue?", "Fix Y problem?"
+- **optimization**: "Optimize system for Y?", "Improve X performance?"
+- **architecture**: "Design system for X?", "Best approach for Y?"
+- **comparison**: "Implementation X vs Y?", "Tool A vs B?"
 
-### RISC-V Topic Areas for Medium Queries (Batch 2):
-- Linux kernel porting and device drivers
-- Security extensions and TEE implementation
-- Hardware debugging and trace analysis
-- Formal verification and testing methodologies
-- Bootloader and firmware development
-- Real-time and embedded system design
-- RISC-V compliance and certification
+### Computer Architecture & Systems Topic Areas for Medium Queries (Batch 2):
+- Operating system kernel development
+- System security and trusted execution
+- Hardware debugging and analysis tools
+- Formal verification methodologies
+- System firmware and bootloaders
+- Real-time and embedded systems
+- System compliance and testing
 - Performance analysis and benchmarking
 
 ## Specific Topic Areas for Batch 2
@@ -258,12 +258,12 @@ Before outputting each sample, verify:
 
 ## Output Instructions
 
-**Generate 25 unique, authentic medium-complexity queries as a JSON array.**
+**Generate 50 unique, authentic medium-complexity queries as a JSON array.**
 
 **Key Requirements**:
 - 5 samples in 0.32-0.40 range (medium-simple boundary)
-- 15 samples in 0.41-0.55 range (clearly medium)
-- 5 samples in 0.56-0.66 range (medium-complex boundary)
+- 35 samples in 0.41-0.55 range (clearly medium)
+- 10 samples in 0.56-0.66 range (medium-complex boundary)
 - Each query must represent a genuine developer scenario
 - Emphasize different domains from Batch 1 (data, mobile, testing, infrastructure)
 

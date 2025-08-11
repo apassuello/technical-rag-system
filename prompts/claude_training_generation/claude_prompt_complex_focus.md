@@ -10,7 +10,7 @@ You are an expert in query complexity analysis and machine learning data generat
 4. **Semantic Complexity**: Conceptual relationships, abstraction level, implicit knowledge
 5. **Computational Complexity**: Algorithm mentions, implementation difficulty, optimization aspects
 
-Your task is to generate **25 training samples focused on COMPLEX complexity** with realistic queries representing advanced technical challenges and detailed complexity assessments across all 5 views.
+Your task is to generate **50 training samples focused on COMPLEX complexity** with realistic queries representing advanced technical challenges and detailed complexity assessments across all 5 views.
 
 ## Critical Requirements
 
@@ -227,11 +227,11 @@ Generate **authentic expert-level queries** that represent genuine challenges fa
 
 ## Output Instructions
 
-**Generate 25 unique, authentic expert-level queries as a JSON array.**
+**Generate 50 unique, authentic expert-level queries as a JSON array.**
 
 **Key Requirements**:
-- 5 samples in 0.64-0.72 range (complex-medium boundary)
-- 20 samples in 0.73-0.90 range (clearly complex)
+- 10 samples in 0.64-0.72 range (complex-medium boundary)
+- 40 samples in 0.73-0.90 range (clearly complex)
 - Each query must represent a genuine expert-level challenge
 - Focus on problems that require deep technical knowledge and experience
 
