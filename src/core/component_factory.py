@@ -98,6 +98,7 @@ class ComponentFactory:
         "rule_based": "src.components.query_processors.analyzers.rule_based_analyzer.RuleBasedAnalyzer", 
         "epic1": "src.components.query_processors.analyzers.epic1_query_analyzer.Epic1QueryAnalyzer",
         "epic1_ml": "src.components.query_processors.analyzers.epic1_ml_analyzer.Epic1MLAnalyzer",  # Epic 1 ML-powered analyzer
+        "epic1_ml_adapter": "src.components.query_processors.analyzers.epic_ml_adapter.EpicMLAdapter",  # Epic 1 with trained models
     }
     
     # Phase 4: Performance monitoring and caching

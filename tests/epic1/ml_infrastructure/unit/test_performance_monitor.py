@@ -90,7 +90,8 @@ except ImportError:
             self.throughput_stats = {}
             self.quality_stats = {}
             self.raw_metrics = deque(maxlen=10000)
-            self.custom_metric = {}
+            self.custom_metrics = {}
+            self.memory_readings = {}
             self.alerts = []
 
         def record_request(self, operation_name: str):
@@ -120,10 +121,17 @@ except ImportError:
                 )
 
         def record_throughput(self, operation_name: str, throughput: float):
-            self.throughput_stats[operation_name] = {
-                "current": throughput,
-                "average": throughput,  # Simplified
-            }
+            if operation_name not in self.throughput_stats:
+                self.throughput_stats[operation_name] = {
+                    "readings": [],
+                    "current": throughput,
+                    "average": throughput,
+                }
+            
+            stats = self.throughput_stats[operation_name]
+            stats["readings"].append(throughput)
+            stats["current"] = throughput
+            stats["average"] = sum(stats["readings"]) / len(stats["readings"])
 
         def record_quality_score(self, operation_name: str, score: float):
             if operation_name not in self.quality_stats:
@@ -131,8 +139,8 @@ except ImportError:
             self.quality_stats[operation_name]["scores"].append(score)
 
         def record_memory_usage(self, model_name: str, memory_mb: float):
-            # Mock memory recording
-            pass
+            """Record memory usage for a model."""
+            self.memory_readings[model_name] = memory_mb
 
         def get_operation_metrics(self, operation_name: str):
             if operation_name in self.latency_stats:
@@ -167,7 +175,9 @@ except ImportError:
             return None
 
         def get_memory_stats(self, model_name: str):
-            return {"current_usage_mb": 500.0, "peak_usage_mb": 600.0}
+            """Get memory stats for a model."""
+            current = self.memory_readings.get(model_name, 500.0)
+            return {"current_usage_mb": current, "peak_usage_mb": current * 1.2}
 
         def get_active_alerts(self):
             return self.alerts
@@ -180,12 +190,12 @@ except ImportError:
                 self.alerts.remove(alert)
 
         def record_custom_metric(self, metric_name: str, value: float):
-            # Mock custom metric recording
-            pass
+            """Record a custom metric value."""
+            self.custom_metrics[metric_name] = value
 
         def get_custom_metric(self, metric_name: str):
-            # Mock custom metric retrieval
-            return 0.5
+            """Get a custom metric value."""
+            return self.custom_metrics.get(metric_name, 0.0)
 
         def generate_performance_report(self):
             return {

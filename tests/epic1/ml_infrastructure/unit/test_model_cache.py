@@ -43,7 +43,7 @@ except ImportError:
         def hit_rate(self) -> float:
             if self.total_requests == 0:
                 return 0.0
-            return self.hits / self.total_requests
+            return round(self.hits / self.total_requests, 10)
         
         @property
         def miss_rate(self) -> float:
@@ -72,14 +72,17 @@ except ImportError:
             self._cache = OrderedDict()
             self._stats = MockCacheStats() if enable_stats else None
             self._memory_monitor = None
+            self._eviction_callback = None
         
         def put(self, key: str, value: Any, memory_size_mb: Optional[float] = None):
             entry = MockCacheEntry(key, value, memory_size_mb=memory_size_mb)
             self._cache[key] = entry
             if len(self._cache) > self.maxsize:
-                self._cache.popitem(last=False)  # Remove oldest
+                evicted_key, evicted_entry = self._cache.popitem(last=False)  # Remove oldest
                 if self._stats:
                     self._stats.evictions += 1
+                if self._eviction_callback:
+                    self._eviction_callback(evicted_key, evicted_entry.value)
         
         def get(self, key: str) -> Any:
             if self._stats:
@@ -121,6 +124,27 @@ except ImportError:
         
         def set_memory_monitor(self, monitor):
             self._memory_monitor = monitor
+        
+        def set_eviction_callback(self, callback: 'Callable[[str, Any], None]') -> None:
+            """Set callback function to be called when items are evicted."""
+            self._eviction_callback = callback
+        
+        def resize(self, new_size: int) -> None:
+            """Resize the cache to a new maximum size."""
+            self.maxsize = new_size
+            # Evict items if new size is smaller than current cache
+            while len(self._cache) > self.maxsize:
+                evicted_key, evicted_entry = self._cache.popitem(last=False)  # Remove oldest
+                if self._stats:
+                    self._stats.evictions += 1
+                if self._eviction_callback:
+                    self._eviction_callback(evicted_key, evicted_entry.value)
+        
+        def warm_cache(self, loader_func: 'Callable') -> None:
+            """Warm up the cache by pre-loading items."""
+            if callable(loader_func):
+                # Execute the warming function
+                loader_func()
     
     CacheStats = MockCacheStats
     CacheEntry = MockCacheEntry

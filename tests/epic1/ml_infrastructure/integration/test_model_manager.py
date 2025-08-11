@@ -60,6 +60,7 @@ except ImportError:
         def __init__(self, update_interval_seconds: float = 1.0):
             self.update_interval = update_interval_seconds
             self._monitoring = False
+            self.memory_system = MockMemorySystem()
         
         def start_monitoring(self):
             self._monitoring = True
@@ -78,6 +79,11 @@ except ImportError:
         
         def record_actual_model_memory(self, model_name: str, memory_mb: float):
             pass
+    
+    class MockMemorySystem:
+        def __init__(self):
+            self.total_mb = 8192.0
+            self.available_mb = 4096.0
     
     class MockModelCache:
         def __init__(self, maxsize: int = 10, memory_threshold_mb: float = 1500, enable_stats: bool = True, warmup_enabled: bool = False):
@@ -156,6 +162,10 @@ except ImportError:
                 'SciBERT': {'model_name': 'allenai/scibert_scivocab_uncased', 'estimated_memory_mb': 440},
                 'DistilBERT': {'model_name': 'distilbert-base-uncased', 'estimated_memory_mb': 260},
             }
+            
+            # Testing flags
+            self.simulate_timeout = False
+            self.quantized_models = set()
         
         def register_model_factory(self, model_type: str, factory_function):
             self._model_factories[model_type] = factory_function
@@ -163,6 +173,10 @@ except ImportError:
         async def load_model(self, model_name: str, force_reload: bool = False):
             if model_name in self.model_instances and not force_reload:
                 return self.model_instances[model_name]
+            
+            # Simulate timeout if requested
+            if self.simulate_timeout:
+                raise ModelLoadingError(f"Model {model_name} loading timed out")
             
             if model_name in self._model_factories:
                 model = self._model_factories[model_name]()
@@ -173,6 +187,23 @@ except ImportError:
                 return model
             else:
                 raise ModelLoadingError(f"No factory registered for model: {model_name}")
+        
+        async def load_model_async(self, model_name: str, timeout: float = 30.0):
+            """Async model loading with timeout handling."""
+            return await self.load_model(model_name)
+        
+        def quantize_model(self, model_name: str) -> bool:
+            """Quantize a model and return success status."""
+            if model_name in self.model_instances:
+                self.quantized_models.add(model_name)
+                if model_name in self.model_registry:
+                    self.model_registry[model_name].quantized = True
+                return True
+            return False
+        
+        def is_quantized(self, model_name: str) -> bool:
+            """Check if a model is quantized."""
+            return model_name in self.quantized_models
         
         async def _ensure_memory_available(self, model_name: str):
             pass

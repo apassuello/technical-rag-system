@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fixtures.base_test import MLInfrastructureTestBase, MemoryTestMixin
+from fixtures.base_test import MLInfrastructureTestBase, MemoryTestMixin, PerformanceTestMixin
 from fixtures.mock_memory import MockMemorySystem, create_memory_test_scenarios
 
 try:
@@ -51,6 +51,9 @@ except ImportError:
             self._model_estimates = {
                 'SciBERT': {'full': 440, 'quantized': 220},
                 'DistilBERT': {'full': 260, 'quantized': 130},
+                'DeBERTa-v3': {'full': 800, 'quantized': 400},
+                'Sentence-BERT': {'full': 320, 'quantized': 160},
+                'T5-small': {'full': 240, 'quantized': 120},
                 'model_overhead': 50
             }
             self._monitoring = False
@@ -58,9 +61,12 @@ except ImportError:
         
         def start_monitoring(self):
             self._monitoring = True
+            # Create a mock thread object for testing
+            self._monitor_thread = threading.Thread(target=lambda: None)
         
         def stop_monitoring(self):
             self._monitoring = False
+            self._monitor_thread = None
         
         def get_current_stats(self):
             return MockMemoryStats(
@@ -86,12 +92,48 @@ except ImportError:
             return (current_stats.used_mb + estimated) > budget_mb
         
         def get_eviction_candidates(self, target_free_mb: float):
-            return {}  # Return empty dict for mock
+            # Return realistic model data sorted by memory usage for eviction priority
+            return {
+                "model-large": 400.0,
+                "model-medium": 200.0,
+                "model-small": 100.0
+            }
         
         def get_memory_pressure_level(self, budget_mb: float):
-            return 'normal'
+            # Use Epic1-specific memory usage if available, otherwise use current stats
+            try:
+                current_usage = self.get_epic1_memory_usage()
+            except:
+                current_stats = self.get_current_stats()
+                current_usage = current_stats.used_mb
+            
+            usage_percentage = (current_usage / budget_mb) * 100
+            
+            if usage_percentage < 50:
+                return 'low'
+            elif usage_percentage < 75:
+                return 'medium'  # Changed from 'normal' to 'medium'
+            elif usage_percentage < 90:
+                return 'high'
+            else:
+                return 'critical'
+        
+        def get_actual_model_memory(self, model_name: str) -> Optional[float]:
+            """Get actual recorded memory usage for a model."""
+            return self._model_memory_map.get(model_name)
+        
+        def log_memory_status(self) -> None:
+            """Log current memory state for debugging."""
+            stats = self.get_current_stats()
+            # Minimal logging implementation for tests
+            pass
+        
+        def get_epic1_memory_usage(self) -> float:
+            """Get Epic1-specific memory usage."""
+            return self.get_current_stats().epic1_process_mb
         
         def __enter__(self):
+            self.start_monitoring()
             return self
         
         def __exit__(self, exc_type, exc_val, exc_tb):
@@ -490,7 +532,7 @@ class TestMemoryMonitorWithMockSystem(MLInfrastructureTestBase, MemoryTestMixin)
 
 
 # Performance tests
-class TestMemoryMonitorPerformance(MLInfrastructureTestBase):
+class TestMemoryMonitorPerformance(MLInfrastructureTestBase, PerformanceTestMixin):
     """Test MemoryMonitor performance characteristics."""
     
     def test_memory_stats_retrieval_performance(self):
