@@ -1,11 +1,16 @@
 # Epic 1 ML Session Prompt - Multi-View Query Complexity Analyzer Implementation
 
 ## Session Objective
-Implement sophisticated ML-based multi-view stacking architecture for query complexity analysis, transforming Epic 1 from rule-based system (58.1% accuracy) to production ML system (85%+ accuracy target).
+Implement comprehensive test suite for Phase 2 ML infrastructure components, ensuring Swiss engineering quality standards with >95% test coverage and performance validation before proceeding to view implementations.
 
 ## Context Loading Instructions
 
-Start by loading the Epic 1 ML implementation context:
+Start by loading the Epic 1 testing session context:
+```bash
+cat .claude/commands/epic1-testing-session.md
+```
+
+Then load the ML implementation context:
 ```bash
 cat .claude/commands/epic1-ml-implementation.md
 ```
@@ -23,41 +28,39 @@ cat docs/architecture/EPIC1_ML_IMPLEMENTATION_PLAN.md
 
 ## Session Tasks by Phase
 
-### **Phase 1: Architecture & Documentation** (Current Phase)
+### **Phase 2.5: Infrastructure Testing** (Current Phase)
 
-#### Task 1: Complete Documentation System (Priority: HIGH)
-1. Create detailed technical implementation plan
-2. Document hybrid algorithmic+ML strategy 
-3. Specify model architectures and integration patterns
-4. Define performance targets and success criteria
+#### Task 1: Memory Management Testing (Priority: HIGH)
+1. MemoryMonitor unit tests - memory tracking accuracy, pressure detection
+2. ModelCache unit tests - LRU eviction, thread safety, statistics
+3. Integration tests - memory budget enforcement, concurrent access
+4. Performance benchmarks - monitoring overhead, memory optimization
 
-**Deliverable**: Complete architecture documentation in `docs/architecture/`
+**Deliverable**: Complete test suite for memory management components
 
-#### Task 2: Hybrid Strategy Design (Priority: HIGH)
-1. Define algorithmic baseline for each view
-2. Specify ML enhancement models and integration
-3. Design fallback mechanisms and error handling
-4. Plan performance optimization strategies
+#### Task 2: Model Management Testing (Priority: HIGH)
+1. ModelManager integration tests - async loading, timeout handling
+2. QuantizationUtils tests - memory reduction, quality validation
+3. Model loading performance benchmarks - concurrent access validation
+4. Error handling tests - fallback mechanisms, resource cleanup
 
-**Deliverable**: `EPIC1_HYBRID_STRATEGY.md` with detailed implementation guidelines
+**Deliverable**: Complete test suite for model management infrastructure
 
-### **Phase 2: Core Infrastructure** (Next Phase)
+#### Task 3: Performance Monitoring Testing (Priority: MEDIUM)
+1. PerformanceMonitor unit tests - metrics accuracy, alert triggering
+2. Integration tests - real-time monitoring, background cleanup
+3. Performance overhead benchmarks - monitoring system impact
+4. Alert system validation - threshold triggering, handler execution
 
-#### Task 1: Model Management System (Priority: HIGH)
-1. Implement lazy model loading with 2GB budget
-2. Create model quantization and caching system
-3. Build LRU cache for model instances
-4. Implement progressive loading and memory monitoring
+**Deliverable**: Comprehensive performance monitoring validation
 
-**Deliverable**: `src/components/query_processors/analyzers/ml_models/` module
+#### Task 4: View Framework Testing (Priority: MEDIUM) 
+1. ViewResult structure tests - serialization, validation, error handling
+2. BaseView class tests - abstract interface compliance, fallback behavior
+3. Integration tests - view orchestration, parallel processing
+4. Configuration-driven behavior testing - mode switching validation
 
-#### Task 2: View Implementation Framework (Priority: HIGH)
-1. Create base classes: `AlgorithmicView`, `MLView`, `HybridView`
-2. Implement standardized `ViewResult` format
-3. Build view orchestration and parallel processing
-4. Create error handling and fallback mechanisms
-
-**Deliverable**: `src/components/query_processors/analyzers/ml_views/base_view.py`
+**Deliverable**: Complete view framework test coverage
 
 ### **Phase 3: View-Specific Implementation** (Weeks 3-4)
 
