@@ -27,6 +27,26 @@ class TestEpic1Integration:
     
     def setup_method(self):
         """Set up test fixtures."""
+        # Create sample documents for testing (needed by mock methods)
+        self.sample_documents = [
+            Document(
+                content="Retrieval-Augmented Generation (RAG) is a method that combines retrieval and generation.",
+                metadata={"id": "doc1", "source": "rag_guide.pdf", "page": 1}
+            ),
+            Document(
+                content="Transformers use attention mechanisms to process sequences in parallel.",
+                metadata={"id": "doc2", "source": "transformers.pdf", "page": 5}
+            ),
+            Document(
+                content="Dense embeddings capture semantic similarity between texts.",
+                metadata={"id": "doc3", "source": "embeddings.pdf", "page": 3}
+            )
+        ]
+        
+        # Create mock retriever and generator for ModularQueryProcessor
+        self.mock_retriever = self._create_mock_retriever()
+        self.mock_generator = self._create_mock_generator()
+        
         # Epic 1 configuration
         self.epic1_config = {
             'type': 'modular',
@@ -93,22 +113,6 @@ class TestEpic1Integration:
                 }
             }
         }
-        
-        # Create sample documents for testing
-        self.sample_documents = [
-            Document(
-                content="Retrieval-Augmented Generation (RAG) is a method that combines retrieval and generation.",
-                metadata={"id": "doc1", "source": "rag_guide.pdf", "page": 1}
-            ),
-            Document(
-                content="Transformers use attention mechanisms to process sequences in parallel.",
-                metadata={"id": "doc2", "source": "transformers.pdf", "page": 5}
-            ),
-            Document(
-                content="Dense embeddings capture semantic similarity between texts.",
-                metadata={"id": "doc3", "source": "embeddings.pdf", "page": 3}
-            )
-        ]
     
     def test_modular_query_processor_with_epic1(self):
         """Test ModularQueryProcessor can use Epic1QueryAnalyzer."""
@@ -122,8 +126,12 @@ class TestEpic1Integration:
             assembler_config={}
         )
         
-        # Create processor
-        processor = ModularQueryProcessor(config)
+        # Create processor with required dependencies
+        processor = ModularQueryProcessor(
+            retriever=self.mock_retriever,
+            generator=self.mock_generator,
+            config=config
+        )
         
         # Verify Epic1QueryAnalyzer is being used
         assert processor._analyzer.__class__.__name__ == 'Epic1QueryAnalyzer'
@@ -151,7 +159,11 @@ class TestEpic1Integration:
             assembler_config={'include_sources': True}
         )
         
-        processor = ModularQueryProcessor(config)
+        processor = ModularQueryProcessor(
+            retriever=self.mock_retriever,
+            generator=self.mock_generator,
+            config=config
+        )
         
         # Process different complexity queries
         queries = [
@@ -191,7 +203,11 @@ class TestEpic1Integration:
             assembler_config={}
         )
         
-        processor = ModularQueryProcessor(config)
+        processor = ModularQueryProcessor(
+            retriever=self.mock_retriever,
+            generator=self.mock_generator,
+            config=config
+        )
         
         queries = [
             "What is RAG?",
@@ -222,7 +238,11 @@ class TestEpic1Integration:
             assembler_config={}
         )
         
-        nlp_processor = ModularQueryProcessor(nlp_config)
+        nlp_processor = ModularQueryProcessor(
+            retriever=self.mock_retriever,
+            generator=self.mock_generator,
+            config=nlp_config
+        )
         assert nlp_processor._analyzer.__class__.__name__ == 'NLPAnalyzer'
         
         # Switch to Epic 1 analyzer
@@ -235,7 +255,11 @@ class TestEpic1Integration:
             assembler_config={}
         )
         
-        epic1_processor = ModularQueryProcessor(epic1_config)
+        epic1_processor = ModularQueryProcessor(
+            retriever=self.mock_retriever,
+            generator=self.mock_generator,
+            config=epic1_config
+        )
         assert epic1_processor._analyzer.__class__.__name__ == 'Epic1QueryAnalyzer'
         
         # Test both work correctly
@@ -259,7 +283,11 @@ class TestEpic1Integration:
             assembler_config={}
         )
         
-        processor = ModularQueryProcessor(standard_config)
+        processor = ModularQueryProcessor(
+            retriever=self.mock_retriever,
+            generator=self.mock_generator,
+            config=standard_config
+        )
         
         # Should work without Epic 1
         query = "How does retrieval work?"
@@ -303,7 +331,11 @@ class TestEpic1Integration:
             assembler_config={}
         )
         
-        processor = ModularQueryProcessor(config)
+        processor = ModularQueryProcessor(
+            retriever=self.mock_retriever,
+            generator=self.mock_generator,
+            config=config
+        )
         
         # Test with edge cases
         edge_cases = [
@@ -334,7 +366,11 @@ class TestEpic1Integration:
             assembler_config={}
         )
         
-        processor = ModularQueryProcessor(config)
+        processor = ModularQueryProcessor(
+            retriever=self.mock_retriever,
+            generator=self.mock_generator,
+            config=config
+        )
         
         # Process multiple queries
         queries = [
@@ -358,6 +394,37 @@ class TestEpic1Integration:
         if hasattr(processor._analyzer, 'get_performance_metrics'):
             epic1_metrics = processor._analyzer.get_performance_metrics()
             assert 'epic1_performance' in epic1_metrics
+    
+    def _create_mock_retriever(self):
+        """Create a mock retriever for testing."""
+        from unittest.mock import Mock
+        from src.core.interfaces import RetrievalResult
+        
+        mock_retriever = Mock()
+        mock_retriever.retrieve.return_value = [
+            RetrievalResult(
+                document=doc,
+                score=0.9 - i * 0.1,
+                retrieval_method="mock",
+                metadata={"test": True}
+            )
+            for i, doc in enumerate(self.sample_documents[:2])
+        ]
+        return mock_retriever
+    
+    def _create_mock_generator(self):
+        """Create a mock answer generator for testing."""
+        from unittest.mock import Mock
+        from src.core.interfaces import Answer
+        
+        mock_generator = Mock()
+        mock_generator.generate.return_value = Answer(
+            text="This is a mock answer based on the provided context.",
+            sources=self.sample_documents[:2],
+            confidence=0.85,
+            metadata={"model": "mock", "generation_time": 0.5}
+        )
+        return mock_generator
 
 
 if __name__ == "__main__":
