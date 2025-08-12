@@ -892,11 +892,52 @@ class ComponentFactory:
         
         try:
             logger.debug(f"Creating {processor_type} query processor with args: {kwargs}")
-            return cls._create_with_tracking(
-                processor_class, 
-                f"query_processor_{processor_type}", 
-                **kwargs
-            )
+            
+            # Special handling for ModularQueryProcessor
+            if processor_type == 'modular' or processor_type == 'modular_query_processor':
+                # ModularQueryProcessor needs retriever and generator instances
+                from src.components.query_processors.base import QueryProcessorConfig
+                
+                # Get or create required dependencies
+                retriever = kwargs.pop('retriever', None)
+                generator = kwargs.pop('generator', None)
+                
+                if retriever is None:
+                    # Create a default retriever if not provided
+                    # ModularUnifiedRetriever needs an embedder
+                    embedder = cls.create_embedder('sentence_transformer')
+                    retriever = cls.create_retriever('modular_unified', embedder=embedder)
+                    
+                if generator is None:
+                    # Create a default generator if not provided
+                    generator = cls.create_generator('adaptive_modular')
+                
+                # Build config from remaining kwargs
+                config = QueryProcessorConfig(
+                    analyzer_type=kwargs.pop('analyzer_type', 'rule_based'),
+                    analyzer_config=kwargs.pop('analyzer_config', {}),
+                    selector_type=kwargs.pop('selector_type', 'token_limit'),
+                    selector_config=kwargs.pop('selector_config', {}),
+                    assembler_type=kwargs.pop('assembler_type', 'standard'),
+                    assembler_config=kwargs.pop('assembler_config', {})
+                )
+                
+                # Create processor with correct arguments
+                return cls._create_with_tracking(
+                    processor_class,
+                    f"query_processor_{processor_type}",
+                    retriever=retriever,
+                    generator=generator,
+                    config=config,
+                    **kwargs  # Any remaining kwargs
+                )
+            else:
+                # Default handling for other processor types
+                return cls._create_with_tracking(
+                    processor_class, 
+                    f"query_processor_{processor_type}", 
+                    **kwargs
+                )
         except Exception as e:
             raise TypeError(
                 f"Failed to create query processor '{processor_type}': {e}. "
