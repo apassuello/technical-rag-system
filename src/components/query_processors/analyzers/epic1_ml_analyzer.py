@@ -130,31 +130,26 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             for view in self.view_weights:
                 self.view_weights[view] /= weight_sum
         
-        # Initialize ML infrastructure (simplified to avoid hanging)
-        try:
-            self._initialize_ml_infrastructure()
-        except Exception as e:
-            logger.warning(f"ML infrastructure initialization failed: {e}, using simplified setup")
+        # Skip heavy ML infrastructure initialization to avoid hanging
+        # Models will be loaded lazily when needed
+        logger.info("Skipping heavy ML infrastructure - using lightweight initialization")
         
-        # Initialize views (simplified)
-        try:
-            self._initialize_views()
-        except Exception as e:
-            logger.warning(f"Views initialization failed: {e}, using empty views")
+        # Initialize basic components
+        self.model_manager = None
+        self.performance_monitor = None
+        self.memory_monitor = None
+        self.complexity_classifier = None
+        self.model_recommender = None
         
-        # Initialize meta-classifier (simplified)
-        try:
-            self._initialize_meta_classifier()
-        except Exception as e:
-            logger.warning(f"Meta-classifier initialization failed: {e}, using basic classifier")
-            from .components.complexity_classifier import ComplexityClassifier
-            self.complexity_classifier = ComplexityClassifier()
+        # Initialize views dict (empty initially)
+        self.views = {}
         
-        # Load trained models if available
+        # Load trained models if available (this is lightweight)
         try:
             self._load_trained_models()
         except Exception as e:
             logger.warning(f"Failed to load trained models: {e}")
+            self.trained_view_models = {}
         
         logger.info(f"Initialized Epic1MLAnalyzer with {len(self.views)} views, "
                    f"memory budget: {self.memory_budget_gb}GB, "
@@ -478,17 +473,24 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             self.trained_view_models = {}
             view_model_loaded = False
             
-            for view_name in self.views.keys():
+            # Load models for the 5 standard view names
+            view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
+            for view_name in view_names:
                 model_path = models_dir / f"{view_name}_model.pth"
                 if model_path.exists():
                     try:
                         # Load the simple view model (matching training architecture)
                         model = self._load_simple_view_model(model_path)
-                        self.trained_view_models[view_name] = model
-                        view_model_loaded = True
-                        logger.info(f"Loaded trained model for {view_name} view")
+                        if model is not None:
+                            self.trained_view_models[view_name] = model
+                            view_model_loaded = True
+                            logger.info(f"Loaded trained model for {view_name} view")
+                        else:
+                            logger.warning(f"Model loading returned None for {view_name}")
                     except Exception as e:
                         logger.warning(f"Failed to load {view_name} model: {e}")
+                else:
+                    logger.debug(f"Model file not found: {model_path}")
             
             # Load MetaClassifier
             meta_classifier_path = models_dir / "meta_classifier.pkl"
@@ -537,25 +539,29 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
     
     def _load_simple_view_model(self, model_path: Path):
         """Load a simple view model matching the training architecture."""
-        
-        class SimpleViewModel(nn.Module):
-            def __init__(self, input_dim=10, hidden_dim=128):
-                super().__init__()
-                self.network = nn.Sequential(
-                    nn.Linear(input_dim, hidden_dim), nn.ReLU(), nn.BatchNorm1d(hidden_dim), nn.Dropout(0.3),
-                    nn.Linear(hidden_dim, hidden_dim // 2), nn.ReLU(), nn.BatchNorm1d(hidden_dim // 2), nn.Dropout(0.3),
-                    nn.Linear(hidden_dim // 2, hidden_dim // 4), nn.ReLU(), nn.Dropout(0.2),
-                    nn.Linear(hidden_dim // 4, 1), nn.Sigmoid()
-                )
+        try:
+            class SimpleViewModel(nn.Module):
+                def __init__(self, input_dim=10, hidden_dim=128):
+                    super().__init__()
+                    self.network = nn.Sequential(
+                        nn.Linear(input_dim, hidden_dim), nn.ReLU(), nn.BatchNorm1d(hidden_dim), nn.Dropout(0.3),
+                        nn.Linear(hidden_dim, hidden_dim // 2), nn.ReLU(), nn.BatchNorm1d(hidden_dim // 2), nn.Dropout(0.3),
+                        nn.Linear(hidden_dim // 2, hidden_dim // 4), nn.ReLU(), nn.Dropout(0.2),
+                        nn.Linear(hidden_dim // 4, 1), nn.Sigmoid()
+                    )
+                
+                def forward(self, features):
+                    return self.network(features).squeeze()
             
-            def forward(self, features):
-                return self.network(features).squeeze()
-        
-        model = SimpleViewModel()
-        checkpoint = torch.load(model_path, map_location='cpu')
-        model.load_state_dict(checkpoint['model_state_dict'])
-        model.eval()
-        return model
+            model = SimpleViewModel()
+            checkpoint = torch.load(model_path, map_location='cpu')
+            model.load_state_dict(checkpoint['model_state_dict'])
+            model.eval()
+            logger.debug(f"Successfully loaded view model: {model_path}")
+            return model
+        except Exception as e:
+            logger.error(f"Failed to load view model {model_path}: {e}")
+            return None
     
     def _load_fusion_model(self, model_path: Path) -> torch.nn.Module:
         """Load neural fusion model matching the training architecture."""
@@ -602,64 +608,325 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
     
     async def analyze(self, query: str, mode: str = 'hybrid') -> 'AnalysisResult':
         """
-        Perform comprehensive ML-powered query analysis.
+        Perform comprehensive ML-powered query analysis using trained models.
         
         Args:
             query: The query string to analyze
             mode: Analysis mode ('ml', 'hybrid', or 'algorithmic')
             
         Returns:
-            AnalysisResult with comprehensive analysis
+            AnalysisResult with comprehensive analysis from trained models
         """
         start_time = time.time()
         self._analysis_count += 1
         
         try:
-            # For now, provide a basic implementation that creates a simple result
             from .ml_views.view_result import AnalysisResult, ComplexityLevel, AnalysisMethod
             
-            # Create a basic analysis result with correct constructor signature
-            result = AnalysisResult(
-                query=query,
-                view_results={},  # Empty for now - would contain ViewResult objects
-                meta_features=None,  
-                final_score=0.5,  # Medium complexity as default
-                final_complexity=ComplexityLevel.MEDIUM,
-                total_latency_ms=(time.time() - start_time) * 1000,
-                confidence=0.7,
-                method_breakdown={'hybrid': 1},
-                metadata={
-                    'analyzer': 'Epic1MLAnalyzer',
-                    'mode': mode,
-                    'views_available': len(self.views),
-                    'ml_infrastructure_ready': hasattr(self, 'model_manager') and self.model_manager is not None,
-                    'model_recommendation': "ollama:llama3.2:3b"
-                }
+            # Check if we should use trained models
+            use_trained_models = (
+                mode in ['ml', 'hybrid'] and 
+                self.trained_view_models and 
+                len(self.trained_view_models) > 0
             )
             
-            return result
+            if use_trained_models:
+                # Use trained ML models for analysis
+                return await self._analyze_with_trained_models(query, mode, start_time)
+            else:
+                # Fallback to Epic 1 infrastructure
+                return await self._analyze_with_epic1_fallback(query, mode, start_time)
             
         except Exception as e:
             logger.error(f"Analysis failed for query '{query}': {e}")
-            # Return fallback result
-            from .ml_views.view_result import AnalysisResult, ComplexityLevel, AnalysisMethod
+            return self._create_error_result(query, str(e), start_time)
+    
+    async def _analyze_with_trained_models(self, query: str, mode: str, start_time: float) -> 'AnalysisResult':
+        """Perform analysis using trained PyTorch models and fusion."""
+        from .ml_views.view_result import AnalysisResult, ComplexityLevel, AnalysisMethod, ViewResult
+        
+        # Get predictions from the trained predictor (epic1_predictor.py approach)
+        prediction_result = self._get_trained_model_predictions(query)
+        
+        if not prediction_result:
+            # If trained model prediction failed, fallback
+            return await self._analyze_with_epic1_fallback(query, mode, start_time)
+        
+        # Create view results from trained model predictions
+        view_results = {}
+        view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
+        
+        for view_name in view_names:
+            if view_name in prediction_result['view_scores']:
+                view_score = prediction_result['view_scores'][view_name]
+                
+                # Create ViewResult for each view
+                view_results[view_name] = ViewResult(
+                    view_name=view_name,
+                    score=view_score,
+                    confidence=prediction_result.get('confidence_scores', {}).get(view_name, 0.85),
+                    method=AnalysisMethod.ML,
+                    latency_ms=prediction_result.get('view_latencies', {}).get(view_name, 5.0),
+                    features={'trained_model_score': view_score},
+                    metadata={
+                        'trained_model_used': True,
+                        'fusion_method': prediction_result['fusion_method'],
+                        'model_version': prediction_result.get('metadata', {}).get('model_version', 'epic1_v1.0')
+                    }
+                )
+        
+        # Create final complexity level
+        final_complexity = self._score_to_complexity_level(prediction_result['complexity_score'])
+        
+        # Calculate analysis time
+        total_latency_ms = (time.time() - start_time) * 1000
+        
+        # Create comprehensive result
+        result = AnalysisResult(
+            query=query,
+            view_results=view_results,
+            meta_features=None,  # Could be added later if needed
+            final_score=prediction_result['complexity_score'],
+            final_complexity=final_complexity,
+            total_latency_ms=total_latency_ms,
+            confidence=prediction_result.get('confidence', 0.85),
+            method_breakdown={'ml': len(view_results)},
+            metadata={
+                'analyzer': 'Epic1MLAnalyzer',
+                'mode': mode,
+                'trained_models_used': True,
+                'fusion_method': prediction_result['fusion_method'],
+                'model_version': prediction_result.get('metadata', {}).get('model_version', 'epic1_v1.0'),
+                'view_count': len(view_results),
+                'prediction_method': 'trained_pytorch_models',
+                'model_recommendation': self._get_model_recommendation(prediction_result['complexity_score'])
+            }
+        )
+        
+        return result
+    
+    async def _analyze_with_epic1_fallback(self, query: str, mode: str, start_time: float) -> 'AnalysisResult':
+        """Fallback to Epic 1 infrastructure when trained models unavailable."""
+        from .ml_views.view_result import AnalysisResult, ComplexityLevel, AnalysisMethod
+        
+        # Use Epic 1 infrastructure views if available
+        view_results = {}
+        method_breakdown = {}
+        
+        if self.views:
+            # Try to use individual views
+            for view_name, view in self.views.items():
+                try:
+                    # Use algorithmic mode for fallback
+                    view_result = await view.analyze(query, mode='algorithmic')
+                    view_results[view_name] = view_result
+                    
+                    # Track method used
+                    method = view_result.method.value
+                    method_breakdown[method] = method_breakdown.get(method, 0) + 1
+                    
+                except Exception as e:
+                    logger.warning(f"View {view_name} failed: {e}")
+        
+        # Calculate final score from view results
+        if view_results:
+            scores = [result.score for result in view_results.values()]
+            confidences = [result.confidence for result in view_results.values()]
             
-            return AnalysisResult(
-                query=query,
-                view_results={},
-                meta_features=None,
-                final_score=0.5,
-                final_complexity=ComplexityLevel.MEDIUM,
-                total_latency_ms=(time.time() - start_time) * 1000,
-                confidence=0.3,
-                method_breakdown={'algorithmic': 1},
-                metadata={
-                    'analyzer': 'Epic1MLAnalyzer',
-                    'error': str(e),
-                    'fallback': True,
-                    'model_recommendation': "ollama:llama3.2:3b"
+            # Weighted average using configured weights
+            final_score = 0.0
+            total_weight = 0.0
+            for view_name, result in view_results.items():
+                weight = self.view_weights.get(view_name, 0.2)
+                final_score += result.score * weight
+                total_weight += weight
+            
+            if total_weight > 0:
+                final_score = final_score / total_weight
+            else:
+                final_score = sum(scores) / len(scores)
+            
+            # Average confidence
+            avg_confidence = sum(confidences) / len(confidences)
+        else:
+            # No views worked - use conservative defaults
+            final_score = 0.5
+            avg_confidence = 0.3
+            method_breakdown = {'algorithmic': 1}
+        
+        # Create final complexity level
+        final_complexity = self._score_to_complexity_level(final_score)
+        
+        # Calculate analysis time
+        total_latency_ms = (time.time() - start_time) * 1000
+        
+        result = AnalysisResult(
+            query=query,
+            view_results=view_results,
+            meta_features=None,
+            final_score=final_score,
+            final_complexity=final_complexity,
+            total_latency_ms=total_latency_ms,
+            confidence=avg_confidence,
+            method_breakdown=method_breakdown,
+            metadata={
+                'analyzer': 'Epic1MLAnalyzer',
+                'mode': mode,
+                'trained_models_used': False,
+                'fallback_reason': 'trained_models_unavailable',
+                'views_attempted': len(self.views),
+                'views_successful': len(view_results),
+                'model_recommendation': self._get_model_recommendation(final_score)
+            }
+        )
+        
+        return result
+    
+    def _get_trained_model_predictions(self, query: str) -> Optional[Dict[str, Any]]:
+        """Get predictions using the trained model approach (like epic1_predictor.py)."""
+        try:
+            # Import the feature extraction logic
+            import torch
+            import numpy as np
+            from pathlib import Path
+            
+            # Use the same feature extraction approach as in epic1_predictor.py
+            view_scores = {}
+            view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
+            
+            for view_name in view_names:
+                if view_name in self.trained_view_models:
+                    # Extract features for this view (simplified approach)
+                    features = self._extract_view_features(query, view_name)
+                    
+                    # Get prediction from trained model
+                    model = self.trained_view_models[view_name]
+                    model.eval()
+                    
+                    with torch.no_grad():
+                        features_tensor = torch.FloatTensor(features).unsqueeze(0)
+                        prediction = model(features_tensor).item()
+                    
+                    view_scores[view_name] = prediction
+            
+            if not view_scores:
+                return None
+            
+            # Apply fusion using the same approach as epic1_predictor.py
+            final_score = self._apply_fusion(view_scores)
+            
+            # Determine complexity level
+            if final_score < 0.35:
+                complexity_level = 'simple'
+            elif final_score < 0.70:
+                complexity_level = 'medium'
+            else:
+                complexity_level = 'complex'
+            
+            # Calculate confidence based on view consistency
+            scores = list(view_scores.values())
+            consistency = max(0.0, 1.0 - (np.std(scores) * 2))
+            confidence = 0.6 + (consistency * 0.3)  # Base + consistency bonus
+            
+            return {
+                'complexity_score': final_score,
+                'complexity_level': complexity_level,
+                'view_scores': view_scores,
+                'fusion_method': 'weighted_average',  # Primary method from config
+                'confidence': confidence,
+                'metadata': {
+                    'model_version': 'epic1_v1.0',
+                    'prediction_timestamp': time.time()
                 }
-            )
+            }
+            
+        except Exception as e:
+            logger.error(f"Trained model prediction failed: {e}")
+            return None
+    
+    def _extract_view_features(self, query: str, view_name: str) -> np.ndarray:
+        """Extract features for a specific view (matching training approach)."""
+        # Use the same feature extraction as in epic1_predictor.py SimpleViewDataset
+        words = query.split()
+        features = [
+            len(query), len(words),
+            np.mean([len(w) for w in words]) if words else 0,
+            query.count('?'), query.count(',') + query.count(';'),
+            len([w for w in words if len(w) > 6]),
+            len([w for w in words if w[0].isupper()]),
+            query.count(' and ') + query.count(' or '),
+            len(set(words)) / len(words) if words else 0,
+            query.count(' ') / len(query) if query else 0,
+        ]
+        return np.array(features, dtype=np.float32)
+    
+    def _apply_fusion(self, view_scores: Dict[str, float]) -> float:
+        """Apply fusion using the trained weighted average approach."""
+        # Use weights from the trained weighted_average_fusion.json
+        fusion_weights = {
+            'technical': 0.19999032962292654,
+            'linguistic': 0.19998833763905233,
+            'task': 0.1999982824778589,
+            'semantic': 0.20000875562698767,
+            'computational': 0.20001429463317463
+        }
+        
+        # Calculate weighted average
+        weighted_sum = 0.0
+        total_weight = 0.0
+        
+        for view_name, score in view_scores.items():
+            if view_name in fusion_weights:
+                weight = fusion_weights[view_name]
+                weighted_sum += score * weight
+                total_weight += weight
+        
+        if total_weight > 0:
+            return min(1.0, max(0.0, weighted_sum))
+        else:
+            # Fallback to simple average
+            return sum(view_scores.values()) / len(view_scores)
+    
+    def _score_to_complexity_level(self, score: float) -> 'ComplexityLevel':
+        """Convert score to complexity level."""
+        from .ml_views.view_result import ComplexityLevel
+        
+        if score < 0.35:
+            return ComplexityLevel.SIMPLE
+        elif score < 0.70:
+            return ComplexityLevel.MEDIUM
+        else:
+            return ComplexityLevel.COMPLEX
+    
+    def _get_model_recommendation(self, complexity_score: float) -> str:
+        """Get model recommendation based on complexity score."""
+        if complexity_score < 0.35:
+            return "ollama:llama3.2:3b"
+        elif complexity_score < 0.70:
+            return "ollama:llama3.2:8b"
+        else:
+            return "mistral:mistral-medium"
+    
+    def _create_error_result(self, query: str, error: str, start_time: float) -> 'AnalysisResult':
+        """Create error result for failed analysis."""
+        from .ml_views.view_result import AnalysisResult, ComplexityLevel
+        
+        return AnalysisResult(
+            query=query,
+            view_results={},
+            meta_features=None,
+            final_score=0.5,
+            final_complexity=ComplexityLevel.MEDIUM,
+            total_latency_ms=(time.time() - start_time) * 1000,
+            confidence=0.3,
+            method_breakdown={'error': 1},
+            metadata={
+                'analyzer': 'Epic1MLAnalyzer',
+                'error': error,
+                'fallback': True,
+                'model_recommendation': "ollama:llama3.2:3b"
+            }
+        )
 
 
 class NeuralFusionModel(nn.Module):
