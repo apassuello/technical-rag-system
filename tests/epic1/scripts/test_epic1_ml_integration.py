@@ -15,7 +15,7 @@ from pathlib import Path
 import sys
 
 # Add project root to path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer
@@ -56,22 +56,24 @@ async def test_epic1_integration():
         print(f"❌ Failed to initialize analyzer: {e}")
         return
     
-    # Test queries covering different complexity levels
+    # Test queries covering different complexity levels (based on training prompt definitions)
     test_queries = [
-        # Simple queries
+        # Simple queries (0.10-0.35) - Basic concepts, Bloom's Level 1-2
         ("What is Python?", "simple"),
-        ("How do I print hello world?", "simple"),
+        ("How do I create a list in Python?", "simple"),
         ("What does the len() function do?", "simple"),
+        ("How do I implement a binary search tree in Python?", "simple"),  # Basic algorithm, fundamental CS
+        ("What's the difference between let and const in JavaScript?", "simple"),  # Basic language features
         
-        # Medium queries
-        ("How do I implement a binary search tree in Python?", "medium"),
-        ("Explain the difference between async and threading in Python", "medium"),
-        ("What are the best practices for error handling in Python?", "medium"),
+        # Medium queries (0.32-0.66) - Intermediate concepts, Bloom's Level 3-4, multi-step solutions
+        ("How to implement rate limiting for REST APIs to prevent abuse while maintaining good user experience?", "medium"),
+        ("What's the best approach to handle errors properly in async JavaScript functions with try-catch and promise chains?", "medium"),
+        ("How should I design a caching strategy for a web application with both Redis and database queries?", "medium"),
         
-        # Complex queries
-        ("Design and implement a distributed caching system with Redis that handles cache invalidation, supports multiple eviction policies, and provides monitoring capabilities", "complex"),
-        ("How would you optimize a machine learning pipeline for real-time inference, considering model quantization, batching strategies, and hardware acceleration?", "complex"),
-        ("Explain the internal implementation of Python's Global Interpreter Lock and how it affects multi-threaded performance in CPU-bound vs I/O-bound operations", "complex"),
+        # Complex queries (0.64-0.90) - Expert-level, Bloom's Level 4-6, advanced distributed systems
+        ("How can I implement a distributed consensus algorithm with Byzantine fault tolerance that maintains linearizability while optimizing for network partition recovery?", "complex"),
+        ("What are the theoretical and practical implications of implementing a CRDT-based eventually consistent data store for a globally distributed collaborative editing system?", "complex"),
+        ("How would you design a fault-tolerant distributed system that guarantees exactly-once message delivery semantics across multiple data centers with network partitions?", "complex"),
     ]
     
     print("\n2. Testing queries with different complexity levels...")
@@ -160,7 +162,7 @@ async def test_epic1_integration():
     print(f"MetaClassifier used: {meta_used_count}/{total_count} queries")
     
     # Save results
-    output_file = Path("test_results/epic1_integration_results.json")
+    output_file = Path("/tmp/epic1_integration_results.json")
     output_file.parent.mkdir(exist_ok=True)
     
     with open(output_file, 'w') as f:

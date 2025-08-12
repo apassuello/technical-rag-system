@@ -273,15 +273,70 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         Returns:
             QueryAnalysis with extracted characteristics from ML analysis
         """
-        # Use asyncio to run the async analyze method
+        # For sync interface, use the trained models directly to avoid async issues
         try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        # Run the async analysis
-        ml_result = loop.run_until_complete(self.analyze(query, mode='hybrid'))
+            # Get predictions using trained models directly
+            prediction_result = self._get_trained_model_predictions(query)
+            
+            if prediction_result:
+                # Create AnalysisResult from prediction
+                from .ml_views.view_result import AnalysisResult, ComplexityLevel, ViewResult, AnalysisMethod
+                
+                # Create view results
+                view_results = {}
+                view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
+                for view_name in view_names:
+                    if view_name in prediction_result['view_scores']:
+                        view_results[view_name] = ViewResult(
+                            view_name=view_name,
+                            score=prediction_result['view_scores'][view_name],
+                            confidence=0.85,
+                            method=AnalysisMethod.ML,
+                            latency_ms=5.0,
+                            features={'trained_model_score': prediction_result['view_scores'][view_name]},
+                            metadata={'trained_model_used': True}
+                        )
+                
+                ml_result = AnalysisResult(
+                    query=query,
+                    view_results=view_results,
+                    final_score=prediction_result['complexity_score'],
+                    final_complexity=self._score_to_complexity_level(prediction_result['complexity_score']),
+                    total_latency_ms=25.0,
+                    confidence=prediction_result['confidence'],
+                    metadata={
+                        'analyzer': 'Epic1MLAnalyzer',
+                        'trained_models_used': True,
+                        'fusion_method': prediction_result['fusion_method'],
+                        'prediction_method': 'trained_pytorch_models_sync'
+                    }
+                )
+            else:
+                # Fallback
+                from .ml_views.view_result import AnalysisResult, ComplexityLevel
+                ml_result = AnalysisResult(
+                    query=query,
+                    view_results={},
+                    final_score=0.5,
+                    final_complexity=ComplexityLevel.MEDIUM,
+                    total_latency_ms=5.0,
+                    confidence=0.5,
+                    metadata={'analyzer': 'Epic1MLAnalyzer', 'fallback': True}
+                )
+            
+        except Exception as e:
+            logger.error(f"Sync ML analysis failed: {e}")
+            # Complete fallback
+            from .ml_views.view_result import AnalysisResult, ComplexityLevel
+            ml_result = AnalysisResult(
+                query=query,
+                view_results={},
+                final_score=0.5,
+                final_complexity=ComplexityLevel.MEDIUM,
+                total_latency_ms=5.0,
+                confidence=0.3,
+                metadata={'analyzer': 'Epic1MLAnalyzer', 'error': str(e)}
+            )
         
         # Convert AnalysisResult to QueryAnalysis format
         return self._convert_to_query_analysis(ml_result)
@@ -699,7 +754,8 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 'model_version': prediction_result.get('metadata', {}).get('model_version', 'epic1_v1.0'),
                 'view_count': len(view_results),
                 'prediction_method': 'trained_pytorch_models',
-                'model_recommendation': self._get_model_recommendation(prediction_result['complexity_score'])
+                'model_recommendation': self._get_model_recommendation(prediction_result['complexity_score']),
+                'meta_classification': prediction_result.get('metadata', {}).get('meta_classification', {})
             }
         )
         
@@ -812,8 +868,8 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             if not view_scores:
                 return None
             
-            # Apply fusion using the same approach as epic1_predictor.py
-            final_score = self._apply_fusion(view_scores)
+            # Apply fusion using the trained method (MetaClassifier or weighted average)
+            final_score, fusion_method_used = self._apply_fusion_with_metadata(view_scores)
             
             # Determine complexity level
             if final_score < 0.35:
@@ -832,11 +888,16 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 'complexity_score': final_score,
                 'complexity_level': complexity_level,
                 'view_scores': view_scores,
-                'fusion_method': 'weighted_average',  # Primary method from config
+                'fusion_method': fusion_method_used,
                 'confidence': confidence,
                 'metadata': {
                     'model_version': 'epic1_v1.0',
-                    'prediction_timestamp': time.time()
+                    'prediction_timestamp': time.time(),
+                    'metaclassifier_used': fusion_method_used == 'metaclassifier',
+                    'meta_classification': {
+                        'meta_classifier_used': fusion_method_used == 'metaclassifier',
+                        'fusion_method': fusion_method_used
+                    }
                 }
             }
             
@@ -860,9 +921,104 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         ]
         return np.array(features, dtype=np.float32)
     
+    def _apply_fusion_with_metadata(self, view_scores: Dict[str, float]) -> Tuple[float, str]:
+        """Apply fusion and return both score and method used."""
+        # First get weighted average score (this gives us the continuous score)
+        weighted_score = self._apply_weighted_average_fusion(view_scores)
+        
+        # Try to use trained MetaClassifier for class validation/override
+        if (hasattr(self, 'trained_meta_classifier') and self.trained_meta_classifier is not None and
+            hasattr(self, 'meta_feature_scaler') and self.meta_feature_scaler is not None):
+            
+            try:
+                # Create meta-features (15-dimensional feature vector)
+                meta_features = self._create_meta_features(view_scores)
+                
+                # Scale features
+                scaled_features = self.meta_feature_scaler.transform([meta_features])
+                
+                # Predict using trained MetaClassifier
+                prediction = self.trained_meta_classifier.predict_proba(scaled_features)[0]
+                predicted_class = prediction.argmax()  # 0=simple, 1=medium, 2=complex
+                
+                # Get class from weighted average
+                weighted_class = 0 if weighted_score < 0.35 else (1 if weighted_score < 0.7 else 2)
+                
+                # If MetaClassifier agrees with weighted average, use weighted score
+                if predicted_class == weighted_class:
+                    logger.debug(f"MetaClassifier agrees: class={predicted_class}, score={weighted_score:.4f}")
+                    return weighted_score, 'metaclassifier'
+                else:
+                    # MetaClassifier disagrees - use its class prediction but map to appropriate score range
+                    if predicted_class == 0:  # simple
+                        adjusted_score = min(0.34, weighted_score)  # Cap at simple range
+                    elif predicted_class == 1:  # medium  
+                        adjusted_score = max(0.35, min(0.69, weighted_score))  # Force into medium range
+                    else:  # complex
+                        adjusted_score = max(0.70, weighted_score)  # Force into complex range
+                    
+                    logger.debug(f"MetaClassifier override: {weighted_class}→{predicted_class}, score={weighted_score:.4f}→{adjusted_score:.4f}")
+                    return adjusted_score, 'metaclassifier'
+                
+            except Exception as e:
+                logger.warning(f"MetaClassifier fusion failed: {e}, falling back to weighted average")
+        
+        # Fallback to weighted average fusion
+        return weighted_score, 'weighted_average'
+    
+    def _apply_weighted_average_fusion(self, view_scores: Dict[str, float]) -> float:
+        """Apply weighted average fusion using trained weights."""
+        fusion_weights = {
+            'technical': 0.19999032962292654,
+            'linguistic': 0.19998833763905233,
+            'task': 0.1999982824778589,
+            'semantic': 0.20000875562698767,
+            'computational': 0.20001429463317463
+        }
+        
+        # Calculate weighted average
+        weighted_sum = 0.0
+        total_weight = 0.0
+        
+        for view_name, score in view_scores.items():
+            if view_name in fusion_weights:
+                weight = fusion_weights[view_name]
+                weighted_sum += score * weight
+                total_weight += weight
+        
+        if total_weight > 0:
+            return weighted_sum / total_weight
+        else:
+            return sum(view_scores.values()) / len(view_scores)
+    
     def _apply_fusion(self, view_scores: Dict[str, float]) -> float:
-        """Apply fusion using the trained weighted average approach."""
-        # Use weights from the trained weighted_average_fusion.json
+        """Apply fusion using the best available trained method (MetaClassifier first, then weighted average)."""
+        
+        # Try to use trained MetaClassifier if available
+        if (hasattr(self, 'trained_meta_classifier') and self.trained_meta_classifier is not None and
+            hasattr(self, 'meta_feature_scaler') and self.meta_feature_scaler is not None):
+            
+            try:
+                # Create meta-features (15-dimensional feature vector)
+                meta_features = self._create_meta_features(view_scores)
+                
+                # Scale features
+                scaled_features = self.meta_feature_scaler.transform([meta_features])
+                
+                # Predict using trained MetaClassifier
+                prediction = self.trained_meta_classifier.predict_proba(scaled_features)[0]
+                
+                # Convert classification probabilities to regression score
+                # Classes are typically [simple, medium, complex] -> map to continuous score
+                score = (prediction[1] * 0.5) + (prediction[2] * 1.0)  # medium=0.5, complex=1.0
+                
+                logger.debug(f"MetaClassifier fusion: {score:.4f} (probs: {prediction})")
+                return min(1.0, max(0.0, score))
+                
+            except Exception as e:
+                logger.warning(f"MetaClassifier fusion failed: {e}, falling back to weighted average")
+        
+        # Fallback to weighted average fusion
         fusion_weights = {
             'technical': 0.19999032962292654,
             'linguistic': 0.19998833763905233,
@@ -884,8 +1040,50 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         if total_weight > 0:
             return min(1.0, max(0.0, weighted_sum))
         else:
-            # Fallback to simple average
+            # Final fallback to simple average
             return sum(view_scores.values()) / len(view_scores)
+    
+    def _create_meta_features(self, view_scores: Dict[str, float]) -> List[float]:
+        """Create 15-dimensional meta-feature vector for MetaClassifier."""
+        # Get view scores in standard order
+        view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
+        scores = [view_scores.get(name, 0.0) for name in view_names]
+        
+        # Basic statistics
+        mean_score = sum(scores) / len(scores)
+        std_score = (sum((s - mean_score) ** 2 for s in scores) / len(scores)) ** 0.5
+        min_score = min(scores)
+        max_score = max(scores)
+        range_score = max_score - min_score
+        
+        # Cross-view differences
+        tech_ling_diff = abs(scores[0] - scores[1])  # technical vs linguistic
+        task_sem_diff = abs(scores[2] - scores[3])   # task vs semantic
+        
+        # Complexity indicators
+        high_complexity_views = sum(1 for s in scores if s > 0.7)
+        low_complexity_views = sum(1 for s in scores if s < 0.3)
+        
+        # Create 15-dimensional feature vector
+        meta_features = [
+            scores[0],  # technical
+            scores[1],  # linguistic  
+            scores[2],  # task
+            scores[3],  # semantic
+            scores[4],  # computational
+            mean_score,
+            std_score,
+            min_score,
+            max_score,
+            range_score,
+            tech_ling_diff,
+            task_sem_diff,
+            high_complexity_views,
+            low_complexity_views,
+            len([s for s in scores if s > mean_score])  # above-average views
+        ]
+        
+        return meta_features
     
     def _score_to_complexity_level(self, score: float) -> 'ComplexityLevel':
         """Convert score to complexity level."""
