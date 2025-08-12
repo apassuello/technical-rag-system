@@ -41,8 +41,40 @@ Resolved critical GraphEnhancedRRFFusion issue with automatic score normalizatio
   - **Graph-enhanced fusion** with validated 48.7% MRR improvement  
   - **Advanced analytics** and real-time performance monitoring
 - **Multiple Deployment Options**: HuggingFace Spaces, Local, Docker
-- **Swiss Engineering Standards**: 147 test cases, comprehensive validation, production monitoring
+- **Quality Engineering Standards**: 147 test cases, comprehensive validation, production monitoring
 
+## 📁 Project Structure
+
+```
+project-1-technical-rag/
+├── src/                       # Source code
+│   ├── components/           # Core RAG components
+│   ├── core/                # Platform orchestrator & factory
+│   └── training/            # Training infrastructure
+├── tests/                     # Test suites
+│   ├── epic1/               # Epic 1 specific tests
+│   ├── epic2_validation/    # Epic 2 validation tests
+│   └── diagnostic/          # System diagnostics
+├── docs/                      # Documentation
+│   ├── epic1/               # Epic 1 documentation & reports
+│   ├── epic2/               # Epic 2 documentation
+│   └── architecture/        # System architecture docs
+├── scripts/                   # Utility scripts
+│   ├── epic1_training/      # Training scripts
+│   ├── epic1_validation/    # Validation scripts
+│   ├── debug/              # Debug utilities
+│   ├── fixes/              # Fix scripts
+│   └── analysis/           # Analysis tools
+├── data/                      # Data files
+│   ├── training/           # Training datasets
+│   └── analysis/           # Analysis results
+├── models/                    # Trained models
+│   └── epic1/              # Epic 1 trained models
+├── config/                    # Configuration files
+├── app.py                     # Main application
+├── streamlit_app.py          # Streamlit UI
+└── requirements.txt          # Python dependencies
+```
 
 ## 📋 Prerequisites
 
