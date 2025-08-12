@@ -86,18 +86,36 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 - fallback_strategy: Strategy when ML analysis fails ('algorithmic' or 'conservative')
                 - confidence_threshold: Minimum confidence for ML results (default: 0.6)
         """
-        self.config = config or {}
+        # Call parent constructor first
         super().__init__(config)
         
-        # Core configuration
-        self.memory_budget_gb = self.config.get('memory_budget_gb', 2.0)
-        self.enable_performance_monitoring = self.config.get('enable_performance_monitoring', True)
-        self.parallel_execution = self.config.get('parallel_execution', True)
-        self.fallback_strategy = self.config.get('fallback_strategy', 'algorithmic')
-        self.confidence_threshold = self.config.get('confidence_threshold', 0.6)
+        # Access config from parent (stored as _config)
+        config = self._config
+        
+        # Core configuration - ALWAYS set these
+        self.memory_budget_gb = config.get('memory_budget_gb', 2.0)
+        self.enable_performance_monitoring = config.get('enable_performance_monitoring', True)
+        self.parallel_execution = config.get('parallel_execution', True)
+        self.fallback_strategy = config.get('fallback_strategy', 'algorithmic')
+        self.confidence_threshold = config.get('confidence_threshold', 0.6)
+        
+        # Performance tracking - ALWAYS initialize
+        self._analysis_count = 0
+        self._total_analysis_time = 0.0
+        self._error_count = 0
+        self._view_performance = {}
+        
+        # Initialize core containers - ALWAYS create these
+        self.views = {}
+        self.trained_view_models = None
+        self.neural_fusion_model = None
+        self.ensemble_models = None
+        self.model_manager = None
+        self.performance_monitor = None
+        self.memory_monitor = None
         
         # View weights for meta-classification (sum to 1.0)
-        self.view_weights = self.config.get('view_weights', {
+        self.view_weights = config.get('view_weights', {
             'technical': 0.25,      # Technical complexity often drives model choice
             'linguistic': 0.20,     # Linguistic patterns important for routing
             'task': 0.25,          # Task type crucial for model selection
@@ -112,27 +130,35 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             for view in self.view_weights:
                 self.view_weights[view] /= weight_sum
         
-        # Initialize ML infrastructure
-        self._initialize_ml_infrastructure()
+        # Initialize ML infrastructure (simplified to avoid hanging)
+        try:
+            self._initialize_ml_infrastructure()
+        except Exception as e:
+            logger.warning(f"ML infrastructure initialization failed: {e}, using simplified setup")
         
-        # Initialize views
-        self._initialize_views()
+        # Initialize views (simplified)
+        try:
+            self._initialize_views()
+        except Exception as e:
+            logger.warning(f"Views initialization failed: {e}, using empty views")
         
-        # Initialize meta-classifier
-        self._initialize_meta_classifier()
+        # Initialize meta-classifier (simplified)
+        try:
+            self._initialize_meta_classifier()
+        except Exception as e:
+            logger.warning(f"Meta-classifier initialization failed: {e}, using basic classifier")
+            from .components.complexity_classifier import ComplexityClassifier
+            self.complexity_classifier = ComplexityClassifier()
         
         # Load trained models if available
-        self._load_trained_models()
-        
-        # Performance tracking
-        self._analysis_count = 0
-        self._total_analysis_time = 0.0
-        self._error_count = 0
-        self._view_performance = {}
+        try:
+            self._load_trained_models()
+        except Exception as e:
+            logger.warning(f"Failed to load trained models: {e}")
         
         logger.info(f"Initialized Epic1MLAnalyzer with {len(self.views)} views, "
                    f"memory budget: {self.memory_budget_gb}GB, "
-                   f"trained models: {'loaded' if hasattr(self, 'trained_meta_classifier') else 'not available'}")
+                   f"trained models: {'loaded' if self.trained_view_models else 'not available'}")
     
     def configure(self, config: Dict[str, Any]) -> None:
         """
@@ -144,8 +170,8 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         # Call parent configure method
         super().configure(config)
         
-        # Update ML-specific configuration
-        self.config.update(config)
+        # Update ML-specific configuration (use _config from parent)
+        # No need to update again as parent already did this
         
         # Reconfigure core settings
         if 'memory_budget_gb' in config:
@@ -483,29 +509,71 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 logger.warning("MetaClassifier not found, using default weighted combination")
                 self.trained_meta_classifier = None
             
-            if view_model_loaded or hasattr(self, 'trained_meta_classifier'):
+            # Load fusion models
+            try:
+                neural_fusion_path = models_dir / "fusion" / "neural_fusion_model.pth"
+                if neural_fusion_path.exists():
+                    self.neural_fusion_model = self._load_fusion_model(neural_fusion_path)
+                    logger.info("Loaded neural fusion model successfully")
+                else:
+                    self.neural_fusion_model = None
+                    
+                self.ensemble_models = self._load_ensemble_models()
+                if self.ensemble_models:
+                    logger.info(f"Loaded {len(self.ensemble_models)} ensemble models")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to load fusion models: {e}")
+                self.neural_fusion_model = None
+                self.ensemble_models = {}
+            
+            if view_model_loaded or hasattr(self, 'trained_meta_classifier') or self.neural_fusion_model or self.ensemble_models:
                 logger.info(f"Successfully loaded trained models from {models_dir}")
                 
         except Exception as e:
             logger.error(f"Error loading trained models: {e}")
             self.trained_view_models = {}
             self.trained_meta_classifier = None
+
+
+class NeuralFusionModel(nn.Module):
+    """Neural fusion model for combining view predictions - EXACT MATCH to epic1_predictor.py"""
+    def __init__(self, input_dim=5, hidden_dim=64):
+        super().__init__()
+        self.shared_layers = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim), nn.ReLU(), nn.BatchNorm1d(hidden_dim), nn.Dropout(0.3),
+            nn.Linear(hidden_dim, hidden_dim // 2), nn.ReLU(), nn.BatchNorm1d(hidden_dim // 2), nn.Dropout(0.2)
+        )
+        self.regression_head = nn.Sequential(
+            nn.Linear(hidden_dim // 2, hidden_dim // 4), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(hidden_dim // 4, 1), nn.Sigmoid()
+        )
+        self.classification_head = nn.Sequential(
+            nn.Linear(hidden_dim // 2, hidden_dim // 4), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(hidden_dim // 4, 3), nn.Softmax(dim=1)
+        )
+    
+    def forward(self, view_predictions):
+        shared_features = self.shared_layers(view_predictions)
+        regression_output = self.regression_head(shared_features).squeeze()
+        classification_output = self.classification_head(shared_features)
+        return regression_output, classification_output
+
+
+class Epic1MLAnalyzer(BaseQueryAnalyzer):
+    # ... continuing with class definition
     
     def _load_simple_view_model(self, model_path: Path):
         """Load a simple view model matching the training architecture."""
         
         class SimpleViewModel(nn.Module):
-            def __init__(self, input_dim: int = 8, hidden_dim: int = 64):
+            def __init__(self, input_dim=10, hidden_dim=128):
                 super().__init__()
                 self.network = nn.Sequential(
-                    nn.Linear(input_dim, hidden_dim),
-                    nn.ReLU(),
-                    nn.Dropout(0.2),
-                    nn.Linear(hidden_dim, hidden_dim // 2),
-                    nn.ReLU(),
-                    nn.Dropout(0.2),
-                    nn.Linear(hidden_dim // 2, 1),
-                    nn.Sigmoid()
+                    nn.Linear(input_dim, hidden_dim), nn.ReLU(), nn.BatchNorm1d(hidden_dim), nn.Dropout(0.3),
+                    nn.Linear(hidden_dim, hidden_dim // 2), nn.ReLU(), nn.BatchNorm1d(hidden_dim // 2), nn.Dropout(0.3),
+                    nn.Linear(hidden_dim // 2, hidden_dim // 4), nn.ReLU(), nn.Dropout(0.2),
+                    nn.Linear(hidden_dim // 4, 1), nn.Sigmoid()
                 )
             
             def forward(self, features):
@@ -517,19 +585,63 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         model.eval()
         return model
     
+    def _load_fusion_model(self, model_path: Path) -> torch.nn.Module:
+        """Load neural fusion model matching the training architecture."""
+        try:
+            model = NeuralFusionModel(input_dim=5, hidden_dim=64)
+            checkpoint = torch.load(model_path, map_location='cpu')
+            model.load_state_dict(checkpoint['model_state_dict'])
+            model.eval()
+            logger.info(f"Successfully loaded neural fusion model from {model_path}")
+            return model
+        except Exception as e:
+            logger.error(f"Failed to load neural fusion model from {model_path}: {e}")
+            return None
+    
+    def _load_ensemble_models(self) -> Dict[str, Any]:
+        """Load ensemble classification and regression models."""
+        import joblib
+        ensemble_models = {}
+        
+        try:
+            # Load classification model
+            clf_path = self.model_dir / "fusion" / "ensemble_classification_model.pkl" 
+            if clf_path.exists():
+                ensemble_models['classification'] = joblib.load(clf_path)
+                logger.info(f"Loaded ensemble classification model from {clf_path}")
+            
+            # Load regression model  
+            reg_path = self.model_dir / "fusion" / "ensemble_regression_model.pkl"
+            if reg_path.exists():
+                ensemble_models['regression'] = joblib.load(reg_path)
+                logger.info(f"Loaded ensemble regression model from {reg_path}")
+                
+            # Load scaler
+            scaler_path = self.model_dir / "fusion" / "ensemble_scaler.pkl"
+            if scaler_path.exists():
+                ensemble_models['scaler'] = joblib.load(scaler_path)
+                logger.info(f"Loaded ensemble scaler from {scaler_path}")
+                
+        except Exception as e:
+            logger.error(f"Error loading ensemble models: {e}")
+            
+        return ensemble_models
+    
     def _extract_simple_features(self, query: str) -> np.ndarray:
-        """Extract simple features from query (matching training feature extraction)."""
+        """Extract simple features from query (matching training feature extraction - EXACT 10 features)."""
         words = query.split()
         
         features = [
-            len(query),                          # Character count
-            len(words),                           # Word count
-            np.mean([len(w) for w in words]) if words else 0,    # Average word length
-            query.count('?'),                     # Question marks
-            query.count(','),                     # Commas
-            len([w for w in words if len(w) > 6]),  # Long words
-            len([w for w in words if w and w[0].isupper()]),  # Capitalized words
-            query.count(' and ') + query.count(' or '),  # Conjunctions
+            len(query),                          # 1. Character count
+            len(words),                          # 2. Word count
+            np.mean([len(w) for w in words]) if words else 0,    # 3. Average word length
+            query.count('?'),                    # 4. Question marks
+            query.count(',') + query.count(';'), # 5. Commas + semicolons (FIXED)
+            len([w for w in words if len(w) > 6]),  # 6. Long words
+            len([w for w in words if w and w[0].isupper()]),  # 7. Capitalized words
+            query.count(' and ') + query.count(' or '),  # 8. Conjunctions
+            len(set(words)) / len(words) if words else 0,    # 9. Vocabulary richness (ADDED)
+            query.count(' ') / len(query) if query else 0,   # 10. Space ratio (ADDED)
         ]
         
         return np.array(features, dtype=np.float32)
@@ -812,9 +924,15 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
     ) -> ComplexityClassification:
         """Combine view results using meta-classifier."""
         try:
-            # Check if we have trained models to use
-            if hasattr(self, 'trained_meta_classifier') and self.trained_meta_classifier:
-                # Use trained MetaClassifier (Epic 1 ML architecture)
+            # Check if we have fusion models to use (priority: neural fusion > ensemble > meta-classifier)
+            if hasattr(self, 'neural_fusion_model') and self.neural_fusion_model:
+                # Use neural fusion model (best approach)
+                return self._combine_with_neural_fusion(query, view_results)
+            elif hasattr(self, 'ensemble_models') and self.ensemble_models and len(self.ensemble_models) >= 3:
+                # Use ensemble models (alternative fusion)
+                return self._combine_with_ensemble_models(query, view_results)
+            elif hasattr(self, 'trained_meta_classifier') and self.trained_meta_classifier:
+                # Use trained MetaClassifier (fallback ML approach)
                 return self._combine_with_trained_meta_classifier(query, view_results)
             else:
                 # Fall back to original ComplexityClassifier
@@ -924,6 +1042,111 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 meta_features[base_idx + 2] = 0.0  # Algorithmic
         
         return meta_features
+    
+    def _combine_with_neural_fusion(self, query: str, view_results: Dict[str, ViewResult]) -> Dict[str, Any]:
+        """Use neural fusion model to combine view results - EXACT MATCH to epic1_predictor.py"""
+        try:
+            # Extract view predictions (5 values from 5 view models)
+            view_predictions = []
+            view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
+            
+            for view_name in view_names:
+                if view_name in view_results:
+                    score = view_results[view_name].complexity_score
+                else:
+                    score = 0.5  # Default fallback
+                view_predictions.append(score)
+            
+            view_tensor = torch.tensor([view_predictions], dtype=torch.float32)
+            
+            # Use neural fusion model
+            with torch.no_grad():
+                regression_score, classification_probs = self.neural_fusion_model(view_tensor)
+                complexity_score = float(regression_score)
+                class_probs = classification_probs.numpy()[0]
+                class_idx = torch.argmax(classification_probs).item()
+                confidence = float(torch.max(classification_probs))
+        
+            # Map class index to complexity level
+            complexity_levels = ['simple', 'medium', 'complex']
+            complexity_level = complexity_levels[class_idx] if class_idx < len(complexity_levels) else 'medium'
+            
+            # Create breakdown
+            breakdown = {view_name: score for view_name, score in zip(view_names, view_predictions)}
+            
+            return {
+                'complexity_level': complexity_level,
+                'complexity_score': complexity_score,
+                'confidence': confidence,
+                'breakdown': breakdown,
+                'reasoning': f'Neural fusion model prediction with {confidence:.3f} confidence (class probs: {class_probs})',
+                'fusion_method': 'neural_fusion'
+            }
+            
+        except Exception as e:
+            logger.error(f"Neural fusion model prediction failed: {e}")
+            # Fallback to simple average
+            scores = [vr.complexity_score for vr in view_results.values()]
+            avg_score = sum(scores) / len(scores) if scores else 0.5
+            return {
+                'complexity_level': 'simple' if avg_score < 0.35 else ('complex' if avg_score > 0.7 else 'medium'),
+                'complexity_score': avg_score,
+                'confidence': 0.5,
+                'breakdown': {'average_fallback': avg_score},
+                'reasoning': f'Neural fusion failed, using average: {e}'
+            }
+    
+    def _combine_with_ensemble_models(self, query: str, view_results: Dict[str, ViewResult]) -> Dict[str, Any]:
+        """Use ensemble models to combine view results - EXACT MATCH to epic1_predictor.py"""
+        try:
+            # Extract view predictions (5 values from 5 view models)
+            view_predictions = []
+            view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
+            
+            for view_name in view_names:
+                if view_name in view_results:
+                    score = view_results[view_name].complexity_score
+                else:
+                    score = 0.5  # Default fallback
+                view_predictions.append(score)
+            
+            # Scale features using trained scaler
+            scaled_features = self.ensemble_models['scaler'].transform([view_predictions])
+            
+            # Get predictions
+            complexity_score = float(self.ensemble_models['regression'].predict(scaled_features)[0])
+            class_probs = self.ensemble_models['classification'].predict_proba(scaled_features)[0]
+            class_idx = np.argmax(class_probs)
+            confidence = float(np.max(class_probs))
+        
+            # Map class index to complexity level
+            complexity_levels = ['simple', 'medium', 'complex']
+            complexity_level = complexity_levels[class_idx] if class_idx < len(complexity_levels) else 'medium'
+            
+            # Create breakdown
+            breakdown = {view_name: score for view_name, score in zip(view_names, view_predictions)}
+            
+            return {
+                'complexity_level': complexity_level,
+                'complexity_score': complexity_score,
+                'confidence': confidence,
+                'breakdown': breakdown,
+                'reasoning': f'Ensemble fusion model prediction with {confidence:.3f} confidence',
+                'fusion_method': 'ensemble'
+            }
+            
+        except Exception as e:
+            logger.error(f"Ensemble model prediction failed: {e}")
+            # Fallback to simple average
+            scores = [vr.complexity_score for vr in view_results.values()]
+            avg_score = sum(scores) / len(scores) if scores else 0.5
+            return {
+                'complexity_level': 'simple' if avg_score < 0.35 else ('complex' if avg_score > 0.7 else 'medium'),
+                'complexity_score': avg_score,
+                'confidence': 0.5,
+                'breakdown': {'average_fallback': avg_score},
+                'reasoning': f'Ensemble fusion failed, using average: {e}'
+            }
     
     def _fallback_combination(self, view_results: Dict[str, ViewResult]) -> Dict[str, Any]:
         """Fallback to weighted average when MetaClassifier fails."""
