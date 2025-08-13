@@ -518,6 +518,9 @@ class TestAdaptiveRouter:
             "confidence": 0.85
         }
         
+        # Clear model registry to simulate empty registry
+        self.router.model_registry.models = {"simple": [], "medium": [], "complex": []}
+        
         # Should handle gracefully
         decision = self.router.route_query(
             query="Test query",

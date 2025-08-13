@@ -167,7 +167,8 @@ class CostTracker:
                      query_complexity: Optional[str] = None,
                      request_time_ms: Optional[float] = None,
                      success: bool = True,
-                     metadata: Optional[Dict[str, Any]] = None) -> None:
+                     metadata: Optional[Dict[str, Any]] = None,
+                     timestamp: Optional[datetime] = None) -> None:
         """
         Record usage for a single LLM request with budget monitoring.
         
@@ -181,6 +182,7 @@ class CostTracker:
             request_time_ms: Request duration in ms (optional)
             success: Whether request was successful
             metadata: Additional metadata (optional)
+            timestamp: Custom timestamp for testing (optional, defaults to now)
         """
         # Ensure cost precision
         cost_usd = Decimal(str(cost_usd)).quantize(
@@ -189,7 +191,7 @@ class CostTracker:
         
         # Create usage record
         record = UsageRecord(
-            timestamp=datetime.now(),
+            timestamp=timestamp or datetime.now(),
             provider=provider.lower(),
             model=model.lower(),
             input_tokens=input_tokens,

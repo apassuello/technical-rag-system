@@ -426,7 +426,8 @@ class TestCostTracker:
                 provider=f"provider_{i}", model=f"model_{i}",
                 input_tokens=100, output_tokens=50,
                 cost_usd=Decimal('0.010000'),
-                query_complexity="simple"
+                query_complexity="simple",
+                timestamp=timestamp
             )
         
         # Get usage for last hour

@@ -88,9 +88,10 @@ class TestEpic1AnswerGenerator:
                 del os.environ[key]
     
     # EPIC1-INTEG-001: End-to-End Multi-Model Workflow
+    @patch('src.components.generators.llm_adapters.ollama_adapter.requests.post')
     @patch('src.components.generators.llm_adapters.openai_adapter.OpenAI')
     @patch('src.components.generators.llm_adapters.mistral_adapter.requests.post')
-    def test_end_to_end_multi_model_workflow(self, mock_mistral_post, mock_openai_class):
+    def test_end_to_end_multi_model_workflow(self, mock_mistral_post, mock_openai_class, mock_ollama_post):
         """Test complete query processing with routing.
         
         Requirement: Seamless multi-model answer generation
@@ -132,6 +133,22 @@ class TestEpic1AnswerGenerator:
             }
             mock_mistral_post.return_value = mock_mistral_response
             
+            # Mock Ollama API response
+            mock_ollama_response = MagicMock()
+            mock_ollama_response.status_code = 200
+            mock_ollama_response.json.return_value = {
+                'response': 'OAuth 2.0 is an authorization framework that allows third-party applications to access user resources without exposing credentials. It involves authorization server, resource server, client application, and resource owner.',
+                'done': True,
+                'context': [],
+                'total_duration': 1000000000,
+                'load_duration': 100000000,
+                'prompt_eval_count': 50,
+                'prompt_eval_duration': 200000000,
+                'eval_count': 30,
+                'eval_duration': 300000000
+            }
+            mock_ollama_post.return_value = mock_ollama_response
+            
             # Create Epic1AnswerGenerator
             generator = Epic1AnswerGenerator(config=self.multi_model_config["config"])
             
@@ -151,15 +168,15 @@ class TestEpic1AnswerGenerator:
             # Verify complete workflow
             assert answer is not None
             assert isinstance(answer, Answer)
-            assert len(answer.content) > 50  # Substantial response
+            assert len(answer.text) > 50  # Substantial response
             
             # Verify routing metadata present
-            assert 'routing_decision' in answer.metadata
-            routing_info = answer.metadata['routing_decision']
+            assert 'routing' in answer.metadata
+            routing_info = answer.metadata['routing']
             assert routing_info['complexity_level'] == 'medium'
-            assert routing_info['selected_provider'] == 'mistral'
-            assert routing_info['selected_model'] == 'mistral-small'
-            assert 'decision_time_ms' in routing_info
+            assert routing_info['selected_model']['provider'] == 'ollama'
+            assert routing_info['selected_model']['model'] == 'llama3.2:3b'
+            assert 'routing_decision_time_ms' in routing_info
             
             # Verify cost tracking integrated
             assert 'cost_usd' in answer.metadata

@@ -390,18 +390,32 @@ class BalancedStrategy(RoutingStrategy):
         best_model = None
         best_score = -1
         
+        # Find max cost for normalization, but avoid free models dominating
+        costs = [float(model.estimated_cost) for model in available_models]
+        max_cost = max(costs) if costs else 0.1
+        if max_cost == 0:  # All models are free
+            max_cost = 0.01  # Use small value to prevent total dominance by cost
+            
         for model in available_models:
-            # Calculate balanced score
-            cost_score = 1.0 - (float(model.estimated_cost) / 0.1)  # Normalize to 0-1
+            model_cost = float(model.estimated_cost)
+            
+            # Calculate balanced score with adjusted cost normalization
+            # For very low cost models, reduce cost advantage to emphasize quality
+            if model_cost == 0 and max_cost > 0:
+                # Free models get cost advantage but not total dominance
+                cost_score = 0.9  # High but not perfect score
+            else:
+                cost_score = 1.0 - (model_cost / max_cost) if max_cost > 0 else 1.0
+                
             quality_score = model.estimated_quality
             
-            # Weight based on complexity
+            # Weight based on complexity (more emphasis on quality for medium/complex)
             if complexity_score < 0.35:  # Simple - prioritize cost
                 score = cost_score * 0.7 + quality_score * 0.3
-            elif complexity_score < 0.75:  # Medium - balanced
-                score = cost_score * 0.5 + quality_score * 0.5
+            elif complexity_score < 0.75:  # Medium - more quality emphasis  
+                score = cost_score * 0.3 + quality_score * 0.7  # Changed from 0.5/0.5
             else:  # Complex - prioritize quality
-                score = cost_score * 0.3 + quality_score * 0.7
+                score = cost_score * 0.2 + quality_score * 0.8  # Even more quality focus
             
             if score > best_score:
                 best_score = score
