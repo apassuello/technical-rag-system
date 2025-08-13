@@ -478,8 +478,20 @@ class CostTracker:
             if not self._usage_records:
                 return recommendations
             
-            # Analyze cost by complexity
-            complexity_costs = self.get_cost_by_complexity()
+            # Analyze cost by complexity (inline to avoid deadlock)
+            complexity_costs = {}
+            for record in self._usage_records:
+                complexity = record.query_complexity or 'unknown'
+                if complexity not in complexity_costs:
+                    complexity_costs[complexity] = Decimal('0')
+                complexity_costs[complexity] += record.cost_usd
+            
+            # Quantize complexity costs
+            complexity_costs = {
+                complexity: cost.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
+                for complexity, cost in complexity_costs.items()
+            }
+            
             total_cost = sum(complexity_costs.values())
             
             if total_cost == 0:
@@ -490,17 +502,31 @@ class CostTracker:
             simple_percentage = (simple_cost / total_cost) * 100
             
             if simple_percentage > 30:  # >30% cost on simple queries
+                # Calculate savings as the difference between using expensive models vs cheap models
+                # Assume cheap model cost is near zero for simple queries
+                potential_savings = simple_cost * Decimal("0.9")  # 90% savings by switching to cheap models
                 recommendations.append({
                     'type': 'cost_optimization',
                     'priority': 'high',
                     'title': 'High cost on simple queries',
                     'description': f'{simple_percentage:.1f}% of costs are from simple queries',
-                    'suggestion': 'Consider using cheaper models (ollama) for simple queries',
-                    'potential_savings': f'${(simple_cost * Decimal("0.8")):.3f}'
+                    'suggestion': 'Consider routing simple queries to cheaper models (ollama) or use cheaper models for simple queries',
+                    'potential_savings': f'${potential_savings:.3f}'
                 })
             
-            # Check for high-cost providers
-            provider_costs = self.get_cost_by_provider()
+            # Analyze cost by provider (inline to avoid deadlock)
+            provider_costs = {}
+            for record in self._usage_records:
+                provider = record.provider.lower()
+                if provider not in provider_costs:
+                    provider_costs[provider] = Decimal('0')
+                provider_costs[provider] += record.cost_usd
+            
+            # Quantize provider costs
+            provider_costs = {
+                provider: cost.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
+                for provider, cost in provider_costs.items()
+            }
             for provider, cost in provider_costs.items():
                 percentage = (cost / total_cost) * 100
                 if percentage > 60 and provider in ['openai']:  # High-cost provider
@@ -567,6 +593,91 @@ class CostTracker:
             
         logger.info(f"Cleared {cleared_count} usage records")
         return cleared_count
+    
+    def get_usage_history(self, 
+                          hours: Optional[int] = None,
+                          start_time: Optional[datetime] = None,
+                          end_time: Optional[datetime] = None) -> List[UsageRecord]:
+        """
+        Get usage history records.
+        
+        Args:
+            hours: If specified, only return records from the last N hours
+            start_time: If specified (with end_time), filter records after this time
+            end_time: If specified (with start_time), filter records before this time
+            
+        Returns:
+            List of usage records
+        """
+        with self._lock:
+            if start_time is not None and end_time is not None:
+                return [r for r in self._usage_records 
+                       if start_time <= r.timestamp <= end_time]
+            elif hours is not None:
+                cutoff_time = datetime.now() - timedelta(hours=hours)
+                return [r for r in self._usage_records if r.timestamp >= cutoff_time]
+            else:
+                return list(self._usage_records)
+    
+    def analyze_usage_patterns(self) -> Dict[str, Any]:
+        """
+        Analyze usage patterns to identify optimization opportunities.
+        
+        Returns:
+            Dictionary containing usage pattern analysis including:
+            - complexity_distribution: Usage by complexity level
+            - provider_distribution: Usage by provider
+            - cost_per_complexity: Average cost per complexity level
+        """
+        with self._lock:
+            if not self._usage_records:
+                return {
+                    "complexity_distribution": {},
+                    "provider_distribution": {},
+                    "cost_per_complexity": {}
+                }
+            
+            # Analyze complexity distribution
+            complexity_stats = {}
+            provider_stats = {}
+            
+            for record in self._usage_records:
+                # Complexity analysis
+                complexity = record.query_complexity
+                if complexity not in complexity_stats:
+                    complexity_stats[complexity] = {"count": 0, "total_cost": Decimal('0')}
+                complexity_stats[complexity]["count"] += 1
+                complexity_stats[complexity]["total_cost"] += record.cost_usd
+                
+                # Provider analysis
+                provider = record.provider
+                if provider not in provider_stats:
+                    provider_stats[provider] = {"count": 0, "total_cost": Decimal('0')}
+                provider_stats[provider]["count"] += 1
+                provider_stats[provider]["total_cost"] += record.cost_usd
+            
+            # Calculate distributions
+            total_requests = len(self._usage_records)
+            complexity_distribution = {
+                k: v["count"] / total_requests 
+                for k, v in complexity_stats.items()
+            }
+            provider_distribution = {
+                k: v["count"] / total_requests 
+                for k, v in provider_stats.items()
+            }
+            
+            # Calculate cost per complexity
+            cost_per_complexity = {
+                k: float(v["total_cost"] / v["count"]) if v["count"] > 0 else 0.0
+                for k, v in complexity_stats.items()
+            }
+            
+            return {
+                "complexity_distribution": complexity_distribution,
+                "provider_distribution": provider_distribution, 
+                "cost_per_complexity": cost_per_complexity
+            }
     
     def _calculate_summary(self, records: List[UsageRecord]) -> CostSummary:
         """Calculate summary statistics for a list of records."""

@@ -204,6 +204,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
                 )
             
             # Step 2: Generate answer using selected/configured model
+            # Note: Don't pass max_tokens parameter as it's now handled in adapter config
             answer = super().generate(query, context)
             
             # Step 3: Track costs and routing decisions

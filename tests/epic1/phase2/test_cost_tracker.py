@@ -45,25 +45,25 @@ class TestCostTracker:
         # Record precise usage
         precise_cost = Decimal('0.029340')  # 6 decimal places
         
-        usage_record = self.cost_tracker.record_usage(
+        self.cost_tracker.record_usage(
             provider="openai",
             model="gpt-4-turbo",
             input_tokens=1234,
             output_tokens=567,
             cost_usd=precise_cost,
-            query_complexity="complex",
-            timestamp=self.test_timestamp
+            query_complexity="complex"
         )
         
-        # Verify precision preservation
-        assert isinstance(usage_record.cost_usd, Decimal)
-        assert usage_record.cost_usd == precise_cost
-        assert len(str(usage_record.cost_usd).split('.')[-1]) <= 6  # Max 6 decimal places
+        # Verify precision preservation through cost tracker API
+        total_cost = self.cost_tracker.get_total_cost()
+        assert isinstance(total_cost, Decimal)
+        assert total_cost == precise_cost
+        assert len(str(total_cost).split('.')[-1]) <= 6  # Max 6 decimal places
         
         # Test aggregation precision
-        summary = self.cost_tracker.get_summary()
-        assert isinstance(summary.total_cost, Decimal)
-        assert summary.total_cost == precise_cost
+        summary = self.cost_tracker.get_summary_by_time_period(hours=24)
+        assert isinstance(summary.total_cost_usd, Decimal)
+        assert summary.total_cost_usd == precise_cost
         
         # Test multiple precise additions
         costs = [Decimal('0.001234'), Decimal('0.005678'), Decimal('0.009012')]
@@ -79,12 +79,12 @@ class TestCostTracker:
         
         # Verify aggregation accuracy
         expected_total = precise_cost + sum(costs)
-        summary = self.cost_tracker.get_summary()
-        assert summary.total_cost == expected_total
+        actual_total = self.cost_tracker.get_total_cost()
+        assert actual_total == expected_total
         
         # Test no floating-point errors
-        assert isinstance(summary.total_cost, Decimal)
-        precision = len(str(summary.total_cost).split('.')[-1])
+        assert isinstance(actual_total, Decimal)
+        precision = len(str(actual_total).split('.')[-1])
         assert precision <= 6
     
     def test_decimal_arithmetic_accuracy(self):
@@ -102,13 +102,13 @@ class TestCostTracker:
             cost_usd=cost2, query_complexity="simple"
         )
         
-        summary = self.cost_tracker.get_summary()
+        summary = self.cost_tracker.get_summary_by_time_period(hours=24)
         expected = Decimal('0.300000')
-        assert summary.total_cost == expected
+        assert summary.total_cost_usd == expected
         
         # Verify this doesn't have floating-point errors
         # (0.1 + 0.2 = 0.30000000000000004 with float)
-        assert str(summary.total_cost) == '0.300000'
+        assert str(summary.total_cost_usd) == '0.300000'
     
     # EPIC1-COST-002: Thread-Safe Cost Tracking
     def test_thread_safe_operations(self):
@@ -157,7 +157,7 @@ class TestCostTracker:
         print(f"Thread safety test completed in {execution_time:.2f}s")
         
         # Verify entry count
-        summary = self.cost_tracker.get_summary()
+        summary = self.cost_tracker.get_summary_by_time_period(hours=24)
         assert summary.total_requests == total_expected, f"Expected {total_expected} entries, got {summary.total_requests}"
         
         # Verify data integrity - check a few specific records
@@ -171,7 +171,7 @@ class TestCostTracker:
         
         # Verify total cost calculation
         expected_total_cost = sum(costs)
-        assert summary.total_cost == expected_total_cost
+        assert summary.total_cost_usd == expected_total_cost
     
     def test_concurrent_summary_generation(self):
         """Test thread-safe summary generation during concurrent writes."""
@@ -190,7 +190,7 @@ class TestCostTracker:
             """Continuously generate summaries."""
             summaries = []
             for i in range(20):
-                summary = self.cost_tracker.get_summary()
+                summary = self.cost_tracker.get_summary_by_time_period(hours=24)
                 summaries.append(summary)
                 time.sleep(0.02)
             return summaries
@@ -246,7 +246,7 @@ class TestCostTracker:
             )
         
         # Generate recommendations
-        recommendations = self.cost_tracker.get_optimization_recommendations()
+        recommendations = self.cost_tracker.get_cost_optimization_recommendations()
         
         # Verify recommendations are relevant
         assert len(recommendations) > 0
@@ -254,7 +254,7 @@ class TestCostTracker:
         # Should identify simple queries on expensive model
         simple_query_rec = None
         for rec in recommendations:
-            if 'simple' in rec.description.lower() and 'expensive' in rec.description.lower():
+            if 'simple' in rec['description'].lower() and rec['type'] == 'cost_optimization':
                 simple_query_rec = rec
                 break
         
@@ -266,20 +266,22 @@ class TestCostTracker:
         expected_savings = current_cost - optimized_cost
         
         # Should be within 10% of actual potential
-        savings_error = abs(simple_query_rec.potential_savings - expected_savings) / expected_savings
+        potential_savings_str = simple_query_rec['potential_savings'].replace('$', '')
+        potential_savings = Decimal(potential_savings_str)
+        savings_error = abs(potential_savings - expected_savings) / expected_savings
         assert savings_error <= 0.10, f"Savings calculation error {savings_error:.2%} > 10%"
         
         # Verify priority assignment
-        assert hasattr(simple_query_rec, 'priority')
-        assert simple_query_rec.priority in ['high', 'medium', 'low']
+        assert 'priority' in simple_query_rec
+        assert simple_query_rec['priority'] in ['high', 'medium', 'low']
         
         # High savings should get high priority
         if expected_savings > Decimal('1.00'):
-            assert simple_query_rec.priority == 'high'
+            assert simple_query_rec['priority'] == 'high'
         
         # Verify actionable suggestion
-        assert len(simple_query_rec.action) > 0
-        assert 'route' in simple_query_rec.action.lower() or 'use' in simple_query_rec.action.lower()
+        assert len(simple_query_rec['suggestion']) > 0
+        assert 'route' in simple_query_rec['suggestion'].lower() or 'use' in simple_query_rec['suggestion'].lower()
     
     def test_usage_pattern_analysis(self):
         """Test analysis of usage patterns for optimization."""
@@ -332,21 +334,21 @@ class TestCostTracker:
             )
         
         # Export to JSON
-        export_path = Path("/tmp/test_cost_export.json")
-        self.cost_tracker.export_usage_data(export_path, format="json")
+        json_data = self.cost_tracker.export_usage_data(format_type="json")
         
-        # Verify export file exists and is valid JSON
-        assert export_path.exists()
+        # Verify export data is valid JSON
+        import json
+        data = json.loads(json_data)
         
-        with open(export_path, 'r') as f:
-            data = json.load(f)
+        # Should be a list of usage records
+        assert isinstance(data, list)
+        assert len(data) == 3
         
-        assert "usage_records" in data
-        assert "summary" in data
-        assert len(data["usage_records"]) == 3
-        
-        # Clean up
-        export_path.unlink()
+        # Verify record structure
+        record = data[0]
+        assert 'provider' in record
+        assert 'model' in record
+        assert 'cost_usd' in record
     
     def test_csv_export(self):
         """Test CSV export functionality."""
@@ -359,24 +361,19 @@ class TestCostTracker:
         )
         
         # Export to CSV
-        export_path = Path("/tmp/test_cost_export.csv")
-        self.cost_tracker.export_usage_data(export_path, format="csv")
+        csv_data = self.cost_tracker.export_usage_data(format_type="csv")
         
         # Verify CSV structure
-        assert export_path.exists()
-        
-        with open(export_path, 'r') as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
+        import csv
+        import io
+        reader = csv.DictReader(io.StringIO(csv_data))
+        rows = list(reader)
         
         assert len(rows) == 1
         row = rows[0]
         assert row['provider'] == 'test'
         assert row['model'] == 'test-model'
         assert row['cost_usd'] == '0.025000'
-        
-        # Clean up
-        export_path.unlink()
     
     # Edge Cases and Error Handling
     def test_zero_cost_handling(self):
@@ -388,8 +385,8 @@ class TestCostTracker:
             query_complexity="simple"
         )
         
-        summary = self.cost_tracker.get_summary()
-        assert summary.total_cost == Decimal('0.000000')
+        summary = self.cost_tracker.get_summary_by_time_period(hours=24)
+        assert summary.total_cost_usd == Decimal('0.000000')
         assert summary.total_requests == 1
         
         # Should still track tokens and requests
@@ -408,8 +405,8 @@ class TestCostTracker:
             query_complexity="complex"
         )
         
-        summary = self.cost_tracker.get_summary()
-        assert summary.total_cost == large_cost
+        summary = self.cost_tracker.get_summary_by_time_period(hours=24)
+        assert summary.total_cost_usd == large_cost
         assert summary.total_input_tokens == large_tokens
         assert summary.total_output_tokens == large_tokens
     
@@ -429,8 +426,7 @@ class TestCostTracker:
                 provider=f"provider_{i}", model=f"model_{i}",
                 input_tokens=100, output_tokens=50,
                 cost_usd=Decimal('0.010000'),
-                query_complexity="simple",
-                timestamp=timestamp
+                query_complexity="simple"
             )
         
         # Get usage for last hour

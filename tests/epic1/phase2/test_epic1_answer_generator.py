@@ -29,10 +29,17 @@ class TestEpic1AnswerGenerator:
         os.environ['MISTRAL_API_KEY'] = 'test-mistral-key'
         
         # Test data
+        from src.core.interfaces import Document
         self.test_query = "How does OAuth 2.0 authentication work?"
         self.test_context = [
-            "OAuth 2.0 is an authorization framework...",
-            "The OAuth 2.0 flow involves several steps..."
+            Document(
+                content="OAuth 2.0 is an authorization framework...",
+                metadata={"source": "oauth_guide.pdf", "page": 1}
+            ),
+            Document(
+                content="The OAuth 2.0 flow involves several steps...",
+                metadata={"source": "oauth_guide.pdf", "page": 2}
+            )
         ]
         
         # Test configuration for multi-model
@@ -135,8 +142,7 @@ class TestEpic1AnswerGenerator:
             # Generate answer
             answer = generator.generate(
                 query=self.test_query,
-                context=self.test_context,
-                max_tokens=200
+                context=self.test_context
             )
             
             end_time = time.time()
@@ -192,7 +198,9 @@ class TestEpic1AnswerGenerator:
             mock_ollama.return_value = mock_adapter_instance
             
             mock_adapter_instance.generate.return_value = Answer(
-                content="This is a response from Ollama",
+                text="This is a response from Ollama",
+                sources=[],
+                confidence=0.85,
                 metadata={
                     "provider": "ollama",
                     "model": "llama3.2:3b",
@@ -228,8 +236,8 @@ class TestEpic1AnswerGenerator:
         """Test backward compatibility through ComponentFactory."""
         # Test that legacy config works through ComponentFactory
         try:
-            generator = ComponentFactory.create_answer_generator(
-                generator_type="standard",
+            generator = ComponentFactory.create_generator(
+                generator_type="adaptive",
                 config=self.legacy_config["config"]
             )
             
@@ -382,7 +390,9 @@ class TestEpic1AnswerGenerator:
                     mock_adapter = MagicMock()
                     mock_ollama.return_value = mock_adapter
                     mock_adapter.generate.return_value = Answer(
-                        content="Response from degraded model",
+                        text="Response from degraded model",
+                        sources=[],
+                        confidence=0.75,
                         metadata={"cost_usd": 0.00, "provider": "ollama"}
                     )
                     
@@ -419,7 +429,9 @@ class TestEpic1AnswerGenerator:
                 mock_adapter = MagicMock()
                 mock_ollama.return_value = mock_adapter
                 mock_adapter.generate.return_value = Answer(
-                    content="Fast response",
+                    text="Fast response",
+                    sources=[],
+                    confidence=0.80,
                     metadata={"cost_usd": 0.0, "generation_time_ms": 500}
                 )
                 

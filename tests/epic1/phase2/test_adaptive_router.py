@@ -17,9 +17,28 @@ from typing import List, Dict, Any
 from src.components.generators.routing.adaptive_router import (
     AdaptiveRouter, RoutingDecision
 )
+from src.components.query_processors.base import QueryAnalysis
 from src.components.generators.routing.routing_strategies import (
     CostOptimizedStrategy, QualityFirstStrategy, BalancedStrategy, ModelOption
 )
+
+
+def create_mock_query_analysis(complexity_level="medium", complexity_score=0.55, confidence=0.85, **metadata_extras):
+    """Helper function to create QueryAnalysis mock objects."""
+    metadata = {
+        "complexity_level": complexity_level,
+        "complexity_score": complexity_score,
+        "confidence": confidence
+    }
+    metadata.update(metadata_extras)
+    
+    return QueryAnalysis(
+        query="test",
+        complexity_score=complexity_score,
+        complexity_level=complexity_level,
+        confidence=confidence,
+        metadata=metadata
+    )
 
 
 class TestAdaptiveRouter:
@@ -86,19 +105,15 @@ class TestAdaptiveRouter:
         - No performance degradation over time
         """
         # Configure mock analyzer for consistent responses
-        self.mock_query_analyzer.analyze.return_value = {
-            "complexity_level": "medium",
-            "complexity_score": 0.55,
-            "confidence": 0.85,
-            "recommended_model": {"provider": "mistral", "model": "mistral-small"}
-        }
+        self.mock_query_analyzer.analyze.return_value = create_mock_query_analysis(
+            recommended_model={"provider": "mistral", "model": "mistral-small"}
+        )
         
         # Warm up (exclude from measurements)
         for _ in range(10):
             self.router.route_query(
                 query="Warm up query",
-                available_models=self.mock_model_registry["medium"],
-                strategy="balanced"
+                strategy_override="balanced"
             )
         
         # Performance measurement
@@ -110,8 +125,7 @@ class TestAdaptiveRouter:
             
             decision = self.router.route_query(
                 query=f"Test query {i}",
-                available_models=self.mock_model_registry["medium"],
-                strategy="balanced"
+                strategy_override="balanced"
             )
             
             end_time = time.perf_counter()
@@ -153,11 +167,7 @@ class TestAdaptiveRouter:
         from concurrent.futures import ThreadPoolExecutor, as_completed
         
         # Configure analyzer
-        self.mock_query_analyzer.analyze.return_value = {
-            "complexity_level": "medium",
-            "complexity_score": 0.55,
-            "confidence": 0.85
-        }
+        self.mock_query_analyzer.analyze.return_value = create_mock_query_analysis()
         
         def single_routing_test(thread_id: int) -> float:
             """Perform routing test from single thread."""
@@ -165,8 +175,7 @@ class TestAdaptiveRouter:
             
             decision = self.router.route_query(
                 query=f"Concurrent query {thread_id}",
-                available_models=self.mock_model_registry["medium"],
-                strategy="balanced"
+                strategy_override="balanced"
             )
             
             end_time = time.perf_counter()
@@ -224,8 +233,7 @@ class TestAdaptiveRouter:
             strategy = test_case["strategy"]
             decision = self.router.route_query(
                 query=test_case["query"],
-                available_models=self.mock_model_registry[expected_complexity],
-                strategy=strategy
+                strategy_override=strategy
             )
             
             total_decisions += 1
@@ -242,7 +250,7 @@ class TestAdaptiveRouter:
             
             # Verify decision structure
             assert isinstance(decision, RoutingDecision)
-            assert decision.query_analysis is not None
+            assert decision.routing_metadata.get('complexity_analysis') is not None
             assert decision.selected_model is not None
             assert decision.strategy_used == strategy
             assert decision.decision_time_ms > 0
@@ -285,12 +293,11 @@ class TestAdaptiveRouter:
             
             decision = self.router.route_query(
                 query=query,
-                available_models=self.mock_model_registry[expected_complexity],
-                strategy="balanced"
+                strategy_override="balanced"
             )
             
             total_classifications += 1
-            if decision.query_analysis["complexity_level"] == expected_complexity:
+            if decision.routing_metadata['complexity_analysis']["complexity_level"] == expected_complexity:
                 correct_classifications += 1
         
         classification_accuracy = correct_classifications / total_classifications
@@ -360,10 +367,11 @@ class TestAdaptiveRouter:
                 start_time = time.perf_counter()
                 
                 try:
-                    decision = self.router.route_query_with_fallback(
+                    # Enable fallback and use regular route_query
+                    self.router.enable_fallback = True
+                    decision = self.router.route_query(
                         query="Test query requiring fallback",
-                        available_models=self.mock_model_registry["medium"],
-                        strategy="balanced"
+                        strategy_override="balanced"
                     )
                     
                     end_time = time.perf_counter()
@@ -410,10 +418,11 @@ class TestAdaptiveRouter:
             
             # Should handle gracefully when all fallbacks fail
             with pytest.raises(Exception) as exc_info:
-                decision = self.router.route_query_with_fallback(
+                # Enable fallback and use regular route_query
+                self.router.enable_fallback = True
+                decision = self.router.route_query(
                     query="Test query with all fallbacks failing",
-                    available_models=self.mock_model_registry["medium"],
-                    strategy="balanced"
+                    strategy_override="balanced"
                 )
             
             # Should indicate fallback chain exhaustion
@@ -446,11 +455,12 @@ class TestAdaptiveRouter:
                 "confidence": 0.85
             }
             
-            decision = self.router.route_query_with_fallback(
+            # Enable fallback and use regular route_query with context_documents
+            self.router.enable_fallback = True
+            decision = self.router.route_query(
                 query=original_query,
-                context=original_context,
-                available_models=self.mock_model_registry["medium"],
-                strategy="balanced"
+                context_documents=original_context,
+                strategy_override="balanced"
             )
             
             # Verify state preservation in decision
@@ -461,22 +471,18 @@ class TestAdaptiveRouter:
     # Integration and Edge Case Tests
     def test_routing_decision_metadata(self):
         """Test completeness of routing decision metadata."""
-        self.mock_query_analyzer.analyze.return_value = {
-            "complexity_level": "medium",
-            "complexity_score": 0.55,
-            "confidence": 0.85,
-            "features": {"technical_terms": 3, "clause_count": 2}
-        }
+        self.mock_query_analyzer.analyze.return_value = create_mock_query_analysis(
+            features={"technical_terms": 3, "clause_count": 2}
+        )
         
         decision = self.router.route_query(
             query="Test query for metadata",
-            available_models=self.mock_model_registry["medium"],
-            strategy="balanced"
+            strategy_override="balanced"
         )
         
         # Verify complete decision metadata
         required_fields = [
-            "query_analysis", "selected_model", "strategy_used", 
+            "routing_metadata", "selected_model", "strategy_used", 
             "decision_time_ms", "alternatives_considered"
         ]
         
@@ -484,7 +490,7 @@ class TestAdaptiveRouter:
             assert hasattr(decision, field), f"Missing required field: {field}"
         
         # Verify specific content
-        assert decision.query_analysis["complexity_level"] == "medium"
+        assert decision.routing_metadata['complexity_analysis']["complexity_level"] == "medium"
         assert decision.strategy_used == "balanced"
         assert decision.decision_time_ms > 0
         assert len(decision.alternatives_considered) > 0
@@ -501,8 +507,7 @@ class TestAdaptiveRouter:
         with pytest.raises(ValueError, match="Unknown strategy"):
             decision = self.router.route_query(
                 query="Test query",
-                available_models=self.mock_model_registry["medium"],
-                strategy="invalid_strategy"
+                strategy_override="invalid_strategy"
             )
     
     def test_empty_model_registry_handling(self):
@@ -516,8 +521,7 @@ class TestAdaptiveRouter:
         # Should handle gracefully
         decision = self.router.route_query(
             query="Test query",
-            available_models=[],
-            strategy="balanced"
+            strategy_override="balanced"
         )
         
         assert decision is None or decision.selected_model is None

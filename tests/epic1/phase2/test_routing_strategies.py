@@ -32,15 +32,15 @@ class TestRoutingStrategies:
                     provider="ollama",
                     model="llama3.2:3b",
                     estimated_cost=Decimal('0.000'),
-                    estimated_latency=1.5,
-                    quality_score=0.75
+                    estimated_latency_ms=1.5,
+                    estimated_quality=0.75
                 ),
                 ModelOption(
                     provider="openai",
                     model="gpt-3.5-turbo",
                     estimated_cost=Decimal('0.002'),
-                    estimated_latency=0.8,
-                    quality_score=0.90
+                    estimated_latency_ms=0.8,
+                    estimated_quality=0.90
                 )
             ],
             "medium": [
@@ -48,15 +48,15 @@ class TestRoutingStrategies:
                     provider="mistral",
                     model="mistral-small",
                     estimated_cost=Decimal('0.010'),
-                    estimated_latency=1.2,
-                    quality_score=0.85
+                    estimated_latency_ms=1.2,
+                    estimated_quality=0.85
                 ),
                 ModelOption(
                     provider="openai",
                     model="gpt-4-turbo",
                     estimated_cost=Decimal('0.050'),
-                    estimated_latency=2.0,
-                    quality_score=0.95
+                    estimated_latency_ms=2.0,
+                    estimated_quality=0.95
                 )
             ],
             "complex": [
@@ -64,15 +64,15 @@ class TestRoutingStrategies:
                     provider="openai",
                     model="gpt-3.5-turbo",
                     estimated_cost=Decimal('0.020'),
-                    estimated_latency=1.5,
-                    quality_score=0.85
+                    estimated_latency_ms=1.5,
+                    estimated_quality=0.85
                 ),
                 ModelOption(
                     provider="openai",
                     model="gpt-4-turbo",
                     estimated_cost=Decimal('0.100'),
-                    estimated_latency=3.0,
-                    quality_score=0.98
+                    estimated_latency_ms=3.0,
+                    estimated_quality=0.98
                 )
             ]
         }
@@ -100,43 +100,47 @@ class TestRoutingStrategies:
         - Quality threshold: Maintains minimum quality
         - Fallback logic: Activates when budget exceeded
         """
-        strategy = CostOptimizedStrategy(
-            max_cost_per_query=Decimal('0.015'),
-            min_quality_threshold=0.80
-        )
+        strategy = CostOptimizedStrategy(config={
+            "max_cost_per_query": 0.015,
+            "min_quality_score": 0.80
+        })
         
         # Test simple query routing
-        simple_analysis = {**self.query_analysis, "complexity_level": "simple"}
         selection = strategy.select_model(
-            query_analysis=simple_analysis,
+            query_analysis={"complexity_level": "simple", "complexity_score": 0.2},
             available_models=self.model_options["simple"]
         )
         
-        # Should select cheapest option (Ollama)
-        assert selection.provider == "ollama"
-        assert selection.model == "llama3.2:3b"
-        assert selection.estimated_cost == Decimal('0.000')
-        assert selection.quality_score >= 0.80  # Meets minimum quality
+        # Should select cheapest option that meets quality threshold
+        # Ollama has quality 0.75 < 0.80, so OpenAI should be selected
+        assert selection.provider == "openai"
+        assert selection.model == "gpt-3.5-turbo"
+        assert selection.estimated_cost == Decimal('0.002')
+        assert selection.estimated_quality >= 0.80  # Meets minimum quality
+        
+        # Verify it's within budget
+        assert selection.estimated_cost <= Decimal('0.015')
         
         # Test medium complexity with budget constraint
         selection = strategy.select_model(
-            query_analysis=self.query_analysis,
+            query_analysis={"complexity_level": "medium", "complexity_score": 0.55},
             available_models=self.model_options["medium"]
         )
         
-        # Should select Mistral (cheaper than GPT-4, within budget)
-        assert selection.provider == "mistral"
+        # Should select cheapest option that meets quality threshold
+        # Mistral is cheapest and meets quality 0.85 >= 0.80
+        assert selection.provider == "mistral"  # Cost-optimized chooses cheapest viable
         assert selection.model == "mistral-small"
-        assert selection.estimated_cost <= Decimal('0.015')
-        assert selection.quality_score >= 0.80
+        assert selection.estimated_cost == Decimal('0.010')
+        assert selection.estimated_cost <= Decimal('0.015')  # Within budget
     
     def test_cost_optimized_budget_enforcement(self):
         """Test strict budget enforcement in cost optimized strategy."""
         # Very tight budget
-        strategy = CostOptimizedStrategy(
-            max_cost_per_query=Decimal('0.005'),
-            min_quality_threshold=0.70
-        )
+        strategy = CostOptimizedStrategy(config={
+            "max_cost_per_query": 0.005,
+            "min_quality_score": 0.70
+        })
         
         # Test with medium complexity models
         selection = strategy.select_model(
@@ -161,10 +165,10 @@ class TestRoutingStrategies:
     
     def test_cost_optimized_quality_threshold(self):
         """Test quality threshold enforcement."""
-        strategy = CostOptimizedStrategy(
-            max_cost_per_query=Decimal('1.000'),  # High budget
-            min_quality_threshold=0.90  # High quality requirement
-        )
+        strategy = CostOptimizedStrategy(config={
+            "max_cost_per_query": 1.000,  # High budget
+            "min_quality_score": 0.90  # High quality requirement
+        })
         
         selection = strategy.select_model(
             query_analysis=self.query_analysis,
@@ -173,7 +177,7 @@ class TestRoutingStrategies:
         
         # Should select model meeting quality threshold
         assert selection is not None
-        assert selection.quality_score >= 0.90
+        assert selection.estimated_quality >= 0.90
         
         # May not be the cheapest if it doesn't meet quality
         if selection.provider == "openai":
@@ -190,10 +194,10 @@ class TestRoutingStrategies:
         - Consistency: Same complexity → same model
         - Cost acknowledgment: Cost tracked but not limiting
         """
-        strategy = QualityFirstStrategy(
-            min_quality_threshold=0.85,
-            cost_awareness_factor=0.1  # Minimal cost consideration
-        )
+        strategy = QualityFirstStrategy(config={
+            "min_quality_score": 0.85,
+            "cost_awareness_factor": 0.1  # Minimal cost consideration
+        })
         
         # Test simple query
         simple_analysis = {**self.query_analysis, "complexity_level": "simple"}
@@ -203,7 +207,7 @@ class TestRoutingStrategies:
         )
         
         # Should select highest quality option
-        assert selection.quality_score == max(opt.quality_score for opt in self.model_options["simple"])
+        assert selection.estimated_quality == max(opt.estimated_quality for opt in self.model_options["simple"])
         assert selection.provider == "openai"  # Higher quality than Ollama
         assert selection.model == "gpt-3.5-turbo"
         
@@ -216,7 +220,7 @@ class TestRoutingStrategies:
         # Should select GPT-4 (highest quality)
         assert selection.provider == "openai"
         assert selection.model == "gpt-4-turbo"
-        assert selection.quality_score == 0.95  # Highest available
+        assert selection.estimated_quality == 0.95  # Highest available
         
         # Test complex queries
         complex_analysis = {**self.query_analysis, "complexity_level": "complex"}
@@ -228,11 +232,11 @@ class TestRoutingStrategies:
         # Should consistently select GPT-4 for quality
         assert selection.provider == "openai"
         assert selection.model == "gpt-4-turbo"
-        assert selection.quality_score == 0.98
+        assert selection.estimated_quality == 0.98
     
     def test_quality_first_consistency(self):
         """Test consistency of quality-first selections."""
-        strategy = QualityFirstStrategy(min_quality_threshold=0.80)
+        strategy = QualityFirstStrategy(config={"min_quality_score": 0.80})
         
         # Test same complexity multiple times
         selections = []
@@ -249,7 +253,7 @@ class TestRoutingStrategies:
     
     def test_quality_first_cost_tracking(self):
         """Test that quality-first strategy tracks but doesn't limit by cost."""
-        strategy = QualityFirstStrategy(min_quality_threshold=0.80)
+        strategy = QualityFirstStrategy(config={"min_quality_score": 0.80})
         
         selection = strategy.select_model(
             query_analysis=self.query_analysis,
@@ -276,11 +280,11 @@ class TestRoutingStrategies:
         - Cost reduction: 25-40% vs quality-first
         - Quality maintenance: >85% average
         """
-        strategy = BalancedStrategy(
-            cost_weight=0.4,
-            quality_weight=0.6,
-            latency_weight=0.0  # Focus on cost/quality only
-        )
+        strategy = BalancedStrategy(config={
+            "cost_weight": 0.4,
+            "quality_weight": 0.6,
+            "latency_weight": 0.0  # Focus on cost/quality only
+        })
         
         # Test medium complexity balancing
         selection = strategy.select_model(
@@ -296,9 +300,9 @@ class TestRoutingStrategies:
             cost_score = 1.0 - (float(option.estimated_cost) / float(max_cost))
             
             # Balanced score calculation
-            balanced_score = (0.4 * cost_score) + (0.6 * option.quality_score)
+            balanced_score = (0.4 * cost_score) + (0.6 * option.estimated_quality)
             
-            print(f"{option.model}: cost_score={cost_score:.3f}, quality_score={option.quality_score}, balanced_score={balanced_score:.3f}")
+            print(f"{option.model}: cost_score={cost_score:.3f}, estimated_quality={option.estimated_quality}, balanced_score={balanced_score:.3f}")
         
         # Verify selection makes sense for balanced approach
         assert selection is not None
@@ -308,17 +312,17 @@ class TestRoutingStrategies:
             # For medium complexity, Mistral should win on balance
             # (lower cost, decent quality vs GPT-4's high cost, high quality)
             assert selection.provider == "mistral" or selection.provider == "openai"
-            assert selection.quality_score >= 0.80  # Maintain reasonable quality
+            assert selection.estimated_quality >= 0.80  # Maintain reasonable quality
     
     def test_balanced_strategy_weight_effects(self):
         """Test how different weights affect model selection."""
         options = self.model_options["medium"]
         
         # Cost-heavy balance (70% cost, 30% quality)
-        cost_heavy_strategy = BalancedStrategy(
-            cost_weight=0.7,
-            quality_weight=0.3
-        )
+        cost_heavy_strategy = BalancedStrategy(config={
+            "cost_weight": 0.7,
+            "quality_weight": 0.3
+        })
         
         cost_heavy_selection = cost_heavy_strategy.select_model(
             query_analysis=self.query_analysis,
@@ -326,10 +330,10 @@ class TestRoutingStrategies:
         )
         
         # Quality-heavy balance (30% cost, 70% quality)
-        quality_heavy_strategy = BalancedStrategy(
-            cost_weight=0.3,
-            quality_weight=0.7
-        )
+        quality_heavy_strategy = BalancedStrategy(config={
+            "cost_weight": 0.3,
+            "quality_weight": 0.7
+        })
         
         quality_heavy_selection = quality_heavy_strategy.select_model(
             query_analysis=self.query_analysis,
@@ -341,14 +345,14 @@ class TestRoutingStrategies:
         if cost_heavy_selection.provider != quality_heavy_selection.provider:
             # They chose different models
             assert cost_heavy_selection.estimated_cost <= quality_heavy_selection.estimated_cost
-            assert quality_heavy_selection.quality_score >= cost_heavy_selection.quality_score
+            assert quality_heavy_selection.estimated_quality >= cost_heavy_selection.estimated_quality
     
     def test_balanced_strategy_scoring_accuracy(self):
         """Test accuracy of balanced scoring calculations."""
-        strategy = BalancedStrategy(
-            cost_weight=0.4,
-            quality_weight=0.6
-        )
+        strategy = BalancedStrategy(config={
+            "cost_weight": 0.4,
+            "quality_weight": 0.6
+        })
         
         options = self.model_options["medium"]
         
@@ -358,7 +362,7 @@ class TestRoutingStrategies:
         expected_scores = []
         for option in options:
             cost_score = 1.0 - (float(option.estimated_cost) / float(max_cost))
-            balanced_score = (0.4 * cost_score) + (0.6 * option.quality_score)
+            balanced_score = (0.4 * cost_score) + (0.6 * option.estimated_quality)
             expected_scores.append((option, balanced_score))
         
         # Sort by expected score
@@ -377,8 +381,8 @@ class TestRoutingStrategies:
     
     def test_balanced_cost_reduction_validation(self):
         """Validate cost reduction compared to quality-first approach."""
-        balanced_strategy = BalancedStrategy(cost_weight=0.4, quality_weight=0.6)
-        quality_strategy = QualityFirstStrategy(min_quality_threshold=0.80)
+        balanced_strategy = BalancedStrategy(config={"cost_weight": 0.4, "quality_weight": 0.6})
+        quality_strategy = QualityFirstStrategy(config={"min_quality_score": 0.80})
         
         # Compare selections across different complexities
         total_balanced_cost = Decimal('0')
@@ -411,25 +415,25 @@ class TestRoutingStrategies:
             provider="test",
             model="test-model",
             estimated_cost=Decimal('0.025'),
-            estimated_latency=1.5,
-            quality_score=0.88
+            estimated_latency_ms=1.5,
+            estimated_quality=0.88
         )
         
         assert option.provider == "test"
         assert option.model == "test-model"
         assert option.estimated_cost == Decimal('0.025')
-        assert option.estimated_latency == 1.5
-        assert option.quality_score == 0.88
+        assert option.estimated_latency_ms == 1.5
+        assert option.estimated_quality == 0.88
         
         # Test validation
-        assert 0.0 <= option.quality_score <= 1.0
+        assert 0.0 <= option.estimated_quality <= 1.0
         assert option.estimated_cost >= 0
-        assert option.estimated_latency > 0
+        assert option.estimated_latency_ms > 0
     
     def test_model_option_comparison(self):
         """Test ModelOption comparison for sorting."""
-        option1 = ModelOption("provider1", "model1", Decimal('0.010'), 1.0, 0.85)
-        option2 = ModelOption("provider2", "model2", Decimal('0.020'), 1.5, 0.90)
+        option1 = ModelOption("provider1", "model1", Decimal('0.010'), 0.85, 1.0)
+        option2 = ModelOption("provider2", "model2", Decimal('0.020'), 0.90, 1.5)
         
         # Test comparison methods if implemented
         options = [option1, option2]
@@ -439,7 +443,7 @@ class TestRoutingStrategies:
         assert cost_sorted[0] == option1  # Lower cost first
         
         # Sort by quality (descending)
-        quality_sorted = sorted(options, key=lambda x: x.quality_score, reverse=True)
+        quality_sorted = sorted(options, key=lambda x: x.estimated_quality, reverse=True)
         assert quality_sorted[0] == option2  # Higher quality first
     
     # Edge Cases and Error Handling
@@ -468,15 +472,15 @@ class TestRoutingStrategies:
         # Should select the only available option
         assert selection == single_option[0]
     
-    def test_invalid_quality_scores(self):
+    def test_invalid_estimated_qualitys(self):
         """Test handling of invalid quality scores."""
         # Create option with invalid quality score
         invalid_option = ModelOption(
             provider="test",
             model="test-model",
             estimated_cost=Decimal('0.010'),
-            estimated_latency=1.0,
-            quality_score=1.5  # Invalid: > 1.0
+            estimated_latency_ms=1.0,
+            estimated_quality=1.5  # Invalid: > 1.0
         )
         
         strategy = QualityFirstStrategy()

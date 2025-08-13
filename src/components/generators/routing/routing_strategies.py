@@ -74,19 +74,17 @@ class RoutingStrategy(ABC):
     
     @abstractmethod
     def select_model(self,
-                     query_complexity: float,
-                     complexity_level: str,
-                     query_metadata: Optional[Dict[str, Any]] = None) -> ModelOption:
+                     query_analysis: Dict[str, Any],
+                     available_models: List[ModelOption]) -> Optional[ModelOption]:
         """
         Select the optimal model for a given query.
         
         Args:
-            query_complexity: Complexity score (0.0-1.0)
-            complexity_level: Complexity level (simple, medium, complex)
-            query_metadata: Additional query metadata
+            query_analysis: Dictionary containing complexity analysis results
+            available_models: List of available models to choose from
             
         Returns:
-            ModelOption with selected model and metadata
+            ModelOption with selected model and metadata, or None if no suitable model
         """
         pass
     
@@ -143,61 +141,44 @@ class CostOptimizedStrategy(RoutingStrategy):
         }
     
     def select_model(self,
-                     query_complexity: float,
-                     complexity_level: str,
-                     query_metadata: Optional[Dict[str, Any]] = None) -> ModelOption:
-        """Select the most cost-effective model for the query complexity."""
+                     query_analysis: Dict[str, Any],
+                     available_models: List[ModelOption]) -> Optional[ModelOption]:
+        """Select cheapest model that meets quality threshold."""
+        if not available_models:
+            return None
         
-        # Determine complexity tier
-        if query_complexity < self.simple_threshold:
-            tier = 'simple'
-        elif query_complexity < self.complex_threshold:
-            tier = 'medium'
-        else:
-            tier = 'complex'
+        # Get quality threshold from config or use complexity-based defaults
+        min_quality_score = self.config.get('min_quality_score')
+        if min_quality_score is None:
+            complexity_level = query_analysis.get('complexity_level', 'medium')
+            min_quality_score = {'simple': 0.7, 'medium': 0.8, 'complex': 0.9}.get(complexity_level, 0.8)
         
-        # Get model options for this tier
-        model_options = self.model_tiers.get(tier, self.model_tiers['medium'])
+        # Filter by minimum quality threshold
+        viable_models = [m for m in available_models if m.estimated_quality >= min_quality_score]
         
-        # Estimate tokens (rough approximation)
-        estimated_tokens = self._estimate_tokens(query_metadata)
+        if not viable_models:
+            # If no models meet quality, take best quality available
+            viable_models = sorted(available_models, key=lambda m: m.estimated_quality, reverse=True)
         
-        # Select cheapest model within cost budget
-        for model_info in model_options:
-            estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * model_info['cost_per_1k']
+        # Sort by cost (cheapest first)
+        viable_models.sort(key=lambda m: m.estimated_cost)
+        
+        # Check budget constraint
+        max_cost = self.config.get('max_cost_per_query')
+        if max_cost is not None:
+            max_cost_decimal = Decimal(str(max_cost))
+            budget_models = [m for m in viable_models if m.estimated_cost <= max_cost_decimal]
             
-            if estimated_cost <= self.max_cost_per_query:
-                # Build fallback chain
-                fallback_options = [
-                    f"{opt['provider']}/{opt['model']}" 
-                    for opt in model_options[1:3]  # Next 2 options
-                ]
-                
-                return ModelOption(
-                    provider=model_info['provider'],
-                    model=model_info['model'],
-                    estimated_cost=estimated_cost,
-                    estimated_quality=self._estimate_quality(tier, model_info),
-                    estimated_latency_ms=self._estimate_latency(model_info),
-                    confidence=0.9,  # High confidence for cost optimization
-                    fallback_options=fallback_options
-                )
+            if budget_models:
+                selected = budget_models[0]  # Cheapest within budget
+            else:
+                # No models fit budget - return None or cheapest anyway based on strategy
+                logger.warning(f"No models within budget ${max_cost}")
+                return None  # Strict budget enforcement
+        else:
+            selected = viable_models[0]  # Cheapest overall
         
-        # If no model fits budget, use cheapest option
-        cheapest = model_options[0]
-        estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * cheapest['cost_per_1k']
-        
-        logger.warning(f"Selected model exceeds cost budget: ${estimated_cost:.4f}")
-        
-        return ModelOption(
-            provider=cheapest['provider'],
-            model=cheapest['model'],
-            estimated_cost=estimated_cost,
-            estimated_quality=self._estimate_quality(tier, cheapest),
-            estimated_latency_ms=self._estimate_latency(cheapest),
-            confidence=0.7,  # Lower confidence due to budget constraint
-            fallback_options=[f"{opt['provider']}/{opt['model']}" for opt in model_options[1:2]]
-        )
+        return selected
     
     def get_strategy_info(self) -> Dict[str, Any]:
         """Get cost optimization strategy information."""
@@ -292,60 +273,25 @@ class QualityFirstStrategy(RoutingStrategy):
         }
     
     def select_model(self,
-                     query_complexity: float,
-                     complexity_level: str,
-                     query_metadata: Optional[Dict[str, Any]] = None) -> ModelOption:
-        """Select the highest quality model for the query complexity."""
+                     query_analysis: Dict[str, Any],
+                     available_models: List[ModelOption]) -> Optional[ModelOption]:
+        """Select highest quality model within budget."""
+        if not available_models:
+            return None
         
-        # Determine complexity tier
-        if query_complexity < self.simple_threshold:
-            tier = 'simple'
-        elif query_complexity < self.complex_threshold:
-            tier = 'medium'
+        # Filter by budget if set
+        max_cost = self.config.get('max_cost_per_query')
+        if max_cost:
+            max_cost = Decimal(str(max_cost))
+            models = [m for m in available_models if m.estimated_cost <= max_cost]
+            if not models:
+                models = available_models  # Use all if none fit budget
         else:
-            tier = 'complex'
+            models = available_models
         
-        # Get model options for this tier
-        model_options = self.model_tiers.get(tier, self.model_tiers['complex'])
-        
-        # Estimate tokens
-        estimated_tokens = self._estimate_tokens(query_metadata)
-        
-        # Select highest quality model above minimum threshold
-        for model_info in model_options:
-            if model_info['quality'] >= self.min_quality_score:
-                estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * model_info['cost_per_1k']
-                
-                # Build fallback chain with other high-quality options
-                fallback_options = [
-                    f"{opt['provider']}/{opt['model']}" 
-                    for opt in model_options[1:3]
-                    if opt['quality'] >= self.min_quality_score - 0.1
-                ]
-                
-                return ModelOption(
-                    provider=model_info['provider'],
-                    model=model_info['model'],
-                    estimated_cost=estimated_cost,
-                    estimated_quality=model_info['quality'],
-                    estimated_latency_ms=self._estimate_latency(model_info),
-                    confidence=0.95,  # High confidence for quality-first
-                    fallback_options=fallback_options
-                )
-        
-        # Fallback to best available option
-        best_option = model_options[0]
-        estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * best_option['cost_per_1k']
-        
-        return ModelOption(
-            provider=best_option['provider'],
-            model=best_option['model'],
-            estimated_cost=estimated_cost,
-            estimated_quality=best_option['quality'],
-            estimated_latency_ms=self._estimate_latency(best_option),
-            confidence=0.8,  # Lower confidence due to quality constraint
-            fallback_options=[f"{opt['provider']}/{opt['model']}" for opt in model_options[1:2]]
-        )
+        # Sort by quality (descending) and select best
+        models.sort(key=lambda m: m.estimated_quality, reverse=True)
+        return models[0]
     
     def get_strategy_info(self) -> Dict[str, Any]:
         """Get quality-first strategy information."""
@@ -433,60 +379,35 @@ class BalancedStrategy(RoutingStrategy):
         self._calculate_balanced_scores()
     
     def select_model(self,
-                     query_complexity: float,
-                     complexity_level: str,
-                     query_metadata: Optional[Dict[str, Any]] = None) -> ModelOption:
-        """Select the best balanced cost/quality model."""
+                     query_analysis: Dict[str, Any],
+                     available_models: List[ModelOption]) -> Optional[ModelOption]:
+        """Balance cost and quality using weighted scoring."""
+        if not available_models:
+            return None
         
-        # Determine complexity tier
-        if query_complexity < self.simple_threshold:
-            tier = 'simple'
-        elif query_complexity < self.complex_threshold:
-            tier = 'medium'
-        else:
-            tier = 'complex'
+        complexity_score = query_analysis.get('complexity_score', 0.5)
         
-        # Get model options for this tier
-        model_options = self.model_options.get(tier, self.model_options['medium'])
-        
-        # Estimate tokens
-        estimated_tokens = self._estimate_tokens(query_metadata)
-        
-        # Select model with best balanced score within budget
-        best_option = None
+        best_model = None
         best_score = -1
         
-        for model_info in model_options:
-            estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * model_info['cost_per_1k']
+        for model in available_models:
+            # Calculate balanced score
+            cost_score = 1.0 - (float(model.estimated_cost) / 0.1)  # Normalize to 0-1
+            quality_score = model.estimated_quality
             
-            # Check budget constraint
-            if estimated_cost <= self.max_cost_per_query:
-                if model_info['score'] > best_score:
-                    best_score = model_info['score']
-                    best_option = model_info
+            # Weight based on complexity
+            if complexity_score < 0.35:  # Simple - prioritize cost
+                score = cost_score * 0.7 + quality_score * 0.3
+            elif complexity_score < 0.75:  # Medium - balanced
+                score = cost_score * 0.5 + quality_score * 0.5
+            else:  # Complex - prioritize quality
+                score = cost_score * 0.3 + quality_score * 0.7
+            
+            if score > best_score:
+                best_score = score
+                best_model = model
         
-        # If no model within budget, use best scoring option anyway
-        if best_option is None:
-            best_option = max(model_options, key=lambda x: x['score'])
-            logger.warning(f"Selected model may exceed budget: {best_option['provider']}/{best_option['model']}")
-        
-        estimated_cost = (Decimal(str(estimated_tokens)) / Decimal('1000')) * best_option['cost_per_1k']
-        
-        # Build fallback chain with other good options
-        fallback_options = [
-            f"{opt['provider']}/{opt['model']}" 
-            for opt in sorted(model_options, key=lambda x: x['score'], reverse=True)[1:3]
-        ]
-        
-        return ModelOption(
-            provider=best_option['provider'],
-            model=best_option['model'],
-            estimated_cost=estimated_cost,
-            estimated_quality=best_option['quality'],
-            estimated_latency_ms=self._estimate_latency(best_option),
-            confidence=0.85,  # Good confidence for balanced approach
-            fallback_options=fallback_options
-        )
+        return best_model
     
     def get_strategy_info(self) -> Dict[str, Any]:
         """Get balanced strategy information."""
