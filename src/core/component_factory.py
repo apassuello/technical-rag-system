@@ -90,6 +90,8 @@ class ComponentFactory:
     _QUERY_PROCESSORS: Dict[str, str] = {
         "modular": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",
         "modular_query_processor": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",  # Alias for compatibility
+        "domain_aware": "src.components.query_processors.domain_aware_query_processor.DomainAwareQueryProcessor",  # Epic 1 Phase 1 Domain-Aware Processor
+        "epic1_domain_aware": "src.components.query_processors.domain_aware_query_processor.DomainAwareQueryProcessor",  # Alias for Epic 1
     }
     
     # Query analyzer implementations (used by ModularQueryProcessor)
