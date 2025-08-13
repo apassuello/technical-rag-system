@@ -1,5 +1,5 @@
-# Epic 2 Configuration with Graph Enhancement - Calibration Ready
-# This config enables graph enhancement with all parameters registered for calibration
+# Epic 1 Production Configuration - Complete Multi-Model System
+# This config enables Epic 1 with domain-aware processing, ML-powered analysis, and adaptive routing
 
 # Document processor for handling input files
 document_processor:
@@ -8,7 +8,7 @@ document_processor:
     chunk_size: 1024
     chunk_overlap: 128
 
-# High-performance embedder for Epic 2
+# High-performance embedder for Epic 1
 embedder:
   type: "modular"
   config:
@@ -30,7 +30,7 @@ embedder:
         max_entries: 100000
         max_memory_mb: 1024
 
-# Epic 2 with Graph Enhancement - All Parameters Calibration-Ready
+# Epic 1 Retriever - Modular unified retrieval
 retriever:
   type: "modular_unified"
   config:
@@ -67,40 +67,175 @@ retriever:
       config:
         enabled: false
 
-# Mock answer generation for testing
+# Epic 1 Multi-Model Answer Generator with Adaptive Routing
 answer_generator:
-  type: "adaptive_modular"
+  type: "epic1"
   config:
-    llm_client:
-      type: "mock"
-      config:
-        model_name: "mock-llm-for-testing"
-        response_pattern: "technical"
-        include_citations: true
+    # Multi-model routing configuration
+    routing:
+      enabled: true
+      default_strategy: "balanced"  # balanced cost/quality optimization
+      
+      # Routing strategy configurations
+      strategies:
+        cost_optimized:
+          simple_threshold: 0.35
+          complex_threshold: 0.75
+          max_cost_per_query: 0.010    # $0.01 maximum per query
+          model_preferences: "cheapest_first"
+          
+        quality_first:
+          simple_threshold: 0.40
+          complex_threshold: 0.70
+          min_quality_score: 0.85      # Minimum acceptable quality
+          model_preferences: "quality_first"
+          
+        balanced:
+          simple_threshold: 0.35
+          complex_threshold: 0.70
+          cost_weight: 0.4             # 40% cost consideration
+          quality_weight: 0.6          # 60% quality consideration
+          max_cost_per_query: 0.020    # $0.02 maximum per query
     
-    temperature: 0.3
-    max_tokens: 1024
-    confidence_threshold: 0.85     # Calibration parameter
+    # Model mappings for different complexity levels
+    models:
+      simple:
+        primary:
+          provider: "ollama"
+          model: "llama3.2:3b"
+          max_cost_per_query: 0.000
+          expected_quality: 0.80
+          expected_latency_ms: 2000
+        fallback:
+          - provider: "mistral"
+            model: "mistral-tiny"
+            max_cost_per_query: 0.001
+          - provider: "openai"
+            model: "gpt-3.5-turbo"
+            max_cost_per_query: 0.005
+            
+      medium:
+        primary:
+          provider: "ollama"  # Use local model for medium queries too
+          model: "llama3.2:3b"
+          max_cost_per_query: 0.000
+          expected_quality: 0.85
+          expected_latency_ms: 2500
+        fallback:
+          - provider: "mistral"
+            model: "mistral-small"
+            max_cost_per_query: 0.005
+          - provider: "openai"
+            model: "gpt-3.5-turbo"
+            max_cost_per_query: 0.010
+            
+      complex:
+        primary:
+          provider: "ollama"  # Start with local for all queries
+          model: "llama3.2:3b"
+          max_cost_per_query: 0.000
+          expected_quality: 0.85
+          expected_latency_ms: 3000
+        fallback:
+          - provider: "openai"
+            model: "gpt-4-turbo"
+            max_cost_per_query: 0.050
+          - provider: "mistral"
+            model: "mistral-large"
+            max_cost_per_query: 0.025
     
-    prompt_builder:
-      type: "simple"
+    # Fallback configuration
+    fallback:
+      enabled: true
+      max_retries: 3
+      retry_delay_ms: 1000
+      fallback_chain: ["ollama/llama3.2:3b"]
+      fallback_on_cost_exceeded: true
+      fallback_on_latency_exceeded: true
+      max_latency_ms: 10000
+      
+    # Cost tracking configuration
+    cost_tracking:
+      enabled: true
+      precision_places: 6          # Track to $0.000001 precision
+      daily_budget_usd: 10.00      # $10 daily budget
+      alert_threshold: 0.8         # Alert at 80% of budget
+      export_enabled: true
+      retention_days: 30
+      
+    # Performance monitoring
+    monitoring:
+      enabled: true
+      track_routing_decisions: true
+      track_model_performance: true
+      track_cost_optimization: true
+      metrics_retention_hours: 72
+      slow_query_threshold_ms: 5000
+
+# Epic 1 Query Processor with Domain-Aware Processing
+query_processor:
+  type: "modular"
+  config:
+    analyzer:
+      implementation: "epic1_ml"  # Use ML-powered Epic1MLAnalyzer
       config:
-        max_context_length: 12000
-        include_instructions: true
-        citation_style: "inline"
+        # Epic1MLAnalyzer configuration
+        memory_budget_gb: 2.0  # Sufficient memory for ML models
+        enable_quantization: false  # Disable for better accuracy
+        model_timeout_seconds: 30
+        
+        # Enable all Epic 1 features
+        enable_complexity_analysis: true
+        enable_model_recommendation: true
+        
+        # Feature extraction and classification
+        feature_extractor:
+          enable_entity_extraction: true
+          normalization_params:
+            max_words: 18
+            max_chars: 140
+            max_sentences: 5
+            max_technical_terms: 4
+            max_entities: 10
+        
+        complexity_classifier:
+          weights:
+            length: 0.20
+            syntactic: 0.25
+            vocabulary: 0.30
+            question: 0.15
+            ambiguity: 0.10
+          thresholds:
+            simple: 0.150
+            complex: 0.320
+        
+        model_recommender:
+          strategy: "balanced"
+          model_mappings:
+            simple:
+              provider: "ollama"
+              model: "llama3.2:3b"
+              max_cost: 0.001
+            medium:
+              provider: "ollama"
+              model: "llama3.2:3b"
+              max_cost: 0.001
+            complex:
+              provider: "ollama"
+              model: "llama3.2:3b"
+              max_cost: 0.001
     
-    response_parser:
-      type: "markdown"
+    selector:
+      implementation: "mmr"
       config:
-        preserve_formatting: true
-        extract_citations: true
+        lambda_param: 0.5
+        max_tokens: 2048
     
-    confidence_scorer:
-      type: "semantic"
+    assembler:
+      implementation: "rich"
       config:
-        relevance_weight: 0.4
-        grounding_weight: 0.4
-        quality_weight: 0.2
+        include_sources: true
+        format_citations: true
 
 # Global settings
 global_settings:

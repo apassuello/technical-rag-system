@@ -479,11 +479,14 @@ class Epic1AnswerGenerator(AnswerGenerator):
                 }
                 
             elif selected_model.provider in ['openai', 'mistral']:
-                # For API providers, pass temperature and max_tokens directly
-                adapter_config = {
-                    'model_name': selected_model.model,
+                # For API providers, pass temperature and max_tokens through config
+                config_params = {
                     'temperature': self.config.get('llm_client', {}).get('config', {}).get('temperature', 0.7),
                     'max_tokens': self.config.get('llm_client', {}).get('config', {}).get('max_tokens', 512),
+                }
+                adapter_config = {
+                    'model_name': selected_model.model,
+                    'config': config_params,
                     'timeout': 30.0
                 }
             else:
