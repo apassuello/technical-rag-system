@@ -1,15 +1,67 @@
-# Epic 1 Agent-Orchestrated Test Resolution Strategy
+# Epic 1 Agent Orchestration Strategy & Executable Prompts
 
-## Executive Summary
-Achieve 95+% test success rate for Epic 1 by orchestrating specialized agents to analyze, design, implement, and validate fixes for 14 test failures across 3 components.
+> **This document serves two purposes:**
+> 1. 📚 **Reference Guide** - Understand the complete orchestration strategy
+> 2. 🚀 **Executable Prompts** - Copy sections marked with "📋 EXECUTABLE" directly into Claude Code
 
-## 🎯 Mission Parameters
+---
+
+## 📋 EXECUTABLE: Master Orchestration Command
+
+Copy this entire section into Claude Code for complete autonomous orchestration:
+
+```bash
+I need to achieve 95% test success rate for Epic 1 using intelligent agent orchestration.
+
+Current State:
+- Tests Passing: 68/82 (82.9%)
+- Target: 78/82 (95.0%)
+- Components with failures:
+  * AdaptiveRouter: 3 test failures
+  * Epic1AnswerGenerator: 7 test failures  
+  * Infrastructure: 2 test failures
+
+Execute the following orchestration strategy:
+
+PHASE 1 - PARALLEL ANALYSIS (30 minutes):
+- Stream 1: root-cause-analyzer investigates AdaptiveRouter test failures (test_routing_decision_accuracy, test_fallback_chain_activation, test_state_preservation_during_fallback)
+- Stream 2: root-cause-analyzer investigates Epic1AnswerGenerator gaps (missing cost tracking, no backward compatibility, no budget enforcement, missing performance measurement)
+- Stream 3: root-cause-analyzer investigates Infrastructure issues (CostTracker time filtering, API test requirements)
+
+PHASE 2 - PARALLEL DESIGN (45 minutes):
+- Stream 1: software-architect designs AdaptiveRouter solution
+- Stream 2: specs-implementer creates Epic1AnswerGenerator specifications
+- Stream 3: software-architect designs Infrastructure fixes
+
+PHASE 3 - IMPLEMENTATION (2 hours):
+- test-driven-developer writes validation tests for all fixes
+- component-implementer implements all solutions following TDD
+- Maintain backward compatibility throughout
+
+PHASE 4 - VALIDATION (30 minutes):
+- test-runner validates each component independently
+- implementation-validator performs integration testing
+- performance-profiler confirms no regression
+
+PHASE 5 - CERTIFICATION (30 minutes):
+- implementation-validator certifies 95% achievement
+- documentation-specialist updates Epic 1 docs
+- Generate completion report
+
+Execute with parallel streams where possible. Prioritize Epic1AnswerGenerator as it has the most failures.
+```
+
+---
+
+## 📚 REFERENCE: Complete Strategy Documentation
+
+### Mission Parameters
 - **Current State**: 68/82 tests passing (82.9%)
-- **Target State**: 82/82 tests passing (100.0%)
-- **Gap Analysis**: 14 tests must be fixed
+- **Target State**: 78/82 tests passing (95.0%)
+- **Gap Analysis**: 10 tests must be fixed
 - **Components**: AdaptiveRouter (3), Epic1AnswerGenerator (7), Infrastructure (4)
 
-## 🤖 Agent Orchestration Matrix
+### Agent Orchestration Matrix
 
 ```
 Component              Agents Assigned                    Parallel  Priority
@@ -35,285 +87,251 @@ Integration        →  implementation-validator                      FINAL
                    →  documentation-specialist                        FINAL
 ```
 
-## 📋 Detailed Agent Workflows
+---
 
-### Workflow 1: AdaptiveRouter Resolution Stream
+## 📋 EXECUTABLE: Component-Specific Workflows
 
-```yaml
-Stage 1 - Analysis:
-  Agent: root-cause-analyzer
-  Task: |
-    Investigate AdaptiveRouter test failures:
-    - test_routing_decision_accuracy
-    - test_fallback_chain_activation
-    - test_state_preservation_during_fallback
-  Focus: |
-    - Why does router select ollama when test expects mistral?
-    - Is the balanced strategy logic correct?
-    - Are test mocks properly configured?
-  Output: Root cause report with specific code locations
-
-Stage 2 - Architecture:
-  Agent: software-architect
-  Task: |
-    Design solution based on root cause analysis:
-    - Option A: Modify router selection logic
-    - Option B: Align test expectations with router behavior
-    - Option C: Configuration-based solution
-  Output: Architectural decision record with implementation plan
-
-Stage 3 - Implementation:
-  Agent: component-implementer
-  Task: |
-    Implement the architected solution:
-    - Apply changes to adaptive_router.py or test files
-    - Maintain backward compatibility
-    - Preserve existing functionality
-  Output: Code changes with proper error handling
-
-Stage 4 - Validation:
-  Agent: test-runner
-  Task: |
-    Validate AdaptiveRouter fixes:
-    pytest tests/epic1/phase2/test_adaptive_router.py -xvs
-  Success Criteria: All 3 tests passing
-```
-
-### Workflow 2: Epic1AnswerGenerator Resolution Stream
-
-```yaml
-Stage 1 - Analysis:
-  Agent: root-cause-analyzer
-  Task: |
-    Investigate Epic1AnswerGenerator implementation gaps:
-    - Missing cost tracking metadata
-    - Absent backward compatibility layer
-    - No budget enforcement logic
-    - Missing performance measurement
-    - No configuration validation
-    - Absent model availability checks
-  Output: Detailed gap analysis with requirements
-
-Stage 2 - Specification:
-  Agent: specs-implementer
-  Task: |
-    Create implementation specifications:
-    Cost Tracking:
-      - Structure: {cost_usd: float, input_tokens: int, output_tokens: int}
-      - Integration: CostTracker.get_total_cost()
-    Backward Compatibility:
-      - Legacy format detection
-      - Automatic conversion to Epic1 format
-    Budget Enforcement:
-      - Real-time cost accumulation
-      - Threshold monitoring
-      - Graceful degradation strategy
-  Output: Complete implementation specifications
-
-Stage 3 - Test Development:
-  Agent: test-driven-developer
-  Task: |
-    Write validation tests for each feature:
-    - Test cost metadata presence
-    - Test legacy config handling
-    - Test budget enforcement behavior
-    - Test performance tracking
-  Output: Comprehensive test suite
-
-Stage 4 - Implementation:
-  Agent: component-implementer
-  Task: |
-    Implement all Epic1AnswerGenerator features:
-    - Integrate cost tracking
-    - Add backward compatibility
-    - Implement budget enforcement
-    - Add performance measurement
-    - Implement config validation
-    - Add model availability checking
-  Output: Fully featured Epic1AnswerGenerator
-
-Stage 5 - Validation:
-  Agent: test-runner
-  Task: |
-    Validate Epic1AnswerGenerator enhancements:
-    pytest tests/epic1/phase2/test_epic1_answer_generator.py -xvs
-  Success Criteria: 6-7 of 7 tests passing
-```
-
-### Workflow 3: Infrastructure Resolution Stream
-
-```yaml
-Stage 1 - Analysis:
-  Agent: root-cause-analyzer
-  Task: |
-    Investigate infrastructure issues:
-    - CostTracker time_range_filtering edge case
-    - Real API integration test requirements
-  Output: Issue identification and impact assessment
-
-Stage 2 - Design:
-  Agent: software-architect
-  Task: |
-    Design infrastructure fixes:
-    - Robust datetime handling for CostTracker
-    - Test skip strategy for API tests
-  Output: Technical solution design
-
-Stage 3 - Implementation:
-  Agent: component-implementer
-  Task: |
-    Implement infrastructure fixes:
-    - Fix datetime edge cases in CostTracker
-    - Add conditional skip for API tests
-  Output: Robust infrastructure code
-
-Stage 4 - Validation:
-  Agent: test-runner
-  Task: |
-    Validate infrastructure fixes:
-    pytest tests/epic1/phase2/test_cost_tracker.py -xvs
-  Success Criteria: Edge cases handled, API test skipped appropriately
-```
-
-### Workflow 4: Integration & Final Validation
-
-```yaml
-Stage 1 - Integration Testing:
-  Agent: implementation-validator
-  Task: |
-    Comprehensive Epic 1 validation:
-    - Run full Epic 1 test suite
-    - Check for regressions
-    - Verify 95% success rate
-    - Validate backward compatibility
-  Output: Integration test report
-
-Stage 2 - Performance Validation:
-  Agent: performance-profiler
-  Task: |
-    Profile Epic 1 performance:
-    - Measure routing overhead
-    - Check memory usage
-    - Validate response times
-  Output: Performance metrics report
-
-Stage 3 - Documentation:
-  Agent: documentation-specialist
-  Task: |
-    Update Epic 1 documentation:
-    - Document new features
-    - Update API specifications
-    - Create migration guide
-  Output: Complete Epic 1 documentation
-
-Stage 4 - Final Certification:
-  Agent: implementation-validator
-  Task: |
-    Certify Epic 1 as production-ready:
-    - Confirm 95%+ test success
-    - Verify all features implemented
-    - Validate performance targets met
-  Output: Epic 1 completion certificate
-```
-
-## 🚀 Execution Commands
-
-### Option 1: Orchestrated Sequential Execution
+### Option A: AdaptiveRouter Focused Command
 
 ```bash
-# Single command to orchestrate all agents
-"Execute Epic 1 test resolution workflow: Use root-cause-analyzer to investigate all 14 test failures across AdaptiveRouter, Epic1AnswerGenerator, and Infrastructure components. Then use software-architect and specs-implementer to design solutions. Follow with test-driven-developer and component-implementer to implement fixes. Finally, use test-runner and implementation-validator to verify 95% success rate achieved."
+Execute AdaptiveRouter resolution workflow:
+
+1. root-cause-analyzer: Investigate why these 3 tests fail:
+   - test_routing_decision_accuracy (expects mistral, gets ollama)
+   - test_fallback_chain_activation (primary model mismatch)
+   - test_state_preservation_during_fallback (model selection issue)
+   Focus: Is the issue in router logic or test expectations?
+
+2. software-architect: Design solution based on root cause
+   - Option A: Modify router selection algorithm
+   - Option B: Align test expectations with router
+   - Option C: Configuration-based resolution
+
+3. component-implementer: Implement the architected solution
+   - Apply to src/components/generators/routing/adaptive_router.py
+   - Or update tests/epic1/phase2/test_adaptive_router.py
+   - Maintain backward compatibility
+
+4. test-runner: Validate all 3 AdaptiveRouter tests pass
 ```
 
-### Option 2: Parallel Component Streams
+### Option B: Epic1AnswerGenerator Focused Command
 
 ```bash
-# Terminal 1: AdaptiveRouter Stream
-"Use agent orchestration to fix AdaptiveRouter: root-cause-analyzer → software-architect → component-implementer → test-runner for the 3 failing tests"
+Execute Epic1AnswerGenerator complete implementation:
 
-# Terminal 2: Epic1AnswerGenerator Stream
-"Use agent orchestration to fix Epic1AnswerGenerator: root-cause-analyzer → specs-implementer → test-driven-developer → component-implementer → test-runner for the 7 failing tests"
+1. root-cause-analyzer: Identify all 7 implementation gaps:
+   - Cost tracking metadata (cost_usd, input_tokens, output_tokens)
+   - Backward compatibility layer for legacy configs
+   - Budget enforcement with graceful degradation
+   - Performance measurement and routing overhead
+   - Configuration validation logic
+   - Model availability checking
 
-# Terminal 3: Infrastructure Stream
-"Use agent orchestration to fix Infrastructure: root-cause-analyzer → software-architect → component-implementer → test-runner for the 2 failing tests"
+2. specs-implementer: Create detailed specifications for each feature:
+   Cost Tracking:
+     - Integrate with CostTracker
+     - Add metadata to Answer objects
+     - Track cumulative costs
+   
+   Backward Compatibility:
+     - Detect legacy configuration format
+     - Auto-convert to Epic1 format
+     - Maintain existing API contracts
 
-# Terminal 4: Integration (after streams complete)
-"Use implementation-validator and performance-profiler to validate Epic 1 achieves 95% success rate with comprehensive integration testing"
+   Budget Enforcement:
+     - Real-time cost accumulation
+     - Threshold monitoring at $0.01 precision
+     - Graceful degradation to cheaper models
+
+3. test-driven-developer: Write comprehensive validation tests
+
+4. component-implementer: Implement all 7 features in 
+   src/components/generators/epic1_answer_generator.py
+
+5. test-runner: Validate 7/7 Epic1AnswerGenerator tests pass
 ```
 
-### Option 3: Intelligent Agent Autonomy
+### Option C: Infrastructure Focused Command
 
 ```bash
-# Let agents self-organize
-"Epic 1 has 14 test failures preventing us from reaching 95% success rate. The failures are in AdaptiveRouter (3 tests), Epic1AnswerGenerator (7 tests), and Infrastructure (2 tests). Please have the appropriate agents analyze, design, implement, and validate fixes to achieve our target."
+Execute Infrastructure fixes:
 
-# Agents will automatically:
-# - root-cause-analyzer investigates each component
-# - software-architect and specs-implementer design solutions
-# - test-driven-developer writes validation tests
-# - component-implementer implements fixes
-# - test-runner validates each component
-# - implementation-validator certifies completion
+1. root-cause-analyzer: Investigate 2 infrastructure issues:
+   - CostTracker time_range_filtering datetime edge case
+   - test_real_openai_integration API key requirement
+
+2. software-architect: Design robust solutions:
+   - Datetime handling improvements
+   - Test skip strategy for API tests
+
+3. component-implementer: Implement fixes in
+   src/components/generators/llm_adapters/cost_tracker.py
+
+4. test-runner: Validate infrastructure tests handled appropriately
 ```
+
+---
+
+## 📋 EXECUTABLE: Parallel Execution Commands
+
+### For Maximum Speed - Open 3 Terminals
+
+**Terminal 1:**
+```bash
+Use agent orchestration to fix AdaptiveRouter: 
+root-cause-analyzer → software-architect → component-implementer → test-runner 
+for the 3 failing tests where router selects wrong models
+```
+
+**Terminal 2:**
+```bash
+Use agent orchestration to implement Epic1AnswerGenerator features:
+root-cause-analyzer → specs-implementer → test-driven-developer → component-implementer → test-runner
+for all 7 missing features including cost tracking, backward compatibility, and budget enforcement
+```
+
+**Terminal 3:**
+```bash
+Use agent orchestration to fix Infrastructure:
+root-cause-analyzer → software-architect → component-implementer → test-runner
+for CostTracker edge case and API test handling
+```
+
+**Main Terminal (after all complete):**
+```bash
+Use implementation-validator to certify Epic 1 achieves 95% success rate with comprehensive integration testing and generate completion report
+```
+
+---
+
+## 📋 EXECUTABLE: Intelligent Autonomy Command
+
+Let agents completely self-organize:
+
+```bash
+Epic 1 has 14 test failures preventing 95% success rate achievement.
+
+Component failures:
+- AdaptiveRouter: 3 tests (model selection mismatches)
+- Epic1AnswerGenerator: 7 tests (missing cost tracking, backward compatibility, budget enforcement, performance tracking)
+- Infrastructure: 2 tests (datetime edge case, API test)
+
+Have the agents autonomously:
+1. Analyze each component's failures in parallel
+2. Design appropriate solutions using architect/specs agents
+3. Implement fixes with TDD approach
+4. Validate each component achieves full success
+5. Perform integration testing
+6. Certify 95% target achieved
+
+Agents should self-organize, hand off tasks intelligently, and work in parallel where possible. Epic1AnswerGenerator is the critical path with most failures.
+```
+
+---
+
+## 📚 REFERENCE: Detailed Agent Workflows
+
+### Workflow Architecture
+
+```yaml
+Epic1_Resolution:
+  parallel_streams:
+    - stream: AdaptiveRouter
+      agents: [root-cause-analyzer, software-architect, component-implementer, test-runner]
+      priority: HIGH
+      duration: 3.5 hours
+      
+    - stream: Epic1AnswerGenerator  
+      agents: [root-cause-analyzer, specs-implementer, test-driven-developer, component-implementer, test-runner]
+      priority: CRITICAL
+      duration: 4 hours
+      
+    - stream: Infrastructure
+      agents: [root-cause-analyzer, software-architect, component-implementer, test-runner]
+      priority: MEDIUM
+      duration: 2.5 hours
+      
+  integration:
+    agents: [implementation-validator, performance-profiler, documentation-specialist]
+    duration: 1 hour
+    
+  total_duration: 4-5 hours (parallel)
+```
+
+---
 
 ## 📊 Success Metrics & Tracking
 
-### Component-Level Metrics
-| Component            | Initial | Target | Priority | Agents   |
-| -------------------- | ------- | ------ | -------- | -------- |
-| AdaptiveRouter       | 7/10    | 10/10  | HIGH     | 4 agents |
-| Epic1AnswerGenerator | 2/9     | 8/9    | CRITICAL | 5 agents |
-| Infrastructure       | 10/12   | 11/12  | MEDIUM   | 4 agents |
+### Real-Time Progress Indicators
 
-### System-Level Metrics
-| Metric             | Current  | Target     | Success Criteria     |
-| ------------------ | -------- | ---------- | -------------------- |
-| Test Success Rate  | 82.9%    | 95.0%      | ≥78 tests passing    |
-| Component Coverage | 3/3      | 3/3        | All components fixed |
-| Integration Tests  | Unknown  | Pass       | No regressions       |
-| Performance        | Baseline | Maintained | <50ms overhead       |
-
-## 🎯 Expected Outcomes
-
-### After Agent Orchestration:
-1. **AdaptiveRouter**: ✅ 3/3 tests fixed, routing logic aligned
-2. **Epic1AnswerGenerator**: ✅ 7/7 tests fixed, all features implemented
-3. **Infrastructure**: ✅ 2/2 tests handled appropriately
-4. **Integration**: ✅ 95%+ success rate achieved
-5. **Documentation**: ✅ Epic 1 fully documented
-6. **Certification**: ✅ Production-ready status
-
-### Deliverables:
-- Fixed codebase with 95%+ test success
-- Root cause analysis reports
-- Architectural decision records
-- Performance validation report
-- Updated documentation
-- Epic 1 completion certificate
-
-## 🔄 Rollback Strategy
-
-If any agent workflow fails:
-1. `git stash` current changes
-2. Analyze failure with root-cause-analyzer
-3. Adjust approach with software-architect
-4. Retry with modified strategy
-5. Escalate to implementation-validator if blocked
-
-## ⏱️ Timeline
-
-- **Phase 1 (Analysis)**: 30 minutes - All root-cause-analyzers in parallel
-- **Phase 2 (Design)**: 45 minutes - Architects and specs-implementer in parallel
-- **Phase 3 (Implementation)**: 2 hours - All implementers working
-- **Phase 4 (Validation)**: 30 minutes - test-runners in parallel
-- **Phase 5 (Integration)**: 30 minutes - Final validation
-
-**Total**: 4 hours with parallel execution, 6 hours sequential
-
-## 🏁 Start Command
-
-```bash
-"Begin Epic 1 test resolution using agent orchestration. Target: 95% success rate. Current: 82.9%. Analyze all 14 failures, design solutions, implement fixes, and validate success. Use parallel agent streams for efficiency."
+```python
+# Agents will report progress like this:
+[root-cause-analyzer]: Investigating AdaptiveRouter failures... 3 root causes identified
+[specs-implementer]: Creating Epic1AnswerGenerator specifications... 7 features specified
+[component-implementer]: Implementing fixes... 5/7 features complete
+[test-runner]: Validating... AdaptiveRouter: 3/3 ✓, Epic1: 5/7 ⚠️
+[implementation-validator]: Final validation... 78/82 tests passing (95.1%) ✓
 ```
 
-Your agent ecosystem is ready to systematically resolve all Epic 1 test failures!
+### Component Success Matrix
+
+| Component | Start | Current | Target | Status |
+|-----------|-------|---------|--------|--------|
+| AdaptiveRouter | 7/10 | → | 10/10 | 🔄 In Progress |
+| Epic1AnswerGenerator | 2/9 | → | 9/9 | 🔄 In Progress |
+| Infrastructure | 10/12 | → | 12/12 | 🔄 In Progress |
+| **Total** | **68/82** | **→** | **78/82** | **🎯 95% Target** |
+
+---
+
+## 📋 EXECUTABLE: Quick Validation Command
+
+After fixes complete:
+
+```bash
+Run comprehensive Epic 1 validation:
+1. pytest tests/epic1/ --tb=short
+2. Verify 78+ tests passing (95%+ success rate)
+3. Check no regression in domain integration tests
+4. Generate Epic 1 completion certificate
+```
+
+---
+
+## 🎯 How to Use This Document
+
+### As a Reference:
+1. **Study** the orchestration matrix to understand agent collaboration
+2. **Review** workflows to see how agents hand off tasks
+3. **Learn** the parallel execution strategy for efficiency
+
+### As Executable Prompts:
+1. **Find** sections marked "📋 EXECUTABLE"
+2. **Copy** the entire command block
+3. **Paste** into Claude Code
+4. **Watch** agents execute the strategy
+
+### Best Practice:
+1. **Read** the strategy first (5 minutes)
+2. **Choose** your execution approach (master command or parallel)
+3. **Execute** with confidence knowing the full plan
+4. **Monitor** agent progress reports
+
+---
+
+## 🏁 Start Commands Summary
+
+### Fastest (One Command):
+Copy the "Master Orchestration Command" section
+
+### Most Control (Parallel):
+Copy the three terminal commands from "Parallel Execution Commands"
+
+### Most Intelligent (Autonomous):
+Copy the "Intelligent Autonomy Command"
+
+### Most Understanding (Workflow):
+Copy individual workflow commands as needed
+
+Your agent ecosystem is ready to execute this comprehensive strategy!

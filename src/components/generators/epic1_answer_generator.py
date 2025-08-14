@@ -72,6 +72,9 @@ class Epic1AnswerGenerator(AnswerGenerator):
         "routing": {
             "enabled": true,
             "default_strategy": "balanced",
+            "enable_availability_testing": false,
+            "availability_check_mode": "startup",
+            "fallback_on_failure": true,
             "query_analyzer": {
                 "type": "epic1",
                 "config": {...}
@@ -163,13 +166,14 @@ class Epic1AnswerGenerator(AnswerGenerator):
     
     def generate(self, query: str, context: List[Document]) -> Answer:
         """
-        Generate an answer using adaptive multi-model routing.
+        Generate an answer using adaptive multi-model routing with failure-based fallback.
         
         This method orchestrates the entire adaptive generation process:
         1. Route query to optimal model (if routing enabled)
         2. Generate answer using selected model
-        3. Track costs and routing decisions
-        4. Return enhanced answer with routing metadata
+        3. Handle actual failures with fallback chain
+        4. Track costs and routing decisions
+        5. Return enhanced answer with routing metadata
         
         Args:
             query: User query string
@@ -201,7 +205,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
         routing_decision = None
         
         try:
-            # Step 1: Route query to optimal model (if enabled)
+            # Step 1: Route query to optimal model (fast routing, no availability testing)
             if self.routing_enabled and self.adaptive_router:
                 routing_start = time.time()
                 
@@ -225,7 +229,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
                             self._switch_to_selected_model(routing_decision.selected_model)
                             logger.warning("Applied budget degradation before routing")
                 
-                # Route query to optimal model
+                # Route query to optimal model (uses cached availability, no preemptive testing)
                 routing_decision = self.adaptive_router.route_query(
                     query=query,
                     query_metadata=query_metadata,
@@ -244,16 +248,17 @@ class Epic1AnswerGenerator(AnswerGenerator):
                     f"{routing_decision.selected_model.model} in {routing_time:.1f}ms"
                 )
             
-            # Step 2: Generate answer using selected/configured model
-            # Note: Don't pass max_tokens parameter as it's now handled in adapter config
+            # Step 2: Generate answer using selected model with failure-based fallback
             try:
                 answer = super().generate(query, context)
+                
             except Exception as e:
-                # Handle model unavailability with fallback
-                if routing_decision and ("unavailable" in str(e).lower() or "authentication" in str(e).lower() or "404" in str(e) or "503" in str(e)):
-                    logger.warning(f"Model generation failed, attempting fallback: {str(e)}")
-                    answer = self._handle_model_unavailable(routing_decision, query, context)
+                # Detect actual model failures and trigger fallback chain
+                if routing_decision and self._is_model_failure(e):
+                    logger.warning(f"Model failure detected, triggering fallback chain: {str(e)}")
+                    answer = self._handle_actual_request_failure(routing_decision, query, context, e)
                 else:
+                    # Not a model failure - propagate the error
                     raise
             
             # Step 3: Track costs and add cost metadata to answer
@@ -613,14 +618,18 @@ class Epic1AnswerGenerator(AnswerGenerator):
                 self.query_analyzer = None
                 logger.warning("Epic1QueryAnalyzer not available")
             
-            # Initialize adaptive router
+            # Initialize adaptive router with FULL configuration support
             router_config = config.get('routing', {})
             self.adaptive_router = AdaptiveRouter(
                 default_strategy=router_config.get('default_strategy', 'balanced'),
                 query_analyzer=self.query_analyzer,
                 config=router_config.get('strategies', {}),
                 enable_fallback=config.get('fallback', {}).get('enabled', True),
-                enable_cost_tracking=config.get('cost_tracking', {}).get('enabled', True)
+                fallback_on_failure=router_config.get('fallback_on_failure', True),  # NEW
+                enable_cost_tracking=config.get('cost_tracking', {}).get('enabled', True),
+                enable_availability_testing=router_config.get('enable_availability_testing', False),  # NEW
+                availability_check_mode=router_config.get('availability_check_mode', 'startup'),  # NEW
+                availability_cache_ttl=router_config.get('availability_cache_ttl', 3600)  # NEW
             )
             
             # Initialize cost tracker
@@ -1138,6 +1147,261 @@ class Epic1AnswerGenerator(AnswerGenerator):
             if analyzer_type and analyzer_type not in ['epic1', 'rule_based', 'simple']:
                 raise ValueError(f"Invalid query analyzer type: {analyzer_type}. Must be one of: epic1, rule_based, simple")
     
+    def _is_model_failure(self, error: Exception) -> bool:
+        """
+        Detect actual model failures that should trigger fallback handling.
+        
+        This method distinguishes between:
+        - Model failures: Authentication, timeouts, service unavailable, model not found
+        - Logic errors: Parsing errors, configuration issues (no fallback)
+        - System errors: Out of memory, disk space (no fallback)
+        
+        Args:
+            error: The exception that occurred
+            
+        Returns:
+            True if this is a model failure that should trigger fallback
+        """
+        # Import adapter errors for type checking
+        try:
+            from .llm_adapters.base_adapter import AuthenticationError, ModelNotFoundError, RateLimitError
+        except ImportError:
+            # Fallback if imports aren't available
+            AuthenticationError = type('AuthenticationError', (Exception,), {})
+            ModelNotFoundError = type('ModelNotFoundError', (Exception,), {})
+            RateLimitError = type('RateLimitError', (Exception,), {})
+        
+        # Check for specific model failure types
+        if isinstance(error, (AuthenticationError, ModelNotFoundError, RateLimitError)):
+            return True
+        
+        # Check for common HTTP error patterns
+        error_str = str(error).lower()
+        
+        # Authentication failures
+        if any(keyword in error_str for keyword in [
+            'authentication', 'unauthorized', '401', 'api key', 'forbidden', '403'
+        ]):
+            return True
+        
+        # Service unavailability
+        if any(keyword in error_str for keyword in [
+            'timeout', 'connection', 'unavailable', '503', '502', '500', 
+            'service down', 'server error', 'network error'
+        ]):
+            return True
+        
+        # Model not found
+        if any(keyword in error_str for keyword in [
+            'model not found', '404', 'not found', 'model does not exist',
+            'invalid model', 'model unavailable'
+        ]):
+            return True
+        
+        # Rate limiting (temporary failure)
+        if any(keyword in error_str for keyword in [
+            'rate limit', '429', 'quota exceeded', 'too many requests'
+        ]):
+            return True
+        
+        # Connection errors (network issues)
+        if isinstance(error, (ConnectionError, TimeoutError, OSError)):
+            return True
+        
+        # Logic errors that should NOT trigger fallback
+        logic_error_indicators = [
+            'parsing', 'configuration', 'validation', 'format',
+            'json decode', 'schema', 'parameter', 'argument'
+        ]
+        if any(indicator in error_str for indicator in logic_error_indicators):
+            return False
+        
+        # System errors that should NOT trigger fallback
+        system_error_indicators = [
+            'memory', 'disk space', 'permission denied', 'file not found',
+            'import error', 'module not found'
+        ]
+        if any(indicator in error_str for indicator in system_error_indicators):
+            return False
+        
+        # Default: treat unknown errors as potential model failures for graceful degradation
+        logger.debug(f"Unknown error type, treating as model failure for fallback: {error_str}")
+        return True
+    
+    def _handle_actual_request_failure(self, 
+                                      routing_decision: RoutingDecision, 
+                                      query: str, 
+                                      context: List[Document],
+                                      original_error: Exception) -> Answer:
+        """
+        Handle actual request failures with fallback chain integration.
+        
+        This method integrates with the AdaptiveRouter's cached availability system
+        to trigger fallback chains when actual model requests fail.
+        
+        Args:
+            routing_decision: The original routing decision that failed
+            query: The original query
+            context: Context documents
+            original_error: The error that triggered fallback
+            
+        Returns:
+            Answer from successful fallback model
+            
+        Raises:
+            GenerationError: If all fallback attempts fail
+        """
+        start_time = time.time()
+        
+        try:
+            # Notify AdaptiveRouter about the actual failure for cache updates
+            if hasattr(self.adaptive_router, 'handle_actual_request_failure'):
+                self.adaptive_router.handle_actual_request_failure(
+                    routing_decision.selected_model, 
+                    original_error
+                )
+            
+            # Get fallback chain from router
+            fallback_models = self._get_fallback_models_from_router(routing_decision)
+            
+            # Track original failure
+            if self.cost_tracker:
+                self._track_failed_request(routing_decision, original_error)
+            
+            # Attempt fallback models in sequence
+            for i, fallback_model in enumerate(fallback_models):
+                try:
+                    # Switch to fallback model
+                    self._switch_to_selected_model(fallback_model)
+                    
+                    logger.info(f"Attempting fallback {i+1}/{len(fallback_models)}: "
+                              f"{fallback_model.provider}/{fallback_model.model}")
+                    
+                    # Generate with fallback model
+                    answer = super().generate(query, context)
+                    
+                    # Success! Update routing decision metadata
+                    routing_decision.selected_model = fallback_model
+                    routing_decision.fallback_used = True
+                    routing_decision.routing_metadata['fallback_attempt'] = i + 1
+                    routing_decision.routing_metadata['original_error'] = str(original_error)
+                    routing_decision.routing_metadata['fallback_switch_time_ms'] = (time.time() - start_time) * 1000
+                    
+                    logger.info(f"Fallback successful with {fallback_model.provider}/{fallback_model.model} "
+                              f"after {(time.time() - start_time) * 1000:.1f}ms")
+                    
+                    return answer
+                    
+                except Exception as fallback_error:
+                    logger.warning(f"Fallback {i+1} failed ({fallback_model.provider}/"
+                                 f"{fallback_model.model}): {fallback_error}")
+                    
+                    # Update router cache with fallback failure if it's also a model failure
+                    if self._is_model_failure(fallback_error) and hasattr(self.adaptive_router, 'handle_actual_request_failure'):
+                        self.adaptive_router.handle_actual_request_failure(fallback_model, fallback_error)
+                    
+                    # Continue to next fallback
+                    continue
+            
+            # All fallbacks exhausted
+            fallback_time = (time.time() - start_time) * 1000
+            error_msg = (f"All fallback models failed after {fallback_time:.1f}ms. "
+                        f"Original error: {original_error}")
+            
+            logger.error(error_msg)
+            raise GenerationError(error_msg)
+            
+        except GenerationError:
+            # Re-raise generation errors as-is
+            raise
+        except Exception as e:
+            # Unexpected error in fallback handling
+            error_msg = f"Fallback handling failed unexpectedly: {str(e)}"
+            logger.error(error_msg)
+            raise GenerationError(error_msg) from e
+    
+    def _get_fallback_models_from_router(self, routing_decision: RoutingDecision) -> List:
+        """
+        Get fallback models from the router's fallback logic.
+        
+        Args:
+            routing_decision: The original routing decision
+            
+        Returns:
+            List of fallback ModelOption objects
+        """
+        fallback_models = []
+        
+        # Try to get fallback models from router
+        if self.adaptive_router and hasattr(self.adaptive_router, '_get_fallback_models'):
+            try:
+                fallback_models = self.adaptive_router._get_fallback_models(routing_decision.selected_model)
+            except Exception as e:
+                logger.warning(f"Failed to get fallback models from router: {e}")
+        
+        # If no fallbacks from router, create basic fallback chain
+        if not fallback_models:
+            fallback_models = self._create_basic_fallback_chain(routing_decision.selected_model)
+        
+        return fallback_models
+    
+    def _create_basic_fallback_chain(self, failed_model) -> List:
+        """
+        Create a basic fallback chain when router doesn't provide one.
+        
+        Args:
+            failed_model: The model that failed
+            
+        Returns:
+            List of basic fallback ModelOption objects
+        """
+        from .routing.routing_strategies import ModelOption
+        from decimal import Decimal
+        
+        fallback_models = []
+        
+        # If external API failed, fallback to local model
+        if failed_model.provider in ['openai', 'mistral']:
+            local_fallback = ModelOption(
+                provider='ollama',
+                model='llama3.2:3b',
+                estimated_cost=Decimal('0.00'),
+                estimated_quality=0.7,
+                estimated_latency_ms=2000.0,
+                confidence=0.8,
+                fallback_options=[]
+            )
+            fallback_models.append(local_fallback)
+        
+        return fallback_models
+    
+    def _track_failed_request(self, routing_decision: RoutingDecision, error: Exception) -> None:
+        """
+        Track the failed request in cost tracker for monitoring.
+        
+        Args:
+            routing_decision: The routing decision that failed
+            error: The error that occurred
+        """
+        try:
+            if self.cost_tracker:
+                self.cost_tracker.record_usage(
+                    provider=routing_decision.selected_model.provider,
+                    model=routing_decision.selected_model.model,
+                    input_tokens=0,
+                    output_tokens=0,
+                    cost_usd=Decimal('0.00'),
+                    query_complexity=routing_decision.complexity_level,
+                    success=False,
+                    metadata={
+                        'error_type': type(error).__name__,
+                        'error_message': str(error),
+                        'failure_triggered_fallback': True
+                    }
+                )
+        except Exception as tracking_error:
+            logger.warning(f"Failed to track failed request: {tracking_error}")
+
     def _handle_model_unavailable(self, routing_decision, query: str, context: List[Document]) -> Answer:
         """
         Handle cases where selected model is unavailable.

@@ -130,8 +130,12 @@ class AdaptiveRouter:
                  default_strategy: str = "balanced",
                  query_analyzer: Optional['Epic1QueryAnalyzer'] = None,
                  config: Optional[Dict[str, Any]] = None,
-                 enable_fallback: bool = True,
-                 enable_cost_tracking: bool = True):
+                 enable_fallback: bool = False,  # Legacy parameter name - production default
+                 fallback_on_failure: bool = None,  # New parameter name
+                 enable_cost_tracking: bool = True,
+                 enable_availability_testing: bool = False,  # Production default
+                 availability_check_mode: str = "startup",  # startup/scheduled/per_request
+                 availability_cache_ttl: int = 3600):
         """
         Initialize adaptive router.
         
@@ -139,14 +143,30 @@ class AdaptiveRouter:
             default_strategy: Default routing strategy to use
             query_analyzer: Epic1QueryAnalyzer instance for complexity analysis
             config: Router configuration
-            enable_fallback: Whether to enable fallback chain management
+            enable_fallback: Whether to enable fallback chain management (legacy)
+            fallback_on_failure: Whether to enable fallback on actual failures
             enable_cost_tracking: Whether to track routing costs
+            enable_availability_testing: Whether to test model availability
+            availability_check_mode: When to check availability (startup/scheduled/per_request)
+            availability_cache_ttl: TTL for availability cache in seconds
         """
         self.config = config or {}
         self.default_strategy = default_strategy
         self.query_analyzer = query_analyzer
-        self.enable_fallback = enable_fallback
+        
+        # Handle backward compatibility for fallback parameter
+        if fallback_on_failure is not None:
+            self.fallback_on_failure = fallback_on_failure
+        else:
+            self.fallback_on_failure = enable_fallback  # Use legacy parameter
+        
+        # For backward compatibility, keep enable_fallback reference
+        self.enable_fallback = self.fallback_on_failure
+        
         self.enable_cost_tracking = enable_cost_tracking
+        self.enable_availability_testing = enable_availability_testing
+        self.availability_check_mode = availability_check_mode
+        self.availability_cache_ttl = availability_cache_ttl
         
         # Initialize performance metrics first (needed by _initialize_strategies)
         self._total_routing_decisions = 0
@@ -176,10 +196,18 @@ class AdaptiveRouter:
         # Fallback chain (for test compatibility)
         self.fallback_chain = []
         
-        # Circuit breaker state for authentication error handling
+        # Production availability cache with configurable TTL
+        self._availability_cache: Dict[str, Dict[str, Any]] = {}
+        self._availability_cache_ttl = availability_cache_ttl
+        
+        # Legacy circuit breaker state (maintained for compatibility)
         self._adapter_availability_cache: Dict[str, Dict[str, Any]] = {}
         self._cache_expiry_seconds = 300  # 5 minutes cache
         self._max_failures_before_cache = 3  # Cache failures after 3 attempts
+        
+        # Setup availability cache if enabled
+        if self.enable_availability_testing and self.availability_check_mode == "startup":
+            self._setup_availability_cache()
         
         logger.info(f"Initialized AdaptiveRouter with {len(self.strategies)} strategies")
     
@@ -242,8 +270,8 @@ class AdaptiveRouter:
                 logger.warning("No model selected by strategy - possibly empty model registry")
                 return None
             
-            # 6. Test model availability and apply fallback logic if enabled
-            final_model, fallback_used = self._test_and_fallback_model_selection(selected_model, enhanced_metadata)
+            # 6. Apply production model selection (no per-query network calls)
+            final_model, fallback_used = self._production_model_selection(selected_model, enhanced_metadata)
             
             # 7. Create routing decision with alternatives
             decision_time_ms = (time.time() - start_time) * 1000
@@ -291,6 +319,166 @@ class AdaptiveRouter:
             logger.error(f"Query routing failed: {str(e)}")
             raise RuntimeError(f"Failed to route query: {str(e)}") from e
     
+    def setup_availability_cache(self) -> Dict[str, bool]:
+        """
+        One-time availability testing during startup (production deployment).
+        
+        This method performs comprehensive availability testing once during
+        initialization, caching results to eliminate per-query network calls.
+        
+        Returns:
+            Dictionary mapping model keys to availability status
+        """
+        availability_results = {}
+        all_models = self.model_registry.get_all_models()
+        
+        logger.info(f"Testing availability for {len(all_models)} models during startup...")
+        start_time = time.time()
+        
+        for model in all_models:
+            cache_key = f"{model.provider}/{model.model}"
+            try:
+                # Use existing availability test method but cache results
+                response = self._attempt_model_request(model, "Availability test", None)
+                is_available = response is not None
+                
+                self._availability_cache[cache_key] = {
+                    'available': is_available,
+                    'timestamp': time.time(),
+                    'tested_at_startup': True,
+                    'last_error': None if is_available else 'Failed startup availability test'
+                }
+                availability_results[cache_key] = is_available
+                
+            except Exception as e:
+                self._availability_cache[cache_key] = {
+                    'available': False,
+                    'timestamp': time.time(),
+                    'tested_at_startup': True,
+                    'last_error': str(e)
+                }
+                availability_results[cache_key] = False
+        
+        setup_time = (time.time() - start_time) * 1000
+        available_count = sum(availability_results.values())
+        
+        logger.info(
+            f"Availability testing complete: {available_count}/{len(all_models)} "
+            f"models available in {setup_time:.1f}ms"
+        )
+        
+        return availability_results
+    
+    def _setup_availability_cache(self) -> None:
+        """Internal method to setup availability cache during initialization."""
+        try:
+            self.setup_availability_cache()
+        except Exception as e:
+            logger.warning(f"Startup availability testing failed: {e}")
+            # Continue with empty cache - fallback to per-request testing if needed
+    
+    def _get_cached_availability(self, cache_key: str) -> Optional[Dict]:
+        """
+        Fast cached availability lookup with TTL checking.
+        
+        Args:
+            cache_key: Model cache key (provider/model)
+            
+        Returns:
+            Cached availability data or None if expired/missing
+        """
+        if cache_key not in self._availability_cache:
+            return None
+        
+        cached_entry = self._availability_cache[cache_key]
+        current_time = time.time()
+        cache_age = current_time - cached_entry['timestamp']
+        
+        # Check if cache has expired
+        if cache_age > self._availability_cache_ttl:
+            logger.debug(f"Availability cache expired for {cache_key} (age: {cache_age:.1f}s)")
+            return None
+        
+        return cached_entry
+    
+    def _production_model_selection(self, 
+                                    selected_model: ModelOption, 
+                                    query_metadata: Dict[str, Any]) -> Tuple[ModelOption, bool]:
+        """
+        Production-optimized model selection with zero per-query network calls.
+        
+        This method uses cached availability data for routing decisions,
+        falling back to actual failure handling only when requests fail.
+        
+        Args:
+            selected_model: Initially selected model from strategy
+            query_metadata: Query metadata for fallback decisions
+            
+        Returns:
+            Tuple of (final_model, fallback_used)
+        """
+        # For per-request mode or when fallbacks are explicitly enabled, use legacy method
+        # This ensures backward compatibility with tests that set enable_fallback = True
+        if (self.availability_check_mode == "per_request" or 
+            self.fallback_on_failure):
+            return self._test_and_fallback_model_selection(selected_model, query_metadata)
+        
+        # Skip availability testing in production mode (both availability testing 
+        # and fallback are disabled)
+        if not self.enable_availability_testing:
+            return selected_model, False
+        
+        # Production mode: use cached availability
+        cache_key = f"{selected_model.provider}/{selected_model.model}"
+        cached_availability = self._get_cached_availability(cache_key)
+        
+        # If model is cached as available, use it directly
+        if cached_availability and cached_availability.get('available', False):
+            logger.debug(f"Using cached available model: {cache_key}")
+            return selected_model, False
+        
+        # If model is cached as unavailable, find immediate fallback
+        if cached_availability and not cached_availability.get('available', True):
+            logger.debug(f"Model {cache_key} cached as unavailable, finding fallback")
+            fallback_model = self._get_immediate_fallback(selected_model)
+            if fallback_model:
+                return fallback_model, True
+        
+        # No cache data or fallback failed - return original model
+        # Actual failure will be handled during request execution
+        return selected_model, False
+    
+    def _get_immediate_fallback(self, failed_model: ModelOption) -> Optional[ModelOption]:
+        """
+        Deterministic fallback without testing - uses cached availability.
+        
+        Args:
+            failed_model: The model that failed or is cached as unavailable
+            
+        Returns:
+            Available fallback model or None if no suitable fallback found
+        """
+        fallback_models = self._get_fallback_models(failed_model)
+        
+        # Find first available fallback from cache
+        for fallback_model in fallback_models:
+            cache_key = f"{fallback_model.provider}/{fallback_model.model}"
+            cached_availability = self._get_cached_availability(cache_key)
+            
+            # If cached as available, use it
+            if cached_availability and cached_availability.get('available', False):
+                logger.info(f"Selected cached available fallback: {cache_key}")
+                return fallback_model
+            
+            # If no cache data, assume available (optimistic fallback)
+            if cached_availability is None:
+                logger.info(f"Selected uncached fallback (assumed available): {cache_key}")
+                return fallback_model
+        
+        # All fallbacks are cached as unavailable
+        logger.warning("No cached available fallback found - returning None")
+        return None
+
     def get_routing_stats(self) -> Dict[str, Any]:
         """
         Get comprehensive routing statistics.
@@ -343,6 +531,11 @@ class AdaptiveRouter:
             'history_size': len(self.routing_history),
             'cost_tracking_enabled': self.enable_cost_tracking,
             'fallback_enabled': self.enable_fallback,
+            'fallback_on_failure': self.fallback_on_failure,
+            'availability_testing_enabled': self.enable_availability_testing,
+            'availability_check_mode': self.availability_check_mode,
+            'availability_cache_ttl': self.availability_cache_ttl,
+            'availability_cache_entries': len(self._availability_cache),
             'available_strategies': list(self.strategies.keys())
         }
         
@@ -836,7 +1029,7 @@ class AdaptiveRouter:
         Returns:
             Tuple of (final_model, fallback_used)
         """
-        if not self.enable_fallback:
+        if not self.fallback_on_failure:
             return selected_model, False
         
         # Extract query and context for testing
@@ -1028,6 +1221,43 @@ class AdaptiveRouter:
             # This should never happen, but if it does, return None
             # The calling code will handle this gracefully
             return None
+    
+    def handle_actual_request_failure(self, model_option: ModelOption, error: Exception) -> None:
+        """
+        Handle actual request failure to update availability cache.
+        
+        This method is called by Epic1AnswerGenerator when an actual model request fails,
+        allowing the router to update its cached availability information without
+        doing preemptive availability testing.
+        
+        Args:
+            model_option: The model that failed during actual request
+            error: The error that occurred during the request
+        """
+        try:
+            cache_key = f"{model_option.provider}/{model_option.model}"
+            current_time = time.time()
+            error_message = str(error)
+            
+            # Determine cache duration based on error type
+            cache_duration = self._cache_expiry_seconds  # Default 5 minutes
+            
+            # Shorter cache for temporary issues
+            if any(keyword in error_message.lower() for keyword in ['rate limit', '429', 'timeout']):
+                cache_duration = 120  # 2 minutes for temporary issues
+            
+            # Longer cache for authentication/model not found
+            elif any(keyword in error_message.lower() for keyword in ['401', '403', '404', 'authentication', 'not found']):
+                cache_duration = 600  # 10 minutes for persistent issues
+            
+            # Update cache with failure information
+            self._update_failure_cache(cache_key, current_time, error_message, cache_duration)
+            
+            logger.info(f"Updated availability cache after actual failure: {cache_key} -> unavailable "
+                       f"(cached for {cache_duration}s due to: {error_message[:100]})")
+            
+        except Exception as cache_error:
+            logger.warning(f"Failed to update availability cache after request failure: {cache_error}")
     
     def _track_routing_decision(self, decision: RoutingDecision) -> None:
         """

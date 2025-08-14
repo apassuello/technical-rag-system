@@ -2,7 +2,9 @@
 
 ## 📁 Your Prompt Files
 
-I've created 4 progressively detailed prompts for fixing Epic 1 test failures:
+I've created 4 progressively detailed prompts for fixing Epic 1 test failures.
+
+**🎆 Special Note**: `EPIC1_AGENT_ORCHESTRATION_STRATEGY.md` is BOTH a comprehensive reference document AND contains executable prompts! Look for sections marked "📋 EXECUTABLE" to copy and run.
 
 ### 1. **EPIC1_QUICK_FIX.md** ⚡
 - **Purpose**: Ultra-simple copy-paste command
@@ -22,11 +24,14 @@ I've created 4 progressively detailed prompts for fixing Epic 1 test failures:
 - **Time**: 10 minutes to review, 4-5 hours to execute
 - **Usage**: Follow the phases, understand the strategy
 
-### 4. **EPIC1_AGENT_ORCHESTRATION_STRATEGY.md** 🤖
-- **Purpose**: Complete agent orchestration matrix and workflows
-- **Best for**: Understanding agent collaboration patterns
-- **Time**: 15 minutes to study, 4-6 hours to execute
-- **Usage**: Learn how agents work together
+### 4. **EPIC1_AGENT_ORCHESTRATION_STRATEGY.md** 🤖 ⭐ **RECOMMENDED**
+- **Purpose**: BOTH reference guide AND executable prompts!
+- **Best for**: Complete understanding + structured execution
+- **Time**: 5 minutes to find executable sections, 4 hours to execute
+- **Usage**: 
+  - Look for sections marked "📋 EXECUTABLE"
+  - Copy the "Master Orchestration Command" for best results
+  - The structure IS the execution plan!
 
 ## 🚀 Quick Start
 
@@ -101,10 +106,14 @@ Integration - FINAL VALIDATION
 # Follow EPIC1_SYSTEMATIC_FIX_PROMPT.md phase by phase
 ```
 
-### Option 4: Study First (Best Understanding)
+### Option 4: Best of Both Worlds (RECOMMENDED) ⭐
 ```bash
-# Read EPIC1_AGENT_ORCHESTRATION_STRATEGY.md
-# Then execute with full knowledge of the plan
+# EPIC1_AGENT_ORCHESTRATION_STRATEGY.md is BOTH reference AND executable!
+# 1. Open the file
+# 2. Find "📋 EXECUTABLE: Master Orchestration Command"
+# 3. Copy that entire section
+# 4. Paste into Claude Code
+# The structured format guides perfect execution!
 ```
 
 ## ✅ Expected Results
