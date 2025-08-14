@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
 # Add project root to path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 def run_command(cmd: str, description: str) -> Tuple[bool, str, str]:

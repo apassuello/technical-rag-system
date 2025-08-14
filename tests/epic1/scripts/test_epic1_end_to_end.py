@@ -19,7 +19,7 @@ import tempfile
 import os
 
 # Add project paths
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 # Load environment variables
@@ -37,7 +37,7 @@ def get_test_documents() -> List[Path]:
     """Get real RISC-V corpus documents for Epic1 validation."""
     print("📄 Selecting RISC-V corpus documents for testing...")
     
-    project_root = Path(__file__).parent
+    project_root = Path(__file__).parent.parent.parent.parent
     corpus_base = project_root / "data" / "riscv_comprehensive_corpus"
     
     # Select 3 documents of varying complexity from RISC-V corpus

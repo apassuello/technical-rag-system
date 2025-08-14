@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 # Add project root to path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer
