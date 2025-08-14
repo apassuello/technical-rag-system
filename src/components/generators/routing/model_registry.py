@@ -41,7 +41,7 @@ class ModelRegistry:
                     provider='ollama',
                     model='llama3.2:3b',
                     estimated_cost=Decimal('0.0000'),
-                    estimated_quality=0.80,
+                    estimated_quality=0.75,
                     estimated_latency_ms=150,
                     confidence=0.92,
                     fallback_options=[]
@@ -49,8 +49,8 @@ class ModelRegistry:
                 ModelOption(
                     provider='mistral',
                     model='mistral-small',
-                    estimated_cost=Decimal('0.002'),
-                    estimated_quality=0.85,
+                    estimated_cost=Decimal('0.001'),
+                    estimated_quality=0.87,
                     estimated_latency_ms=300,
                     confidence=0.92,
                     fallback_options=[]
@@ -86,7 +86,7 @@ class ModelRegistry:
                 ),
                 ModelOption(
                     provider='openai',
-                    model='gpt-4',
+                    model='gpt-4-turbo',
                     estimated_cost=Decimal('0.03'),
                     estimated_quality=0.95,
                     estimated_latency_ms=800,
