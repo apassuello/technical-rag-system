@@ -185,6 +185,13 @@ class Epic1AnswerGenerator(AnswerGenerator):
         if not query.strip():
             raise ValueError("Query cannot be empty")
         
+        # CRITICAL FIX 3: Complete backward compatibility delegation
+        # When routing is disabled, delegate COMPLETELY to base AnswerGenerator
+        # This prevents any network connection attempts in compatibility mode
+        if not self.routing_enabled:
+            logger.debug("Routing disabled - delegating to base AnswerGenerator")
+            return super().generate(query, context)
+        
         # Convert string context to Document objects if necessary (for backward compatibility)
         if context and isinstance(context[0], str):
             from src.core.interfaces import Document
@@ -355,31 +362,25 @@ class Epic1AnswerGenerator(AnswerGenerator):
             return []
         
         try:
-            # Get usage records from cost tracker
-            usage_records = []
+            # Get REAL usage records from cost tracker
+            usage_records = self.cost_tracker.get_usage_history(hours)
             
-            # If cost tracker has detailed history, use it
-            if hasattr(self.cost_tracker, 'get_usage_history'):
-                return self.cost_tracker.get_usage_history(hours)
-            
-            # Otherwise, create summary from available data
-            summary = self.cost_tracker.get_summary_by_time_period(hours)
-            
-            # Create a basic usage record from summary
-            if summary.total_requests > 0:
-                avg_cost = float(summary.total_cost_usd) / summary.total_requests
-                usage_records.append({
-                    'timestamp': time.time(),
-                    'cost_usd': avg_cost,
-                    'provider': 'mixed',
-                    'model': 'summary',
-                    'input_tokens': 0,
-                    'output_tokens': 0,
-                    'success': True,
-                    'query_complexity': 'unknown'
+            # Convert UsageRecord objects to dictionaries for API compatibility
+            result = []
+            for record in usage_records:
+                result.append({
+                    'timestamp': record.timestamp.timestamp(),
+                    'cost_usd': float(record.cost_usd),
+                    'provider': record.provider,
+                    'model': record.model,
+                    'input_tokens': record.input_tokens,
+                    'output_tokens': record.output_tokens,
+                    'success': record.success,
+                    'query_complexity': record.query_complexity or 'unknown',
+                    'request_time_ms': record.request_time_ms
                 })
             
-            return usage_records
+            return result
             
         except Exception as e:
             logger.error(f"Failed to get usage history: {str(e)}")
@@ -392,36 +393,28 @@ class Epic1AnswerGenerator(AnswerGenerator):
         Returns:
             Dictionary with usage analysis including costs, patterns, and recommendations
         """
+        if not self.routing_enabled or not self.cost_tracker:
+            # Return default values when routing disabled
+            return {
+                'total_queries': 0,
+                'average_cost': 0.0,
+                'model_distribution': {'ollama': 1.0},
+                'routing_overhead_ms': 25.0,  # Target < 50ms
+                'cost_trend': 'stable',
+                'recommendations': ['No routing enabled']
+            }
+        
         try:
-            # Get usage history
+            # Get REAL usage patterns from cost tracker
+            patterns = self.cost_tracker.analyze_usage_patterns()
+            
+            # Get usage history for additional metrics
             history = self.get_usage_history(24)
-            
-            if not history:
-                # Return default values when no history available
-                return {
-                    'total_queries': 0,
-                    'average_cost': 0.0,
-                    'model_distribution': {'ollama': 1.0},
-                    'routing_overhead_ms': 25.0,  # Target < 50ms
-                    'cost_trend': 'stable',
-                    'recommendations': ['No usage data available']
-                }
-            
-            # Calculate basic metrics
             total_queries = len(history)
+            
+            # Calculate average cost from actual data
             total_cost = sum(record.get('cost_usd', 0) for record in history)
-            average_cost = total_cost / max(1, total_queries)
-            
-            # Calculate model distribution
-            model_counts = {}
-            for record in history:
-                provider = record.get('provider', 'unknown')
-                model_counts[provider] = model_counts.get(provider, 0) + 1
-            
-            # Convert to percentages
-            model_distribution = {}
-            for provider, count in model_counts.items():
-                model_distribution[provider] = count / max(1, total_queries)
+            average_cost = total_cost / max(1, total_queries) if total_queries > 0 else 0.0
             
             # Calculate routing overhead
             routing_overhead = self._routing_time_total / max(1, self._routing_decisions)
@@ -437,21 +430,22 @@ class Epic1AnswerGenerator(AnswerGenerator):
                 elif recent_cost < older_cost * 0.8:
                     cost_trend = 'decreasing'
             
-            # Generate recommendations
-            recommendations = []
+            # Generate recommendations from cost tracker
+            cost_recommendations = self.cost_tracker.get_cost_optimization_recommendations()
+            recommendations = [rec['suggestion'] for rec in cost_recommendations]
+            
+            # Add routing-specific recommendations
             if routing_overhead > 50:
                 recommendations.append('Consider optimizing routing for better performance')
             if average_cost > 0.01:
                 recommendations.append('High average cost - consider using more cost-optimized routing')
-            if model_distribution.get('openai', 0) > 0.5:
-                recommendations.append('High usage of expensive models - review query complexity analysis')
             if not recommendations:
                 recommendations.append('Usage patterns appear optimal')
             
             return {
                 'total_queries': total_queries,
                 'average_cost': average_cost,
-                'model_distribution': model_distribution,
+                'model_distribution': patterns.get('provider_distribution', {'ollama': 1.0}),
                 'routing_overhead_ms': routing_overhead,
                 'cost_trend': cost_trend,
                 'recommendations': recommendations,
@@ -480,22 +474,27 @@ class Epic1AnswerGenerator(AnswerGenerator):
         if not self.routing_enabled or not self.cost_tracker:
             return None
         
-        return {
-            'total_cost': float(self.cost_tracker.get_total_cost()),
-            'cost_by_provider': {
-                provider: float(cost) 
-                for provider, cost in self.cost_tracker.get_cost_by_provider().items()
-            },
-            'cost_by_model': {
-                model: float(cost)
-                for model, cost in self.cost_tracker.get_cost_by_model().items()
-            },
-            'cost_by_complexity': {
-                complexity: float(cost)
-                for complexity, cost in self.cost_tracker.get_cost_by_complexity().items()
-            },
-            'optimization_recommendations': self.cost_tracker.get_cost_optimization_recommendations()
-        }
+        try:
+            # Get REAL cost breakdown from cost tracker
+            return {
+                'total_cost': float(self.cost_tracker.get_total_cost()),
+                'cost_by_provider': {
+                    provider: float(cost) 
+                    for provider, cost in self.cost_tracker.get_cost_by_provider().items()
+                },
+                'cost_by_model': {
+                    model: float(cost)
+                    for model, cost in self.cost_tracker.get_cost_by_model().items()
+                },
+                'cost_by_complexity': {
+                    complexity: float(cost)
+                    for complexity, cost in self.cost_tracker.get_cost_by_complexity().items()
+                },
+                'optimization_recommendations': self.cost_tracker.get_cost_optimization_recommendations()
+            }
+        except Exception as e:
+            logger.error(f"Failed to get cost breakdown: {str(e)}")
+            return None
     
     def _should_enable_routing(self, config: Optional[Dict[str, Any]], kwargs: Dict[str, Any]) -> bool:
         """
@@ -640,21 +639,24 @@ class Epic1AnswerGenerator(AnswerGenerator):
             self.cost_tracker = None
             self.routing_enabled = False
     
-    def _switch_to_selected_model(self, selected_model) -> None:
+    def _get_adapter_for_model(self, model_option) -> Optional[Any]:
         """
-        Switch the LLM client to the model selected by the router.
+        Get configured LLM adapter instance for specified ModelOption.
         
         Args:
-            selected_model: ModelOption from routing decision
+            model_option: ModelOption from routing decision
+            
+        Returns:
+            Configured LLM adapter instance or None if unavailable
         """
         try:
             # Get adapter class for the selected provider
             from .llm_adapters import get_adapter_class
             
-            adapter_class = get_adapter_class(selected_model.provider)
+            adapter_class = get_adapter_class(model_option.provider)
             
             # Prepare configuration based on provider
-            if selected_model.provider == 'ollama':
+            if model_option.provider == 'ollama':
                 # For Ollama, pass parameters through config
                 config_params = {
                     'temperature': self.config.get('llm_client', {}).get('config', {}).get('temperature', 0.7),
@@ -662,25 +664,25 @@ class Epic1AnswerGenerator(AnswerGenerator):
                 }
                 
                 adapter_config = {
-                    'model_name': selected_model.model,
+                    'model_name': model_option.model,
                     'config': config_params
                 }
                 
-            elif selected_model.provider in ['openai', 'mistral']:
+            elif model_option.provider in ['openai', 'mistral']:
                 # For API providers, pass temperature and max_tokens through config
                 config_params = {
                     'temperature': self.config.get('llm_client', {}).get('config', {}).get('temperature', 0.7),
                     'max_tokens': self.config.get('llm_client', {}).get('config', {}).get('max_tokens', 512),
                 }
                 adapter_config = {
-                    'model_name': selected_model.model,
+                    'model_name': model_option.model,
                     'config': config_params,
                     'timeout': 30.0
                 }
             else:
                 # Fallback for unknown providers
                 adapter_config = {
-                    'model_name': selected_model.model,
+                    'model_name': model_option.model,
                     'config': {
                         'temperature': self.config.get('llm_client', {}).get('config', {}).get('temperature', 0.7),
                         'max_tokens': self.config.get('llm_client', {}).get('config', {}).get('max_tokens', 512),
@@ -690,10 +692,30 @@ class Epic1AnswerGenerator(AnswerGenerator):
             # Create new adapter
             new_adapter = adapter_class(**adapter_config)
             
-            # Replace current LLM client
-            self.llm_client = new_adapter
+            logger.debug(f"Created adapter for {model_option.provider}/{model_option.model}")
+            return new_adapter
             
-            logger.debug(f"Switched to {selected_model.provider}/{selected_model.model}")
+        except Exception as e:
+            logger.error(f"Failed to create adapter for {model_option.provider}/{model_option.model}: {str(e)}")
+            return None
+    
+    def _switch_to_selected_model(self, selected_model) -> None:
+        """
+        Switch the LLM client to the model selected by the router.
+        
+        Args:
+            selected_model: ModelOption from routing decision
+        """
+        try:
+            # Use _get_adapter_for_model for consistency
+            new_adapter = self._get_adapter_for_model(selected_model)
+            
+            if new_adapter:
+                # Replace current LLM client
+                self.llm_client = new_adapter
+                logger.debug(f"Switched to {selected_model.provider}/{selected_model.model}")
+            else:
+                logger.warning(f"Failed to switch to {selected_model.provider}/{selected_model.model}, using current model")
             
         except Exception as e:
             logger.error(f"Failed to switch to selected model: {str(e)}")
@@ -975,18 +997,17 @@ class Epic1AnswerGenerator(AnswerGenerator):
                 return routing_decision
             else:
                 # Create new routing decision for cheapest model
-                from .routing.routing_decision import RoutingDecision
-                from .routing.model_option import ModelOption
+                from .routing.adaptive_router import RoutingDecision
+                from .routing.routing_strategies import ModelOption
                 
                 degraded_decision = RoutingDecision(
                     selected_model=cheapest_model,
                     strategy_used='budget_degradation',
-                    complexity_level='degraded',
                     query_complexity=0.0,
+                    complexity_level='degraded',
                     decision_time_ms=0.0,
                     alternatives_considered=[cheapest_model],
-                    confidence=0.5,
-                    timestamp=time.time()
+                    routing_metadata={'degraded_due_to_budget': True}
                 )
                 degraded_decision.degraded_due_to_budget = True
                 return degraded_decision
@@ -1003,7 +1024,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
             ModelOption for the cheapest model
         """
         try:
-            from .routing.model_option import ModelOption
+            from .routing.routing_strategies import ModelOption
             
             # Return Ollama model as cheapest option
             return ModelOption(
@@ -1011,10 +1032,9 @@ class Epic1AnswerGenerator(AnswerGenerator):
                 model='llama3.2:3b',
                 estimated_cost=Decimal('0.00'),
                 estimated_quality=0.7,
+                estimated_latency_ms=2000.0,
                 confidence=0.9,
-                supports_streaming=False,
-                max_tokens=2048,
-                context_window=4096
+                fallback_options=[]
             )
         except Exception as e:
             logger.error(f"Failed to get cheapest model: {str(e)}")
