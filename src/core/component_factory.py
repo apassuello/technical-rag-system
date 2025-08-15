@@ -80,14 +80,27 @@ class ComponentFactory:
     }
     
     _GENERATORS: Dict[str, str] = {
-        "adaptive": "src.components.generators.adaptive_generator.AdaptiveAnswerGenerator",
-        "adaptive_generator": "src.components.generators.adaptive_generator.AdaptiveAnswerGenerator",  # Alias for compatibility
+        "adaptive": "src.components.generators.epic1_answer_generator.Epic1AnswerGenerator",  # Epic 1 Multi-Model Generator
+        "adaptive_generator": "src.components.generators.epic1_answer_generator.Epic1AnswerGenerator",  # Alias for compatibility
         "adaptive_modular": "src.components.generators.answer_generator.AnswerGenerator",  # New modular implementation
+        "epic1": "src.components.generators.epic1_answer_generator.Epic1AnswerGenerator",  # Epic 1 Multi-Model Generator
+        "epic1_multi_model": "src.components.generators.epic1_answer_generator.Epic1AnswerGenerator",  # Alias for Epic 1
     }
     
     _QUERY_PROCESSORS: Dict[str, str] = {
         "modular": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",
         "modular_query_processor": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",  # Alias for compatibility
+        "domain_aware": "src.components.query_processors.domain_aware_query_processor.DomainAwareQueryProcessor",  # Epic 1 Phase 1 Domain-Aware Processor
+        "epic1_domain_aware": "src.components.query_processors.domain_aware_query_processor.DomainAwareQueryProcessor",  # Alias for Epic 1
+    }
+    
+    # Query analyzer implementations (used by ModularQueryProcessor)
+    _QUERY_ANALYZERS: Dict[str, str] = {
+        "nlp": "src.components.query_processors.analyzers.nlp_analyzer.NLPAnalyzer",
+        "rule_based": "src.components.query_processors.analyzers.rule_based_analyzer.RuleBasedAnalyzer", 
+        "epic1": "src.components.query_processors.analyzers.epic1_query_analyzer.Epic1QueryAnalyzer",
+        "epic1_ml": "src.components.query_processors.analyzers.epic1_ml_analyzer.Epic1MLAnalyzer",  # Epic 1 ML-powered analyzer
+        "epic1_ml_adapter": "src.components.query_processors.analyzers.epic_ml_adapter.EpicMLAdapter",  # Epic 1 with trained models
     }
     
     # Phase 4: Performance monitoring and caching
@@ -815,6 +828,45 @@ class ComponentFactory:
             ) from e
     
     @classmethod
+    def create_query_analyzer(cls, analyzer_type: str, **kwargs):
+        """
+        Create a query analyzer instance.
+        
+        Args:
+            analyzer_type: Type of analyzer ("nlp", "rule_based", "epic1", "epic1_ml")
+            **kwargs: Arguments to pass to the analyzer constructor
+            
+        Returns:
+            Instantiated QueryAnalyzer
+            
+        Raises:
+            ValueError: If analyzer type is not supported
+            TypeError: If constructor arguments are invalid
+        """
+        if analyzer_type not in cls._QUERY_ANALYZERS:
+            available = list(cls._QUERY_ANALYZERS.keys())
+            raise ValueError(
+                f"Unknown analyzer type '{analyzer_type}'. "
+                f"Available analyzers: {available}"
+            )
+        
+        analyzer_module_path = cls._QUERY_ANALYZERS[analyzer_type]
+        analyzer_class = cls._get_component_class(analyzer_module_path)
+        
+        try:
+            logger.debug(f"Creating {analyzer_type} analyzer with args: {kwargs}")
+            return cls._create_with_tracking(
+                analyzer_class, 
+                f"analyzer_{analyzer_type}", 
+                **kwargs
+            )
+        except Exception as e:
+            raise TypeError(
+                f"Failed to create analyzer '{analyzer_type}': {e}. "
+                f"Check constructor arguments: {kwargs}"
+            ) from e
+    
+    @classmethod
     def create_query_processor(cls, processor_type: str, **kwargs) -> QueryProcessor:
         """
         Create a query processor instance.
@@ -842,11 +894,52 @@ class ComponentFactory:
         
         try:
             logger.debug(f"Creating {processor_type} query processor with args: {kwargs}")
-            return cls._create_with_tracking(
-                processor_class, 
-                f"query_processor_{processor_type}", 
-                **kwargs
-            )
+            
+            # Special handling for ModularQueryProcessor
+            if processor_type == 'modular' or processor_type == 'modular_query_processor':
+                # ModularQueryProcessor needs retriever and generator instances
+                from src.components.query_processors.base import QueryProcessorConfig
+                
+                # Get or create required dependencies
+                retriever = kwargs.pop('retriever', None)
+                generator = kwargs.pop('generator', None)
+                
+                if retriever is None:
+                    # Create a default retriever if not provided
+                    # ModularUnifiedRetriever needs an embedder
+                    embedder = cls.create_embedder('sentence_transformer')
+                    retriever = cls.create_retriever('modular_unified', embedder=embedder)
+                    
+                if generator is None:
+                    # Create a default generator if not provided
+                    generator = cls.create_generator('adaptive_modular')
+                
+                # Build config from remaining kwargs
+                config = QueryProcessorConfig(
+                    analyzer_type=kwargs.pop('analyzer_type', 'rule_based'),
+                    analyzer_config=kwargs.pop('analyzer_config', {}),
+                    selector_type=kwargs.pop('selector_type', 'token_limit'),
+                    selector_config=kwargs.pop('selector_config', {}),
+                    assembler_type=kwargs.pop('assembler_type', 'standard'),
+                    assembler_config=kwargs.pop('assembler_config', {})
+                )
+                
+                # Create processor with correct arguments
+                return cls._create_with_tracking(
+                    processor_class,
+                    f"query_processor_{processor_type}",
+                    retriever=retriever,
+                    generator=generator,
+                    config=config,
+                    **kwargs  # Any remaining kwargs
+                )
+            else:
+                # Default handling for other processor types
+                return cls._create_with_tracking(
+                    processor_class, 
+                    f"query_processor_{processor_type}", 
+                    **kwargs
+                )
         except Exception as e:
             raise TypeError(
                 f"Failed to create query processor '{processor_type}': {e}. "
@@ -872,7 +965,8 @@ class ComponentFactory:
             'vector_store': cls._VECTOR_STORES,
             'retriever': cls._RETRIEVERS,
             'generator': cls._GENERATORS,
-            'query_processor': cls._QUERY_PROCESSORS
+            'query_processor': cls._QUERY_PROCESSORS,
+            'query_analyzer': cls._QUERY_ANALYZERS
         }
         
         mapping = type_mappings.get(component_type)
@@ -901,6 +995,7 @@ class ComponentFactory:
             "retrievers": list(cls._RETRIEVERS.keys()),
             "generators": list(cls._GENERATORS.keys()),
             "query_processors": list(cls._QUERY_PROCESSORS.keys()),
+            "query_analyzers": list(cls._QUERY_ANALYZERS.keys()),
         }
     
     @classmethod

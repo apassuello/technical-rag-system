@@ -1,0 +1,114 @@
+# Epic 1 ML Analyzer Configuration
+# Advanced ML-powered query complexity analysis with 5-view stacking
+
+query_processor:
+  type: "modular"
+  config:
+    analyzer_type: "epic1_ml"  # Use ML-powered Epic 1 analyzer
+    analyzer_config:
+      # Core ML configuration
+      memory_budget_gb: 2.0
+      enable_performance_monitoring: true
+      parallel_execution: true
+      fallback_strategy: "algorithmic"  # Options: 'algorithmic', 'conservative'
+      confidence_threshold: 0.6
+      
+      # View weighting for meta-classification (must sum to 1.0)
+      view_weights:
+        technical: 0.25      # Technical complexity often drives model choice
+        linguistic: 0.20     # Linguistic patterns important for routing
+        task: 0.25          # Task type crucial for model selection
+        semantic: 0.20      # Semantic complexity affects reasoning needs
+        computational: 0.10 # Computational needs least predictive for LLM routing
+      
+      # Individual view configurations
+      views:
+        technical:
+          algorithmic_weight: 0.3
+          ml_weight: 0.7
+          scibert_model_name: "allenai/scibert_scivocab_uncased"
+          min_technical_density: 0.1
+          
+        linguistic:
+          algorithmic_weight: 0.4
+          ml_weight: 0.6
+          distilbert_model_name: "distilbert-base-uncased"
+          enable_syntactic_parsing: true
+          
+        task:
+          algorithmic_weight: 0.5
+          ml_weight: 0.5
+          deberta_model_name: "microsoft/deberta-v3-base"
+          enable_blooms_taxonomy: true
+          cognitive_threshold: 0.7
+          
+        semantic:
+          algorithmic_weight: 0.4
+          ml_weight: 0.6
+          sentence_bert_model_name: "sentence-transformers/all-MiniLM-L6-v2"
+          min_concept_count: 3
+          enable_relationship_analysis: true
+          
+        computational:
+          algorithmic_weight: 0.6
+          ml_weight: 0.4
+          t5_model_name: "t5-small"
+          complexity_indicators_count: 10
+          enable_pattern_detection: true
+      
+      # Meta-classifier configuration (ML-optimized thresholds)
+      meta_classifier:
+        thresholds:
+          simple: 0.30   # Lower threshold - ML is more discriminative
+          complex: 0.70  # Higher threshold - ML captures nuance better
+        confidence_params:
+          high_confidence_margin: 0.15
+          medium_confidence_margin: 0.10
+          low_confidence_margin: 0.05
+      
+      # Model recommender configuration
+      model_recommender:
+        strategy: "balanced"  # Options: 'cost_optimized', 'quality_first', 'balanced'
+        model_mappings:
+          simple:
+            primary: "llama3.2:3b"
+            fallback: "llama3.2:1b"
+          medium:
+            primary: "llama3.2:8b" 
+            fallback: "llama3.2:3b"
+          complex:
+            primary: "llama3.1:70b"
+            fallback: "llama3.2:8b"
+    
+    # Context selector configuration
+    selector_type: "mmr"
+    selector_config:
+      lambda_param: 0.5
+      max_tokens: 2048
+      
+    # Response assembler configuration
+    assembler_type: "rich"
+    assembler_config:
+      include_sources: true
+      format_citations: true
+      
+    # Workflow configuration
+    default_k: 5
+    max_tokens: 2048
+    enable_fallback: true
+    timeout_seconds: 30.0
+
+# Performance targets for Epic 1 ML system
+performance_targets:
+  classification_accuracy: 0.85  # >85% accuracy target
+  routing_latency_ms: 50        # <50ms routing overhead target
+  memory_budget_gb: 2.0         # <2GB memory budget
+  reliability: 1.0              # 100% reliability with fallbacks
+
+# Monitoring and validation
+monitoring:
+  enable_metrics_collection: true
+  performance_logging: true
+  error_tracking: true
+  model_performance_tracking: true
+  view_performance_isolation: true

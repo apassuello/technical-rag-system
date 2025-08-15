@@ -265,6 +265,115 @@ class ParameterRegistry:
             )
         )
 
+        # Epic 1 Query Complexity Analysis Parameters
+        # Complexity thresholds - critical for query routing accuracy
+        self.register_parameter(
+            Parameter(
+                name="epic1_simple_threshold",
+                component="query_complexity_analyzer",
+                path="query_processor.config.analyzer.config.complexity_classifier.thresholds.simple",
+                current=0.150,
+                min_value=0.05,
+                max_value=0.40,
+                step=0.005,
+                param_type="float",
+                impacts=["classification_accuracy", "routing_precision"],
+                description="Threshold below which queries are classified as simple",
+            )
+        )
+
+        self.register_parameter(
+            Parameter(
+                name="epic1_complex_threshold",
+                component="query_complexity_analyzer",
+                path="query_processor.config.analyzer.config.complexity_classifier.thresholds.complex",
+                current=0.320,
+                min_value=0.25,
+                max_value=0.65,
+                step=0.005,
+                param_type="float",
+                impacts=["classification_accuracy", "routing_precision"],
+                description="Threshold above which queries are classified as complex",
+            )
+        )
+
+        # Feature category weights - balance different complexity indicators
+        self.register_parameter(
+            Parameter(
+                name="epic1_vocabulary_weight",
+                component="query_complexity_analyzer",
+                path="query_processor.config.analyzer.config.complexity_classifier.weights.vocabulary",
+                current=0.30,
+                min_value=0.10,
+                max_value=0.50,
+                step=0.01,
+                param_type="float",
+                impacts=["classification_accuracy", "vocabulary_sensitivity"],
+                description="Weight for technical vocabulary in complexity scoring",
+            )
+        )
+
+        self.register_parameter(
+            Parameter(
+                name="epic1_syntactic_weight",
+                component="query_complexity_analyzer", 
+                path="query_processor.config.analyzer.config.complexity_classifier.weights.syntactic",
+                current=0.25,
+                min_value=0.10,
+                max_value=0.40,
+                step=0.01,
+                param_type="float",
+                impacts=["classification_accuracy", "syntactic_sensitivity"],
+                description="Weight for syntactic complexity in complexity scoring",
+            )
+        )
+
+        self.register_parameter(
+            Parameter(
+                name="epic1_length_weight",
+                component="query_complexity_analyzer",
+                path="query_processor.config.analyzer.config.complexity_classifier.weights.length",
+                current=0.20,
+                min_value=0.05,
+                max_value=0.35,
+                step=0.01,
+                param_type="float",
+                impacts=["classification_accuracy", "length_sensitivity"],
+                description="Weight for query length in complexity scoring",
+            )
+        )
+
+        # Normalization parameters - critical for feature scaling
+        self.register_parameter(
+            Parameter(
+                name="epic1_max_technical_terms",
+                component="query_complexity_analyzer",
+                path="query_processor.config.analyzer.config.feature_extractor.normalization_params.max_technical_terms",
+                current=4,
+                min_value=2,
+                max_value=10,
+                step=1,
+                param_type="int",
+                impacts=["feature_scaling", "vocabulary_normalization"],
+                description="Maximum technical terms for normalization in complexity analysis",
+            )
+        )
+
+        self.register_parameter(
+            Parameter(
+                name="epic1_max_words",
+                component="query_complexity_analyzer",
+                path="query_processor.config.analyzer.config.feature_extractor.normalization_params.max_words",
+                current=18,
+                min_value=8,
+                max_value=30,
+                step=1,
+                param_type="int",
+                impacts=["feature_scaling", "length_normalization"],
+                description="Maximum word count for normalization in complexity analysis",
+            )
+        )
+
     def register_parameter(self, parameter: Parameter) -> None:
         """Register a new parameter."""
         if parameter.name in self.parameters:

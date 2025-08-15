@@ -1,0 +1,384 @@
+# Epic 1 Multi-Model Configuration
+# Advanced configuration for intelligent multi-model routing system
+
+# Global configuration
+global_settings:
+  log_level: "INFO"
+  enable_metrics: true
+  enable_caching: true
+
+# Platform orchestrator configuration
+platform_orchestrator:
+  type: "production"
+  config:
+    monitoring_enabled: true
+    health_check_interval: 30
+    performance_tracking: true
+
+# Document processor configuration (existing)
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 512
+    chunk_overlap: 50
+    enable_ocr: false
+    content_cleaning: true
+
+# Embedder configuration (modular)
+embedder:
+  type: "modular"
+  config:
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/all-MiniLM-L6-v2"
+        device: "auto"
+    
+    batch_processor:
+      type: "dynamic"
+      config:
+        base_batch_size: 32
+        max_batch_size: 256
+        enable_dynamic_sizing: true
+    
+    cache:
+      type: "memory"
+      config:
+        max_size_mb: 512
+        ttl_hours: 24
+
+# Retriever configuration (existing)
+retriever:
+  type: "modular_unified"
+  config:
+    vector_config:
+      similarity_metric: "cosine"
+      nprobe: 10
+    sparse_config:
+      k1: 1.2
+      b: 0.75
+    fusion_config:
+      strategy: "rrf"
+      weights: [0.6, 0.4]
+      k: 60
+    reranking_config:
+      strategy: "identity"
+      top_k: 10
+
+# Epic 1 Answer Generator Configuration
+answer_generator:
+  type: "epic1"
+  config:
+    # Multi-model routing configuration
+    routing:
+      enabled: true
+      default_strategy: "cost_optimized"  # Prioritize local Ollama for development
+      
+      # Query complexity analyzer configuration
+      query_analyzer:
+        type: "epic1"
+        config:
+          feature_extractor:
+            technical_terms_file: "config/technical_vocabulary.txt"
+            enable_entity_extraction: true
+            extract_question_types: true
+            analyze_syntactic_complexity: true
+            
+          complexity_classifier:
+            weights:
+              length_features: 0.15      # Query length characteristics
+              syntactic_features: 0.25   # Grammar complexity
+              vocabulary_features: 0.30  # Technical term density
+              question_features: 0.15    # Question type analysis
+              entity_features: 0.10      # Named entity complexity
+              ambiguity_features: 0.05   # Ambiguity indicators
+            thresholds:
+              simple_threshold: 0.35     # Below this = simple
+              complex_threshold: 0.70    # Above this = complex
+            
+          model_recommender:
+            strategy: "balanced"
+            confidence_threshold: 0.8
+      
+      # Routing strategy configurations
+      strategies:
+        cost_optimized:
+          simple_threshold: 0.35
+          complex_threshold: 0.75
+          max_cost_per_query: 0.010    # $0.01 maximum per query
+          model_preferences: "cheapest_first"
+          
+        quality_first:
+          simple_threshold: 0.40
+          complex_threshold: 0.70
+          min_quality_score: 0.85      # Minimum acceptable quality
+          model_preferences: "quality_first"
+          
+        balanced:
+          simple_threshold: 0.35
+          complex_threshold: 0.70
+          cost_weight: 0.4             # 40% cost consideration
+          quality_weight: 0.6          # 60% quality consideration
+          max_cost_per_query: 0.020    # $0.02 maximum per query
+    
+    # Model mappings for different complexity levels
+    models:
+      simple:
+        primary:
+          provider: "ollama"
+          model: "llama3.2:3b"
+          max_cost_per_query: 0.000
+          expected_quality: 0.80
+          expected_latency_ms: 2000
+        fallback:
+          - provider: "mistral"
+            model: "mistral-tiny"
+            max_cost_per_query: 0.001
+          - provider: "openai"
+            model: "gpt-3.5-turbo"
+            max_cost_per_query: 0.005
+            
+      medium:
+        primary:
+          provider: "mistral"
+          model: "mistral-small"
+          max_cost_per_query: 0.005
+          expected_quality: 0.85
+          expected_latency_ms: 1500
+        fallback:
+          - provider: "ollama"
+            model: "llama3.2:3b"
+            max_cost_per_query: 0.000
+          - provider: "openai"
+            model: "gpt-3.5-turbo"
+            max_cost_per_query: 0.010
+            
+      complex:
+        primary:
+          provider: "openai"
+          model: "gpt-4-turbo"
+          max_cost_per_query: 0.050
+          expected_quality: 0.95
+          expected_latency_ms: 1000
+        fallback:
+          - provider: "mistral"
+            model: "mistral-large"
+            max_cost_per_query: 0.025
+          - provider: "openai"
+            model: "gpt-3.5-turbo"
+            max_cost_per_query: 0.015
+    
+    # Fallback configuration
+    fallback:
+      enabled: true
+      max_retries: 3
+      retry_delay_ms: 1000
+      fallback_chain: ["mistral/mistral-small", "ollama/llama3.2:3b"]
+      fallback_on_cost_exceeded: true
+      fallback_on_latency_exceeded: true
+      max_latency_ms: 10000
+      
+    # Cost tracking configuration
+    cost_tracking:
+      enabled: true
+      precision_places: 6          # Track to $0.000001 precision
+      daily_budget_usd: 10.00      # $10 daily budget
+      alert_threshold: 0.8         # Alert at 80% of budget
+      export_enabled: true
+      retention_days: 30
+      
+    # Performance monitoring
+    monitoring:
+      enabled: true
+      track_routing_decisions: true
+      track_model_performance: true
+      track_cost_optimization: true
+      metrics_retention_hours: 72
+      slow_query_threshold_ms: 5000
+      
+    # Legacy compatibility (single-model fallback)
+    legacy_fallback:
+      enabled: true
+      provider: "ollama"
+      model: "llama3.2:3b"
+      temperature: 0.7
+      max_tokens: 1000
+
+# Query processor configuration (existing)
+query_processor:
+  type: "modular"
+  config:
+    analyzer:
+      implementation: "epic1"
+      config:
+        # Epic 1 analyzer configuration - calibration ready
+        enable_complexity_analysis: true
+        enable_model_recommendation: true
+        
+        # Feature Extractor Configuration
+        feature_extractor:
+          # Entity extraction settings
+          enable_entity_extraction: true
+          
+          # Normalization parameters - optimized for calibration
+          normalization_params:
+            # Length normalization
+            max_words: 18           # 95th percentile from ground truth
+            max_chars: 140          # 95th percentile from queries  
+            max_sentences: 5        # Sentence count normalization
+            
+            # Vocabulary normalization
+            max_technical_terms: 4  # Realistic for technical queries
+            max_entities: 10        # Entity count normalization
+            max_unique_words: 15    # Vocabulary richness normalization
+            
+            # Syntactic normalization
+            max_clauses: 3          # Syntactic complexity
+            max_nesting_depth: 3    # Structural complexity
+            max_conjunctions: 2     # Coordination complexity
+            
+            # Question normalization
+            max_question_words: 3   # Question complexity
+            max_comparatives: 2     # Comparative structures
+            
+            # Ambiguity normalization
+            max_ambiguous_terms: 2  # Ambiguous term presence
+            max_pronouns: 3         # Pronoun complexity
+        
+        # Complexity Classifier Configuration
+        complexity_classifier:
+          # Main category weights (must sum to 1.0)
+          weights:
+            length: 0.20        # Query length and structure
+            syntactic: 0.25     # Syntactic complexity
+            vocabulary: 0.30    # Technical vocabulary (high impact)
+            question: 0.15      # Question type complexity
+            ambiguity: 0.10     # Ambiguity and clarity
+          
+          # Sub-category weights for fine-grained tuning
+          sub_weights:
+            length:
+              word_count: 0.6         # Word count contribution
+              char_count: 0.2         # Character count contribution
+              sentence_count: 0.2     # Sentence count contribution
+            vocabulary:
+              technical_density: 0.5      # Technical term density
+              technical_count: 0.3        # Raw technical term count
+              vocabulary_richness: 0.2    # Unique word ratio
+            syntactic:
+              clause_complexity: 0.4      # Clause structure
+              nesting_depth: 0.3          # Structural nesting
+              conjunction_complexity: 0.3 # Coordination complexity
+            question:
+              question_type: 0.6          # Type-based complexity
+              comparative_complexity: 0.4 # Comparative structures
+            ambiguity:
+              ambiguous_terms: 0.7        # Ambiguous term presence
+              pronoun_references: 0.3     # Pronoun complexity
+          
+          # Classification thresholds - optimized for 58.1% accuracy
+          thresholds:
+            simple: 0.150       # Below this = simple
+            complex: 0.320      # Above this = complex
+          
+          # Confidence calculation parameters
+          confidence_params:
+            high_confidence_margin: 0.15    # Distance from threshold for high confidence
+            medium_confidence_margin: 0.05  # Distance from threshold for medium confidence
+        
+        # Model Recommender Configuration
+        model_recommender:
+          # Routing strategy
+          strategy: "balanced"    # balanced, cost_optimized, quality_first, performance_first
+          
+          # Model mappings by complexity level
+          model_mappings:
+            simple:
+              provider: "ollama"
+              model: "llama3.2:3b"
+              max_cost: 0.001
+              expected_latency: 2.0
+            medium:
+              provider: "mistral" 
+              model: "mistral-small"
+              max_cost: 0.01
+              expected_latency: 3.0
+            complex:
+              provider: "openai"
+              model: "gpt-4-turbo"
+              max_cost: 0.10
+              expected_latency: 5.0
+    selector:
+      implementation: "mmr"
+      config:
+        lambda_param: 0.5
+        max_tokens: 2048
+    assembler:
+      implementation: "rich"
+      config:
+        include_sources: true
+        format_citations: true
+
+# Model-specific API configurations
+api_keys:
+  # These should be set as environment variables in production
+  openai_api_key: "${OPENAI_API_KEY}"
+  mistral_api_key: "${MISTRAL_API_KEY}"
+  anthropic_api_key: "${ANTHROPIC_API_KEY}"  # Future use
+
+# Model provider configurations
+providers:
+  ollama:
+    base_url: "http://localhost:11434"
+    timeout: 120
+    keep_alive: "5m"
+    models:
+      - "llama3.2:3b"
+      
+  openai:
+    base_url: "https://api.openai.com/v1"
+    timeout: 30
+    organization: "${OPENAI_ORG_ID}"  # Optional
+    models:
+      - "gpt-3.5-turbo"
+      - "gpt-4-turbo"
+      - "gpt-4o-mini"
+      
+  mistral:
+    base_url: "https://api.mistral.ai/v1"
+    timeout: 30
+    models:
+      - "mistral-tiny"
+      - "mistral-small"
+      - "mistral-medium"
+      - "mistral-large"
+
+# Epic 1 specific settings
+epic1:
+  # Enable all Epic 1 features
+  enabled: true
+  
+  # Cost optimization targets
+  cost_reduction_target: 0.40      # 40% cost reduction target
+  routing_overhead_target_ms: 50   # <50ms routing overhead target
+  
+  # Quality assurance
+  min_quality_threshold: 0.80      # Minimum acceptable quality
+  quality_regression_threshold: 0.05  # Max 5% quality regression
+  
+  # Performance monitoring
+  routing_decision_logging: true
+  cost_tracking_logging: true
+  model_performance_logging: true
+  
+  # A/B testing (future enhancement)
+  ab_testing:
+    enabled: false
+    test_percentage: 0.10
+    
+  # Advanced features (future enhancements)
+  advanced:
+    enable_model_fine_tuning: false
+    enable_prompt_optimization: false
+    enable_response_caching: true
+    cache_ttl_hours: 24
