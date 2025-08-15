@@ -22,13 +22,17 @@ tests/epic1/
 │   └── test_epic1_accuracy_fixes.py    # Tests for Epic1 accuracy improvements
 ├── smoke/                              # Quick Epic1 health checks
 │   └── test_epic1_smoke.py            # Basic Epic1 functionality validation
-├── tools/                              # Epic1 development tools
+├── debug/                              # Epic1 development tools  
 │   ├── debug_clause_detection.py      # Clause detection debugging
 │   ├── debug_technical_terms.py       # Technical term analysis
 │   ├── debug_syntactic_parser.py      # Syntactic parsing debugging  
 │   ├── debug_feature_extractor.py     # Feature extraction analysis
 │   └── debug_epic1_workflow.py        # Epic1 workflow debugging
-└── validation/                         # Formal Epic1 validation (future)
+├── demos/scripts/                      # Analysis and demonstration scripts
+│   ├── test_epic1_training_basic.py   # Basic training validation
+│   ├── analyze_epic1_domain_distribution.py # Domain analysis
+│   └── demo_complete_epic1_domain_integration.py # Integration demos
+└── legacy/validation/                  # Historical validation tests
     ├── test_epic1_accuracy_validation.py    # Statistical accuracy validation
     └── test_epic1_production_readiness.py   # Production deployment validation
 ```
@@ -75,7 +79,7 @@ cd tests/epic1/smoke
 pytest test_epic1_smoke.py -v
 ```
 
-### **Development Tools** (`tools/`)
+### **Development Tools** (`debug/`)
 Debugging and analysis tools for Epic1 development:
 
 - **Component Debugging**: Individual component analysis tools
@@ -84,13 +88,13 @@ Debugging and analysis tools for Epic1 development:
 
 **Run Debug Tools:**
 ```bash
-cd tests/epic1/tools
+cd tests/epic1/debug
 python debug_epic1_workflow.py
 python debug_clause_detection.py
 ```
 
-### **Validation Tests** (`validation/`) - **FUTURE**
-Formal statistical validation of Epic1 accuracy and production readiness:
+### **Legacy Validation Tests** (`legacy/validation/`)
+Historical validation tests preserved for reference:
 
 - **Statistical Validation**: Cross-validation, confidence intervals
 - **Production Readiness**: Load testing, error boundary testing
@@ -157,7 +161,7 @@ pytest integration/test_epic1_query_analyzer.py::TestEpic1QueryAnalyzer::test_la
 
 ### **Component Development**
 1. **Unit test individual components** in `tests/unit/test_[component].py`
-2. **Debug component issues** using `tests/epic1/tools/debug_[component].py`
+2. **Debug component issues** using `tests/epic1/debug/debug_[component].py`
 3. **Test Epic1 integration** with `tests/epic1/integration/test_epic1_query_analyzer.py`
 
 ### **Epic1 Architecture Changes**
@@ -197,14 +201,14 @@ cd tests/unit && pytest test_technical_term_manager.py test_syntactic_parser.py 
 
 ### **Classification Issues**
 ```bash
-python tests/epic1/tools/debug_epic1_workflow.py
+python tests/epic1/debug/debug_epic1_workflow.py
 ```
 
 ### **Component-Specific Issues**
 ```bash  
-python tests/epic1/tools/debug_technical_terms.py    # Vocabulary issues
-python tests/epic1/tools/debug_clause_detection.py   # Syntax analysis issues
-python tests/epic1/tools/debug_feature_extractor.py  # Feature extraction issues
+python tests/epic1/debug/debug_technical_terms.py    # Vocabulary issues
+python tests/epic1/debug/debug_clause_detection.py   # Syntax analysis issues
+python tests/epic1/debug/debug_feature_extractor.py  # Feature extraction issues
 ```
 
 ### **Performance Issues**
@@ -228,7 +232,7 @@ pytest tests/epic1/regression/test_epic1_accuracy_fixes.py::test_end_to_end_perf
 
 ### **Test Issues**
 - Check individual component unit tests first: `tests/unit/test_[component].py`
-- Use Epic1 debug tools: `tests/epic1/tools/debug_*.py`
+- Use Epic1 debug tools: `tests/epic1/debug/debug_*.py`
 - Run Epic1 smoke tests: `tests/epic1/smoke/test_epic1_smoke.py`
 
 ### **Epic1 Architecture Issues**
