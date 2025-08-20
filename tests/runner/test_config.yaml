@@ -1,0 +1,194 @@
+# RAG Portfolio Test Configuration
+# Defines test suites for Epic 1 and other system components
+
+suites:
+  # Epic 1 Test Suites
+  epic1_unit:
+    name: "Epic 1 Unit Tests"
+    description: "Unit tests for Epic 1 components (classifiers, analyzers, etc.)"
+    patterns:
+      - "tests/unit/test_technical_term_manager.py"
+      - "tests/unit/test_syntactic_parser.py"
+      - "tests/unit/test_feature_extractor.py"
+      - "tests/unit/test_complexity_classifier.py"
+      - "tests/unit/test_model_recommender.py"
+    markers:
+      - "epic1"
+      - "unit"
+    epic: "epic1"
+    timeout: 300
+    parallel: false
+
+  epic1_integration:
+    name: "Epic 1 Integration Tests"
+    description: "Integration tests for Epic 1 system orchestration"
+    patterns:
+      - "tests/epic1/integration/test_*.py"
+    markers:
+      - "epic1"
+      - "integration"
+    epic: "epic1"
+    timeout: 600
+    parallel: false
+
+  epic1_phase2:
+    name: "Epic 1 Phase 2 Tests"
+    description: "Multi-model routing and cost tracking tests"
+    patterns:
+      - "tests/epic1/phase2/test_*.py"
+    markers:
+      - "epic1"
+      - "phase2"
+      - "multimodel"
+    epic: "epic1"
+    timeout: 900
+    parallel: false
+
+  epic1_ml_infrastructure:
+    name: "Epic 1 ML Infrastructure Tests"
+    description: "ML model training and infrastructure tests"
+    patterns:
+      - "tests/epic1/ml_infrastructure/unit/test_*.py"
+      - "tests/epic1/ml_infrastructure/integration/test_*.py"
+    markers:
+      - "epic1"
+      - "ml"
+      - "infrastructure"
+    epic: "epic1"
+    timeout: 1200
+    parallel: false
+
+  epic1_smoke:
+    name: "Epic 1 Smoke Tests"
+    description: "Quick health checks for Epic 1 system"
+    patterns:
+      - "tests/epic1/smoke/test_*.py"
+    markers:
+      - "epic1"
+      - "smoke"
+    epic: "epic1"
+    timeout: 60
+    parallel: false
+
+  epic1_regression:
+    name: "Epic 1 Regression Tests"
+    description: "Bug fix validation for Epic 1"
+    patterns:
+      - "tests/epic1/regression/test_*.py"
+    markers:
+      - "epic1"
+      - "regression"
+    epic: "epic1"
+    timeout: 300
+    parallel: false
+
+  epic1_all:
+    name: "All Epic 1 Tests"
+    description: "Complete Epic 1 test suite including all phases"
+    patterns:
+      - "tests/epic1/**/*.py"
+      - "tests/unit/test_technical_term_manager.py"
+      - "tests/unit/test_syntactic_parser.py"
+      - "tests/unit/test_feature_extractor.py"
+      - "tests/unit/test_complexity_classifier.py"
+      - "tests/unit/test_model_recommender.py"
+    markers:
+      - "epic1"
+    epic: "epic1"
+    timeout: 1800
+    parallel: false
+
+  # General Test Suites
+  smoke:
+    name: "System Smoke Tests"
+    description: "Quick health checks across all system components"
+    patterns:
+      - "tests/smoke/test_*.py"
+      - "tests/epic1/smoke/test_*.py"
+    markers:
+      - "smoke"
+    timeout: 120
+    parallel: false
+
+  regression:
+    name: "System Regression Tests"
+    description: "Bug fix validation across all components"
+    patterns:
+      - "tests/epic1/regression/test_*.py"
+    markers:
+      - "regression"
+    timeout: 600
+    parallel: false
+
+  integration:
+    name: "System Integration Tests"
+    description: "End-to-end integration testing"
+    patterns:
+      - "tests/integration/test_*.py"
+      - "tests/integration_validation/test_*.py"
+    markers:
+      - "integration"
+    timeout: 900
+    parallel: false
+
+  unit:
+    name: "All Unit Tests"
+    description: "Complete unit test suite for all components"
+    patterns:
+      - "tests/unit/test_*.py"
+    markers:
+      - "unit"
+    timeout: 600
+    parallel: true
+
+  diagnostic:
+    name: "Diagnostic Tests"
+    description: "System diagnostic and forensic tests"
+    patterns:
+      - "tests/diagnostic/test_*.py"
+    markers:
+      - "diagnostic"
+    timeout: 900
+    parallel: false
+
+  component:
+    name: "Component Tests"
+    description: "Individual component validation tests"
+    patterns:
+      - "tests/component/test_*.py"
+    markers:
+      - "component"
+    timeout: 600
+    parallel: true
+
+# Default execution settings
+defaults:
+  output_format: "terminal"
+  verbose: true
+  fail_fast: false
+  capture: "no"
+  parallel: false
+
+# Epic-specific configurations
+epic_configs:
+  epic1:
+    description: "Multi-model routing system with adaptive query analysis"
+    phases:
+      - "unit"
+      - "integration"
+      - "phase2"
+      - "ml_infrastructure"
+    success_criteria:
+      min_success_rate: 85.0
+      max_duration: 1800
+      required_suites:
+        - "epic1_unit"
+        - "epic1_integration"
+        - "epic1_phase2"
+
+  epic2:
+    description: "Advanced retrieval system (future)"
+    phases: []
+    success_criteria:
+      min_success_rate: 90.0
+      max_duration: 1200
