@@ -1,0 +1,1 @@
+"""Epic 8 Integration Tests - Service-to-service communication validation"""

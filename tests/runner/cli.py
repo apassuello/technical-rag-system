@@ -98,6 +98,9 @@ Examples:
         # Epic 2 command (future)
         self._add_epic2_parser(subparsers)
         
+        # Epic 8 command
+        self._add_epic8_parser(subparsers)
+        
         # Smoke tests command
         self._add_smoke_parser(subparsers)
         
@@ -156,6 +159,53 @@ Examples:
             description='Execute Epic 2 tests (not yet implemented)'
         )
         epic2_parser.set_defaults(func=lambda args: print("Epic 2 tests not yet implemented") or 0)
+    
+    def _add_epic8_parser(self, subparsers):
+        """Add Epic 8 test command."""
+        epic8_parser = subparsers.add_parser(
+            'epic8',
+            help='Run Epic 8 cloud-native microservices tests',
+            description='Execute Epic 8 Cloud-Native Multi-Model RAG Platform tests'
+        )
+        
+        # Epic 8 subcommands
+        epic8_subparsers = epic8_parser.add_subparsers(
+            dest='test_type',
+            help='Test categories'
+        )
+        
+        # Unit tests
+        unit_parser = epic8_subparsers.add_parser('unit', help='Run unit tests')
+        self._add_common_test_options(unit_parser)
+        unit_parser.set_defaults(func=lambda args: self._run_suite('epic8_unit', args))
+        
+        # Integration tests  
+        integration_parser = epic8_subparsers.add_parser('integration', help='Run integration tests')
+        self._add_common_test_options(integration_parser)
+        integration_parser.set_defaults(func=lambda args: self._run_suite('epic8_integration', args))
+        
+        # API tests
+        api_parser = epic8_subparsers.add_parser('api', help='Run API tests')
+        self._add_common_test_options(api_parser)
+        api_parser.set_defaults(func=lambda args: self._run_suite('epic8_api', args))
+        
+        # Performance tests
+        performance_parser = epic8_subparsers.add_parser('performance', help='Run performance tests')
+        self._add_common_test_options(performance_parser)
+        performance_parser.set_defaults(func=lambda args: self._run_suite('epic8_performance', args))
+        
+        # Smoke tests
+        smoke_parser = epic8_subparsers.add_parser('smoke', help='Run smoke tests')
+        self._add_common_test_options(smoke_parser)
+        smoke_parser.set_defaults(func=lambda args: self._run_suite('epic8_smoke', args))
+        
+        # All tests
+        all_parser = epic8_subparsers.add_parser('all', help='Run all Epic 8 tests')
+        self._add_common_test_options(all_parser)
+        all_parser.set_defaults(func=lambda args: self._run_suite('epic8_all', args))
+        
+        # Set default to show help
+        epic8_parser.set_defaults(func=lambda args: epic8_parser.print_help() or 0)
     
     def _add_smoke_parser(self, subparsers):
         """Add smoke test command."""
