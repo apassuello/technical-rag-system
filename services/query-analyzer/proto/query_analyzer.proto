@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package query_analyzer;
+
+// Query Analyzer Service Definition
+service QueryAnalyzerService {
+  // Analyze a query for complexity and model recommendation
+  rpc AnalyzeQuery(AnalyzeQueryRequest) returns (AnalyzeQueryResponse);
+  
+  // Get service health status
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  
+  // Get service metrics
+  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
+  
+  // Configure the analyzer
+  rpc UpdateConfiguration(UpdateConfigRequest) returns (UpdateConfigResponse);
+}
+
+// Request to analyze a query
+message AnalyzeQueryRequest {
+  string query = 1;
+  optional string correlation_id = 2;
+  map<string, string> metadata = 3;
+}
+
+// Response with query analysis results
+message AnalyzeQueryResponse {
+  // Basic analysis
+  string query = 1;
+  double complexity_score = 2;
+  string complexity_level = 3;
+  repeated string technical_terms = 4;
+  repeated string entities = 5;
+  string intent_category = 6;
+  int32 suggested_k = 7;
+  double confidence = 8;
+  
+  // Epic 1 specific metadata
+  Epic1Analysis epic1_analysis = 9;
+  
+  // Processing metadata
+  string correlation_id = 10;
+  double processing_time_ms = 11;
+  string timestamp = 12;
+}
+
+// Epic 1 analysis results
+message Epic1Analysis {
+  // Complexity classification
+  string complexity_level = 1;
+  double complexity_score = 2;
+  double complexity_confidence = 3;
+  map<string, double> complexity_breakdown = 4;
+  string classification_reasoning = 5;
+  
+  // Model recommendation
+  string recommended_model = 6;
+  string model_provider = 7;
+  string model_name = 8;
+  double routing_confidence = 9;
+  double cost_estimate = 10;
+  int32 latency_estimate = 11;
+  repeated string fallback_chain = 12;
+  string recommendation_reasoning = 13;
+  string routing_strategy = 14;
+  
+  // Feature extraction summary
+  map<string, string> feature_summary = 15;
+  
+  // Performance metrics
+  double analysis_time_ms = 16;
+  map<string, double> phase_times_ms = 17;
+}
+
+// Health check request
+message HealthCheckRequest {
+  string service = 1;
+}
+
+// Health check response
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+    SERVICE_UNKNOWN = 3;
+  }
+  ServingStatus status = 1;
+  string message = 2;
+  map<string, string> details = 3;
+}
+
+// Metrics request
+message GetMetricsRequest {
+  repeated string metric_names = 1;
+}
+
+// Metrics response
+message GetMetricsResponse {
+  map<string, double> metrics = 1;
+  string timestamp = 2;
+}
+
+// Configuration update request
+message UpdateConfigRequest {
+  map<string, string> configuration = 1;
+}
+
+// Configuration update response
+message UpdateConfigResponse {
+  bool success = 1;
+  string message = 2;
+  string timestamp = 3;
+}
