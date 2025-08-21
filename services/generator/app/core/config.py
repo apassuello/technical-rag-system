@@ -11,8 +11,8 @@ from pathlib import Path
 from functools import lru_cache
 
 import yaml
-from pydantic import BaseSettings, Field
-from pydantic_settings import SettingsConfigDict
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class GeneratorConfig(BaseSettings):

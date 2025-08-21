@@ -17,7 +17,7 @@ from prometheus_client import make_asgi_app, Counter, Histogram, Gauge
 import structlog
 
 from .api import rest
-from .core.config import get_settings
+from .core.config import get_settings, get_analyzer_config
 from .core.analyzer import QueryAnalyzerService
 from .schemas.requests import AnalyzeRequest
 from .schemas.responses import AnalyzeResponse, HealthResponse
@@ -45,7 +45,8 @@ async def lifespan(app: FastAPI):
     
     # Initialize service
     settings = get_settings()
-    analyzer_service = QueryAnalyzerService(config=settings.analyzer_config)
+    analyzer_config = get_analyzer_config()
+    analyzer_service = QueryAnalyzerService(config=analyzer_config)
     
     # Initialize health metrics
     SERVICE_HEALTH.set(1)

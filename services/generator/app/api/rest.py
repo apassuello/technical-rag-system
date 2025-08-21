@@ -15,7 +15,7 @@ from ..schemas.requests import (
 )
 from ..schemas.responses import (
     GenerateResponse, BatchGenerateResponse, ModelsResponse, GeneratorStatusResponse,
-    RoutingTestResponse, ErrorResponse, CostSummaryResponse, ModelInfo
+    RoutingTestResponse, ErrorResponse, CostSummaryResponse, ModelInfo, RoutingDecision
 )
 
 logger = structlog.get_logger(__name__)

@@ -26,10 +26,10 @@ logging.basicConfig(level=logging.INFO)
 logger = structlog.get_logger(__name__)
 
 # Prometheus metrics
-REQUEST_COUNT = Counter('generator_requests_total', 'Total number of generation requests', ['endpoint', 'status'])
-REQUEST_DURATION = Histogram('generator_request_duration_seconds', 'Request duration in seconds', ['endpoint'])
-MODEL_USAGE = Counter('generator_model_usage_total', 'Model usage counts', ['model', 'status'])
-SERVICE_HEALTH = Gauge('generator_service_health', 'Service health status (1=healthy, 0=unhealthy)')
+MAIN_REQUEST_COUNT = Counter('generator_main_requests_total', 'Total number of generation requests', ['endpoint', 'status'])
+MAIN_REQUEST_DURATION = Histogram('generator_main_request_duration_seconds', 'Request duration in seconds', ['endpoint'])
+MAIN_MODEL_USAGE = Counter('generator_main_model_usage_total', 'Model usage counts', ['model', 'status'])
+MAIN_SERVICE_HEALTH = Gauge('generator_main_service_health', 'Service health status (1=healthy, 0=unhealthy)')
 
 # Global service instance
 generator_service: Optional[GeneratorService] = None
@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
     generator_service = GeneratorService(config=settings.generator_config)
     
     # Initialize health metrics
-    SERVICE_HEALTH.set(1)
+    MAIN_SERVICE_HEALTH.set(1)
     
     logger.info("Generator Service started successfully")
     
@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Generator Service")
     if generator_service:
         await generator_service.shutdown()
-    SERVICE_HEALTH.set(0)
+    MAIN_SERVICE_HEALTH.set(0)
 
 
 def create_app() -> FastAPI:

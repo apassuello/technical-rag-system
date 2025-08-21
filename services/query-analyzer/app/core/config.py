@@ -11,8 +11,8 @@ from pathlib import Path
 from functools import lru_cache
 
 import yaml
-from pydantic import BaseSettings, Field
-from pydantic_settings import SettingsConfigDict
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AnalyzerConfig(BaseSettings):
@@ -68,8 +68,33 @@ class AnalyzerConfig(BaseSettings):
     )
 
 
+class PerformanceTargets(BaseSettings):
+    """Epic 8 Performance targets configuration."""
+    
+    response_time_target_ms: int = Field(default=5000, description="Response time target in milliseconds")
+    response_time_warning_ms: int = Field(default=2000, description="Response time warning threshold in milliseconds")
+    accuracy_target: float = Field(default=0.85, description="Classification accuracy target")
+    cost_error_target: float = Field(default=0.05, description="Cost estimation error target")
+    memory_limit_gb: float = Field(default=2.0, description="Memory limit in GB")
+
+
+class CircuitBreakerConfig(BaseSettings):
+    """Epic 8 Circuit breaker configuration."""
+    
+    failure_threshold: int = Field(default=5, description="Number of failures before opening circuit")
+    timeout_seconds: int = Field(default=60, description="Time to wait before trying half-open")
+    enabled: bool = Field(default=True, description="Enable circuit breaker")
+
+
+class FallbackConfig(BaseSettings):
+    """Epic 8 Fallback mechanism configuration."""
+    
+    enabled: bool = Field(default=True, description="Enable fallback mechanisms")
+    threshold_ms: int = Field(default=3000, description="Timeout threshold for fallback")
+
+
 class ServiceSettings(BaseSettings):
-    """Service-level configuration settings."""
+    """Epic 8 Enhanced service-level configuration settings."""
     
     model_config = SettingsConfigDict(
         env_prefix="QUERY_ANALYZER_",
@@ -103,6 +128,12 @@ class ServiceSettings(BaseSettings):
     
     # Health Check Configuration
     health_check_interval: int = Field(default=30, description="Health check interval in seconds")
+    health_check_timeout: int = Field(default=2, description="Health check timeout in seconds")
+    
+    # Epic 8 Enhanced Configuration
+    performance_targets: PerformanceTargets = Field(default_factory=PerformanceTargets)
+    circuit_breaker: CircuitBreakerConfig = Field(default_factory=CircuitBreakerConfig)
+    fallback: FallbackConfig = Field(default_factory=FallbackConfig)
     
     # Analyzer Configuration
     analyzer_config: AnalyzerConfig = Field(default_factory=AnalyzerConfig)
@@ -111,7 +142,7 @@ class ServiceSettings(BaseSettings):
     config_file: Optional[str] = Field(default=None, description="Path to configuration file")
     
     def load_from_file(self, config_path: Path) -> None:
-        """Load configuration from YAML file."""
+        """Epic 8 Enhanced configuration loading from YAML file."""
         if config_path.exists():
             with open(config_path, 'r') as f:
                 config_data = yaml.safe_load(f)
@@ -122,9 +153,28 @@ class ServiceSettings(BaseSettings):
                     if hasattr(self.analyzer_config, key):
                         setattr(self.analyzer_config, key, value)
             
-            # Update service settings
+            # Update Epic 8 performance targets
+            if 'performance_targets' in config_data:
+                for key, value in config_data['performance_targets'].items():
+                    if hasattr(self.performance_targets, key):
+                        setattr(self.performance_targets, key, value)
+            
+            # Update Epic 8 circuit breaker config
+            if 'circuit_breaker' in config_data:
+                for key, value in config_data['circuit_breaker'].items():
+                    if hasattr(self.circuit_breaker, key):
+                        setattr(self.circuit_breaker, key, value)
+                        
+            # Update Epic 8 fallback config
+            if 'fallback' in config_data:
+                for key, value in config_data['fallback'].items():
+                    if hasattr(self.fallback, key):
+                        setattr(self.fallback, key, value)
+            
+            # Update service settings (excluding nested configs)
+            excluded_keys = {'analyzer', 'performance_targets', 'circuit_breaker', 'fallback'}
             for key, value in config_data.items():
-                if key != 'analyzer' and hasattr(self, key):
+                if key not in excluded_keys and hasattr(self, key):
                     setattr(self, key, value)
 
 

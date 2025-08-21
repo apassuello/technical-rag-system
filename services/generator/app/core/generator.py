@@ -17,15 +17,16 @@ import structlog
 from prometheus_client import Counter, Histogram, Gauge
 
 # Add main project to path to import existing components
-project_root = Path(__file__).parent.parent.parent.parent  # 4 levels up to project root
+# From services/generator/app/core/generator.py go up 5 levels to project root
+project_root = Path(__file__).parent.parent.parent.parent.parent  # 5 levels up to project root
 src_path = project_root / "src"
 if src_path.exists():
-    sys.path.insert(0, str(src_path))
+    sys.path.insert(0, str(project_root))  # Add project root to path
 
 # Import existing Epic 1 components
-from components.generators.epic1_answer_generator import Epic1AnswerGenerator
-from components.generators.routing.routing_strategies import RoutingStrategy
-from core.interfaces import Answer
+from src.components.generators.epic1_answer_generator import Epic1AnswerGenerator
+from src.components.generators.routing.routing_strategies import RoutingStrategy
+from src.core.interfaces import Answer
 
 logger = structlog.get_logger(__name__)
 
@@ -132,7 +133,7 @@ class GeneratorService:
             )
             
             # Convert context documents to the format expected by Epic1AnswerGenerator
-            from core.interfaces import Document
+            from src.core.interfaces import Document
             documents = []
             for doc_data in context_documents:
                 doc = Document(
@@ -157,7 +158,7 @@ class GeneratorService:
                     pass
             
             # Generate answer using Epic1AnswerGenerator
-            answer: Answer = self.generator.generate_answer(query, documents)
+            answer: Answer = self.generator.generate(query, documents)
             
             # Extract routing information from the answer metadata
             routing_metadata = answer.metadata.get('routing', {})

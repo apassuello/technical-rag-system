@@ -1,4 +1,4 @@
-# Query Analyzer Service Configuration
+# Epic 8 Query Analyzer Service Configuration
 service_name: "query-analyzer"
 service_version: "1.0.0"
 
@@ -19,12 +19,32 @@ log_format: "json"
 enable_metrics: true
 metrics_path: "/metrics"
 
-# Performance Configuration
-request_timeout: 30
-max_concurrent_requests: 100
+# Epic 8 Enhanced Performance Configuration
+request_timeout: 30  # Overall request timeout
+max_concurrent_requests: 100  # Kubernetes can scale horizontally
 
-# Health Check Configuration
+# Epic 8 Performance Targets
+performance_targets:
+  response_time_target_ms: 5000  # 5s target per Epic 8 spec (realistic)
+  response_time_warning_ms: 2000  # 2s preferred threshold
+  accuracy_target: 0.85  # 85% classification accuracy (FR-8.1.2)
+  cost_error_target: 0.05  # <5% cost estimation error (FR-8.1.4)
+  memory_limit_gb: 2.0  # <2GB memory usage per instance
+
+# Epic 8 Enhanced Health Check Configuration
 health_check_interval: 30
+health_check_timeout: 2  # Health checks should complete in 2s
+
+# Epic 8 Circuit Breaker Configuration
+circuit_breaker:
+  failure_threshold: 5  # Open circuit after 5 failures
+  timeout_seconds: 60  # Stay open for 60 seconds
+  enabled: true
+
+# Epic 8 Fallback Configuration
+fallback:
+  enabled: true
+  threshold_ms: 3000  # Use fallback after 3s timeout
 
 # Analyzer Configuration - Maps to Epic1QueryAnalyzer config
 analyzer:
