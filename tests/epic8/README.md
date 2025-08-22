@@ -159,9 +159,143 @@ When adding new Epic 8 tests:
 4. Document test purpose and expected behavior
 5. Include both positive and negative test cases
 
+## Epic 8 Retriever Service Tests
+
+### Overview
+
+The Retriever Service test suite validates the integration of Epic 2's ModularUnifiedRetriever within Epic 8's microservices architecture, ensuring preservation of functionality while adding cloud-native capabilities.
+
+### Test Structure
+
+```
+tests/epic8/
+├── unit/test_retriever_service.py           # RetrieverService core functionality
+├── api/test_retriever_api.py               # REST API endpoint validation
+├── integration/test_retriever_integration.py # Epic 2 integration tests
+└── performance/test_retriever_performance.py # Performance and scalability
+```
+
+### Key Test Classes
+
+#### Unit Tests (`test_retriever_service.py`)
+- **TestRetrieverServiceBasics**: Service initialization and health checks
+- **TestRetrieverServiceDocumentRetrieval**: Core retrieval functionality
+- **TestRetrieverServiceBatchRetrieval**: Batch operation handling
+- **TestRetrieverServiceDocumentIndexing**: Document indexing operations
+- **TestRetrieverServiceErrorHandling**: Error scenarios and fallbacks
+- **TestRetrieverServiceResources**: Resource management and cleanup
+
+#### API Tests (`test_retriever_api.py`)
+- **TestRetrieverAPIHealth**: Health endpoints (`/health`, `/health/live`, `/health/ready`)
+- **TestRetrieverAPIDocumentRetrieval**: `/api/v1/retrieve` endpoint validation
+- **TestRetrieverAPIBatchRetrieval**: `/api/v1/batch-retrieve` endpoint testing
+- **TestRetrieverAPIDocumentIndexing**: `/api/v1/index` and `/api/v1/reindex` endpoints
+- **TestRetrieverAPIStatus**: `/api/v1/status` monitoring endpoint
+- **TestRetrieverAPIErrorHandling**: Error response validation
+
+#### Integration Tests (`test_retriever_integration.py`)
+- **TestRetrieverServiceEpic2Integration**: Epic 2 ModularUnifiedRetriever integration
+- **TestRetrieverServicePerformanceVsEpic2**: Performance comparison with direct Epic 2 usage
+- **TestRetrieverServiceResilience**: Error handling with Epic 2 components
+
+#### Performance Tests (`test_retriever_performance.py`)
+- **TestRetrieverServiceBasicPerformance**: Latency and throughput validation
+- **TestRetrieverServiceScalabilityPerformance**: Dataset size scaling tests
+- **TestRetrieverServiceResourceUsage**: Memory, CPU, and disk usage monitoring
+- **TestRetrieverServiceStressTest**: Load testing and edge cases
+
+### Epic 8 Retriever-Specific Thresholds
+
+#### Hard Fails (System Broken)
+- Service startup failure or crashes
+- Epic 2 component initialization failure
+- API responses >60 seconds
+- Memory usage >8GB
+- 0% retrieval accuracy
+
+#### Quality Flags (Optimization Needed)
+- P95 retrieval latency >2 seconds
+- Indexing throughput <1 doc/second
+- API success rate <90%
+- Memory leaks during sustained operations
+- >50% performance overhead vs direct Epic 2
+
+### Running Retriever Service Tests
+
+```bash
+# All retriever tests
+pytest tests/epic8/unit/test_retriever_service.py tests/epic8/api/test_retriever_api.py tests/epic8/integration/test_retriever_integration.py tests/epic8/performance/test_retriever_performance.py -v
+
+# Quick validation (unit + API)
+pytest tests/epic8/unit/test_retriever_service.py tests/epic8/api/test_retriever_api.py -v
+
+# Epic 2 integration tests
+pytest tests/epic8/integration/test_retriever_integration.py -v
+
+# Performance validation
+pytest tests/epic8/performance/test_retriever_performance.py -v --tb=short
+```
+
+### Epic 2 Integration Requirements
+
+The Retriever Service tests require Epic 2 components:
+- `ModularUnifiedRetriever` from `src.components.retrievers`
+- `ModularEmbedder` from `src.components.embedders`
+- `ComponentFactory` from `src.core.component_factory`
+
+Tests use comprehensive mocking when Epic 2 components aren't available:
+```python
+with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
+    with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        # Test with mocked Epic 2 components
+        service = RetrieverService(config)
+```
+
+### Test Data Patterns
+
+#### Document Templates
+```python
+test_document = {
+    "content": "Substantial content for meaningful retrieval testing...",
+    "metadata": {"title": "Test Doc", "topic": "machine_learning"},
+    "doc_id": "test_001",
+    "source": "test.pdf"
+}
+```
+
+#### Query Patterns
+- **Simple**: "machine learning", "AI"
+- **Medium**: "machine learning applications in healthcare"
+- **Complex**: "comparative analysis of transformer architectures for NLP tasks"
+
+### Performance Baselines
+
+| Metric | Target | Hard Fail | Quality Flag |
+|--------|--------|-----------|-------------|
+| Retrieval Latency (P95) | <1s | >60s | >2s |
+| Indexing Throughput | >5 docs/sec | 0 docs/sec | <1 doc/sec |
+| Concurrent Requests | 20 req/sec | 0% success | <90% success |
+| Memory Usage | <2GB | >8GB | >4GB |
+| Epic 2 Overhead | <10% | >1000% | >50% |
+
+### Troubleshooting
+
+#### Common Issues
+1. **Epic 2 Import Errors**: Ensure project root is in PYTHONPATH
+2. **Service Startup Issues**: Check port conflicts and dependencies
+3. **Performance Test Timeouts**: Run with `--timeout=300` for longer operations
+4. **Memory Issues**: Monitor with `psutil` and run smaller test subsets
+
+#### Test Isolation
+- Integration tests use temporary directories for indices
+- Unit tests mock external dependencies
+- Performance tests clean up resources after execution
+- API tests use FastAPI TestClient for isolation
+
 ## Notes
 
 - This is **early-stage implementation testing**
 - Focus on basic functionality rather than production performance
 - Use realistic thresholds that indicate clear failures
 - Build foundation for future production-grade testing
+- **Retriever Service** demonstrates Epic 2 integration patterns for other services

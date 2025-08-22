@@ -1,0 +1,184 @@
+# API Gateway Service Configuration
+
+# Service Information
+service:
+  name: "api-gateway"
+  version: "1.0.0"
+  description: "Epic 8 - Cloud-Native RAG Platform API Gateway"
+
+# Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 8080
+  log_level: "INFO"
+  workers: 1
+
+# External Service Endpoints
+services:
+  query_analyzer:
+    host: "query-analyzer-service"
+    port: 8082
+    scheme: "http"
+    path: "/api/v1"
+    timeout: 30
+    retries: 3
+  
+  generator:
+    host: "generator-service"
+    port: 8081
+    scheme: "http" 
+    path: "/api/v1"
+    timeout: 60  # Longer timeout for generation
+    retries: 2
+  
+  retriever:
+    host: "retriever-service"
+    port: 8083
+    scheme: "http"
+    path: "/api/v1"
+    timeout: 20
+    retries: 3
+  
+  cache:
+    host: "cache-service"
+    port: 8084
+    scheme: "http"
+    path: "/api/v1"
+    timeout: 10
+    retries: 2
+  
+  analytics:
+    host: "analytics-service"
+    port: 8085
+    scheme: "http"
+    path: "/api/v1"
+    timeout: 15
+    retries: 2
+
+# Gateway Configuration
+gateway:
+  max_query_length: 10000
+  max_batch_size: 100
+  default_timeout: 30
+  max_retries: 3
+  
+  # Circuit Breaker Settings
+  circuit_breaker:
+    failure_threshold: 5
+    recovery_timeout: 60
+  
+  # Rate Limiting
+  rate_limiting:
+    per_minute: 100
+    burst_limit: 20
+  
+  # Pipeline Settings
+  pipeline:
+    default_strategy: "balanced"
+    cache_ttl: 3600  # 1 hour
+    analytics_enabled: true
+    
+    # Cost Management
+    cost:
+      max_cost_per_query: 0.10
+      cost_tracking_precision: 4  # decimal places
+      optimization_enabled: true
+    
+    # Performance Targets
+    performance:
+      target_response_time: 2.0  # seconds
+      max_response_time: 10.0    # seconds
+      target_availability: 0.999 # 99.9%
+
+# CORS Configuration
+cors:
+  allowed_origins:
+    - "https://yourdomain.com"
+    - "https://api.yourdomain.com"
+    - "http://localhost:3000"  # Development
+    - "http://localhost:8080"  # Local testing
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allowed_headers:
+    - "Content-Type"
+    - "Authorization"
+    - "X-API-Key"
+    - "X-Request-ID"
+    - "X-Session-ID"
+  allow_credentials: true
+
+# Security Configuration
+security:
+  api_key_header: "X-API-Key"
+  # API keys would be set via environment variables in production
+  require_api_key: false  # Set to true in production
+  
+  # Request Validation
+  validation:
+    max_query_length: 10000
+    max_batch_size: 100
+    max_context_size: 50000
+
+# Monitoring and Observability
+monitoring:
+  metrics:
+    enabled: true
+    endpoint: "/metrics"
+    include_service_metrics: true
+  
+  logging:
+    level: "INFO"
+    format: "json"
+    include_request_id: true
+    
+  health_checks:
+    enabled: true
+    interval: 30  # seconds
+    timeout: 10   # seconds
+    critical_services:
+      - "query-analyzer"
+      - "generator"
+
+# Development Configuration
+development:
+  debug: false
+  reload: false
+  profiling: false
+  mock_services: false
+
+# Epic 8 Specific Configuration
+epic8:
+  architecture: "cloud-native-microservices"
+  deployment_target: "kubernetes"
+  compliance:
+    functional_requirements:
+      - "FR-8.1.1"  # Unified Query Processing
+      - "FR-8.1.2"  # Multi-Service Orchestration
+      - "FR-8.1.3"  # Cost Optimization
+      - "FR-8.1.4"  # Circuit Breaker Resilience
+      - "FR-8.1.5"  # Comprehensive Analytics
+    
+    performance_requirements:
+      max_response_time: 10.0
+      target_response_time: 2.0
+      target_throughput: 1000  # concurrent requests
+      target_availability: 0.999
+    
+    scalability:
+      horizontal_scaling: true
+      auto_scaling: true
+      max_replicas: 20
+      target_cpu_utilization: 70
+    
+  features:
+    intelligent_routing: true
+    cost_optimization: true
+    caching: true
+    analytics: true
+    circuit_breakers: true
+    batch_processing: true
+    fallback_responses: true
