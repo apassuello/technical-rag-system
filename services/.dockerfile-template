@@ -1,12 +1,14 @@
-# Retriever Service - Epic 8 Cloud-Native
-# Build from project root: docker build -f services/retriever/Dockerfile . --build-arg SERVICE_NAME=retriever
+# Epic 8 Service Dockerfile Template
+# Multi-stage build with project-root context
+# Build from project root: docker build -f services/{service}/Dockerfile .
 
 # Stage 1: Dependencies and build environment
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim as builder
 
 # Set build arguments
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
+ARG SERVICE_NAME
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y \
@@ -19,21 +21,28 @@ RUN apt-get update && apt-get install -y \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy requirements from service directory (using project root context)
-COPY services/retriever/requirements.txt /tmp/requirements.txt
+# Copy requirements from service directory
+COPY services/${SERVICE_NAME}/requirements.txt /tmp/requirements.txt
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /tmp/requirements.txt
 
+# Download spaCy model if needed (for query-analyzer)
+RUN if [ "${SERVICE_NAME}" = "query-analyzer" ]; then \
+        python -m spacy download en_core_web_sm; \
+    fi
+
 # Stage 2: Runtime environment
 FROM python:3.11-slim
 
 # Set metadata labels
+ARG SERVICE_NAME
+ARG SERVICE_VERSION=1.0.0
 LABEL maintainer="RAG Portfolio Project"
-LABEL service="retriever"
-LABEL version="1.0.0"
-LABEL description="Retriever microservice for Epic 8 RAG platform"
+LABEL service="${SERVICE_NAME}"
+LABEL version="${SERVICE_VERSION}"
+LABEL description="${SERVICE_NAME} microservice for Epic 8 RAG platform"
 
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
@@ -43,7 +52,6 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH="/app"
-ENV PROJECT_ROOT="/app"
 
 # Copy virtual environment from builder stage
 COPY --from=builder /opt/venv /opt/venv
@@ -53,28 +61,20 @@ WORKDIR /app
 RUN mkdir -p /app/logs /app/cache /app/data && \
     chown -R appuser:appuser /app
 
-# Copy Epic 1 components (available due to project root build context)
+# Copy Epic 1 components (src/ and config/ from project root)
 COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser config/ ./config/
 
 # Copy service-specific application code
-COPY --chown=appuser:appuser services/retriever/app/ ./app/
+COPY --chown=appuser:appuser services/${SERVICE_NAME}/app/ ./app/
 
-# Copy service configuration
-COPY --chown=appuser:appuser services/retriever/config.yaml ./config.yaml
+# Copy service configuration if exists
+COPY --chown=appuser:appuser services/${SERVICE_NAME}/config.yaml ./config.yaml 2>/dev/null || true
 
 # Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Expose port (8083 for Retriever)
-EXPOSE 8083
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8083/health/live || exit 1
-
 # Switch to non-root user
 USER appuser
 
-# Default command
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8083", "--workers", "1"]
+# Service-specific configurations will be set in individual Dockerfiles

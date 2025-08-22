@@ -1,6 +1,8 @@
-# Multi-stage Docker build for Generator Service
+# Generator Service - Epic 8 Cloud-Native
+# Build from project root: docker build -f services/generator/Dockerfile . --build-arg SERVICE_NAME=generator
+
 # Stage 1: Dependencies and build environment
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Set build arguments
 ARG BUILDPLATFORM
@@ -17,10 +19,12 @@ RUN apt-get update && apt-get install -y \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
+# Copy requirements from service directory (using project root context)
+COPY services/generator/requirements.txt /tmp/requirements.txt
+
+# Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Stage 2: Runtime environment
 FROM python:3.11-slim
@@ -38,6 +42,7 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONPATH="/app"
 ENV GENERATOR_CONFIG_FILE="/app/config.yaml"
 
 # Copy virtual environment from builder stage
@@ -45,17 +50,23 @@ COPY --from=builder /opt/venv /opt/venv
 
 # Create app directory and set permissions
 WORKDIR /app
-RUN mkdir -p /app/logs /app/cache && \
+RUN mkdir -p /app/logs /app/cache /app/data && \
     chown -R appuser:appuser /app
 
-# Copy application code
-COPY --chown=appuser:appuser . .
+# Copy Epic 1 components (available due to project root build context)
+COPY --chown=appuser:appuser src/ ./src/
+COPY --chown=appuser:appuser config/ ./config/
 
-# Copy the main project src directory (needed for Epic1AnswerGenerator imports)
-# Note: This is a temporary solution - in production we'd package components properly
-COPY --chown=appuser:appuser ../../src /app/src
+# Copy service-specific application code
+COPY --chown=appuser:appuser services/generator/app/ ./app/
 
-# Expose ports
+# Copy service configuration
+COPY --chown=appuser:appuser services/generator/config.yaml ./config.yaml
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Expose ports (8081 to avoid conflicts)
 EXPOSE 8081 50052
 
 # Health check

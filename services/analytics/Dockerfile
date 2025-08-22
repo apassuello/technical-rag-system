@@ -1,5 +1,5 @@
-# Retriever Service - Epic 8 Cloud-Native
-# Build from project root: docker build -f services/retriever/Dockerfile . --build-arg SERVICE_NAME=retriever
+# Analytics Service - Epic 8 Cloud-Native
+# Build from project root: docker build -f services/analytics/Dockerfile . --build-arg SERVICE_NAME=analytics
 
 # Stage 1: Dependencies and build environment
 FROM python:3.11-slim AS builder
@@ -20,7 +20,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy requirements from service directory (using project root context)
-COPY services/retriever/requirements.txt /tmp/requirements.txt
+COPY services/analytics/requirements.txt /tmp/requirements.txt
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -31,9 +31,9 @@ FROM python:3.11-slim
 
 # Set metadata labels
 LABEL maintainer="RAG Portfolio Project"
-LABEL service="retriever"
+LABEL service="analytics"
 LABEL version="1.0.0"
-LABEL description="Retriever microservice for Epic 8 RAG platform"
+LABEL description="Analytics microservice for Epic 8 RAG platform"
 
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
@@ -44,6 +44,10 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH="/app"
 ENV PROJECT_ROOT="/app"
+ENV ANALYTICS_LOG_LEVEL=INFO
+ENV ANALYTICS_ENABLE_COST_TRACKING=true
+ENV ANALYTICS_ENABLE_PERFORMANCE_TRACKING=true
+ENV ANALYTICS_CIRCUIT_BREAKER_ENABLED=true
 
 # Copy virtual environment from builder stage
 COPY --from=builder /opt/venv /opt/venv
@@ -58,23 +62,23 @@ COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser config/ ./config/
 
 # Copy service-specific application code
-COPY --chown=appuser:appuser services/retriever/app/ ./app/
+COPY --chown=appuser:appuser services/analytics/app/ ./app/
 
 # Copy service configuration
-COPY --chown=appuser:appuser services/retriever/config.yaml ./config.yaml
+COPY --chown=appuser:appuser services/analytics/config.yaml ./config.yaml
 
 # Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Expose port (8083 for Retriever)
-EXPOSE 8083
+# Expose port (8085 for Analytics)
+EXPOSE 8085
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8083/health/live || exit 1
+    CMD curl -f http://localhost:8085/health/live || exit 1
 
 # Switch to non-root user
 USER appuser
 
 # Default command
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8083", "--workers", "1"]
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8085", "--workers", "1"]

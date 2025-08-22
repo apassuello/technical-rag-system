@@ -1,0 +1,67 @@
+# Analytics Service Configuration
+
+analytics:
+  # Service configuration
+  service_name: "analytics"
+  service_version: "1.0.0"
+  log_level: "INFO"
+  debug: false
+
+  # Epic 1 cost tracking integration
+  enable_cost_tracking: true
+  cost_precision_places: 6
+  daily_budget: null  # Set to float value to enable budget enforcement
+  monthly_budget: null  # Set to float value to enable budget enforcement
+  alert_thresholds: [0.80, 0.95, 1.0]  # Budget alert thresholds
+
+  # Performance monitoring
+  enable_performance_tracking: true
+  performance_sampling_rate: 1.0  # Sample all requests
+  slo_response_time_ms: 2000  # 2 second SLO
+  slo_error_rate_threshold: 0.01  # 1% error rate
+  slo_availability_threshold: 0.999  # 99.9% availability
+
+  # Data persistence
+  metrics_retention_hours: 168  # 1 week
+  enable_data_persistence: false
+  persistence_backend: "memory"  # "memory", "redis", "postgresql"
+  redis_url: null  # Set for Redis persistence
+  database_url: null  # Set for PostgreSQL persistence
+
+  # Analytics configuration
+  enable_usage_trends: true
+  enable_ab_testing: true
+  cost_optimization_threshold: 0.30  # 30% cost on simple queries triggers optimization
+  provider_optimization_threshold: 0.60  # 60% cost from expensive provider
+
+  # Circuit breaker settings
+  circuit_breaker_enabled: true
+  circuit_breaker_failure_threshold: 5
+  circuit_breaker_recovery_timeout: 60
+  circuit_breaker_expected_exception: "Exception"
+
+  # API settings
+  api_timeout_seconds: 30
+  max_batch_size: 1000
+  enable_detailed_logging: true
+
+# Example configuration for production deployment
+# Uncomment and modify as needed:
+
+# production:
+#   analytics:
+#     log_level: "WARNING"
+#     debug: false
+#     daily_budget: 50.00  # $50 daily budget
+#     monthly_budget: 1500.00  # $1500 monthly budget
+#     redis_url: "redis://redis-cluster:6379"
+#     enable_data_persistence: true
+#     persistence_backend: "redis"
+#     circuit_breaker_enabled: true
+
+# development:
+#   analytics:
+#     log_level: "DEBUG"
+#     debug: true
+#     daily_budget: 5.00  # $5 daily budget for testing
+#     enable_detailed_logging: true
