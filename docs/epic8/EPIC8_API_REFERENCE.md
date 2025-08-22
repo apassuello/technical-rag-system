@@ -3,7 +3,29 @@
 **Version**: 1.0  
 **Date**: August 21, 2025  
 **API Version**: v1  
-**Status**: Phase 1 Implementation
+**Status**: DOCUMENTED APIS - SERVICE STARTUP ISSUES PREVENT OPERATION
+
+---
+
+## ⚠️ **SERVICE AVAILABILITY WARNING**
+
+**CRITICAL**: The APIs documented below exist in code but **services cannot start** due to unresolved issues:
+
+### **Service Status Reality Check**
+- **Query Analyzer Service**: ❌ Constructor bug prevents startup
+- **Generator Service**: ❌ Import path failures prevent Epic 1 component access  
+- **API Gateway**: ❌ Not implemented (0% complete)
+- **Retriever Service**: ❌ Not implemented (0% complete)
+- **Cache Service**: ❌ Not implemented (0% complete)
+- **Analytics Service**: ❌ Not implemented (0% complete)
+
+### **Current Working Alternative**
+Query Analyzer can run with manual workaround:
+```bash
+PYTHONPATH=/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag:/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services/query-analyzer python -m uvicorn app.main:app --host 0.0.0.0 --port 8082 --reload
+```
+
+**Before using these APIs**: Check [`./EPIC8_CURRENT_STATUS.md`](./EPIC8_CURRENT_STATUS.md) for service resolution status.
 
 ---
 
