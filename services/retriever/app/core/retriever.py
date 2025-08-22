@@ -95,9 +95,23 @@ class RetrieverService:
                 embedder_config = self.config.get('embedder_config', {})
                 logger.info("Creating embedder with config", config=embedder_config)
                 
+                # Extract individual parameters for SentenceTransformerEmbedder
+                config_dict = embedder_config.get('config', {})
+                
+                # Map config parameters to constructor arguments (only supported parameters)
+                embedder_kwargs = {}
+                if 'model_name' in config_dict:
+                    embedder_kwargs['model_name'] = config_dict['model_name']
+                if 'batch_size' in config_dict:
+                    embedder_kwargs['batch_size'] = config_dict['batch_size']
+                if 'device' in config_dict:
+                    # Map device to use_mps for SentenceTransformerEmbedder
+                    embedder_kwargs['use_mps'] = config_dict['device'] in ['mps', 'cuda']
+                # Note: normalize_embeddings is not supported by SentenceTransformerEmbedder - removed
+                    
                 self.embedder = ComponentFactory.create_embedder(
                     embedder_type=embedder_config.get('type', 'sentence_transformer'),
-                    config=embedder_config.get('config', {})
+                    **embedder_kwargs
                 )
                 
                 # Initialize the Epic 2 ModularUnifiedRetriever

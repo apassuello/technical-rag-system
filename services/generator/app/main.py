@@ -44,7 +44,9 @@ async def lifespan(app: FastAPI):
     
     # Initialize service
     settings = get_settings()
-    generator_service = GeneratorService(config=settings.generator_config)
+    # Convert Pydantic model to dict
+    config_dict = settings.generator_config.model_dump()
+    generator_service = GeneratorService(config=config_dict)
     
     # Initialize health metrics
     MAIN_SERVICE_HEALTH.set(1)
