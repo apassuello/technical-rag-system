@@ -962,11 +962,13 @@ class TestEpic1AnswerGeneratorComprehensive:
     
     def test_ollama_adapter_integration(self):
         """Test integration with Ollama adapter for local models."""
-        with patch('src.components.generators.llm_adapters.ollama_adapter.OllamaAdapter') as mock_ollama_adapter:
-            mock_adapter = MagicMock()
-            mock_ollama_adapter.return_value = mock_adapter
-            mock_adapter.generate.return_value = "Response from local Llama model"
-            mock_adapter.last_response_metadata = {
+        with patch('src.components.generators.llm_adapters.get_adapter_class') as mock_get_adapter:
+            mock_adapter_instance = MagicMock()
+            mock_adapter_class = MagicMock(return_value=mock_adapter_instance)
+            mock_get_adapter.return_value = mock_adapter_class
+            
+            mock_adapter_instance.generate.return_value = "Response from local Llama model"
+            mock_adapter_instance.last_response_metadata = {
                 "usage": {"prompt_tokens": 50, "completion_tokens": 100},
                 "provider": "ollama",
                 "model": "llama3.2:3b"
@@ -978,19 +980,24 @@ class TestEpic1AnswerGeneratorComprehensive:
             adapter = generator._get_adapter_for_model(self.mock_ollama_model)
             assert adapter is not None
             
-            # Verify configuration passed correctly
-            mock_ollama_adapter.assert_called_once()
-            call_args = mock_ollama_adapter.call_args
+            # Verify get_adapter_class was called with correct provider
+            mock_get_adapter.assert_called_once_with('ollama')
+            
+            # Verify adapter was instantiated with correct config
+            mock_adapter_class.assert_called_once()
+            call_args = mock_adapter_class.call_args
             assert call_args[1]['model_name'] == "llama3.2:3b"
             assert 'config' in call_args[1]
     
     def test_openai_adapter_integration(self):
         """Test integration with OpenAI adapter for GPT models."""
-        with patch('src.components.generators.llm_adapters.openai_adapter.OpenAIAdapter') as mock_openai_adapter:
-            mock_adapter = MagicMock()
-            mock_openai_adapter.return_value = mock_adapter
-            mock_adapter.generate.return_value = "Response from GPT-4"
-            mock_adapter.last_response_metadata = {
+        with patch('src.components.generators.llm_adapters.get_adapter_class') as mock_get_adapter:
+            mock_adapter_instance = MagicMock()
+            mock_adapter_class = MagicMock(return_value=mock_adapter_instance)
+            mock_get_adapter.return_value = mock_adapter_class
+            
+            mock_adapter_instance.generate.return_value = "Response from GPT-4"
+            mock_adapter_instance.last_response_metadata = {
                 "usage": {"prompt_tokens": 200, "completion_tokens": 300},
                 "provider": "openai",
                 "model": "gpt-4-turbo"
@@ -1002,19 +1009,24 @@ class TestEpic1AnswerGeneratorComprehensive:
             adapter = generator._get_adapter_for_model(self.mock_openai_model)
             assert adapter is not None
             
+            # Verify get_adapter_class was called with correct provider
+            mock_get_adapter.assert_called_once_with('openai')
+            
             # Verify configuration
-            mock_openai_adapter.assert_called_once()
-            call_args = mock_openai_adapter.call_args
+            mock_adapter_class.assert_called_once()
+            call_args = mock_adapter_class.call_args
             assert call_args[1]['model_name'] == "gpt-4-turbo"
             assert call_args[1]['timeout'] == 30.0
     
     def test_mistral_adapter_integration(self):
         """Test integration with Mistral adapter for Mistral models."""
-        with patch('src.components.generators.llm_adapters.mistral_adapter.MistralAdapter') as mock_mistral_adapter:
-            mock_adapter = MagicMock()
-            mock_mistral_adapter.return_value = mock_adapter
-            mock_adapter.generate.return_value = "Response from Mistral"
-            mock_adapter.last_response_metadata = {
+        with patch('src.components.generators.llm_adapters.get_adapter_class') as mock_get_adapter:
+            mock_adapter_instance = MagicMock()
+            mock_adapter_class = MagicMock(return_value=mock_adapter_instance)
+            mock_get_adapter.return_value = mock_adapter_class
+            
+            mock_adapter_instance.generate.return_value = "Response from Mistral"
+            mock_adapter_instance.last_response_metadata = {
                 "usage": {"prompt_tokens": 150, "completion_tokens": 200},
                 "provider": "mistral", 
                 "model": "mistral-small"
@@ -1026,9 +1038,12 @@ class TestEpic1AnswerGeneratorComprehensive:
             adapter = generator._get_adapter_for_model(self.mock_mistral_model)
             assert adapter is not None
             
+            # Verify get_adapter_class was called with correct provider
+            mock_get_adapter.assert_called_once_with('mistral')
+            
             # Verify configuration
-            mock_mistral_adapter.assert_called_once()
-            call_args = mock_mistral_adapter.call_args
+            mock_adapter_class.assert_called_once()
+            call_args = mock_adapter_class.call_args
             assert call_args[1]['model_name'] == "mistral-small"
             assert call_args[1]['timeout'] == 30.0
     
