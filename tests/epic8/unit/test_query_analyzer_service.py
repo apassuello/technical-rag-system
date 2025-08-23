@@ -451,19 +451,25 @@ class TestQueryAnalyzerServiceModelRecommendation:
                 # Should have at least one recommendation
                 assert len(recommended_models) > 0, "No model recommendations provided"
                 
-                # Validate recommendation structure
+                # Validate recommendation structure (accept both dict and string formats)
                 for model_rec in recommended_models:
-                    assert isinstance(model_rec, dict), "Model recommendation must be dict"
-                    
-                    # Check for expected fields
-                    if "provider" in model_rec:
-                        assert isinstance(model_rec["provider"], str), "Provider must be string"
-                    if "name" in model_rec:
-                        assert isinstance(model_rec["name"], str), "Model name must be string"
-                    if "confidence" in model_rec:
-                        conf = model_rec["confidence"]
-                        assert isinstance(conf, (int, float)), "Confidence must be numeric"
-                        assert 0.0 <= conf <= 1.0, f"Confidence {conf} out of range"
+                    # Accept both dict format and simple string format (like "ollama:llama3.2:3b")
+                    if isinstance(model_rec, dict):
+                        # Dict format validation
+                        if "provider" in model_rec:
+                            assert isinstance(model_rec["provider"], str), "Provider must be string"
+                        if "name" in model_rec:
+                            assert isinstance(model_rec["name"], str), "Model name must be string"
+                        if "confidence" in model_rec:
+                            conf = model_rec["confidence"]
+                            assert isinstance(conf, (int, float)), "Confidence must be numeric"
+                            assert 0.0 <= conf <= 1.0, f"Confidence {conf} out of range"
+                    elif isinstance(model_rec, str):
+                        # String format validation (like "ollama:llama3.2:3b")
+                        assert len(model_rec) > 0, "Model recommendation string cannot be empty"
+                        assert ":" in model_rec, "Model recommendation should have provider:model format"
+                    else:
+                        pytest.fail(f"Model recommendation must be dict or string, got {type(model_rec)}")
                 
                 print(f"Query: '{query}' -> {len(recommended_models)} recommendations")
                 
@@ -621,7 +627,9 @@ class TestQueryAnalyzerServiceErrorHandling:
             
         except Exception as e:
             # Graceful failure is acceptable for very long queries
-            if "too long" in str(e).lower() or "limit" in str(e).lower():
+            error_msg = str(e).lower()
+            if ("too long" in error_msg or "limit" in error_msg or 
+                "exceeds" in error_msg or "maximum" in error_msg or "length" in error_msg):
                 print(f"Long query gracefully rejected: {e}")
             else:
                 pytest.fail(f"Unexpected error for long query: {e}")

@@ -407,11 +407,14 @@ class RetrieverService:
             # Convert dictionaries to Document objects
             doc_objects = []
             for i, doc_data in enumerate(documents):
+                # Prepare metadata with Epic 8 fields mapped correctly
+                metadata = doc_data.get('metadata', {}).copy()
+                metadata['doc_id'] = doc_data.get('doc_id', f'doc_{i}')
+                metadata['source'] = doc_data.get('source', f'uploaded_doc_{i}')
+                
                 doc = Document(
                     content=doc_data.get('content', ''),
-                    metadata=doc_data.get('metadata', {}),
-                    doc_id=doc_data.get('doc_id', f'doc_{i}'),
-                    source=doc_data.get('source', f'uploaded_doc_{i}')
+                    metadata=metadata
                 )
                 
                 # Generate embeddings if not provided

@@ -202,7 +202,8 @@ class TestAPIGatewayServiceBasics:
                 
                 # Quality flag: Initialization should ideally be fast
                 if init_time > 2.0:
-                    pytest.warns(UserWarning, f"Initialization slow: {init_time:.2f}s (flag for optimization)")
+                    import warnings
+                    warnings.warn(f"Initialization slow: {init_time:.2f}s (flag for optimization)", UserWarning)
                 
                 print(f"Service initialization completed in {init_time:.3f}s")
                 
@@ -398,7 +399,8 @@ class TestAPIGatewayServicePipelineOrchestration:
             
             # Quality flag: Response time should ideally be <2s
             if processing_time > 2.0:
-                pytest.warns(UserWarning, f"Query processing slow: {processing_time:.2f}s (flag for optimization)")
+                import warnings
+                warnings.warn(f"Query processing slow: {processing_time:.2f}s (flag for optimization)", UserWarning)
             
             print(f"Pipeline processing completed in {processing_time:.3f}s")
             
@@ -475,7 +477,8 @@ class TestAPIGatewayServicePipelineOrchestration:
             
             # Quality flag: Success rate should ideally be >95%
             if success_rate < 0.95:
-                pytest.warns(UserWarning, f"Batch success rate {success_rate:.2%} below 95% target")
+                import warnings
+                warnings.warn(f"Batch success rate {success_rate:.2%} below 95% target", UserWarning)
             
             # Validate summary statistics
             assert "summary" in response.dict()
@@ -666,22 +669,44 @@ class TestAPIGatewayServiceCircuitBreaker:
             options=QueryOptions(strategy="balanced")
         )
         
-        # First few failures should trigger circuit breaker
-        failure_count = 0
-        for i in range(10):  # Try multiple times
+        # Epic 8 Spec RT-8.1.2: Circuit breaker should open within 10 failures
+        # and return fallback responses in <500ms
+        fallback_responses = 0
+        response_times = []
+        
+        for i in range(12):  # Try enough to trigger circuit breaker
+            start_time = time.time()
             try:
-                await service.process_unified_query(request)
-            except Exception:
-                failure_count += 1
+                response = await service.process_unified_query(request)
+                response_time = (time.time() - start_time) * 1000  # Convert to ms
+                response_times.append(response_time)
+                
+                # Check if it's a fallback response
+                if hasattr(response, 'answer') and "fallback" in response.answer.lower():
+                    fallback_responses += 1
+                elif hasattr(response, 'sources') and len(response.sources) == 0:
+                    fallback_responses += 1  # Likely fallback if no sources
+                
+            except Exception as e:
+                # Epic 8 spec expects graceful handling, not exceptions
+                print(f"Unexpected exception (should be graceful): {e}")
         
-        # Should have failed due to service issues
-        assert failure_count > 0
-        
-        # Check circuit breaker state
+        # Epic 8 specification validation
         query_analyzer_cb = service.circuit_breakers["query-analyzer"]
-        if query_analyzer_cb.failure_count >= query_analyzer_cb.failure_threshold:
-            assert query_analyzer_cb.state == "open"
-            print(f"Circuit breaker opened after {query_analyzer_cb.failure_count} failures")
+        
+        # Check circuit breaker opened within 10 failures (RT-8.1.2)
+        if query_analyzer_cb.failure_count >= 10:
+            assert query_analyzer_cb.state == "open", "Circuit breaker should be open after 10 failures"
+            print(f"✅ Circuit breaker opened after {query_analyzer_cb.failure_count} failures (Epic 8 compliant)")
+        
+        # Check fallback responses returned quickly (RT-8.1.2: <500ms)
+        if response_times:
+            avg_response_time = sum(response_times) / len(response_times)
+            assert avg_response_time < 500, f"Fallback responses too slow: {avg_response_time:.1f}ms > 500ms"
+            print(f"✅ Fallback responses averaged {avg_response_time:.1f}ms (Epic 8 compliant)")
+        
+        # Check service remained stable (RT-8.1.2: No upstream crashes)
+        assert fallback_responses > 0, "Should have returned fallback responses during failures"
         
         print("Circuit breaker service protection test completed")
 
@@ -1066,7 +1091,8 @@ class TestAPIGatewayServiceResources:
             
             # Quality flag: Large memory increase might indicate issue
             if memory_increase > 500:  # 500MB increase
-                pytest.warns(UserWarning, f"Large memory increase: {memory_increase:.1f}MB")
+                import warnings
+                warnings.warn(f"Large memory increase: {memory_increase:.1f}MB", UserWarning)
             
             print(f"Memory usage: {initial_memory:.1f}MB -> {final_memory:.1f}MB (+{memory_increase:.1f}MB)")
             
@@ -1126,7 +1152,8 @@ class TestAPIGatewayServiceResources:
             
             # Quality flag: Success rate should be high
             if success_rate < 0.9:
-                pytest.warns(UserWarning, f"Concurrent success rate {success_rate:.2%} below 90%")
+                import warnings
+                warnings.warn(f"Concurrent success rate {success_rate:.2%} below 90%", UserWarning)
             
             print(f"Concurrent test: {len(successful)}/{len(requests)} succeeded in {total_time:.2f}s")
             
