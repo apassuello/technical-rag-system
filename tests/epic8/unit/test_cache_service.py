@@ -23,6 +23,15 @@ import time
 import hashlib
 import json
 import unittest.mock as mock
+
+# Simple fix: Mock prometheus_client to prevent registry collisions
+mock.patch.dict('sys.modules', {
+    'prometheus_client': mock.Mock(
+        Counter=mock.Mock(),
+        Histogram=mock.Mock(),
+        Gauge=mock.Mock()
+    )
+}).start()
 from typing import Dict, Any, Optional
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -177,7 +186,8 @@ class TestCacheServiceBasics:
             
             # Flag but don't fail: Health check should ideally be fast
             if health_check_time > 1.0:
-                pytest.warns(UserWarning, f"Health check slow: {health_check_time:.2f}s (flag for optimization)")
+                import warnings
+                warnings.warn(f"Health check slow: {health_check_time:.2f}s (flag for optimization)", UserWarning)
                 
         except Exception as e:
             pytest.fail(f"Health check crashed (Hard Fail): {e}")
@@ -326,7 +336,8 @@ class TestCacheServiceOperations:
             
             # Quality flag: Should be sub-millisecond
             if operation_time > 0.001:  # 1ms
-                pytest.warns(UserWarning, f"Cache get operation slow: {operation_time:.3f}s (target <1ms)")
+                import warnings
+                warnings.warn(f"Cache get operation slow: {operation_time:.3f}s (target <1ms)", UserWarning)
             
             # Verify result
             assert result is not None
@@ -356,7 +367,8 @@ class TestCacheServiceOperations:
             
             # Quality flag: Should be <5ms for sets
             if operation_time > 0.005:  # 5ms
-                pytest.warns(UserWarning, f"Cache set operation slow: {operation_time:.3f}s (target <5ms)")
+                import warnings
+                warnings.warn(f"Cache set operation slow: {operation_time:.3f}s (target <5ms)", UserWarning)
             
             # Verify operation succeeded
             assert success is True
@@ -407,7 +419,8 @@ class TestCacheServiceOperations:
             
             # Quality flag: Hit rate should be >60% for this pattern
             if hit_rate < 0.60:
-                pytest.warns(UserWarning, f"Hit rate {hit_rate:.2%} below 60% target (flag for optimization)")
+                import warnings
+                warnings.warn(f"Hit rate {hit_rate:.2%} below 60% target (flag for optimization)", UserWarning)
             
             print(f"Cache hit rate: {hit_rate:.2%} ({hits}/{total_requests})")
 
@@ -717,7 +730,8 @@ class TestCacheServiceErrorHandling:
                 
                 # Should not be excessively slow
                 if cache_time > 1.0:
-                    pytest.warns(UserWarning, f"Large data caching slow: {cache_time:.2f}s")
+                    import warnings
+                    warnings.warn(f"Large data caching slow: {cache_time:.2f}s", UserWarning)
                 
                 # Should be able to retrieve large data
                 start_time = time.time()
@@ -728,7 +742,8 @@ class TestCacheServiceErrorHandling:
                 assert result == large_data, "Retrieved data should match original"
                 
                 if retrieve_time > 1.0:
-                    pytest.warns(UserWarning, f"Large data retrieval slow: {retrieve_time:.2f}s")
+                    import warnings
+                    warnings.warn(f"Large data retrieval slow: {retrieve_time:.2f}s", UserWarning)
                 
                 print(f"Large data test passed: cache {cache_time:.2f}s, retrieve {retrieve_time:.2f}s")
                 
@@ -777,7 +792,8 @@ class TestCacheServiceErrorHandling:
                 # Most operations should succeed
                 success_rate = len(successful_ops) / len(results)
                 if success_rate < 0.9:
-                    pytest.warns(UserWarning, f"Concurrent success rate: {success_rate:.2%}")
+                    import warnings
+                    warnings.warn(f"Concurrent success rate: {success_rate:.2%}", UserWarning)
                 
                 print(f"Concurrent test: {len(successful_ops)}/{len(results)} succeeded in {total_time:.2f}s")
                 
@@ -824,7 +840,8 @@ class TestCacheServiceResources:
         
         # Quality flag: Large memory increase might indicate leak
         if memory_increase > 500:  # 500MB increase
-            pytest.warns(UserWarning, f"Large memory increase: {memory_increase:.1f}MB")
+            import warnings
+            warnings.warn(f"Large memory increase: {memory_increase:.1f}MB", UserWarning)
         
         print(f"Memory usage: {initial_memory:.1f}MB -> {final_memory:.1f}MB (+{memory_increase:.1f}MB)")
 
@@ -859,7 +876,8 @@ class TestCacheServiceResources:
             
             # Quality target: Should ideally handle 1000+ ops/sec
             if throughput < 1000:
-                pytest.warns(UserWarning, f"Throughput {throughput:.1f} ops/sec below 1000 target")
+                import warnings
+                warnings.warn(f"Throughput {throughput:.1f} ops/sec below 1000 target", UserWarning)
             
             print(f"Throughput test: {throughput:.1f} operations/second")
 

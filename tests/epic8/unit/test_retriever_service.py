@@ -17,6 +17,15 @@ from typing import Dict, Any, List
 from pathlib import Path
 import sys
 
+# Simple fix: Mock prometheus_client to prevent registry collisions
+mock.patch.dict('sys.modules', {
+    'prometheus_client': mock.Mock(
+        Counter=mock.Mock(),
+        Histogram=mock.Mock(),
+        Gauge=mock.Mock()
+    )
+}).start()
+
 # Robust service import logic for Epic 8 testing
 def _setup_service_imports():
     """Set up imports for Epic 8 Retriever Service testing."""
@@ -63,6 +72,38 @@ if IMPORTS_AVAILABLE:
 
 # Clean up the setup function from global namespace
 del _setup_service_imports, imported_classes
+
+
+# Pytest fixtures for Epic 8 testing infrastructure
+@pytest.fixture(autouse=True)  
+def isolate_prometheus_registry():
+    """
+    Isolate Prometheus metrics registry for each test to prevent collisions.
+    
+    Multiple Epic 8 services define metrics with the same names, causing
+    'Duplicated timeseries in CollectorRegistry' errors in tests.
+    """
+    import prometheus_client
+    
+    # Create a new isolated registry for this test
+    test_registry = prometheus_client.CollectorRegistry()
+    
+    # Store the original global registry
+    original_registry = prometheus_client.REGISTRY
+    
+    try:
+        # Replace the global registry with our isolated one
+        prometheus_client.REGISTRY = test_registry
+        
+        # Clear any existing global state 
+        if hasattr(prometheus_client, '_COLLECTORS'):
+            prometheus_client._COLLECTORS.clear()
+            
+        yield test_registry
+        
+    finally:
+        # Restore the original registry after the test
+        prometheus_client.REGISTRY = original_registry
 
 
 class TestRetrieverServiceBasics:
@@ -134,8 +175,8 @@ class TestRetrieverServiceBasics:
     async def test_component_initialization(self):
         """Test Epic 2 component initialization (Integration test)."""
         # Mock the Epic 2 components to avoid actual initialization
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
                 
@@ -175,8 +216,8 @@ class TestRetrieverServiceDocumentRetrieval:
     async def test_document_retrieval_basic(self):
         """Test basic document retrieval functionality (CT-8.3.1)."""
         # Mock Epic 2 components
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 # Setup mocks
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
@@ -250,8 +291,8 @@ class TestRetrieverServiceDocumentRetrieval:
     @pytest.mark.asyncio
     async def test_retrieval_strategies(self):
         """Test different retrieval strategies (CT-8.3.1)."""
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 # Setup mocks
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
@@ -299,8 +340,8 @@ class TestRetrieverServiceDocumentRetrieval:
     @pytest.mark.asyncio
     async def test_retrieval_fallback_mechanism(self):
         """Test fallback mechanism when Epic 2 retrieval fails."""
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 # Setup mocks to fail
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
@@ -342,8 +383,8 @@ class TestRetrieverServiceDocumentRetrieval:
     @pytest.mark.asyncio
     async def test_retrieval_parameter_validation(self):
         """Test parameter validation for retrieval requests."""
-        with mock.patch('app.core.retriever.ComponentFactory'):
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever'):
+        with mock.patch('retriever_app.core.retriever.ComponentFactory'):
+            with mock.patch('retriever_app.core.retriever.ModularUnifiedRetriever'):
                 service = RetrieverService()
                 
                 # Test valid parameters
@@ -370,8 +411,8 @@ class TestRetrieverServiceBatchRetrieval:
     @pytest.mark.asyncio
     async def test_batch_retrieval_basic(self):
         """Test basic batch retrieval functionality (CT-8.3.2)."""
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 # Setup mocks
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
@@ -438,8 +479,8 @@ class TestRetrieverServiceBatchRetrieval:
     @pytest.mark.asyncio
     async def test_batch_error_handling(self):
         """Test batch retrieval error handling and partial failures."""
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 # Setup mocks with some failures
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
@@ -539,8 +580,8 @@ class TestRetrieverServiceDocumentIndexing:
     @pytest.mark.asyncio
     async def test_document_indexing_basic(self):
         """Test basic document indexing functionality (CT-8.3.3)."""
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 # Setup mocks
                 mock_embedder = mock.Mock()
                 mock_embedder.embed.return_value = [[0.1, 0.2, 0.3]]  # Mock embedding
@@ -606,8 +647,8 @@ class TestRetrieverServiceDocumentIndexing:
     @pytest.mark.asyncio
     async def test_document_indexing_with_embeddings(self):
         """Test indexing documents with pre-computed embeddings."""
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 # Setup mocks
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
@@ -650,8 +691,8 @@ class TestRetrieverServiceDocumentIndexing:
     @pytest.mark.asyncio
     async def test_document_reindexing(self):
         """Test document reindexing functionality."""
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 # Setup mocks
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
@@ -699,8 +740,8 @@ class TestRetrieverServiceDocumentIndexing:
     @pytest.mark.asyncio
     async def test_indexing_error_handling(self):
         """Test error handling during document indexing."""
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 # Setup mocks to fail
                 mock_embedder = mock.Mock()
                 mock_embedder.embed.side_effect = Exception("Embedding failed")
@@ -743,8 +784,8 @@ class TestRetrieverServiceStatus:
     @pytest.mark.asyncio
     async def test_get_retriever_status(self):
         """Test retriever status reporting."""
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 # Setup mocks
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
@@ -844,8 +885,8 @@ class TestRetrieverServiceErrorHandling:
         service = RetrieverService()
         
         # Service should initialize itself on first use
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
                 mock_retriever_instance.retrieve.return_value = []
@@ -871,8 +912,8 @@ class TestRetrieverServiceErrorHandling:
         """Test concurrent initialization safety."""
         service = RetrieverService()
         
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
                 mock_retriever_instance.get_component_info.return_value = {'type': 'modular_unified'}
@@ -904,8 +945,8 @@ class TestRetrieverServiceErrorHandling:
         # Test that repeated failures trigger circuit breaker
         # (This is more of an integration test with the @circuit decorator)
         
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
                 mock_retriever_instance.retrieve.side_effect = Exception("Persistent failure")
@@ -948,8 +989,8 @@ class TestRetrieverServiceResources:
         
         service = RetrieverService()
         
-        with mock.patch('app.core.retriever.ComponentFactory') as mock_factory:
-            with mock.patch('app.core.retriever.ModularUnifiedRetriever') as mock_retriever:
+        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
+            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
                 mock_embedder = mock.Mock()
                 mock_retriever_instance = mock.Mock()
                 mock_retriever_instance.retrieve.return_value = []

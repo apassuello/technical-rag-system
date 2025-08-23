@@ -802,9 +802,12 @@ class APIGatewayService:
             # Get models from generator service
             models_data = await self.generator.get_available_models()
             
-            models = [
-                ModelInfo(**model_data) for model_data in models_data.get("models", [])
-            ]
+            models = []
+            for model_data in models_data.get("models", []):
+                # Add missing 'type' field required by Epic 8 ModelInfo schema
+                if "type" not in model_data:
+                    model_data["type"] = "generative"  # Default type for LLM models
+                models.append(ModelInfo(**model_data))
             
             available_count = len([m for m in models if m.available])
             providers = list(set(m.provider for m in models))

@@ -17,6 +17,15 @@ from typing import Dict, Any
 from pathlib import Path
 import sys
 
+# Simple fix: Mock prometheus_client to prevent registry collisions
+mock.patch.dict('sys.modules', {
+    'prometheus_client': mock.Mock(
+        Counter=mock.Mock(),
+        Histogram=mock.Mock(),
+        Gauge=mock.Mock()
+    )
+}).start()
+
 # Robust service import logic for Epic 8 testing
 def _setup_service_imports():
     """Set up imports for Epic 8 Query Analyzer Service testing."""
@@ -106,7 +115,7 @@ class TestQueryAnalyzerServiceBasics:
             
             # Flag but don't fail: Health check should ideally be fast
             if health_check_time > 2.0:
-                pytest.warns(UserWarning, f"Health check slow: {health_check_time:.2f}s (flag for optimization)")
+                import warnings; warnings.warn(f"Health check slow: {health_check_time:.2f}s (flag for optimization)", UserWarning)
                 
         except Exception as e:
             pytest.fail(f"Health check crashed (Hard Fail): {e}")
@@ -153,7 +162,7 @@ class TestQueryAnalyzerServiceComplexityClassification:
                 
                 # Flag for optimization: Response time >2s
                 if response_time > 2.0:
-                    pytest.warns(UserWarning, f"Slow analysis: {response_time:.2f}s for '{query}' (flag for optimization)")
+                    import warnings; warnings.warn(f"Slow analysis: {response_time:.2f}s for '{query}' (flag for optimization)", UserWarning)
                 
                 # Validate response structure
                 assert "complexity" in result, "Response missing 'complexity' field"
@@ -192,12 +201,12 @@ class TestQueryAnalyzerServiceComplexityClassification:
         
         # Quality flag: Accuracy <85% per CT-8.1.1
         if accuracy < 0.85:
-            pytest.warns(UserWarning, f"Classification accuracy {accuracy:.2%} below 85% target (flag for improvement)")
+            import warnings; warnings.warn(f"Classification accuracy {accuracy:.2%} below 85% target (flag for improvement)", UserWarning)
         
         # Quality check: Response time per CT-8.1.1 (should be <100ms)
         avg_response_time = sum(response_times) / len(response_times)
         if avg_response_time > 0.1:  # 100ms
-            pytest.warns(UserWarning, f"Average response time {avg_response_time:.3f}s exceeds 100ms target")
+            import warnings; warnings.warn(f"Average response time {avg_response_time:.3f}s exceeds 100ms target", UserWarning)
         
         print(f"\nComplexity Classification Results:")
         print(f"Accuracy: {accuracy:.2%} ({correct_classifications}/{len(self.TEST_QUERIES)})")
@@ -238,7 +247,7 @@ class TestQueryAnalyzerServiceComplexityClassification:
         
         # Quality flag for extended set
         if accuracy < 0.75:  # Slightly lower threshold for extended set
-            pytest.warns(UserWarning, f"Extended classification accuracy {accuracy:.2%} below 75% threshold")
+            import warnings; warnings.warn(f"Extended classification accuracy {accuracy:.2%} below 75% threshold", UserWarning)
         
         print(f"\nExtended Classification Accuracy: {accuracy:.2%} ({correct_classifications}/{total_queries})")
 
@@ -299,7 +308,7 @@ class TestQueryAnalyzerServiceComplexityClassification:
         # (This is not a hard requirement, but good to flag)
         if len(simple_confidences) > 0 and len(complex_confidences) > 0:
             if avg_complex < avg_simple:
-                pytest.warns(UserWarning, f"Complex queries have lower confidence than simple ones")
+                import warnings; warnings.warn(f"Complex queries have lower confidence than simple ones", UserWarning)
 
 
 class TestQueryAnalyzerServiceFeatureExtraction:
@@ -338,7 +347,7 @@ class TestQueryAnalyzerServiceFeatureExtraction:
             
             # Quality check: Flag missing features
             if missing_features:
-                pytest.warns(UserWarning, f"Missing expected features: {missing_features}")
+                import warnings; warnings.warn(f"Missing expected features: {missing_features}", UserWarning)
             
             # Validate feature value types and ranges
             if "word_count" in features:
@@ -349,7 +358,7 @@ class TestQueryAnalyzerServiceFeatureExtraction:
                 # Basic sanity check
                 actual_word_count = len(test_query.split())
                 if abs(word_count - actual_word_count) > 5:  # Allow some tolerance
-                    pytest.warns(UserWarning, f"Word count {word_count} seems incorrect for query length")
+                    import warnings; warnings.warn(f"Word count {word_count} seems incorrect for query length", UserWarning)
             
             if "technical_density" in features:
                 tech_density = features["technical_density"]
@@ -366,7 +375,8 @@ class TestQueryAnalyzerServiceFeatureExtraction:
                 assert isinstance(tech_terms, list), "technical_terms must be a list"
                 # For this technical query, we should find some technical terms
                 if len(tech_terms) == 0:
-                    pytest.warns(UserWarning, "No technical terms found in technical query")
+                    import warnings
+                    warnings.warn("No technical terms found in technical query", UserWarning)
             
             print(f"\nFeature Extraction Results:")
             for key, value in features.items():
@@ -402,12 +412,12 @@ class TestQueryAnalyzerServiceFeatureExtraction:
                         # For numeric values, check they're the same
                         if isinstance(first_val, (int, float)) and isinstance(current_val, (int, float)):
                             if abs(first_val - current_val) > 1e-6:
-                                pytest.warns(UserWarning, f"Non-deterministic feature {key}: {first_val} vs {current_val}")
+                                import warnings; warnings.warn(f"Non-deterministic feature {key}: {first_val} vs {current_val}", UserWarning)
                         
                         # For lists and strings, check exact equality
                         elif isinstance(first_val, (list, str)):
                             if first_val != current_val:
-                                pytest.warns(UserWarning, f"Non-deterministic feature {key}: {first_val} vs {current_val}")
+                                import warnings; warnings.warn(f"Non-deterministic feature {key}: {first_val} vs {current_val}", UserWarning)
             
             print(f"Feature determinism test passed for {len(results)} runs")
             
@@ -483,7 +493,7 @@ class TestQueryAnalyzerServiceModelRecommendation:
                     
                     # Quality check: Very high costs might indicate error
                     if value > 1.0:  # $1+ per query seems high
-                        pytest.warns(UserWarning, f"High cost estimate: {key}=${value:.4f}")
+                        import warnings; warnings.warn(f"High cost estimate: {key}=${value:.4f}", UserWarning)
             
             print(f"Cost estimation test passed: {cost_estimate}")
             
@@ -600,7 +610,7 @@ class TestQueryAnalyzerServiceErrorHandling:
             
             # Quality flag: Should ideally handle long queries reasonably fast
             if processing_time > 10.0:
-                pytest.warns(UserWarning, f"Long query processing time: {processing_time:.2f}s")
+                import warnings; warnings.warn(f"Long query processing time: {processing_time:.2f}s", UserWarning)
             
             # Should still produce valid results
             assert "complexity" in result
@@ -644,7 +654,7 @@ class TestQueryAnalyzerServiceErrorHandling:
             # Quality check: Most should succeed
             success_rate = len(successful_results) / len(queries)
             if success_rate < 0.8:
-                pytest.warns(UserWarning, f"Low concurrent success rate: {success_rate:.2%}")
+                import warnings; warnings.warn(f"Low concurrent success rate: {success_rate:.2%}", UserWarning)
             
             print(f"Concurrent test: {len(successful_results)}/{len(queries)} succeeded in {total_time:.2f}s")
             
@@ -680,7 +690,7 @@ class TestQueryAnalyzerServiceResources:
         
         # Quality flag: Large memory increase might indicate leak
         if memory_increase > 1000:  # 1GB increase
-            pytest.warns(UserWarning, f"Large memory increase: {memory_increase:.1f}MB")
+            import warnings; warnings.warn(f"Large memory increase: {memory_increase:.1f}MB", UserWarning)
         
         print(f"Memory usage: {initial_memory:.1f}MB -> {final_memory:.1f}MB (+{memory_increase:.1f}MB)")
 

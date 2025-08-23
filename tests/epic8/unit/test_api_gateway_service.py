@@ -24,7 +24,17 @@ import unittest.mock as mock
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 import sys
+from datetime import datetime
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
+
+# Simple fix: Mock prometheus_client to prevent registry collisions
+mock.patch.dict('sys.modules', {
+    'prometheus_client': mock.Mock(
+        Counter=mock.Mock(),
+        Histogram=mock.Mock(),
+        Gauge=mock.Mock()
+    )
+}).start()
 
 # Robust service import logic for Epic 8 testing
 def _setup_service_imports():
@@ -151,11 +161,11 @@ class TestAPIGatewayServiceBasics:
         service = APIGatewayService()
         
         # Mock all client classes
-        with patch('app.core.gateway.QueryAnalyzerClient') as MockQueryAnalyzer, \
-             patch('app.core.gateway.GeneratorClient') as MockGenerator, \
-             patch('app.core.gateway.RetrieverClient') as MockRetriever, \
-             patch('app.core.gateway.CacheClient') as MockCache, \
-             patch('app.core.gateway.AnalyticsClient') as MockAnalytics:
+        with patch('gateway_app.core.gateway.QueryAnalyzerClient') as MockQueryAnalyzer, \
+             patch('gateway_app.core.gateway.GeneratorClient') as MockGenerator, \
+             patch('gateway_app.core.gateway.RetrieverClient') as MockRetriever, \
+             patch('gateway_app.core.gateway.CacheClient') as MockCache, \
+             patch('gateway_app.core.gateway.AnalyticsClient') as MockAnalytics:
             
             # Mock health checks
             mock_clients = [
@@ -513,20 +523,53 @@ class TestAPIGatewayServicePipelineOrchestration:
             mock_service_clients["cache"].cache_response.assert_called()
             assert response1.metrics.cache_hit is False
             
-            # Second request - mock cache hit
+            # Second request - mock cache hit with proper UnifiedQueryResponse structure
+            # Cache should return the SAME answer as the original response, not different text
             cached_response_data = {
-                "answer": "Cached answer",
-                "sources": [],
-                "complexity": "simple",
-                "confidence": 0.9,
-                "cost": {"total_cost": 0.0},
+                "answer": "This is a test answer based on the retrieved documents.",  # Same as mock generator
+                "sources": [
+                    {
+                        "id": "doc1",
+                        "title": "Test Document 1",
+                        "content": "Test content 1",
+                        "score": 0.9,
+                        "metadata": {"source": "test", "page": 1}
+                    },
+                    {
+                        "id": "doc2", 
+                        "title": "Test Document 2",
+                        "content": "Test content 2",
+                        "score": 0.8,
+                        "metadata": {"source": "test", "page": 2}
+                    }
+                ],
+                "complexity": "medium",
+                "confidence": 0.85,
+                # Proper CostBreakdown structure
+                "cost": {
+                    "model_used": "openai/gpt-3.5-turbo",
+                    "input_tokens": 100,
+                    "output_tokens": 50,
+                    "model_cost": 0.002,
+                    "retrieval_cost": 0.0,
+                    "total_cost": 0.002,
+                    "cost_estimation_confidence": 1.0
+                },
+                # Proper ProcessingMetrics structure  
                 "metrics": {
+                    "analysis_time": 0.0001,
+                    "retrieval_time": 0.0002,
+                    "generation_time": 0.0007, 
+                    "cache_time": 0.001,
                     "total_time": 0.001,
+                    "documents_retrieved": 2,
+                    "tokens_generated": 50,
                     "cache_hit": True,
                     "cache_key": request.query_hash
                 },
                 "query_id": str(uuid.uuid4()),
                 "session_id": "cache-test",
+                "timestamp": datetime.utcnow().isoformat(),
                 "strategy_used": "balanced",
                 "fallback_used": False,
                 "warnings": []
@@ -536,9 +579,10 @@ class TestAPIGatewayServicePipelineOrchestration:
             
             response2 = await service.process_unified_query(request)
             
-            # Should return cached response without calling other services again
-            assert response2.answer == "Cached answer"
+            # Should return cached response with same content but faster time
+            assert response2.answer == "This is a test answer based on the retrieved documents."  # Same answer as original
             assert response2.metrics.cache_hit is True
+            assert response2.metrics.total_time < 0.01  # Should be much faster from cache
             
             # Analytics should record cache hit
             mock_service_clients["analytics"].record_cache_hit.assert_called()
