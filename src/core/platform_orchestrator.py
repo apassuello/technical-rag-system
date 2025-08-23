@@ -2384,20 +2384,31 @@ class PlatformOrchestrator:
     
     def clear_index(self) -> None:
         """
-        Clear all indexed documents from the vector store.
+        Clear all indexed documents from the system.
         
-        This method resets the vector store to its initial state.
+        This method resets the retrieval system to its initial state,
+        handling both unified and legacy architectures.
         """
         if not self._initialized:
             raise RuntimeError("System not initialized")
         
-        vector_store = self._components['vector_store']
-        vector_store.clear()
-        
-        # Also clear retriever if it has separate state
-        retriever = self._components['retriever']
-        if hasattr(retriever, 'clear'):
-            retriever.clear()
+        if self._using_unified_retriever:
+            # Phase 2: Unified architecture - clear retriever directly
+            retriever = self._components['retriever']
+            if hasattr(retriever, 'clear'):
+                retriever.clear()
+            else:
+                logger.warning(f"Retriever {type(retriever).__name__} does not support clearing")
+        else:
+            # Phase 1: Legacy architecture - clear vector store and retriever
+            if 'vector_store' in self._components:
+                vector_store = self._components['vector_store']
+                vector_store.clear()
+            
+            # Also clear retriever if it has separate state
+            retriever = self._components['retriever']
+            if hasattr(retriever, 'clear'):
+                retriever.clear()
         
         logger.info("System index cleared")
     

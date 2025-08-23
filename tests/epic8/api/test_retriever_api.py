@@ -18,14 +18,15 @@ from pathlib import Path
 import sys
 
 # Add services to path
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "retriever"
+project_path = Path(__file__).parent.parent.parent.parent
+services_path = project_path / "services" / "retriever"
 if services_path.exists():
     sys.path.insert(0, str(services_path))
 
 try:
     from fastapi.testclient import TestClient
-    from app.main import app
-    from app.core.retriever import RetrieverService
+    from retriever_app.main import app
+    from retriever_app.core.retriever import RetrieverService
     IMPORTS_AVAILABLE = True
 except ImportError as e:
     IMPORTS_AVAILABLE = False

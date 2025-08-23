@@ -30,8 +30,9 @@ if project_root.exists():
     sys.path.insert(0, str(project_root))
 
 try:
-    from app.core.analyzer import QueryAnalyzerService
-    from app.core.config import QueryAnalyzerConfig
+    sys.path.insert(0, str(project_root / "services" / "query-analyzer"))
+    from analyzer_app.core.analyzer import QueryAnalyzerService
+    from analyzer_app.core.config import QueryAnalyzerConfig
     SERVICE_IMPORTS_AVAILABLE = True
 except ImportError as e:
     SERVICE_IMPORTS_AVAILABLE = False

@@ -28,12 +28,13 @@ except ImportError:
     PSUTIL_AVAILABLE = False
 
 # Add services to path
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "query-analyzer"
+project_path = Path(__file__).parent.parent.parent.parent
+services_path = project_path / "services" / "query-analyzer"
 if services_path.exists():
     sys.path.insert(0, str(services_path))
 
 try:
-    from app.core.analyzer import QueryAnalyzerService
+    from analyzer_app.core.analyzer import QueryAnalyzerService
     SERVICE_IMPORTS_AVAILABLE = True
 except ImportError as e:
     SERVICE_IMPORTS_AVAILABLE = False

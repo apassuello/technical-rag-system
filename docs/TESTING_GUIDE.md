@@ -542,6 +542,66 @@ pytest tests/epic1/phase2/test_cost_tracker.py -vvs
 3. **Fail Fast**: Use `--fail-fast` during development for quick feedback
 4. **Targeted Testing**: Run specific components rather than full suites
 
+## Coverage Monitoring
+
+### Coverage Analysis Commands
+
+The test runner includes comprehensive coverage monitoring capabilities:
+
+```bash
+# Run tests with coverage analysis
+python test_runner.py epic1 unit --coverage
+
+# Generate coverage reports
+python test_runner.py coverage run unit
+python test_runner.py coverage report --format html
+
+# Compare coverage between runs
+python test_runner.py coverage diff baseline.json current.json
+```
+
+### Coverage Scripts
+
+Specialized coverage scripts for different scenarios:
+
+```bash
+# Unit test coverage analysis
+./run_tests.sh coverage unit
+
+# Integration test coverage analysis
+./run_tests.sh coverage integration
+
+# Comprehensive coverage analysis
+./run_tests.sh coverage comprehensive
+
+# Epic-specific coverage analysis
+./run_tests.sh coverage epic1
+./run_tests.sh coverage epic8
+```
+
+### Coverage Dashboard
+
+Access the interactive coverage dashboard:
+
+```bash
+# Generate HTML coverage dashboard
+python scripts/generate_coverage_dashboard.py coverage.json -o dashboard.html
+
+# View dashboard
+open reports/coverage/dashboard.html
+```
+
+### Coverage Targets
+
+| Component Type | Target Coverage | Current Status |
+|----------------|----------------|------------------|
+| Core Modules | 85% | ~20% (needs improvement) |
+| Components | 75% | ~15% (needs improvement) |
+| Epic 1 Features | 80% | ~30% (partial coverage) |
+| Epic 8 Services | 70% | ~50% (moderate coverage) |
+
+For detailed coverage standards, see [COVERAGE_STANDARDS.md](COVERAGE_STANDARDS.md).
+
 ## Best Practices
 
 ### Test Development

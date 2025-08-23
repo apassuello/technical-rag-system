@@ -446,7 +446,8 @@ docker-compose up
 - [Epic 1 Validation Results](docs/epic1/testing/EPIC1_VALIDATION_RESULTS.md) - 99.5% accuracy validation evidence
 
 ### **Epic 2 Advanced Retrieval Documentation**
-- [Complete Validation Report](SCORE_COMPRESSION_FIX_COMPLETE_VALIDATION.md) - 48.7% MRR improvement analysis
+- [Epic 2 Master Status](docs/epic2/EPIC2_MASTER_STATUS.md) - 100% validation with 48.7% MRR improvement analysis
+- [Epic 2 Calibration System API](docs/api/CALIBRATION_SYSTEM_API.md) - 641-line comprehensive API documentation
 - [Architecture Overview](docs/architecture/MASTER-ARCHITECTURE.md) - System design and components
 - [Component Documentation](docs/architecture/components/) - Individual component specifications
 - [Test Documentation](docs/test/) - Enterprise-grade testing framework

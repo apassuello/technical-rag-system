@@ -29,7 +29,8 @@ if project_path.exists():
     sys.path.insert(0, str(project_path))
 
 try:
-    from app.core.retriever import RetrieverService
+    sys.path.insert(0, str(project_path / "services" / "retriever"))
+    from retriever_app.core.retriever import RetrieverService
     # Import Epic 2 components directly for comparison testing
     from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
     from src.components.embedders.modular_embedder import ModularEmbedder

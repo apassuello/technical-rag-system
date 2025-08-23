@@ -29,15 +29,16 @@ from fastapi.testclient import TestClient
 import sys
 
 # Add services to path
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "cache"
+project_path = Path(__file__).parent.parent.parent.parent
+services_path = project_path / "services" / "cache"
 if services_path.exists():
     sys.path.insert(0, str(services_path))
 
 try:
-    from app.main import create_app
-    from app.api.rest import generate_query_hash
-    from app.schemas.requests import CacheRequest, ClearCacheRequest
-    from app.schemas.responses import CacheResponse, StatisticsResponse, CacheOperationResponse, ErrorResponse
+    from cache_app.main import create_app
+    from cache_app.api.rest import generate_query_hash
+    from cache_app.schemas.requests import CacheRequest, ClearCacheRequest
+    from cache_app.schemas.responses import CacheResponse, StatisticsResponse, CacheOperationResponse, ErrorResponse
     IMPORTS_AVAILABLE = True
 except ImportError as e:
     IMPORTS_AVAILABLE = False

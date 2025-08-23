@@ -30,15 +30,16 @@ from unittest.mock import Mock, AsyncMock, MagicMock
 import gc
 
 # Add services to path
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "api-gateway"
+project_path = Path(__file__).parent.parent.parent.parent
+services_path = project_path / "services" / "api-gateway"
 if services_path.exists():
     sys.path.insert(0, str(services_path))
 
 try:
-    from app.core.gateway import APIGatewayService, SimpleCircuitBreaker
-    from app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
-    from app.schemas.responses import UnifiedQueryResponse, BatchQueryResponse
-    from app.core.config import APIGatewaySettings
+    from gateway_app.core.gateway import APIGatewayService, SimpleCircuitBreaker
+    from gateway_app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
+    from gateway_app.schemas.responses import UnifiedQueryResponse, BatchQueryResponse
+    from gateway_app.core.config import APIGatewaySettings
     IMPORTS_AVAILABLE = True
 except ImportError as e:
     IMPORTS_AVAILABLE = False

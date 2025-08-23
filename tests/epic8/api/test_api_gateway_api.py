@@ -29,15 +29,16 @@ from fastapi.testclient import TestClient
 import httpx
 
 # Add services to path
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "api-gateway"
+project_path = Path(__file__).parent.parent.parent.parent
+services_path = project_path / "services" / "api-gateway"
 if services_path.exists():
     sys.path.insert(0, str(services_path))
 
 try:
-    from app.main import create_app
-    from app.core.gateway import APIGatewayService
-    from app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
-    from app.schemas.responses import (
+    from gateway_app.main import create_app
+    from gateway_app.core.gateway import APIGatewayService
+    from gateway_app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
+    from gateway_app.schemas.responses import (
         UnifiedQueryResponse, BatchQueryResponse, GatewayStatusResponse,
         AvailableModelsResponse, ErrorResponse
     )

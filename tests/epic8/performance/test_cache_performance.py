@@ -33,14 +33,15 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 
 # Add services to path
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "cache"
+project_path = Path(__file__).parent.parent.parent.parent
+services_path = project_path / "services" / "cache"
 if services_path.exists():
     sys.path.insert(0, str(services_path))
 
 try:
-    from app.core.cache import CacheService, CachedResponse
-    from app.core.config import CacheConfig
-    from app.api.rest import generate_query_hash
+    from cache_app.core.cache import CacheService, CachedResponse
+    from cache_app.core.config import CacheConfig
+    from cache_app.api.rest import generate_query_hash
     IMPORTS_AVAILABLE = True
 except ImportError as e:
     IMPORTS_AVAILABLE = False

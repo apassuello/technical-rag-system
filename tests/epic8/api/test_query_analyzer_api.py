@@ -31,13 +31,14 @@ except ImportError:
         HTTP_CLIENT_AVAILABLE = False
 
 # Add services to path for direct testing
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "query-analyzer"
+project_path = Path(__file__).parent.parent.parent.parent
+services_path = project_path / "services" / "query-analyzer"
 if services_path.exists():
     sys.path.insert(0, str(services_path))
 
 # Try to import FastAPI app for testing
 try:
-    from app.api.rest import app as fastapi_app
+    from analyzer_app.api.rest import app as fastapi_app
     from fastapi.testclient import TestClient
     FASTAPI_AVAILABLE = True
 except ImportError as e:

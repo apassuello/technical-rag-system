@@ -30,7 +30,8 @@ if project_path.exists():
     sys.path.insert(0, str(project_path))
 
 try:
-    from app.core.retriever import RetrieverService
+    sys.path.insert(0, str(project_path / "services" / "retriever"))
+    from retriever_app.core.retriever import RetrieverService
     IMPORTS_AVAILABLE = True
 except ImportError as e:
     IMPORTS_AVAILABLE = False

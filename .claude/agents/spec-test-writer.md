@@ -1,7 +1,7 @@
 ---
 name: spec-test-writer
 description: MUST BE USED PROACTIVELY when detailed specifications exist. Creates comprehensive test suites from specifications, requirements, and architectural designs. Automatically triggered in PARALLEL with specs-implementer when documentation-validator confirms specs. Works alongside specs-implementer to ensure both implementation and validation are specification-compliant. Examples: Creating acceptance tests from business requirements, generating API contract tests from OpenAPI specs, building compliance tests from architectural specifications.
-tools: Read, Write, Edit, Bash, Grep
+tools: *
 model: sonnet
 color: purple
 ---

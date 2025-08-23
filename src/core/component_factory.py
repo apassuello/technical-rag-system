@@ -56,8 +56,8 @@ class ComponentFactory:
     _PROCESSORS: Dict[str, str] = {
         "hybrid_pdf": "src.components.processors.document_processor.ModularDocumentProcessor",
         "modular": "src.components.processors.document_processor.ModularDocumentProcessor",
-        "pdf_processor": "src.components.processors.pdf_processor.HybridPDFProcessor",  # Legacy processor
-        "legacy_pdf": "src.components.processors.pdf_processor.HybridPDFProcessor",  # Alias for legacy
+        "pdf_processor": "src.components.processors.document_processor.ModularDocumentProcessor",  # Fixed: redirect to working implementation
+        "legacy_pdf": "src.components.processors.document_processor.ModularDocumentProcessor",  # Fixed: redirect to working implementation
     }
     
     _EMBEDDERS: Dict[str, str] = {
@@ -74,7 +74,7 @@ class ComponentFactory:
     _RETRIEVERS: Dict[str, str] = {
         # Legacy Phase 1 architecture moved to archive
         # "hybrid": "src.components.retrievers.hybrid_retriever.HybridRetriever",
-        "unified": "src.components.retrievers.unified_retriever.UnifiedRetriever",
+        "unified": "src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever",  # Fixed: redirect to working implementation
         "modular_unified": "src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever",
         # Note: enhanced_modular_unified removed - Epic 2 features now handled via advanced config transformation
     }
@@ -519,7 +519,7 @@ class ComponentFactory:
             logger.debug(f"Creating {retriever_type} retriever with args: {kwargs}")
             
             # Special handling for retrievers that need embedder + config pattern
-            if retriever_type in ["modular_unified"]:
+            if retriever_type in ["modular_unified", "unified"]:
                 # Extract embedder and config from kwargs
                 embedder = kwargs.pop("embedder", None)
                 if embedder is None:

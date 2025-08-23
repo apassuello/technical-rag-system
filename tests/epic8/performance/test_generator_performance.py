@@ -30,12 +30,13 @@ import requests
 import concurrent.futures
 
 # Add services to path  
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "generator"
+project_path = Path(__file__).parent.parent.parent.parent
+services_path = project_path / "services" / "generator"
 if services_path.exists():
     sys.path.insert(0, str(services_path))
 
 try:
-    from app.core.generator import GeneratorService
+    from generator_app.core.generator import GeneratorService
     GENERATOR_IMPORTS_AVAILABLE = True
 except ImportError as e:
     GENERATOR_IMPORTS_AVAILABLE = False
