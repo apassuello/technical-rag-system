@@ -57,7 +57,7 @@ COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser config/ ./config/
 
 # Copy service-specific application code
-COPY --chown=appuser:appuser services/api-gateway/app/ ./app/
+COPY --chown=appuser:appuser services/api-gateway/gateway_app/ ./app/
 
 # Copy service configuration
 COPY --chown=appuser:appuser services/api-gateway/config.yaml ./config.yaml
@@ -76,4 +76,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 USER appuser
 
 # Default command
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
+CMD ["python", "-m", "uvicorn", "gateway_app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]

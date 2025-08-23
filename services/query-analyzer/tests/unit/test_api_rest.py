@@ -10,10 +10,10 @@ from unittest.mock import Mock, AsyncMock, patch
 import uuid
 from fastapi import HTTPException
 
-from app.api.rest import router, get_analyzer_service
-from app.core.analyzer import QueryAnalyzerService
-from app.schemas.requests import AnalyzeRequest, StatusRequest
-from app.schemas.responses import AnalyzeResponse, StatusResponse
+from analyzer_app.api.rest import router, get_analyzer_service
+from analyzer_app.core.analyzer import QueryAnalyzerService
+from analyzer_app.schemas.requests import AnalyzeRequest, StatusRequest
+from analyzer_app.schemas.responses import AnalyzeResponse, StatusResponse
 
 
 class TestGetAnalyzerServiceDependency:
@@ -54,7 +54,7 @@ class TestAnalyzeEndpoint:
         }
         
         # Mock the endpoint function directly
-        from app.api.rest import analyze_query
+        from analyzer_app.api.rest import analyze_query
         
         request = AnalyzeRequest(query="What is Python?")
         mock_http_request = Mock()
@@ -90,7 +90,7 @@ class TestAnalyzeEndpoint:
             "metadata": {}
         }
         
-        from app.api.rest import analyze_query
+        from analyzer_app.api.rest import analyze_query
         
         context = {"user_id": "123", "session": "abc"}
         request = AnalyzeRequest(query="test", context=context)
@@ -110,7 +110,7 @@ class TestAnalyzeEndpoint:
         mock_analyzer = AsyncMock(spec=QueryAnalyzerService)
         mock_analyzer.analyze_query.side_effect = ValueError("Invalid query format")
         
-        from app.api.rest import analyze_query
+        from analyzer_app.api.rest import analyze_query
         
         request = AnalyzeRequest(query="invalid query")
         mock_http_request = Mock()
@@ -128,7 +128,7 @@ class TestAnalyzeEndpoint:
         mock_analyzer = AsyncMock(spec=QueryAnalyzerService)
         mock_analyzer.analyze_query.side_effect = RuntimeError("Service error")
         
-        from app.api.rest import analyze_query
+        from analyzer_app.api.rest import analyze_query
         
         request = AnalyzeRequest(query="test")
         mock_http_request = Mock()
@@ -152,7 +152,7 @@ class TestAnalyzeEndpoint:
         mock_analyzer = AsyncMock(spec=QueryAnalyzerService)
         mock_analyzer.analyze_query.side_effect = Exception("Test error")
         
-        from app.api.rest import analyze_query
+        from analyzer_app.api.rest import analyze_query
         
         request = AnalyzeRequest(query="test")
         mock_http_request = Mock()
@@ -189,7 +189,7 @@ class TestAnalyzeEndpoint:
         with patch('app.api.rest.API_REQUESTS') as mock_requests, \
              patch('app.api.rest.API_REQUEST_DURATION') as mock_duration:
             
-            from app.api.rest import analyze_query
+            from analyzer_app.api.rest import analyze_query
             
             request = AnalyzeRequest(query="test")
             mock_http_request = Mock()
@@ -211,7 +211,7 @@ class TestAnalyzeEndpoint:
         
         with patch('app.api.rest.API_REQUESTS') as mock_requests:
             
-            from app.api.rest import analyze_query
+            from analyzer_app.api.rest import analyze_query
             
             request = AnalyzeRequest(query="test")
             mock_http_request = Mock()
@@ -240,7 +240,7 @@ class TestStatusEndpoint:
             "components": {"feature_extractor": "healthy"}
         }
         
-        from app.api.rest import get_analyzer_status
+        from analyzer_app.api.rest import get_analyzer_status
         
         request = StatusRequest()
         result = await get_analyzer_status(request, mock_analyzer)
@@ -265,7 +265,7 @@ class TestStatusEndpoint:
             "configuration": {"should_remain": True}
         }
         
-        from app.api.rest import get_analyzer_status
+        from analyzer_app.api.rest import get_analyzer_status
         
         request = StatusRequest(include_performance=False)
         result = await get_analyzer_status(request, mock_analyzer)
@@ -285,7 +285,7 @@ class TestStatusEndpoint:
             "configuration": {"should_be_removed": True}
         }
         
-        from app.api.rest import get_analyzer_status
+        from analyzer_app.api.rest import get_analyzer_status
         
         request = StatusRequest(include_config=False)
         result = await get_analyzer_status(request, mock_analyzer)
@@ -300,7 +300,7 @@ class TestStatusEndpoint:
         mock_analyzer = AsyncMock(spec=QueryAnalyzerService)
         mock_analyzer.get_analyzer_status.side_effect = RuntimeError("Status error")
         
-        from app.api.rest import get_analyzer_status
+        from analyzer_app.api.rest import get_analyzer_status
         
         request = StatusRequest()
         
@@ -322,7 +322,7 @@ class TestStatusEndpoint:
         
         with patch('app.api.rest.API_REQUESTS') as mock_requests:
             
-            from app.api.rest import get_analyzer_status
+            from analyzer_app.api.rest import get_analyzer_status
             
             request = StatusRequest()
             await get_analyzer_status(request, mock_analyzer)
@@ -351,7 +351,7 @@ class TestComponentsEndpoint:
             "configuration": {"strategy": "balanced"}
         }
         
-        from app.api.rest import get_component_info
+        from analyzer_app.api.rest import get_component_info
         
         result = await get_component_info(mock_analyzer)
         
@@ -387,7 +387,7 @@ class TestComponentsEndpoint:
         mock_analyzer = AsyncMock(spec=QueryAnalyzerService)
         mock_analyzer.get_analyzer_status.side_effect = RuntimeError("Component error")
         
-        from app.api.rest import get_component_info
+        from analyzer_app.api.rest import get_component_info
         
         # Should raise HTTPException with 500 status
         with pytest.raises(HTTPException) as exc_info:
@@ -407,7 +407,7 @@ class TestComponentsEndpoint:
         
         with patch('app.api.rest.API_REQUESTS') as mock_requests:
             
-            from app.api.rest import get_component_info
+            from analyzer_app.api.rest import get_component_info
             
             await get_component_info(mock_analyzer)
             
@@ -450,7 +450,7 @@ class TestBatchAnalyzeEndpoint:
             }
         ]
         
-        from app.api.rest import batch_analyze_queries
+        from analyzer_app.api.rest import batch_analyze_queries
         
         queries = ["query1", "query2"]
         context = {"user": "test"}
@@ -492,7 +492,7 @@ class TestBatchAnalyzeEndpoint:
         """Test batch analysis with empty query list."""
         mock_analyzer = AsyncMock(spec=QueryAnalyzerService)
         
-        from app.api.rest import batch_analyze_queries
+        from analyzer_app.api.rest import batch_analyze_queries
         
         # Should raise HTTPException for empty queries
         with pytest.raises(HTTPException) as exc_info:
@@ -506,7 +506,7 @@ class TestBatchAnalyzeEndpoint:
         """Test batch analysis with too many queries."""
         mock_analyzer = AsyncMock(spec=QueryAnalyzerService)
         
-        from app.api.rest import batch_analyze_queries
+        from analyzer_app.api.rest import batch_analyze_queries
         
         # Create 101 queries (exceeds limit of 100)
         queries = [f"query{i}" for i in range(101)]
@@ -539,7 +539,7 @@ class TestBatchAnalyzeEndpoint:
             RuntimeError("Analysis failed for query2")
         ]
         
-        from app.api.rest import batch_analyze_queries
+        from analyzer_app.api.rest import batch_analyze_queries
         
         queries = ["query1", "query2"]
         result = await batch_analyze_queries(queries, None, mock_analyzer)
@@ -574,7 +574,7 @@ class TestBatchAnalyzeEndpoint:
         with patch('app.api.rest.API_REQUESTS') as mock_requests, \
              patch('app.api.rest.API_REQUEST_DURATION') as mock_duration:
             
-            from app.api.rest import batch_analyze_queries
+            from analyzer_app.api.rest import batch_analyze_queries
             
             queries = ["query1", "query2"]
             await batch_analyze_queries(queries, None, mock_analyzer)
@@ -601,7 +601,7 @@ class TestBatchAnalyzeEndpoint:
             "metadata": {}
         }
         
-        from app.api.rest import batch_analyze_queries
+        from analyzer_app.api.rest import batch_analyze_queries
         
         with patch('app.api.rest.uuid.uuid4') as mock_uuid:
             mock_uuid.return_value = Mock()

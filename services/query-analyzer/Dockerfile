@@ -61,7 +61,7 @@ COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser config/ ./config/
 
 # Copy service-specific application code
-COPY --chown=appuser:appuser services/query-analyzer/app/ ./app/
+COPY --chown=appuser:appuser services/query-analyzer/analyzer_app/ ./app/
 
 # Copy service configuration
 COPY --chown=appuser:appuser services/query-analyzer/config.yaml ./config.yaml
@@ -80,4 +80,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 USER appuser
 
 # Default command
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8082", "--workers", "1"]
+CMD ["python", "-m", "uvicorn", "analyzer_app.main:app", "--host", "0.0.0.0", "--port", "8082", "--workers", "1"]

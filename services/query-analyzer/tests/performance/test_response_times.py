@@ -304,7 +304,7 @@ class TestColdStartPerformance:
         query = sample_queries["simple"][0]
         
         # Create a new service instance to simulate cold start
-        from app.core.analyzer import QueryAnalyzerService
+        from analyzer_app.core.analyzer import QueryAnalyzerService
         from unittest.mock import patch
         
         with patch('app.core.analyzer.Epic1QueryAnalyzer') as mock_epic1:

@@ -14,11 +14,11 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 from fastapi.testclient import TestClient
 import httpx
 
-from app.main import app, gateway_service
-from app.core.config import APIGatewaySettings
-from app.core.gateway import APIGatewayService, SimpleCircuitBreaker
-from app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
-from app.schemas.responses import (
+from gateway_app.main import app, gateway_service
+from gateway_app.core.config import APIGatewaySettings
+from gateway_app.core.gateway import APIGatewayService, SimpleCircuitBreaker
+from gateway_app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
+from gateway_app.schemas.responses import (
     UnifiedQueryResponse, BatchQueryResponse, BatchQueryResult,
     ProcessingMetrics, CostBreakdown, DocumentSource, GatewayStatusResponse,
     ServiceStatus, AvailableModelsResponse, ModelInfo

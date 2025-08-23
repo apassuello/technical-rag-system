@@ -9,8 +9,8 @@ import pytest
 from typing import Dict, Any
 from pydantic import ValidationError
 
-from app.schemas.requests import AnalyzeRequest, StatusRequest
-from app.schemas.responses import (
+from analyzer_app.schemas.requests import AnalyzeRequest, StatusRequest
+from analyzer_app.schemas.responses import (
     AnalyzeResponse,
     StatusResponse,
     HealthResponse,

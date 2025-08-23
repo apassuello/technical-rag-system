@@ -25,36 +25,36 @@ def test_imports():
     print("Testing imports...")
     
     try:
-        from app.core.config import get_settings
+        from retriever_app.core.config import get_settings
         print("✅ Config module imported successfully")
     except ImportError as e:
         print(f"❌ Config import failed: {e}")
         return False
     
     try:
-        from app.core.retriever import RetrieverService
+        from retriever_app.core.retriever import RetrieverService
         print("✅ RetrieverService imported successfully")
     except ImportError as e:
         print(f"❌ RetrieverService import failed: {e}")
         return False
     
     try:
-        from app.schemas.requests import RetrievalRequest
-        from app.schemas.responses import RetrievalResponse
+        from retriever_app.schemas.requests import RetrievalRequest
+        from retriever_app.schemas.responses import RetrievalResponse
         print("✅ Schema modules imported successfully")
     except ImportError as e:
         print(f"❌ Schema import failed: {e}")
         return False
     
     try:
-        from app.api.rest import router
+        from retriever_app.api.rest import router
         print("✅ API router imported successfully")
     except ImportError as e:
         print(f"❌ API router import failed: {e}")
         return False
     
     try:
-        from app.main import create_app
+        from retriever_app.main import create_app
         print("✅ FastAPI app imported successfully")
     except ImportError as e:
         print(f"❌ FastAPI app import failed: {e}")
@@ -68,7 +68,7 @@ def test_configuration():
     print("\nTesting configuration...")
     
     try:
-        from app.core.config import get_settings
+        from retriever_app.core.config import get_settings
         settings = get_settings()
         
         print(f"✅ Configuration loaded:")
@@ -89,8 +89,8 @@ def test_schemas():
     print("\nTesting schemas...")
     
     try:
-        from app.schemas.requests import RetrievalRequest
-        from app.schemas.responses import RetrievalResponse, DocumentResult
+        from retriever_app.schemas.requests import RetrievalRequest
+        from retriever_app.schemas.responses import RetrievalResponse, DocumentResult
         
         # Test valid request
         request = RetrievalRequest(
@@ -131,7 +131,7 @@ def test_service_creation():
     print("\nTesting service creation...")
     
     try:
-        from app.core.retriever import RetrieverService
+        from retriever_app.core.retriever import RetrieverService
         
         # Create service with minimal config
         config = {
@@ -164,7 +164,7 @@ def test_fastapi_app():
     print("\nTesting FastAPI app creation...")
     
     try:
-        from app.main import create_app
+        from retriever_app.main import create_app
         
         app = create_app()
         print(f"✅ FastAPI app created successfully")

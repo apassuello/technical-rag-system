@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 import sys
 
-from app.core.analyzer import QueryAnalyzerService
+from analyzer_app.core.analyzer import QueryAnalyzerService
 from conftest import (
     assert_valid_complexity,
     assert_confidence_range,
@@ -351,7 +351,7 @@ class TestEpic1UnavailableHandling:
         # Mock import failure
         with patch.dict('sys.modules', {'components.query_processors.analyzers.epic1_query_analyzer': None}):
             with pytest.raises(ImportError):
-                from app.core.analyzer import Epic1QueryAnalyzer
+                from analyzer_app.core.analyzer import Epic1QueryAnalyzer
 
 
 class TestEpic1MockedIntegration:

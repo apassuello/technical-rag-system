@@ -11,8 +11,8 @@ from unittest.mock import patch, Mock
 import json
 import time
 
-from app.main import create_app, get_analyzer_service
-from app.core.analyzer import QueryAnalyzerService
+from analyzer_app.main import create_app, get_analyzer_service
+from analyzer_app.core.analyzer import QueryAnalyzerService
 from conftest import (
     validate_response_structure,
     assert_valid_complexity,
@@ -277,7 +277,7 @@ class TestServiceConfiguration:
     @pytest.mark.asyncio
     async def test_configuration_loading(self, temp_config_file):
         """Test configuration loading from file."""
-        from app.core.config import get_settings
+        from analyzer_app.core.config import get_settings
         import os
         
         # Set config file environment variable
@@ -304,7 +304,7 @@ class TestServiceConfiguration:
     @pytest.mark.asyncio
     async def test_environment_variable_integration(self):
         """Test environment variable integration."""
-        from app.core.config import ServiceSettings
+        from analyzer_app.core.config import ServiceSettings
         import os
         
         env_vars = {

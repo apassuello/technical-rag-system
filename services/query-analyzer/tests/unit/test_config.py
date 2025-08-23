@@ -12,7 +12,7 @@ import yaml
 from pathlib import Path
 from unittest.mock import patch, mock_open
 
-from app.core.config import (
+from analyzer_app.core.config import (
     ServiceSettings,
     AnalyzerConfig,
     get_settings,

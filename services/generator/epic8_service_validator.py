@@ -170,7 +170,7 @@ import sys
 sys.path.insert(0, '{self.project_root}')
 sys.path.insert(0, '{service_dir}')
 try:
-    from app.main import app
+    from generator_app.main import app
     print('IMPORT_SUCCESS')
 except Exception as e:
     print(f'IMPORT_ERROR: {{e}}')

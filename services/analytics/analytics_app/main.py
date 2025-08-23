@@ -1,8 +1,15 @@
 """
-Query Analyzer Service - FastAPI Application.
+Analytics Service - FastAPI Application.
 
-This module implements the main FastAPI application for the Query Analyzer service,
-providing both REST and gRPC endpoints for query analysis functionality.
+This module implements the main FastAPI application for the Analytics service,
+providing REST endpoints for cost tracking, performance analytics, and usage trends.
+
+Epic 8 Integration:
+- Cost tracking with Epic 1 CostTracker integration
+- Performance analytics and SLO monitoring  
+- Usage pattern analysis and optimization recommendations
+- A/B testing framework support
+- Real-time and historical analytics
 """
 
 import asyncio
@@ -17,45 +24,43 @@ from prometheus_client import make_asgi_app, Counter, Histogram, Gauge
 import structlog
 
 from .api import rest
-from .core.config import get_settings, get_analyzer_config
-from .core.analyzer import QueryAnalyzerService
-from .schemas.requests import AnalyzeRequest
-from .schemas.responses import AnalyzeResponse, HealthResponse
+from .core.config import get_settings
+from .core.analytics import AnalyticsService
+from .schemas.responses import HealthResponse
 
 # Configure structured logging
 logging.basicConfig(level=logging.INFO)
 logger = structlog.get_logger(__name__)
 
 # Prometheus metrics
-REQUEST_COUNT = Counter('query_analyzer_requests_total', 'Total number of analysis requests', ['endpoint', 'status'])
-REQUEST_DURATION = Histogram('query_analyzer_request_duration_seconds', 'Request duration in seconds', ['endpoint'])
-ANALYSIS_COMPLEXITY = Counter('query_analyzer_complexity_total', 'Queries by complexity level', ['complexity'])
-SERVICE_HEALTH = Gauge('query_analyzer_service_health', 'Service health status (1=healthy, 0=unhealthy)')
+REQUEST_COUNT = Counter('analytics_requests_total', 'Total number of analytics requests', ['endpoint', 'status'])
+REQUEST_DURATION = Histogram('analytics_request_duration_seconds', 'Request duration in seconds', ['endpoint'])
+COST_TRACKING_TOTAL = Counter('analytics_cost_tracking_total', 'Total cost tracking records', ['provider', 'model'])
+SERVICE_HEALTH = Gauge('analytics_service_health', 'Service health status (1=healthy, 0=unhealthy)')
 
 # Global service instance
-analyzer_service: Optional[QueryAnalyzerService] = None
+analytics_service: Optional[AnalyticsService] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle - startup and shutdown."""
-    global analyzer_service
+    global analytics_service
     
-    logger.info("Starting Query Analyzer Service")
+    logger.info("Starting Analytics Service")
     
     # Initialize service
     settings = get_settings()
-    analyzer_config = get_analyzer_config()
-    analyzer_service = QueryAnalyzerService(config=analyzer_config)
+    analytics_service = AnalyticsService()
     
     # Initialize health metrics
     SERVICE_HEALTH.set(1)
     
-    logger.info("Query Analyzer Service started successfully")
+    logger.info("Analytics Service started successfully")
     
     yield
     
-    logger.info("Shutting down Query Analyzer Service")
+    logger.info("Shutting down Analytics Service")
     SERVICE_HEALTH.set(0)
 
 
@@ -63,8 +68,8 @@ def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     
     app = FastAPI(
-        title="Query Analyzer Service",
-        description="Microservice for query analysis and complexity classification",
+        title="Analytics Service",
+        description="Microservice for cost tracking, performance analytics, and usage trends",
         version="1.0.0",
         lifespan=lifespan,
         docs_url="/docs",
@@ -74,10 +79,14 @@ def create_app() -> FastAPI:
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Configure appropriately for production
+        allow_origins=[
+            "https://yourdomain.com",
+            "https://api.yourdomain.com",
+            "http://localhost:3000",  # For development
+        ],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
     )
     
     # Include routers
@@ -90,11 +99,11 @@ def create_app() -> FastAPI:
     return app
 
 
-def get_analyzer_service() -> QueryAnalyzerService:
-    """Dependency to get the analyzer service instance."""
-    if analyzer_service is None:
+def get_analytics_service() -> AnalyticsService:
+    """Dependency to get the analytics service instance."""
+    if analytics_service is None:
         raise HTTPException(status_code=503, detail="Service not initialized")
-    return analyzer_service
+    return analytics_service
 
 
 # Create app instance
@@ -105,26 +114,27 @@ app = create_app()
 async def health_check():
     """Health check endpoint."""
     try:
-        if analyzer_service is None:
+        if analytics_service is None:
             raise HTTPException(status_code=503, detail="Service not initialized")
         
         # Perform basic health checks
-        is_healthy = await analyzer_service.health_check()
+        is_healthy = await analytics_service.health_check()
         
         return HealthResponse(
             status="healthy" if is_healthy else "unhealthy",
-            service="query-analyzer",
+            service="analytics",
             version="1.0.0",
             details={
-                "analyzer_initialized": analyzer_service is not None,
-                "components_loaded": is_healthy
+                "service_initialized": analytics_service is not None,
+                "cost_tracker_active": is_healthy,
+                "metrics_store_active": is_healthy
             }
         )
     except Exception as e:
         logger.error("Health check failed", error=str(e))
         return HealthResponse(
             status="unhealthy",
-            service="query-analyzer",
+            service="analytics",
             version="1.0.0",
             details={"error": str(e)}
         )
@@ -139,10 +149,10 @@ async def liveness_probe():
 @app.get("/health/ready")
 async def readiness_probe():
     """Kubernetes readiness probe."""
-    if analyzer_service is None:
+    if analytics_service is None:
         raise HTTPException(status_code=503, detail="Service not ready")
     
-    is_ready = await analyzer_service.health_check()
+    is_ready = await analytics_service.health_check()
     if not is_ready:
         raise HTTPException(status_code=503, detail="Service not ready")
     
@@ -151,9 +161,9 @@ async def readiness_probe():
 
 if __name__ == "__main__":
     uvicorn.run(
-        "app.main:app",
+        "analytics_app.main:app",
         host="0.0.0.0",
-        port=8080,
+        port=8085,  # Analytics service runs on port 8085
         reload=True,
         log_level="info"
     )

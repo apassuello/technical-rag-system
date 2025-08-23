@@ -239,7 +239,7 @@ async def root():
 if __name__ == "__main__":
     settings = get_settings()
     uvicorn.run(
-        "app.main:app",
+        "retriever_app.main:app",
         host=settings.service.host,
         port=settings.service.port,
         reload=settings.service.debug,

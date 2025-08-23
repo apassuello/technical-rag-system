@@ -5,7 +5,7 @@ Unit tests for API Gateway REST endpoints.
 import pytest
 from unittest.mock import patch, AsyncMock
 
-from app.schemas.responses import UnifiedQueryResponse, BatchQueryResponse, GatewayStatusResponse
+from gateway_app.schemas.responses import UnifiedQueryResponse, BatchQueryResponse, GatewayStatusResponse
 
 
 class TestAPIEndpoints:

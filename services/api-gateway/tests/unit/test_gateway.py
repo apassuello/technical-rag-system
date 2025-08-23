@@ -6,9 +6,9 @@ import pytest
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from app.core.gateway import APIGatewayService
-from app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
-from app.schemas.responses import UnifiedQueryResponse, BatchQueryResponse
+from gateway_app.core.gateway import APIGatewayService
+from gateway_app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
+from gateway_app.schemas.responses import UnifiedQueryResponse, BatchQueryResponse
 
 
 class TestAPIGatewayService:

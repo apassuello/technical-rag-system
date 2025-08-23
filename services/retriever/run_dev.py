@@ -32,7 +32,7 @@ def main():
         
         # Run with uvicorn
         uvicorn.run(
-            "app.main:app",
+            "retriever_app.main:app",
             host="0.0.0.0",
             port=8083,
             reload=True,

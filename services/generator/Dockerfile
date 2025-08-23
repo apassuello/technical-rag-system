@@ -58,7 +58,7 @@ COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser config/ ./config/
 
 # Copy service-specific application code
-COPY --chown=appuser:appuser services/generator/app/ ./app/
+COPY --chown=appuser:appuser services/generator/generator_app/ ./generator_app/
 
 # Copy service configuration
 COPY --chown=appuser:appuser services/generator/config.yaml ./config.yaml
@@ -77,4 +77,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 USER appuser
 
 # Default command
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8081", "--workers", "1"]
+CMD ["python", "-m", "uvicorn", "generator_app.main:app", "--host", "0.0.0.0", "--port", "8081", "--workers", "1"]

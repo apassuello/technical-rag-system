@@ -17,10 +17,10 @@ import sys
 service_root = Path(__file__).parent.parent
 sys.path.insert(0, str(service_root))
 
-from app.main import create_app, get_analyzer_service
-from app.core.analyzer import QueryAnalyzerService
-from app.core.config import ServiceSettings, AnalyzerConfig, get_settings
-from app.schemas.responses import AnalyzeResponse
+from analyzer_app.main import create_app, get_analyzer_service
+from analyzer_app.core.analyzer import QueryAnalyzerService
+from analyzer_app.core.config import ServiceSettings, AnalyzerConfig, get_settings
+from analyzer_app.schemas.responses import AnalyzeResponse
 
 
 @pytest.fixture(scope="session")

@@ -9,7 +9,7 @@ import asyncio
 from unittest.mock import Mock, patch, AsyncMock
 import time
 
-from app.core.analyzer import QueryAnalyzerService
+from analyzer_app.core.analyzer import QueryAnalyzerService
 from conftest import (
     validate_response_structure,
     assert_valid_complexity,
