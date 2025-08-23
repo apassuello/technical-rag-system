@@ -25,19 +25,27 @@ from pathlib import Path
 import sys
 from decimal import Decimal
 
-# Add services to path
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "generator"
-if services_path.exists():
-    sys.path.insert(0, str(services_path))
+# Use the robust import helper for Epic 8 testing
+sys.path.insert(0, str(Path(__file__).parent.parent))  # Add epic8 test directory
+from import_helper import safe_import_generator
 
-try:
-    from app.core.generator import GeneratorService
-    from app.schemas.requests import GenerateRequest, DocumentContext
-    from app.schemas.responses import GenerateResponse, RoutingDecision
-    IMPORTS_AVAILABLE = True
-except ImportError as e:
-    IMPORTS_AVAILABLE = False
-    IMPORT_ERROR = str(e)
+# Set up imports using the helper
+IMPORTS_AVAILABLE, IMPORT_ERROR, imported_classes = safe_import_generator()
+
+# Global variables for test classes (set to None if imports fail)
+GeneratorService = None
+GenerateRequest = None
+DocumentContext = None
+GenerateResponse = None
+RoutingDecision = None
+
+if IMPORTS_AVAILABLE:
+    GeneratorService = imported_classes.get('GeneratorService')
+    GenerateRequest = imported_classes.get('GenerateRequest')
+    DocumentContext = imported_classes.get('DocumentContext')
+    GenerateResponse = imported_classes.get('GenerateResponse')
+    RoutingDecision = imported_classes.get('RoutingDecision')
+
 
 # Test data matching Epic 8 specifications
 SIMPLE_TEST_DOCUMENTS = [

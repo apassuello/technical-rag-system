@@ -26,24 +26,89 @@ from pathlib import Path
 import sys
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
 
-# Add services to path
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "api-gateway"
-if services_path.exists():
-    sys.path.insert(0, str(services_path))
+# Robust service import logic for Epic 8 testing
+def _setup_service_imports():
+    """Set up imports for Epic 8 API Gateway Service testing."""
+    # Get the absolute path to the service
+    current_file = Path(__file__).resolve()
+    project_root = current_file.parents[3]  # Go up 3 levels from tests/epic8/unit/
+    service_path = project_root / "services" / "api-gateway"
+    
+    if not service_path.exists():
+        return False, f"Service path does not exist: {service_path}", {}
+    
+    # Add service path to sys.path if not already present
+    service_path_str = str(service_path)
+    if service_path_str not in sys.path:
+        sys.path.insert(0, service_path_str)
+    
+    # Ensure __init__.py files exist for proper module structure
+    app_init = service_path / "gateway_app" / "__init__.py"
+    core_init = service_path / "gateway_app" / "core" / "__init__.py"
+    
+    if not app_init.exists() or not core_init.exists():
+        return False, f"Missing __init__.py files in service structure", {}
+    
+    try:
+        # Try importing the required modules
+        from gateway_app.core.gateway import APIGatewayService, SimpleCircuitBreaker
+        from gateway_app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
+        from gateway_app.schemas.responses import (
+            UnifiedQueryResponse, BatchQueryResponse, BatchQueryResult,
+            ProcessingMetrics, CostBreakdown, DocumentSource, GatewayStatusResponse,
+            ServiceStatus, AvailableModelsResponse, ModelInfo
+        )
+        from gateway_app.core.config import APIGatewaySettings
+        
+        # Return the imported classes so they can be used globally
+        imports = {
+            'APIGatewayService': APIGatewayService,
+            'SimpleCircuitBreaker': SimpleCircuitBreaker,
+            'UnifiedQueryRequest': UnifiedQueryRequest,
+            'BatchQueryRequest': BatchQueryRequest,
+            'QueryOptions': QueryOptions,
+            'UnifiedQueryResponse': UnifiedQueryResponse,
+            'BatchQueryResponse': BatchQueryResponse,
+            'BatchQueryResult': BatchQueryResult,
+            'ProcessingMetrics': ProcessingMetrics,
+            'CostBreakdown': CostBreakdown,
+            'DocumentSource': DocumentSource,
+            'GatewayStatusResponse': GatewayStatusResponse,
+            'ServiceStatus': ServiceStatus,
+            'AvailableModelsResponse': AvailableModelsResponse,
+            'ModelInfo': ModelInfo,
+            'APIGatewaySettings': APIGatewaySettings
+        }
+        return True, None, imports
+    except ImportError as e:
+        return False, f"Import failed: {str(e)}", {}
+    except Exception as e:
+        return False, f"Unexpected error during import: {str(e)}", {}
 
-try:
-    from app.core.gateway import APIGatewayService, SimpleCircuitBreaker
-    from app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
-    from app.schemas.responses import (
-        UnifiedQueryResponse, BatchQueryResponse, BatchQueryResult,
-        ProcessingMetrics, CostBreakdown, DocumentSource, GatewayStatusResponse,
-        ServiceStatus, AvailableModelsResponse, ModelInfo
-    )
-    from app.core.config import APIGatewaySettings
-    IMPORTS_AVAILABLE = True
-except ImportError as e:
-    IMPORTS_AVAILABLE = False
-    IMPORT_ERROR = str(e)
+# Execute import setup
+IMPORTS_AVAILABLE, IMPORT_ERROR, imported_classes = _setup_service_imports()
+
+# Make imported classes available globally if imports succeeded
+if IMPORTS_AVAILABLE:
+    APIGatewayService = imported_classes['APIGatewayService']
+    SimpleCircuitBreaker = imported_classes['SimpleCircuitBreaker']
+    UnifiedQueryRequest = imported_classes['UnifiedQueryRequest']
+    BatchQueryRequest = imported_classes['BatchQueryRequest']
+    QueryOptions = imported_classes['QueryOptions']
+    UnifiedQueryResponse = imported_classes['UnifiedQueryResponse']
+    BatchQueryResponse = imported_classes['BatchQueryResponse']
+    BatchQueryResult = imported_classes['BatchQueryResult']
+    ProcessingMetrics = imported_classes['ProcessingMetrics']
+    CostBreakdown = imported_classes['CostBreakdown']
+    DocumentSource = imported_classes['DocumentSource']
+    GatewayStatusResponse = imported_classes['GatewayStatusResponse']
+    ServiceStatus = imported_classes['ServiceStatus']
+    AvailableModelsResponse = imported_classes['AvailableModelsResponse']
+    ModelInfo = imported_classes['ModelInfo']
+    APIGatewaySettings = imported_classes['APIGatewaySettings']
+
+# Clean up the setup function from global namespace
+del _setup_service_imports, imported_classes
 
 
 class TestAPIGatewayServiceBasics:

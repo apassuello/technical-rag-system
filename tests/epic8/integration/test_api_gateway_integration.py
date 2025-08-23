@@ -34,19 +34,19 @@ if services_path.exists():
     sys.path.insert(0, str(services_path))
 
 try:
-    from app.core.gateway import APIGatewayService
-    from app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
-    from app.schemas.responses import (
+    from gateway_app.core.gateway import APIGatewayService
+    from gateway_app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
+    from gateway_app.schemas.responses import (
         UnifiedQueryResponse, BatchQueryResponse, GatewayStatusResponse,
         ProcessingMetrics, CostBreakdown, DocumentSource
     )
-    from app.core.config import APIGatewaySettings
-    from app.clients.base import ServiceClient
-    from app.clients.query_analyzer import QueryAnalyzerClient  
-    from app.clients.generator import GeneratorClient
-    from app.clients.retriever import RetrieverClient
-    from app.clients.cache import CacheClient
-    from app.clients.analytics import AnalyticsClient
+    from gateway_app.core.config import APIGatewaySettings
+    from gateway_app.clients.base import ServiceClient
+    from gateway_app.clients.query_analyzer import QueryAnalyzerClient  
+    from gateway_app.clients.generator import GeneratorClient
+    from gateway_app.clients.retriever import RetrieverClient
+    from gateway_app.clients.cache import CacheClient
+    from gateway_app.clients.analytics import AnalyticsClient
     IMPORTS_AVAILABLE = True
 except ImportError as e:
     IMPORTS_AVAILABLE = False

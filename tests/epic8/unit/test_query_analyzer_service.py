@@ -17,17 +17,52 @@ from typing import Dict, Any
 from pathlib import Path
 import sys
 
-# Add services to path
-services_path = Path(__file__).parent.parent.parent.parent / "services" / "query-analyzer"
-if services_path.exists():
-    sys.path.insert(0, str(services_path))
+# Robust service import logic for Epic 8 testing
+def _setup_service_imports():
+    """Set up imports for Epic 8 Query Analyzer Service testing."""
+    # Get the absolute path to the service
+    current_file = Path(__file__).resolve()
+    project_root = current_file.parents[3]  # Go up 3 levels from tests/epic8/unit/
+    service_path = project_root / "services" / "query-analyzer"
+    
+    if not service_path.exists():
+        return False, f"Service path does not exist: {service_path}", {}
+    
+    # Add service path to sys.path if not already present
+    service_path_str = str(service_path)
+    if service_path_str not in sys.path:
+        sys.path.insert(0, service_path_str)
+    
+    # Ensure __init__.py files exist for proper module structure
+    app_init = service_path / "analyzer_app" / "__init__.py"
+    core_init = service_path / "analyzer_app" / "core" / "__init__.py"
+    
+    if not app_init.exists() or not core_init.exists():
+        return False, f"Missing __init__.py files in service structure", {}
+    
+    try:
+        # Try importing the required modules
+        from analyzer_app.core.analyzer import QueryAnalyzerService
+        
+        # Return the imported classes so they can be used globally
+        imports = {
+            'QueryAnalyzerService': QueryAnalyzerService
+        }
+        return True, None, imports
+    except ImportError as e:
+        return False, f"Import failed: {str(e)}", {}
+    except Exception as e:
+        return False, f"Unexpected error during import: {str(e)}", {}
 
-try:
-    from app.core.analyzer import QueryAnalyzerService
-    IMPORTS_AVAILABLE = True
-except ImportError as e:
-    IMPORTS_AVAILABLE = False
-    IMPORT_ERROR = str(e)
+# Execute import setup
+IMPORTS_AVAILABLE, IMPORT_ERROR, imported_classes = _setup_service_imports()
+
+# Make imported classes available globally if imports succeeded
+if IMPORTS_AVAILABLE:
+    QueryAnalyzerService = imported_classes['QueryAnalyzerService']
+
+# Clean up the setup function from global namespace
+del _setup_service_imports, imported_classes
 
 
 class TestQueryAnalyzerServiceBasics:

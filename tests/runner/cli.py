@@ -65,8 +65,15 @@ Examples:
   # Run Epic 1 unit tests with JSON output
   test-runner epic1 unit --format json
   
+  # Run Epic 1 tests with coverage
+  test-runner epic1 unit --coverage
+  
   # Run quick smoke tests
   test-runner smoke
+  
+  # Generate coverage report
+  test-runner coverage run unit
+  test-runner coverage report --format html
   
   # List available test suites
   test-runner list
@@ -115,6 +122,9 @@ Examples:
         
         # Validate command
         self._add_validate_parser(subparsers)
+        
+        # Coverage command
+        self._add_coverage_parser(subparsers)
         
         return parser
     
@@ -267,6 +277,70 @@ Examples:
         )
         validate_parser.set_defaults(func=self._validate_setup)
     
+    def _add_coverage_parser(self, subparsers):
+        """Add coverage analysis command."""
+        coverage_parser = subparsers.add_parser(
+            'coverage',
+            help='Run coverage analysis',
+            description='Generate and analyze test coverage reports'
+        )
+        
+        coverage_subparsers = coverage_parser.add_subparsers(dest='coverage_command', help='Coverage commands')
+        
+        # Report command - generate coverage report without running tests
+        report_parser = coverage_subparsers.add_parser('report', help='Generate coverage report')
+        report_parser.add_argument(
+            '--format', '-f',
+            choices=['term', 'term-missing', 'html', 'xml', 'json', 'all'],
+            default='html',
+            help='Coverage report format'
+        )
+        report_parser.add_argument(
+            '--output-dir',
+            default='htmlcov',
+            help='Output directory for HTML reports'
+        )
+        report_parser.set_defaults(func=self._coverage_report)
+        
+        # Run command - run tests with coverage
+        run_parser = coverage_subparsers.add_parser('run', help='Run tests with coverage')
+        run_parser.add_argument(
+            'suite',
+            nargs='?',
+            default='all',
+            help='Test suite to run with coverage (default: all available suites)'
+        )
+        run_parser.add_argument(
+            '--format', '-f',
+            choices=['term', 'term-missing', 'html', 'xml', 'json', 'all'],
+            default='all',
+            help='Coverage report format'
+        )
+        run_parser.add_argument(
+            '--fail-under',
+            type=float,
+            default=70.0,
+            help='Minimum coverage percentage required'
+        )
+        run_parser.set_defaults(func=self._coverage_run)
+        
+        # Diff command - compare coverage between runs
+        diff_parser = coverage_subparsers.add_parser('diff', help='Compare coverage between runs')
+        diff_parser.add_argument(
+            'baseline',
+            help='Baseline coverage file (JSON format)'
+        )
+        diff_parser.add_argument(
+            'current',
+            nargs='?',
+            default='coverage.json',
+            help='Current coverage file (default: coverage.json)'
+        )
+        diff_parser.set_defaults(func=self._coverage_diff)
+        
+        # Set default to show help
+        coverage_parser.set_defaults(func=lambda args: coverage_parser.print_help() or 0)
+    
     def _add_common_test_options(self, parser):
         """Add common test execution options."""
         parser.add_argument(
@@ -297,6 +371,32 @@ Examples:
         parser.add_argument(
             '--output', '-o',
             help='Output file for JSON format'
+        )
+        
+        # Coverage options
+        parser.add_argument(
+            '--coverage', '-c',
+            action='store_true',
+            help='Enable coverage reporting'
+        )
+        
+        parser.add_argument(
+            '--coverage-report',
+            choices=['term', 'term-missing', 'html', 'xml', 'json', 'all'],
+            default='term-missing',
+            help='Coverage report format (default: term-missing)'
+        )
+        
+        parser.add_argument(
+            '--coverage-html-dir',
+            default='htmlcov',
+            help='Directory for HTML coverage report (default: htmlcov)'
+        )
+        
+        parser.add_argument(
+            '--coverage-fail-under',
+            type=float,
+            help='Minimum coverage percentage required (overrides config)'
         )
     
     def _run_suite(self, suite_name: str, args) -> int:
@@ -438,6 +538,201 @@ Examples:
             return 0
         else:
             print(f"\n❌ Test setup validation failed!")
+            return 1
+    
+    def _coverage_report(self, args) -> int:
+        """Generate coverage report from existing coverage data."""
+        import subprocess
+        import os
+        from pathlib import Path
+        
+        print("📊 Generating coverage report...")
+        
+        # Check if coverage data exists
+        if not Path('.coverage').exists():
+            print("❌ No coverage data found. Run tests with --coverage first.")
+            return 1
+        
+        try:
+            format_type = args.format
+            
+            if format_type in ['term', 'term-missing']:
+                # Terminal report
+                show_missing = '--show-missing' if format_type == 'term-missing' else ''
+                cmd = f"coverage report {show_missing}"
+                subprocess.run(cmd, shell=True, check=True)
+                
+            elif format_type == 'html':
+                # HTML report
+                output_dir = args.output_dir
+                cmd = f"coverage html -d {output_dir}"
+                subprocess.run(cmd, shell=True, check=True)
+                print(f"📊 HTML coverage report generated: {output_dir}/index.html")
+                
+            elif format_type == 'xml':
+                # XML report
+                cmd = "coverage xml"
+                subprocess.run(cmd, shell=True, check=True)
+                print("📊 XML coverage report generated: coverage.xml")
+                
+            elif format_type == 'json':
+                # JSON report
+                cmd = "coverage json"
+                subprocess.run(cmd, shell=True, check=True)
+                print("📊 JSON coverage report generated: coverage.json")
+                
+            elif format_type == 'all':
+                # Generate all report types
+                subprocess.run("coverage report --show-missing", shell=True, check=True)
+                subprocess.run(f"coverage html -d {args.output_dir}", shell=True, check=True)
+                subprocess.run("coverage xml", shell=True, check=True)
+                subprocess.run("coverage json", shell=True, check=True)
+                print(f"📊 All coverage reports generated:")
+                print(f"  - Terminal: displayed above")
+                print(f"  - HTML: {args.output_dir}/index.html")
+                print(f"  - XML: coverage.xml")
+                print(f"  - JSON: coverage.json")
+            
+            return 0
+            
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Coverage report generation failed: {e}")
+            return 1
+    
+    def _coverage_run(self, args) -> int:
+        """Run tests with coverage analysis."""
+        print("🧪 Running tests with coverage analysis...")
+        
+        # Determine which suites to run
+        suite_name = args.suite
+        if suite_name == 'all':
+            # Run comprehensive test suites including all Epic tests
+            suites_to_run = ['unit', 'integration', 'epic1_all', 'epic8_all']
+        else:
+            suites_to_run = [suite_name]
+        
+        try:
+            import subprocess
+            
+            coverage_args = [
+                '--cov=src',
+                '--cov-report=term-missing',
+                f'--cov-fail-under={args.fail_under}'
+            ]
+            
+            if args.format in ['html', 'all']:
+                coverage_args.append('--cov-report=html')
+            if args.format in ['xml', 'all']:
+                coverage_args.append('--cov-report=xml')
+            if args.format in ['json', 'all']:
+                coverage_args.append('--cov-report=json')
+            
+            # Build pytest command for each suite
+            all_passed = True
+            for suite in suites_to_run:
+                print(f"\n🧪 Running {suite} tests with coverage...")
+                
+                # Get suite configuration
+                suite_config = self.config.get_suite(suite)
+                if not suite_config:
+                    print(f"❌ Unknown test suite: {suite}")
+                    continue
+                
+                # Build pytest command with coverage
+                cmd = ['python', '-m', 'pytest'] + coverage_args
+                
+                # Add test patterns
+                for pattern in suite_config.patterns:
+                    cmd.append(pattern)
+                
+                # Add markers if present
+                if suite_config.markers:
+                    cmd.extend(['-m', ' and '.join(suite_config.markers)])
+                
+                # Execute tests
+                result = subprocess.run(cmd, capture_output=False)
+                if result.returncode != 0:
+                    all_passed = False
+                    print(f"❌ {suite} tests failed")
+                else:
+                    print(f"✅ {suite} tests passed")
+            
+            if all_passed:
+                print(f"\n✅ All tests passed with coverage analysis!")
+                if args.format in ['html', 'all']:
+                    print(f"📊 HTML coverage report: htmlcov/index.html")
+                return 0
+            else:
+                print(f"\n❌ Some tests failed")
+                return 1
+                
+        except Exception as e:
+            print(f"❌ Coverage run failed: {e}")
+            return 1
+    
+    def _coverage_diff(self, args) -> int:
+        """Compare coverage between two runs."""
+        import json
+        from pathlib import Path
+        
+        baseline_file = Path(args.baseline)
+        current_file = Path(args.current)
+        
+        if not baseline_file.exists():
+            print(f"❌ Baseline coverage file not found: {baseline_file}")
+            return 1
+            
+        if not current_file.exists():
+            print(f"❌ Current coverage file not found: {current_file}")
+            return 1
+        
+        try:
+            # Load coverage data
+            with open(baseline_file) as f:
+                baseline_data = json.load(f)
+            with open(current_file) as f:
+                current_data = json.load(f)
+            
+            # Extract summary data
+            baseline_summary = baseline_data.get('totals', {})
+            current_summary = current_data.get('totals', {})
+            
+            baseline_percent = baseline_summary.get('percent_covered', 0)
+            current_percent = current_summary.get('percent_covered', 0)
+            
+            print("📊 Coverage Comparison")
+            print("=" * 50)
+            print(f"Baseline coverage: {baseline_percent:.1f}%")
+            print(f"Current coverage:  {current_percent:.1f}%")
+            
+            diff = current_percent - baseline_percent
+            if diff > 0:
+                print(f"✅ Coverage improved by {diff:.1f} percentage points")
+            elif diff < 0:
+                print(f"⚠️  Coverage decreased by {abs(diff):.1f} percentage points")
+            else:
+                print("➡️  Coverage unchanged")
+            
+            # Show per-file differences if available
+            baseline_files = baseline_data.get('files', {})
+            current_files = current_data.get('files', {})
+            
+            print(f"\n📁 Per-file changes:")
+            all_files = set(baseline_files.keys()) | set(current_files.keys())
+            
+            for file_path in sorted(all_files):
+                baseline_file_percent = baseline_files.get(file_path, {}).get('summary', {}).get('percent_covered', 0)
+                current_file_percent = current_files.get(file_path, {}).get('summary', {}).get('percent_covered', 0)
+                
+                file_diff = current_file_percent - baseline_file_percent
+                if abs(file_diff) > 0.1:  # Only show significant changes
+                    status = "✅" if file_diff > 0 else "⚠️" if file_diff < 0 else "➡️"
+                    print(f"  {status} {file_path}: {baseline_file_percent:.1f}% → {current_file_percent:.1f}% ({file_diff:+.1f}%)")
+            
+            return 0
+            
+        except Exception as e:
+            print(f"❌ Coverage comparison failed: {e}")
             return 1
 
 

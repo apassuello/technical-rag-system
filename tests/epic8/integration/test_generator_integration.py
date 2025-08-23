@@ -38,7 +38,7 @@ if src_path.exists():
     sys.path.insert(0, str(src_path))
 
 try:
-    from app.core.generator import GeneratorService
+    from generator_app.core.generator import GeneratorService
     GENERATOR_IMPORTS_AVAILABLE = True
 except ImportError as e:
     GENERATOR_IMPORTS_AVAILABLE = False
