@@ -19,6 +19,7 @@ Test Coverage:
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 import time
 import json
@@ -48,7 +49,7 @@ except ImportError as e:
 # Check if Redis is available for integration tests
 REDIS_AVAILABLE = False
 try:
-    import aioredis
+    import redis.asyncio as redis
     # Try connecting to Redis for integration tests
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
     REDIS_AVAILABLE = True
@@ -56,7 +57,7 @@ except ImportError:
     REDIS_URL = None
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def redis_integration_config():
     """Configuration for Redis integration testing."""
     return {
@@ -74,7 +75,7 @@ async def redis_integration_config():
     }
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def cache_service_with_redis(redis_integration_config):
     """Cache service with real Redis connection for integration testing."""
     if not IMPORTS_AVAILABLE:

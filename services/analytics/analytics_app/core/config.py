@@ -7,7 +7,7 @@ performance monitoring settings, and data persistence options.
 
 import os
 from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings
 from pathlib import Path
 import yaml
@@ -64,7 +64,8 @@ class AnalyticsSettings(BaseSettings):
         env_prefix = "ANALYTICS_"
         case_sensitive = False
 
-    @validator("alert_thresholds")
+    @field_validator("alert_thresholds")
+    @classmethod
     def validate_alert_thresholds(cls, v):
         """Validate alert thresholds are between 0 and 1."""
         for threshold in v:
@@ -72,7 +73,8 @@ class AnalyticsSettings(BaseSettings):
                 raise ValueError(f"Alert threshold {threshold} must be between 0 and 1")
         return sorted(v)  # Sort thresholds
 
-    @validator("cost_precision_places")
+    @field_validator("cost_precision_places")
+    @classmethod
     def validate_precision(cls, v):
         """Validate cost precision places."""
         if not 1 <= v <= 10:

@@ -1444,6 +1444,22 @@ class Epic1AnswerGenerator(AnswerGenerator):
         except Exception as e:
             logger.error(f"Fallback generation also failed: {str(e)}")
             raise GenerationError(f"Selected model unavailable and fallback failed: {str(e)}") from e
+    
+    def generate_answer(self, query: str, context: List[Document]) -> Answer:
+        """
+        Compatibility method for Epic8 services integration.
+        
+        This is a wrapper around the generate() method to maintain compatibility
+        with Epic8 service expectations that call generate_answer().
+        
+        Args:
+            query: User query string
+            context: List of relevant context documents
+            
+        Returns:
+            Answer object with generated text, sources, confidence, and metadata
+        """
+        return self.generate(query, context)
 
 
 # Factory function for component factory registration

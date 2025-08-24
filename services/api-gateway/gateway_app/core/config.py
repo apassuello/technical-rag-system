@@ -4,7 +4,7 @@ Configuration module for API Gateway Service.
 
 import os
 from typing import Dict, List, Optional
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -84,7 +84,8 @@ class APIGatewaySettings(BaseSettings):
         env_prefix = "GATEWAY_"
         case_sensitive = False
     
-    @validator('log_level')
+    @field_validator('log_level')
+    @classmethod
     def validate_log_level(cls, v):
         """Validate log level."""
         valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -92,7 +93,8 @@ class APIGatewaySettings(BaseSettings):
             raise ValueError(f'Invalid log level. Must be one of: {valid_levels}')
         return v.upper()
     
-    @validator('allowed_origins')
+    @field_validator('allowed_origins')
+    @classmethod
     def validate_origins(cls, v):
         """Validate CORS origins."""
         if "*" in v and len(v) > 1:

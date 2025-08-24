@@ -3,7 +3,7 @@ Request schemas for Generator Service API.
 """
 
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class DocumentContext(BaseModel):
@@ -28,8 +28,8 @@ class GenerateRequest(BaseModel):
     
     context_documents: List[DocumentContext] = Field(
         ...,
-        min_items=1,
-        max_items=20,
+        min_length=1,
+        max_length=20,
         description="Relevant documents for context"
     )
     
@@ -38,21 +38,24 @@ class GenerateRequest(BaseModel):
         description="Generation options and parameters"
     )
     
-    @validator('query')
+    @field_validator('query')
+    @classmethod
     def validate_query(cls, v):
         """Validate the query string."""
         if not v or not v.strip():
             raise ValueError("Query cannot be empty or whitespace only")
         return v.strip()
     
-    @validator('context_documents')
+    @field_validator('context_documents')
+    @classmethod
     def validate_context_documents(cls, v):
         """Validate context documents."""
         if not v:
             raise ValueError("At least one context document is required")
         return v
     
-    @validator('options')
+    @field_validator('options')
+    @classmethod
     def validate_options(cls, v):
         """Validate options dictionary."""
         if v is not None and not isinstance(v, dict):
@@ -80,8 +83,8 @@ class BatchGenerateRequest(BaseModel):
     
     requests: List[GenerateRequest] = Field(
         ...,
-        min_items=1,
-        max_items=10,
+        min_length=1,
+        max_length=10,
         description="List of generation requests"
     )
     
@@ -112,7 +115,8 @@ class RoutingTestRequest(BaseModel):
     strategy: Optional[str] = Field(default=None, description="Routing strategy to test")
     max_cost: Optional[float] = Field(default=None, ge=0.0, description="Maximum cost constraint")
     
-    @validator('strategy')
+    @field_validator('strategy')
+    @classmethod
     def validate_strategy(cls, v):
         """Validate routing strategy."""
         if v is not None:

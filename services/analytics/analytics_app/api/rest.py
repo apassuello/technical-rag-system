@@ -138,7 +138,7 @@ async def record_query_completion(
                 message="Failed to record query completion",
                 details={"error": str(e)},
                 request_id=request_id
-            ).dict()
+            ).model_dump()
         )
 
 

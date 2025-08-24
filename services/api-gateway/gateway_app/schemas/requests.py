@@ -3,7 +3,7 @@ Request schemas for API Gateway Service.
 """
 
 from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 
@@ -99,14 +99,17 @@ class UnifiedQueryRequest(BaseModel):
         description="User identifier for analytics"
     )
     
-    @validator('query')
+    @field_validator('query')
+    @classmethod
+    @classmethod
     def validate_query(cls, v):
         """Validate query string."""
         if not v or not v.strip():
             raise ValueError("Query cannot be empty or whitespace only")
         return v.strip()
     
-    @validator('context')
+    @field_validator('context')
+    @classmethod
     def validate_context(cls, v):
         """Validate context dictionary."""
         if v is not None and not isinstance(v, dict):
@@ -126,8 +129,8 @@ class BatchQueryRequest(BaseModel):
     
     queries: List[str] = Field(
         ...,
-        min_items=1,
-        max_items=100,
+        min_length=1,
+        max_length=100,
         description="List of queries to process"
     )
     
@@ -163,7 +166,8 @@ class BatchQueryRequest(BaseModel):
         le=50
     )
     
-    @validator('queries')
+    @field_validator('queries')
+    @classmethod
     def validate_queries(cls, v):
         """Validate queries list."""
         for i, query in enumerate(v):
@@ -171,7 +175,8 @@ class BatchQueryRequest(BaseModel):
                 raise ValueError(f"Query at index {i} cannot be empty or whitespace only")
         return [q.strip() for q in v]
     
-    @validator('context')
+    @field_validator('context')
+    @classmethod
     def validate_context(cls, v):
         """Validate context dictionary."""
         if v is not None and not isinstance(v, dict):

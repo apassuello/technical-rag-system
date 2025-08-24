@@ -590,7 +590,7 @@ class APIGatewayService:
             with self.circuit_breakers["cache"]:
                 return await self.cache.cache_response(
                     query_hash,
-                    response.dict(),
+                    response.model_dump(),
                     ttl=3600  # 1 hour default TTL
                 )
         except Exception as e:
@@ -619,8 +619,8 @@ class APIGatewayService:
         try:
             with self.circuit_breakers["analytics"]:
                 return await self.analytics.record_query_completion(
-                    query_request=request.dict(),
-                    query_response=response.dict()
+                    query_request=request.model_dump(),
+                    query_response=response.model_dump()
                 )
         except Exception as e:
             self.logger.warning("Query completion recording failed", error=str(e))

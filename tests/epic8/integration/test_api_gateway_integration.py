@@ -41,7 +41,6 @@ try:
         ProcessingMetrics, CostBreakdown, DocumentSource
     )
     from gateway_app.core.config import APIGatewaySettings
-    from gateway_app.clients.base import ServiceClient
     from gateway_app.clients.query_analyzer import QueryAnalyzerClient  
     from gateway_app.clients.generator import GeneratorClient
     from gateway_app.clients.retriever import RetrieverClient

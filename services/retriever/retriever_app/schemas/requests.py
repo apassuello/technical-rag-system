@@ -6,7 +6,7 @@ with comprehensive validation and documentation.
 """
 
 from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class RetrievalRequest(BaseModel):
@@ -64,7 +64,8 @@ class RetrievalRequest(BaseModel):
         example={"reranking_enabled": True, "fusion_weight": 0.7}
     )
     
-    @validator('retrieval_strategy')
+    @field_validator('retrieval_strategy')
+    @classmethod
     def validate_retrieval_strategy(cls, v):
         """Validate retrieval strategy."""
         allowed_strategies = ["hybrid", "semantic", "keyword", "dense", "sparse"]
@@ -72,7 +73,8 @@ class RetrievalRequest(BaseModel):
             raise ValueError(f"retrieval_strategy must be one of {allowed_strategies}")
         return v
     
-    @validator('complexity')
+    @field_validator('complexity')
+    @classmethod
     def validate_complexity(cls, v):
         """Validate complexity level."""
         allowed_complexities = ["simple", "medium", "complex", "auto"]
@@ -80,7 +82,8 @@ class RetrievalRequest(BaseModel):
             raise ValueError(f"complexity must be one of {allowed_complexities}")
         return v
     
-    @validator('max_documents')
+    @field_validator('max_documents')
+    @classmethod
     def validate_max_documents(cls, v, values):
         """Validate max_documents against k."""
         if v is not None and 'k' in values and v < values['k']:
@@ -98,8 +101,8 @@ class BatchRetrievalRequest(BaseModel):
     queries: List[str] = Field(
         ...,
         description="List of search query strings",
-        min_items=1,
-        max_items=100,
+        min_length=1,
+        max_length=100,
         example=["What is machine learning?", "How does neural networks work?"]
     )
     
@@ -123,7 +126,8 @@ class BatchRetrievalRequest(BaseModel):
         example={"reranking_enabled": True, "parallel_processing": True}
     )
     
-    @validator('queries')
+    @field_validator('queries')
+    @classmethod
     def validate_queries(cls, v):
         """Validate query list."""
         # Check each query individually
@@ -134,7 +138,8 @@ class BatchRetrievalRequest(BaseModel):
                 raise ValueError(f"Query at index {i} exceeds maximum length of 1000 characters")
         return v
     
-    @validator('retrieval_strategy')
+    @field_validator('retrieval_strategy')
+    @classmethod
     def validate_retrieval_strategy(cls, v):
         """Validate retrieval strategy."""
         allowed_strategies = ["hybrid", "semantic", "keyword", "dense", "sparse"]
@@ -190,14 +195,16 @@ class DocumentData(BaseModel):
         example=None
     )
     
-    @validator('content')
+    @field_validator('content')
+    @classmethod
     def validate_content(cls, v):
         """Validate content field."""
         if not v.strip():
             raise ValueError("Document content cannot be empty")
         return v
     
-    @validator('embedding')
+    @field_validator('embedding')
+    @classmethod
     def validate_embedding(cls, v):
         """Validate embedding vector."""
         if v is not None:
@@ -218,8 +225,8 @@ class IndexDocumentsRequest(BaseModel):
     documents: List[DocumentData] = Field(
         ...,
         description="List of documents to index",
-        min_items=1,
-        max_items=1000  # Limit batch size
+        min_length=1,
+        max_length=1000  # Limit batch size
     )
     
     options: Optional[Dict[str, Any]] = Field(
@@ -232,7 +239,8 @@ class IndexDocumentsRequest(BaseModel):
         }
     )
     
-    @validator('documents')
+    @field_validator('documents')
+    @classmethod
     def validate_documents(cls, v):
         """Validate document list."""
         if len(v) == 0:

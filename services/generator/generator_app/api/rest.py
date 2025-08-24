@@ -129,7 +129,7 @@ async def generate_answer(
                 message="Answer generation failed",
                 details={"error": str(e)},
                 request_id=request_id
-            ).dict()
+            ).model_dump()
         )
 
 

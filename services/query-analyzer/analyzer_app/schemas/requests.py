@@ -3,7 +3,7 @@ Request schemas for Query Analyzer Service API.
 """
 
 from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class AnalyzeRequest(BaseModel):
@@ -26,21 +26,24 @@ class AnalyzeRequest(BaseModel):
         description="Optional analysis options and parameters"
     )
     
-    @validator('query')
+    @field_validator('query')
+    @classmethod
     def validate_query(cls, v):
         """Validate the query string."""
         if not v or not v.strip():
             raise ValueError("Query cannot be empty or whitespace only")
         return v.strip()
     
-    @validator('context')
+    @field_validator('context')
+    @classmethod
     def validate_context(cls, v):
         """Validate context dictionary."""
         if v is not None and not isinstance(v, dict):
             raise ValueError("Context must be a dictionary")
         return v
     
-    @validator('options')
+    @field_validator('options')
+    @classmethod
     def validate_options(cls, v):
         """Validate options dictionary."""
         if v is not None and not isinstance(v, dict):

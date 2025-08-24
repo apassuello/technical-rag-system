@@ -96,7 +96,7 @@ async def analyze_query(
                 message="Query analysis failed",
                 details={"error": str(e)},
                 request_id=request_id
-            ).dict()
+            ).model_dump()
         )
 
 

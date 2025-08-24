@@ -128,7 +128,7 @@ def create_app() -> FastAPI:
                     "service_version": "1.0.0",
                     "timestamp": "2025-08-22T10:30:00Z"
                 }
-            ).dict()
+            ).model_dump()
         )
     
     return app

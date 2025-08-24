@@ -45,6 +45,9 @@ tenacity>=8.0.0  # Retry logic with exponential backoff
 tiktoken>=0.5.0  # OpenAI token counting
 mistral-common>=1.0.0  # Mistral token counting
 
+# Epic 8 Cloud-Native Dependencies
+redis>=5.0.1  # Redis Python client with async support for cache service
+
 # Optional dependencies for local development only
 # accelerate>=0.20.0  # Uncomment for local GPU acceleration
 # pdfplumber>=0.10.0  # Uncomment for advanced PDF parsing

@@ -110,7 +110,7 @@ class RetrieverService:
                 # Note: normalize_embeddings is not supported by SentenceTransformerEmbedder - removed
                     
                 self.embedder = ComponentFactory.create_embedder(
-                    embedder_type=embedder_config.get('type', 'sentence_transformer'),
+                    embedder_type=embedder_config.get('type', 'modular'),
                     **embedder_kwargs
                 )
                 

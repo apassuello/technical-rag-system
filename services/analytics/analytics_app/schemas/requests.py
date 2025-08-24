@@ -5,7 +5,7 @@ This module defines Pydantic models for all Analytics Service REST API requests.
 """
 
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
 
@@ -30,21 +30,24 @@ class RecordQueryRequest(BaseModel):
     error_type: Optional[str] = Field(None, description="Type of error if unsuccessful")
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional metadata")
     
-    @validator("complexity")
+    @field_validator("complexity")
+    @classmethod
     def validate_complexity(cls, v):
         """Validate complexity is one of the allowed values."""
         if v.lower() not in ["simple", "medium", "complex"]:
             raise ValueError("Complexity must be one of: simple, medium, complex")
         return v.lower()
     
-    @validator("provider")
+    @field_validator("provider")
+    @classmethod
     def validate_provider(cls, v):
         """Validate provider is one of the supported providers."""
         if v.lower() not in ["openai", "mistral", "ollama", "anthropic", "huggingface"]:
             raise ValueError("Provider must be one of: openai, mistral, ollama, anthropic, huggingface")
         return v.lower()
     
-    @validator("query")
+    @field_validator("query")
+    @classmethod
     def validate_query_length(cls, v):
         """Limit query length for storage efficiency."""
         if len(v) > 10000:
@@ -61,7 +64,8 @@ class BatchRecordQueryRequest(BaseModel):
     queries: List[RecordQueryRequest] = Field(..., description="List of query records")
     batch_id: Optional[str] = Field(None, description="Optional batch identifier")
     
-    @validator("queries")
+    @field_validator("queries")
+    @classmethod
     def validate_batch_size(cls, v):
         """Limit batch size to prevent resource exhaustion."""
         if len(v) > 1000:
@@ -80,7 +84,8 @@ class CostReportRequest(BaseModel):
     include_detailed_breakdown: bool = Field(default=True, description="Include detailed cost breakdown")
     group_by: Optional[str] = Field(None, description="Group results by: provider, model, complexity")
     
-    @validator("group_by")
+    @field_validator("group_by")
+    @classmethod
     def validate_group_by(cls, v):
         """Validate group_by parameter."""
         if v is not None and v.lower() not in ["provider", "model", "complexity"]:
@@ -97,7 +102,8 @@ class PerformanceReportRequest(BaseModel):
     include_trends: bool = Field(default=True, description="Include performance trends")
     percentiles: List[float] = Field(default=[0.50, 0.90, 0.95, 0.99], description="Response time percentiles to calculate")
     
-    @validator("percentiles")
+    @field_validator("percentiles")
+    @classmethod
     def validate_percentiles(cls, v):
         """Validate percentiles are valid."""
         for p in v:
@@ -115,7 +121,8 @@ class UsageTrendsRequest(BaseModel):
     include_patterns: bool = Field(default=True, description="Include usage pattern analysis")
     include_forecasting: bool = Field(default=False, description="Include basic usage forecasting")
     
-    @validator("bucket_size_hours")
+    @field_validator("bucket_size_hours")
+    @classmethod
     def validate_bucket_size(cls, v, values):
         """Validate bucket size is reasonable for the time range."""
         time_range = values.get("time_range_hours", 24)
@@ -133,7 +140,8 @@ class ABTestRequest(BaseModel):
     metrics: List[str] = Field(default=["response_time", "cost", "success_rate"], description="Metrics to analyze")
     confidence_level: float = Field(default=0.95, ge=0.8, le=0.99, description="Statistical confidence level")
     
-    @validator("metrics")
+    @field_validator("metrics")
+    @classmethod
     def validate_metrics(cls, v):
         """Validate metrics are supported."""
         valid_metrics = ["response_time", "cost", "success_rate", "error_rate", "user_satisfaction"]

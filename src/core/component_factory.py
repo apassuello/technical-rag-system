@@ -441,12 +441,21 @@ class ComponentFactory:
         embedder_class = cls._get_component_class(embedder_module_path)
         
         try:
+            # Handle different configuration formats
+            processed_kwargs = kwargs.copy()
+            
+            # If nested config format is used, flatten it for SentenceTransformerEmbedder
+            if 'config' in kwargs and embedder_type in ['sentence_transformer', 'sentence_transformers']:
+                config = kwargs.pop('config')
+                processed_kwargs.update(config)
+                processed_kwargs.pop('config', None)  # Remove the nested config
+            
             # Use caching for embedders (expensive to create)
             return cls._create_with_tracking(
                 embedder_class, 
                 f"embedder_{embedder_type}", 
                 use_cache=True,  # Enable caching for embedders
-                **kwargs
+                **processed_kwargs
             )
         except Exception as e:
             raise TypeError(

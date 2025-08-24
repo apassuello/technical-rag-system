@@ -8,7 +8,7 @@ retriever service using Pydantic settings with YAML support.
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings
 import yaml
 
@@ -82,7 +82,8 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_nested_delimiter = "__"
         
-    @validator('retriever_config', pre=True, always=True)
+    @field_validator('retriever_config', pre=True, always=True)
+    @classmethod
     def set_default_retriever_config(cls, v):
         """Set default retriever configuration if not provided."""
         if not v:
@@ -119,7 +120,8 @@ class Settings(BaseSettings):
             }
         return v
     
-    @validator('embedder_config', pre=True, always=True)
+    @field_validator('embedder_config', pre=True, always=True)
+    @classmethod
     def set_default_embedder_config(cls, v):
         """Set default embedder configuration if not provided."""
         if not v:
