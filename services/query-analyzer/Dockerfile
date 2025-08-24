@@ -61,7 +61,7 @@ COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser config/ ./config/
 
 # Copy service-specific application code
-COPY --chown=appuser:appuser services/query-analyzer/analyzer_app/ ./app/
+COPY --chown=appuser:appuser services/query-analyzer/analyzer_app/ ./analyzer_app/
 
 # Copy service configuration
 COPY --chown=appuser:appuser services/query-analyzer/config.yaml ./config.yaml

@@ -62,7 +62,7 @@ COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser config/ ./config/
 
 # Copy service-specific application code
-COPY --chown=appuser:appuser services/analytics/analytics_app/ ./app/
+COPY --chown=appuser:appuser services/analytics/analytics_app/ ./analytics_app/
 
 # Copy service configuration
 COPY --chown=appuser:appuser services/analytics/config.yaml ./config.yaml

@@ -45,3 +45,8 @@ typing-extensions>=4.5.0
 # Utilities
 python-dateutil>=2.8.0
 pytz>=2023.3
+
+# Document processing dependencies from shared_utils
+pdfplumber>=0.9.0
+PyMuPDF>=1.23.0
+Pillow>=10.0.0

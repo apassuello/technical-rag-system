@@ -83,7 +83,7 @@ class Settings(BaseSettings):
         env_nested_delimiter="__"
     )
         
-    @field_validator('retriever_config', pre=True, always=True)
+    @field_validator('retriever_config')
     @classmethod
     def set_default_retriever_config(cls, v):
         """Set default retriever configuration if not provided."""
@@ -121,7 +121,7 @@ class Settings(BaseSettings):
             }
         return v
     
-    @field_validator('embedder_config', pre=True, always=True)
+    @field_validator('embedder_config')
     @classmethod
     def set_default_embedder_config(cls, v):
         """Set default embedder configuration if not provided."""

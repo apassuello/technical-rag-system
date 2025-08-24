@@ -6,18 +6,13 @@ into a single, more efficient Retriever component. It eliminates the abstraction
 layer between vector storage and retrieval while maintaining all existing capabilities.
 """
 
-import sys
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
 import numpy as np
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent.parent.parent
-sys.path.append(str(project_root))
-
 from src.core.interfaces import Document, RetrievalResult, Retriever, Embedder
-from shared_utils.retrieval.hybrid_search import HybridRetriever as OriginalHybridRetriever
+from src.shared_utils.retrieval.hybrid_search import HybridRetriever as OriginalHybridRetriever
 
 # Import FAISS functionality directly
 import faiss

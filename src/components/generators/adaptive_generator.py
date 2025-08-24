@@ -6,32 +6,27 @@ answer generation capabilities to conform to the AnswerGenerator interface,
 enabling it to be used in the modular architecture.
 """
 
-import sys
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent.parent.parent
-sys.path.append(str(project_root))
-
 from src.core.interfaces import Document, Answer, AnswerGenerator
 
 # Import generation components
-from shared_utils.generation.hf_answer_generator import (
+from src.shared_utils.generation.hf_answer_generator import (
     HuggingFaceAnswerGenerator,
     GeneratedAnswer,
 )
 try:
-    from shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
-    from shared_utils.generation.inference_providers_generator import (
+    from src.shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
+    from src.shared_utils.generation.inference_providers_generator import (
         InferenceProvidersGenerator,
     )
-    from shared_utils.generation.prompt_templates import TechnicalPromptTemplates
-    from shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
-    from shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
+    from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates
+    from src.shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
+    from src.shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
 except ImportError as e:
     # Fallback for missing optional components
     logger.warning(f"Optional generation components not available: {e}")

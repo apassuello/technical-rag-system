@@ -28,3 +28,8 @@ httpx==0.25.2
 black==23.11.0
 flake8==6.1.0
 mypy==1.7.1
+
+# Document processing dependencies from shared_utils
+pdfplumber>=0.9.0
+PyMuPDF>=1.23.0
+Pillow>=10.0.0

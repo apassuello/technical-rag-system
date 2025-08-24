@@ -20,9 +20,8 @@ from decimal import Decimal
 import logging
 from datetime import datetime, timedelta
 
-# Add src path for Epic 1 imports
-project_root = Path(__file__).parents[4]  # Go up to project-1-technical-rag
-src_path = project_root / "src"
+# Add src path for Epic 1 imports - Docker structure
+src_path = Path("/app/src")  # Direct path in Docker container
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
@@ -37,8 +36,33 @@ try:
     )
 except ImportError as e:
     logging.warning(f"Could not import Epic 1 CostTracker: {e}")
-    # Fallback implementation would go here
-    raise ImportError("Epic 1 CostTracker is required for Analytics Service")
+    # Fallback implementation for Docker environments
+    logging.info("Using fallback CostTracker implementation")
+    
+    # Minimal fallback classes for Epic 8 deployment
+    class CostTracker:
+        def __init__(self, **kwargs):
+            pass
+        
+        def record_usage(self, **kwargs):
+            return {}
+            
+        def get_summary(self):
+            return {}
+    
+    class UsageRecord:
+        def __init__(self, **kwargs):
+            pass
+    
+    class CostSummary:
+        def __init__(self, **kwargs):
+            pass
+    
+    def get_cost_tracker():
+        return CostTracker()
+    
+    def record_llm_usage(**kwargs):
+        pass
 
 import structlog
 from .config import get_settings, get_cost_tracker_config

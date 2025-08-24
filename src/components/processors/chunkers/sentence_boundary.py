@@ -22,15 +22,9 @@ import re
 import hashlib
 from typing import List, Dict, Any
 from pathlib import Path
-import sys
-
-# Add project paths for imports
-project_root = Path(__file__).parent.parent.parent.parent.parent
-sys.path.append(str(project_root))
-sys.path.append(str(project_root / "hf_deployment" / "src"))
 
 from ..base import TextChunker, Chunk, ConfigurableComponent, QualityAssessment
-from shared_utils.document_processing.chunker import chunk_technical_text, _is_low_quality_chunk
+from src.shared_utils.document_processing.chunker import chunk_technical_text, _is_low_quality_chunk
 
 
 class SentenceBoundaryChunker(TextChunker, ConfigurableComponent, QualityAssessment):
