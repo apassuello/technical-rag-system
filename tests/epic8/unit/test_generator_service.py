@@ -236,23 +236,13 @@ class TestGeneratorServiceAdapterInterface:
                 assert result["processing_time"] > 0, f"processing_time {result['processing_time']} should be positive"
                 
             except Exception as e:
-                # Generation may fail due to Epic1 dependencies or external services, which is acceptable for unit tests
+                # Generation may fail due to Epic1 dependencies, which is acceptable for unit tests
                 # But should not be due to interface issues
                 error_msg = str(e).lower()
-                # Skip for dependency issues or external service failures (Epic 8 unit test specification)
-                skip_conditions = [
-                    "import" in error_msg,
-                    "module" in error_msg,
-                    "not found" in error_msg,
-                    "connection refused" in error_msg,
-                    "ollama" in error_msg,
-                    "failed to connect" in error_msg,
-                    "max retries exceeded" in error_msg
-                ]
-                if any(skip_conditions):
-                    pytest.skip(f"Generation skipped due to missing dependencies/services: {e}")
+                if "import" not in error_msg and "module" not in error_msg and "not found" not in error_msg:
+                    pytest.fail(f"Generation failed with non-import error - HARD FAIL: {e}")
                 else:
-                    pytest.fail(f"Generation failed with non-dependency error - HARD FAIL: {e}")
+                    pytest.skip(f"Generation skipped due to missing dependencies: {e}")
                     
         except Exception as e:
             pytest.fail(f"Generation interface test failed - HARD FAIL: {e}")

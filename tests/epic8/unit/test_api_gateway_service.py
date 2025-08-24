@@ -839,25 +839,21 @@ class TestAPIGatewayServiceErrorHandling:
         """Test handling of invalid requests (CT-8.3.4)."""
         service = APIGatewayService()
         
-        # Test cases for invalid requests - Epic 8 spec requires validation at schema level
-        invalid_test_cases = [
-            # Empty query should fail Pydantic validation
-            {"query": "", "options": {}},
-            # Very long query should be handled gracefully  
-            {"query": "x" * 100000, "options": {}},
-            # Invalid cost limit should fail validation
-            {"query": "test", "options": {"max_cost": -1.0}},
-            # Invalid document limit should fail validation
-            {"query": "test", "options": {"max_documents": -5}},
+        # Test cases for invalid requests
+        invalid_requests = [
+            # Empty query
+            UnifiedQueryRequest(query="", options=QueryOptions()),
+            # Very long query
+            UnifiedQueryRequest(query="x" * 100000, options=QueryOptions()),
+            # Invalid cost limit
+            UnifiedQueryRequest(query="test", options=QueryOptions(max_cost=-1.0)),
+            # Invalid document limit
+            UnifiedQueryRequest(query="test", options=QueryOptions(max_documents=-5)),
         ]
         
-        for i, test_case in enumerate(invalid_test_cases):
+        for i, request in enumerate(invalid_requests):
             try:
-                # Try to create request object - may fail at Pydantic validation
-                options = QueryOptions(**test_case["options"]) if test_case["options"] else QueryOptions()
-                request = UnifiedQueryRequest(query=test_case["query"], options=options)
-                
-                # If object creation succeeds, try service call
+                # Should either handle gracefully or raise clear validation error
                 response = await service.process_unified_query(request)
                 
                 # If it succeeds, should be valid response
@@ -865,7 +861,7 @@ class TestAPIGatewayServiceErrorHandling:
                 print(f"Invalid request {i} handled gracefully")
                 
             except (ValueError, TypeError, Exception) as e:
-                # Validation errors at any level are acceptable for invalid requests
+                # Validation errors are acceptable
                 print(f"Invalid request {i} rejected with: {type(e).__name__}")
                 continue
 
@@ -881,14 +877,6 @@ class TestAPIGatewayServiceStatus:
             client = AsyncMock()
             client.health_check.return_value = True
             client.endpoint.url = f"http://{service_name}:8080"
-            
-            # Cache client needs specific methods
-            if service_name == "cache":
-                client.get_cache_statistics.return_value = {
-                    "hit_rate": 0.85,
-                    "total_keys": 1250
-                }
-            
             clients[service_name] = client
         return clients
 
