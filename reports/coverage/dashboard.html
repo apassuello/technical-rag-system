@@ -1,0 +1,404 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Portfolio - Coverage Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        
+        .header .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .modules-section {
+            padding: 30px;
+        }
+        
+        .section-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1d1d1f;
+        }
+        
+        .module-list {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .module-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #fafafa;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+        }
+        
+        .module-name {
+            flex: 1;
+            font-weight: 500;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+        }
+        
+        .coverage-bar {
+            width: 120px;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin: 0 15px;
+            overflow: hidden;
+        }
+        
+        .coverage-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .coverage-percent {
+            font-weight: 600;
+            min-width: 50px;
+            text-align: right;
+        }
+        
+        .coverage-lines {
+            font-size: 0.8em;
+            color: #666;
+            min-width: 70px;
+            text-align: right;
+        }
+        
+        .coverage-excellent { background-color: #28a745; }
+        .coverage-good { background-color: #20c997; }
+        .coverage-fair { background-color: #ffc107; }
+        .coverage-poor { background-color: #fd7e14; }
+        .coverage-critical { background-color: #dc3545; }
+        
+        .footer {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 0.9em;
+            text-align: center;
+        }
+        
+        .recommendations {
+            padding: 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .rec-item {
+            background: white;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .rec-priority {
+            font-weight: 600;
+            color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Coverage Dashboard</h1>
+            <div class="subtitle">RAG Portfolio Project • Generated August 22, 2025 at 08:03 PM</div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">10.0%</div>
+                <div class="stat-label">Overall Coverage</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">19,111</div>
+                <div class="stat-label">Total Lines</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">2,454</div>
+                <div class="stat-label">Covered Lines</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">21</div>
+                <div class="stat-label">Modules</div>
+            </div>
+        </div>
+        
+        <div class="modules-section">
+            <h2 class="section-title">Coverage by Module</h2>
+            <div class="module-list">
+
+                <div class="module-item">
+                    <div class="module-name">components.__init__.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-excellent" style="width: 100.0%"></div>
+                    </div>
+                    <div class="coverage-percent">100.0%</div>
+                    <div class="coverage-lines">6 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">components.vector_stores</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-excellent" style="width: 100.0%"></div>
+                    </div>
+                    <div class="coverage-percent">100.0%</div>
+                    <div class="coverage-lines">1 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">core.__init__.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-excellent" style="width: 100.0%"></div>
+                    </div>
+                    <div class="coverage-percent">100.0%</div>
+                    <div class="coverage-lines">5 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">core.interfaces.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-fair" style="width: 54.5%"></div>
+                    </div>
+                    <div class="coverage-percent">54.5%</div>
+                    <div class="coverage-lines">123 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">core.query_processor.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 22.2%"></div>
+                    </div>
+                    <div class="coverage-percent">22.2%</div>
+                    <div class="coverage-lines">54 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">components.processors</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 21.8%"></div>
+                    </div>
+                    <div class="coverage-percent">21.8%</div>
+                    <div class="coverage-lines">996 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">core.config.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 20.2%"></div>
+                    </div>
+                    <div class="coverage-percent">20.2%</div>
+                    <div class="coverage-lines">173 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">core.component_factory.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 19.2%"></div>
+                    </div>
+                    <div class="coverage-percent">19.2%</div>
+                    <div class="coverage-lines">333 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">components.embedders</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 18.8%"></div>
+                    </div>
+                    <div class="coverage-percent">18.8%</div>
+                    <div class="coverage-lines">708 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">components.generators</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 14.1%"></div>
+                    </div>
+                    <div class="coverage-percent">14.1%</div>
+                    <div class="coverage-lines">2,884 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">components.query_processors</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 13.9%"></div>
+                    </div>
+                    <div class="coverage-percent">13.9%</div>
+                    <div class="coverage-lines">6,262 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">sparse_retrieval.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 10.0%"></div>
+                    </div>
+                    <div class="coverage-percent">10.0%</div>
+                    <div class="coverage-lines">70 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">core.platform_orchestrator.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 8.0%"></div>
+                    </div>
+                    <div class="coverage-percent">8.0%</div>
+                    <div class="coverage-lines">990 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">fusion.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 5.7%"></div>
+                    </div>
+                    <div class="coverage-percent">5.7%</div>
+                    <div class="coverage-lines">53 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">components.retrievers</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 0.4%"></div>
+                    </div>
+                    <div class="coverage-percent">0.4%</div>
+                    <div class="coverage-lines">4,988 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">basic_rag.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 0.0%"></div>
+                    </div>
+                    <div class="coverage-percent">0.0%</div>
+                    <div class="coverage-lines">149 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">batch_document_processor.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 0.0%"></div>
+                    </div>
+                    <div class="coverage-percent">0.0%</div>
+                    <div class="coverage-lines">173 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">components.calibration</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 0.0%"></div>
+                    </div>
+                    <div class="coverage-percent">0.0%</div>
+                    <div class="coverage-lines">653 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">confidence_calibration.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 0.0%"></div>
+                    </div>
+                    <div class="coverage-percent">0.0%</div>
+                    <div class="coverage-lines">183 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">production_monitoring.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 0.0%"></div>
+                    </div>
+                    <div class="coverage-percent">0.0%</div>
+                    <div class="coverage-lines">164 lines</div>
+                </div>
+
+                <div class="module-item">
+                    <div class="module-name">rag_with_generation.py</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill coverage-critical" style="width: 0.0%"></div>
+                    </div>
+                    <div class="coverage-percent">0.0%</div>
+                    <div class="coverage-lines">143 lines</div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="recommendations">
+            <h2 class="section-title">💡 Coverage Improvement Recommendations</h2>
+
+            <div class="rec-item">
+                <span class="rec-priority">CRITICAL PRIORITY:</span> Overall coverage (10.0%) is below recommended 70% threshold
+            </div>
+
+        </div>
+        
+        <div class="footer">
+            Last updated: 2025-08-22 20:03:29 • 
+            RAG Portfolio Project Coverage Dashboard • 
+            <strong>Target: 70%+ Overall Coverage</strong>
+        </div>
+    </div>
+</body>
+</html>
