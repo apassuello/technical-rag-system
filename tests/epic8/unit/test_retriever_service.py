@@ -210,86 +210,85 @@ class TestRetrieverServiceDocumentRetrieval:
     """Test document retrieval functionality based on CT-8.3.1 specifications."""
 
     @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio 
     async def test_document_retrieval_basic(self):
         """Test basic document retrieval functionality (CT-8.3.1)."""
-        # Mock Epic 2 components
-        with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
-            with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
-                # Setup mocks
-                mock_embedder = mock.Mock()
-                mock_retriever_instance = mock.Mock()
-                
-                # Mock retrieval results
-                from unittest.mock import Mock
-                mock_result = Mock()
-                mock_result.document = Mock()
-                mock_result.document.content = "Test document content about machine learning"
-                mock_result.document.metadata = {"title": "ML Guide", "page": 1}
-                mock_result.document.doc_id = "doc_001"
-                mock_result.document.source = "test.pdf"
-                mock_result.score = 0.85
-                mock_result.retrieval_method = "modular_unified_hybrid"
-                
-                mock_retriever_instance.retrieve.return_value = [mock_result]
-                mock_retriever_instance.get_document_count.return_value = 100
-                mock_retriever_instance.get_component_info.return_value = {'type': 'modular_unified'}
-                
-                mock_factory.create_embedder.return_value = mock_embedder
-                mock_retriever.return_value = mock_retriever_instance
-                
-                service = RetrieverService()
-                
-                try:
-                    # Test retrieval
-                    start_time = time.time()
-                    result = await service.retrieve_documents(
-                        query="What is machine learning?",
-                        k=10,
-                        retrieval_strategy="hybrid"
-                    )
-                    retrieval_time = time.time() - start_time
-                    
-                    # Hard fail: Response time >60s (clearly broken)
-                    assert retrieval_time < 60.0, f"Retrieval took {retrieval_time:.2f}s, service is broken"
-                    
-                    # Quality flag: Should be fast (sub-second)
-                    if retrieval_time > 1.0:
-                        import warnings
-                        warnings.warn(f"Slow retrieval: {retrieval_time:.2f}s (target <1s)", UserWarning)
-                    
-                    # Validate response structure
-                    assert isinstance(result, list), "Result should be a list"
-                    assert len(result) > 0, "Should return at least one result"
-                    
-                    doc = result[0]
-                    assert "content" in doc, "Document missing 'content' field"
-                    assert "metadata" in doc, "Document missing 'metadata' field"
-                    assert "doc_id" in doc, "Document missing 'doc_id' field"
-                    assert "source" in doc, "Document missing 'source' field"
-                    assert "score" in doc, "Document missing 'score' field"
-                    assert "retrieval_method" in doc, "Document missing 'retrieval_method' field"
-                    
-                    # Validate field types and values
-                    assert isinstance(doc["content"], str), "Content must be string"
-                    assert isinstance(doc["metadata"], dict), "Metadata must be dict"
-                    assert isinstance(doc["score"], (int, float)), "Score must be numeric"
-                    assert 0.0 <= doc["score"] <= 1.0, f"Score {doc['score']} out of range [0,1]"
-                    
-                    # If retrieval succeeded, check stats; if it failed with no docs indexed, stats will be 0
-                    if len(result) > 0 and result[0].get("content") != "No documents available":
-                        # Successful retrieval
-                        assert service.retrieval_stats["total_retrievals"] >= 1
-                        assert service.retrieval_stats["total_time"] > 0
-                        assert service.retrieval_stats["avg_time"] > 0
-                    else:
-                        # Failed retrieval (no documents indexed), stats should reflect this
-                        print("Retrieval failed due to no indexed documents - this is expected behavior")
-                    
-                    print(f"Basic retrieval test passed: {len(result)} docs in {retrieval_time:.3f}s")
-                    
-                except Exception as e:
-                    pytest.fail(f"Basic retrieval test failed: {e}")
+        try:
+            service = RetrieverService()
+            
+            # First, index some test documents for retrieval
+            test_documents = [
+                {
+                    "content": "Machine learning is a subset of artificial intelligence that enables computers to learn and make decisions from data without explicit programming.",
+                    "metadata": {"title": "ML Introduction", "type": "article"},
+                    "doc_id": "ml_001",
+                    "source": "ml_intro.txt"
+                },
+                {
+                    "content": "Deep learning uses neural networks with multiple layers to process complex patterns in data and achieve state-of-the-art results.",
+                    "metadata": {"title": "Deep Learning", "type": "article"},
+                    "doc_id": "dl_001", 
+                    "source": "dl_guide.txt"
+                },
+                {
+                    "content": "Natural language processing helps computers understand and generate human language using statistical and neural methods.",
+                    "metadata": {"title": "NLP Overview", "type": "article"},
+                    "doc_id": "nlp_001",
+                    "source": "nlp_basics.txt"
+                }
+            ]
+            
+            # Index the documents first
+            indexing_result = await service.index_documents(test_documents)
+            assert indexing_result["indexed_documents"] == len(test_documents), "Should index all test documents"
+            
+            # Now test retrieval with real indexed documents
+            start_time = time.time()
+            result = await service.retrieve_documents(
+                query="What is machine learning?",
+                k=10,
+                retrieval_strategy="hybrid"
+            )
+            retrieval_time = time.time() - start_time
+            
+            # Hard fail: Response time >60s (clearly broken)
+            assert retrieval_time < 60.0, f"Retrieval took {retrieval_time:.2f}s, service is broken"
+            
+            # Quality flag: Should be fast (sub-second)
+            if retrieval_time > 1.0:
+                import warnings
+                warnings.warn(f"Slow retrieval: {retrieval_time:.2f}s (target <1s)", UserWarning)
+            
+            # Validate response structure
+            assert isinstance(result, list), "Result should be a list"
+            
+            # With indexed documents, we should get results (not empty)
+            assert len(result) > 0, "Should return results after indexing documents"
+            
+            # Validate the first result
+            doc = result[0]
+            assert "content" in doc, "Document missing 'content' field"
+            assert "metadata" in doc, "Document missing 'metadata' field"
+            assert "doc_id" in doc, "Document missing 'doc_id' field"
+            assert "source" in doc, "Document missing 'source' field"
+            assert "score" in doc, "Document missing 'score' field"
+            assert "retrieval_method" in doc, "Document missing 'retrieval_method' field"
+            
+            # Validate field types and values
+            assert isinstance(doc["content"], str), "Content must be string"
+            assert isinstance(doc["metadata"], dict), "Metadata must be dict"
+            assert isinstance(doc["score"], (int, float)), "Score must be numeric"
+            assert 0.0 <= doc["score"] <= 1.0, f"Score {doc['score']} out of range [0,1]"
+            
+            # With successful retrieval, check stats
+            assert service.retrieval_stats["total_retrievals"] >= 1, "Should record retrieval attempt"
+            assert service.retrieval_stats["total_time"] > 0, "Should record retrieval time"
+            assert service.retrieval_stats["avg_time"] > 0, "Should calculate average time"
+            
+            print(f"Basic retrieval test passed: {len(result)} docs in {retrieval_time:.3f}s")
+            
+        except Exception as e:
+            pytest.fail(f"Basic retrieval test failed: {e}")
 
     @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
     @pytest.mark.asyncio

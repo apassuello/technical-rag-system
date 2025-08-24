@@ -207,16 +207,18 @@ class RetrieverService:
             
             processing_time = time.time() - start_time
             
-            # Convert RetrievalResult objects to dictionaries
+            # Convert RetrievalResult objects to Epic 8 dictionary format
             documents = []
             for result in retrieval_results:
+                # Epic 2 Documents store doc_id and source in metadata, not as direct attributes
+                metadata = result.document.metadata or {}
                 doc_data = {
                     "content": result.document.content,
-                    "metadata": result.document.metadata,
-                    "doc_id": result.document.doc_id,
-                    "source": result.document.source,
+                    "metadata": metadata,
+                    "doc_id": metadata.get("doc_id", f"unknown_{len(documents)}"),
+                    "source": metadata.get("source", "unknown_source"),
                     "score": result.score,
-                    "retrieval_method": result.retrieval_method
+                    "retrieval_method": result.retrieval_method or "modular_unified"
                 }
                 documents.append(doc_data)
             
