@@ -57,8 +57,8 @@ except ImportError:
     REDIS_URL = None
 
 
-@pytest_asyncio.fixture(scope="module")
-async def redis_integration_config():
+@pytest.fixture(scope="function")
+def redis_integration_config():
     """Configuration for Redis integration testing."""
     return {
         "redis_url": REDIS_URL or "redis://localhost:6379",
@@ -75,7 +75,7 @@ async def redis_integration_config():
     }
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="function")
 async def cache_service_with_redis(redis_integration_config):
     """Cache service with real Redis connection for integration testing."""
     if not IMPORTS_AVAILABLE:
@@ -84,25 +84,20 @@ async def cache_service_with_redis(redis_integration_config):
     if not REDIS_AVAILABLE:
         pytest.skip("Redis not available for integration tests")
     
-    service = CacheService(redis_integration_config)
-    
-    try:
-        await service.initialize()
-        
-        # Test Redis connection
-        if service.redis:
-            await service.redis.ping()
-            print("Redis connection established for integration testing")
-        else:
-            pytest.skip("Could not establish Redis connection")
-        
-        yield service
-        
-    except Exception as e:
-        pytest.skip(f"Redis connection failed: {e}")
-    
-    finally:
-        await service.close()
+    # Use async context manager for proper lifecycle management
+    async with CacheService(redis_integration_config) as service:
+        try:
+            # Test Redis connection
+            if service.redis:
+                await service.redis.ping()
+                print("Redis connection established for integration testing")
+            else:
+                pytest.skip("Could not establish Redis connection")
+            
+            yield service
+            
+        except Exception as e:
+            pytest.skip(f"Redis connection failed: {e}")
 
 
 @pytest.fixture
@@ -308,7 +303,7 @@ class TestRedisIntegration:
         
         # Simulate Redis failure by closing connection
         if service.redis:
-            await service.redis.close()
+            await service.redis.aclose()
             service.redis = None
         
         # Data should still be available from fallback cache

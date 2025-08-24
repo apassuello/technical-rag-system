@@ -4,7 +4,7 @@ Configuration module for API Gateway Service.
 
 import os
 from typing import Dict, List, Optional
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -79,10 +79,11 @@ class APIGatewaySettings(BaseSettings):
     api_key_header: str = Field(default="X-API-Key")
     valid_api_keys: List[str] = Field(default_factory=list)
     
-    class Config:
-        env_file = ".env"
-        env_prefix = "GATEWAY_"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_file=".env",
+        env_prefix="GATEWAY_",
+        case_sensitive=False
+    )
     
     @field_validator('log_level')
     @classmethod

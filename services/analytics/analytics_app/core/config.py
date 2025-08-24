@@ -7,7 +7,7 @@ performance monitoring settings, and data persistence options.
 
 import os
 from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from pydantic_settings import BaseSettings
 from pathlib import Path
 import yaml
@@ -60,9 +60,10 @@ class AnalyticsSettings(BaseSettings):
     max_batch_size: int = 1000
     enable_detailed_logging: bool = True
     
-    class Config:
-        env_prefix = "ANALYTICS_"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_prefix="ANALYTICS_",
+        case_sensitive=False
+    )
 
     @field_validator("alert_thresholds")
     @classmethod

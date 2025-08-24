@@ -8,7 +8,7 @@ retriever service using Pydantic settings with YAML support.
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from pydantic_settings import BaseSettings
 import yaml
 
@@ -78,9 +78,10 @@ class Settings(BaseSettings):
         }
     )
     
-    class Config:
-        env_file = ".env"
-        env_nested_delimiter = "__"
+    model_config = ConfigDict(
+        env_file=".env",
+        env_nested_delimiter="__"
+    )
         
     @field_validator('retriever_config', pre=True, always=True)
     @classmethod
@@ -126,12 +127,31 @@ class Settings(BaseSettings):
         """Set default embedder configuration if not provided."""
         if not v:
             return {
-                "type": "sentence_transformer",
+                "type": "modular",
                 "config": {
-                    "model_name": "sentence-transformers/all-MiniLM-L6-v2",
-                    "device": "cpu",
-                    "batch_size": 32,
-                    "normalize_embeddings": True
+                    "model": {
+                        "type": "sentence_transformer",
+                        "config": {
+                            "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+                            "device": "cpu",
+                            "normalize_embeddings": True
+                        }
+                    },
+                    "batch_processor": {
+                        "type": "dynamic",
+                        "config": {
+                            "initial_batch_size": 32,
+                            "max_batch_size": 128,
+                            "optimize_for_memory": True
+                        }
+                    },
+                    "cache": {
+                        "type": "memory",
+                        "config": {
+                            "max_entries": 100000,
+                            "max_memory_mb": 1024
+                        }
+                    }
                 }
             }
         return v

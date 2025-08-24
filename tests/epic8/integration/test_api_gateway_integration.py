@@ -52,6 +52,119 @@ except ImportError as e:
     IMPORT_ERROR = str(e)
 
 
+# Test data factories for Pydantic schema objects
+def create_test_cost_breakdown(
+    model_used: str = "test-model",
+    model_cost: float = 0.001,
+    total_cost: float = None,
+    input_tokens: int = None,
+    output_tokens: int = None,
+    retrieval_cost: float = 0.0,
+    cost_estimation_confidence: float = 1.0
+) -> CostBreakdown:
+    """Create a test CostBreakdown object with all required fields."""
+    if total_cost is None:
+        total_cost = model_cost + retrieval_cost
+    
+    return CostBreakdown(
+        model_used=model_used,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        model_cost=model_cost,
+        retrieval_cost=retrieval_cost,
+        total_cost=total_cost,
+        cost_estimation_confidence=cost_estimation_confidence
+    )
+
+
+def create_test_processing_metrics(
+    analysis_time: float = 0.1,
+    retrieval_time: float = 0.2,
+    generation_time: float = 0.3,
+    total_time: float = None,
+    documents_retrieved: int = 0,
+    cache_hit: bool = False,
+    cache_time: float = None,
+    tokens_generated: int = None,
+    cache_key: str = None
+) -> ProcessingMetrics:
+    """Create a test ProcessingMetrics object with all required fields."""
+    if total_time is None:
+        total_time = analysis_time + retrieval_time + generation_time
+        if cache_time:
+            total_time += cache_time
+    
+    return ProcessingMetrics(
+        analysis_time=analysis_time,
+        retrieval_time=retrieval_time,
+        generation_time=generation_time,
+        cache_time=cache_time,
+        total_time=total_time,
+        documents_retrieved=documents_retrieved,
+        tokens_generated=tokens_generated,
+        cache_hit=cache_hit,
+        cache_key=cache_key
+    )
+
+
+def create_test_document_source(
+    id: str = "test-doc",
+    title: str = "Test Document",
+    content: str = "Test content",
+    score: float = 0.9,
+    metadata: Dict[str, Any] = None
+) -> DocumentSource:
+    """Create a test DocumentSource object."""
+    if metadata is None:
+        metadata = {"source": "test.pdf", "page": 1}
+    
+    return DocumentSource(
+        id=id,
+        title=title,
+        content=content,
+        score=score,
+        metadata=metadata
+    )
+
+
+def create_test_unified_query_response(
+    answer: str = "Test answer",
+    sources: List[DocumentSource] = None,
+    complexity: str = "simple",
+    confidence: float = 0.8,
+    cost: CostBreakdown = None,
+    metrics: ProcessingMetrics = None,
+    query_id: str = "test-query",
+    session_id: str = "test-session",
+    strategy_used: str = "balanced",
+    fallback_used: bool = False,
+    warnings: List[str] = None
+) -> UnifiedQueryResponse:
+    """Create a test UnifiedQueryResponse object with all required fields."""
+    if sources is None:
+        sources = []
+    if cost is None:
+        cost = create_test_cost_breakdown()
+    if metrics is None:
+        metrics = create_test_processing_metrics()
+    if warnings is None:
+        warnings = []
+    
+    return UnifiedQueryResponse(
+        answer=answer,
+        sources=sources,
+        complexity=complexity,
+        confidence=confidence,
+        cost=cost,
+        metrics=metrics,
+        query_id=query_id,
+        session_id=session_id,
+        strategy_used=strategy_used,
+        fallback_used=fallback_used,
+        warnings=warnings
+    )
+
+
 class TestAPIGatewayQueryAnalyzerIntegration:
     """Test integration with Query Analyzer service (CT-8.5.1)."""
 
@@ -101,6 +214,9 @@ class TestAPIGatewayQueryAnalyzerIntegration:
         
         # Mock health check
         client.health_check.return_value = True
+        
+        # Mock endpoint structure
+        client.endpoint = Mock()
         client.endpoint.url = "http://query-analyzer:8081"
         
         return client
@@ -115,7 +231,7 @@ class TestAPIGatewayQueryAnalyzerIntegration:
         
         request = UnifiedQueryRequest(
             query="How does machine learning work?",
-            context="Educational Q&A",
+            context={"domain": "educational", "type": "Q&A"},
             options=QueryOptions(
                 strategy="balanced",
                 complexity_hint="medium"
@@ -277,6 +393,9 @@ class TestAPIGatewayGeneratorIntegration:
         }
         
         client.health_check.return_value = True
+        
+        # Mock endpoint structure
+        client.endpoint = Mock()
         client.endpoint.url = "http://generator:8082"
         
         return client
@@ -464,6 +583,9 @@ class TestAPIGatewayRetrieverIntegration:
         ]
         
         client.health_check.return_value = True
+        
+        # Mock endpoint structure
+        client.endpoint = Mock()
         client.endpoint.url = "http://retriever:8083"
         
         return client
@@ -618,6 +740,9 @@ class TestAPIGatewayCacheIntegration:
         }
         
         client.health_check.return_value = True
+        
+        # Mock endpoint structure
+        client.endpoint = Mock()
         client.endpoint.url = "http://cache:8084"
         
         return client
@@ -645,13 +770,20 @@ class TestAPIGatewayCacheIntegration:
             mock_cache_client.get_cached_response.assert_called_once_with(query_hash)
             
             # Test cache storage
-            mock_response = UnifiedQueryResponse(
+            mock_response = create_test_unified_query_response(
                 answer="Test answer",
                 sources=[],
                 complexity="simple",
                 confidence=0.8,
-                cost={"total_cost": 0.001},
-                metrics={"total_time": 0.5},
+                cost=create_test_cost_breakdown(total_cost=0.001),
+                metrics=create_test_processing_metrics(
+                    analysis_time=0.1,
+                    retrieval_time=0.1,
+                    generation_time=0.3,
+                    total_time=0.5,
+                    documents_retrieved=0,
+                    cache_hit=False
+                ),
                 query_id="test-query",
                 session_id="test-session",
                 strategy_used="balanced",
@@ -691,22 +823,30 @@ class TestAPIGatewayCacheIntegration:
         gateway.cache = mock_cache_client
         gateway._initialize_circuit_breakers()
         
-        # Mock cached response data
-        cached_data = {
-            "answer": "Cached answer about machine learning",
-            "sources": [],
-            "complexity": "medium", 
-            "confidence": 0.89,
-            "cost": {"total_cost": 0.0},
-            "metrics": {"total_time": 0.001, "cache_hit": True},
-            "query_id": "cached-query-id",
-            "session_id": "cached-session",
-            "strategy_used": "balanced",
-            "fallback_used": False,
-            "warnings": []
-        }
+        # Mock cached response data - cache client returns dict, not Pydantic object
+        cached_response_obj = create_test_unified_query_response(
+            answer="Cached answer about machine learning",
+            sources=[],
+            complexity="medium", 
+            confidence=0.89,
+            cost=create_test_cost_breakdown(model_used="cached", total_cost=0.0, model_cost=0.0),
+            metrics=create_test_processing_metrics(
+                analysis_time=0.0,
+                retrieval_time=0.0,
+                generation_time=0.0,
+                total_time=0.001,
+                documents_retrieved=0,
+                cache_hit=True
+            ),
+            query_id="cached-query-id",
+            session_id="cached-session",
+            strategy_used="balanced",
+            fallback_used=False,
+            warnings=[]
+        )
         
-        mock_cache_client.get_cached_response.return_value = cached_data
+        # Cache client returns dictionary representation, not the object itself
+        mock_cache_client.get_cached_response.return_value = cached_response_obj.model_dump()
         
         query_hash = "cached_hash_456"
         
@@ -742,11 +882,25 @@ class TestAPIGatewayCacheIntegration:
             cached_response = await gateway._get_cached_response("test_hash")
             assert cached_response is None, "Should return None on cache failure"
             
-            mock_response = UnifiedQueryResponse(
-                answer="Test", sources=[], complexity="simple", confidence=0.5,
-                cost={"total_cost": 0.0}, metrics={"total_time": 0.1},
-                query_id="test", session_id="test", strategy_used="balanced",
-                fallback_used=False, warnings=[]
+            mock_response = create_test_unified_query_response(
+                answer="Test", 
+                sources=[], 
+                complexity="simple", 
+                confidence=0.5,
+                cost=create_test_cost_breakdown(total_cost=0.0, model_cost=0.0),
+                metrics=create_test_processing_metrics(
+                    analysis_time=0.03,
+                    retrieval_time=0.03,
+                    generation_time=0.04,
+                    total_time=0.1,
+                    documents_retrieved=0,
+                    cache_hit=False
+                ),
+                query_id="test", 
+                session_id="test", 
+                strategy_used="balanced",
+                fallback_used=False, 
+                warnings=[]
             )
             
             cache_stored = await gateway._cache_response("test_hash", mock_response)
@@ -772,6 +926,9 @@ class TestAPIGatewayAnalyticsIntegration:
         client.record_error.return_value = True
         
         client.health_check.return_value = True
+        
+        # Mock endpoint structure
+        client.endpoint = Mock()
         client.endpoint.url = "http://analytics:8085"
         
         return client
@@ -791,13 +948,20 @@ class TestAPIGatewayAnalyticsIntegration:
             options=QueryOptions(analytics_enabled=True)
         )
         
-        response = UnifiedQueryResponse(
+        response = create_test_unified_query_response(
             answer="Analytics test answer",
             sources=[],
             complexity="medium",
             confidence=0.85,
-            cost={"total_cost": 0.003},
-            metrics={"total_time": 1.2, "cache_hit": False},
+            cost=create_test_cost_breakdown(total_cost=0.003, model_cost=0.003),
+            metrics=create_test_processing_metrics(
+                analysis_time=0.3,
+                retrieval_time=0.4,
+                generation_time=0.5,
+                total_time=1.2,
+                documents_retrieved=0,
+                cache_hit=False
+            ),
             query_id="analytics-query-id",
             session_id="analytics-session",
             strategy_used="balanced",
@@ -816,8 +980,8 @@ class TestAPIGatewayAnalyticsIntegration:
             # Verify analytics was called correctly
             mock_analytics_client.record_query_completion.assert_called_once()
             call_args = mock_analytics_client.record_query_completion.call_args
-            assert call_args.kwargs["query_request"] == request.dict()
-            assert call_args.kwargs["query_response"] == response.dict()
+            assert call_args.kwargs["query_request"] == request.model_dump()
+            assert call_args.kwargs["query_response"] == response.model_dump()
             
             # Quality flag: Analytics should be fast and non-blocking
             if analytics_time > 1.0:
@@ -911,11 +1075,25 @@ class TestAPIGatewayAnalyticsIntegration:
         try:
             # Analytics failures should not break the pipeline
             request = UnifiedQueryRequest(query="test", options=QueryOptions())
-            response = UnifiedQueryResponse(
-                answer="test", sources=[], complexity="simple", confidence=0.5,
-                cost={"total_cost": 0.0}, metrics={"total_time": 0.1},
-                query_id="test", session_id="test", strategy_used="balanced",
-                fallback_used=False, warnings=[]
+            response = create_test_unified_query_response(
+                answer="test", 
+                sources=[], 
+                complexity="simple", 
+                confidence=0.5,
+                cost=create_test_cost_breakdown(total_cost=0.0, model_cost=0.0),
+                metrics=create_test_processing_metrics(
+                    analysis_time=0.03,
+                    retrieval_time=0.03,
+                    generation_time=0.04,
+                    total_time=0.1,
+                    documents_retrieved=0,
+                    cache_hit=False
+                ),
+                query_id="test", 
+                session_id="test", 
+                strategy_used="balanced",
+                fallback_used=False, 
+                warnings=[]
             )
             
             # All should return False but not raise exceptions
@@ -1003,6 +1181,9 @@ class TestAPIGatewayCompletePipelineIntegration:
         analytics.record_cache_hit.return_value = True
         analytics.record_error.return_value = True
         analytics.health_check.return_value = True
+        
+        # Mock endpoint structure
+        analytics.endpoint = Mock()
         analytics.endpoint.url = "http://analytics:8085"
         
         # Assign to gateway
@@ -1024,7 +1205,7 @@ class TestAPIGatewayCompletePipelineIntegration:
         
         request = UnifiedQueryRequest(
             query="What is machine learning and how does it work?",
-            context="Educational documentation",
+            context={"domain": "educational", "type": "documentation"},
             options=QueryOptions(
                 strategy="balanced",
                 cache_enabled=True,
@@ -1110,7 +1291,7 @@ class TestAPIGatewayCompletePipelineIntegration:
                 "How do neural networks work?", 
                 "Explain deep learning concepts?"
             ],
-            context="Technical education",
+            context={"domain": "technical", "type": "education"},
             options=QueryOptions(
                 strategy="cost_optimized",
                 cache_enabled=True,
@@ -1178,21 +1359,35 @@ class TestAPIGatewayCompletePipelineIntegration:
         gateway = full_mock_gateway
         
         # Configure cache to return cached response
-        cached_response = {
-            "answer": "Cached machine learning answer from previous request",
-            "sources": [{"id": "cached_doc", "title": "Cached Document", "content": "Cached content", "score": 0.9}],
-            "complexity": "medium",
-            "confidence": 0.88,
-            "cost": {"total_cost": 0.0, "model_used": "cached"},
-            "metrics": {"total_time": 0.002, "cache_hit": True, "cache_key": "test_hash"},
-            "query_id": "cached-query-123",
-            "session_id": "cache-hit-session", 
-            "strategy_used": "balanced",
-            "fallback_used": False,
-            "warnings": []
-        }
+        cached_response_obj = create_test_unified_query_response(
+            answer="Cached machine learning answer from previous request",
+            sources=[create_test_document_source(
+                id="cached_doc", 
+                title="Cached Document", 
+                content="Cached content", 
+                score=0.9
+            )],
+            complexity="medium",
+            confidence=0.88,
+            cost=create_test_cost_breakdown(model_used="cached", total_cost=0.0, model_cost=0.0),
+            metrics=create_test_processing_metrics(
+                analysis_time=0.0,
+                retrieval_time=0.0,
+                generation_time=0.0,
+                total_time=0.002,
+                documents_retrieved=1,
+                cache_hit=True,
+                cache_key="test_hash"
+            ),
+            query_id="cached-query-123",
+            session_id="cache-hit-session", 
+            strategy_used="balanced",
+            fallback_used=False,
+            warnings=[]
+        )
         
-        gateway.cache.get_cached_response.return_value = cached_response
+        # Cache client returns dictionary representation 
+        gateway.cache.get_cached_response.return_value = cached_response_obj.model_dump()
         
         request = UnifiedQueryRequest(
             query="What is machine learning?",

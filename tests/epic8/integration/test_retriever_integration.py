@@ -60,8 +60,21 @@ class TestRetrieverServiceEpic2Integration:
                         'reranker': {'type': 'identity'}  # Simplified for testing
                     },
                     'embedder_config': {
-                        'type': 'sentence_transformer',
-                        'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                        'type': 'modular',
+                        'config': {
+                            'model': {
+                                'type': 'sentence_transformer',
+                                'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                            },
+                            'batch_processor': {
+                                'type': 'dynamic',
+                                'config': {'initial_batch_size': 32}
+                            },
+                            'cache': {
+                                'type': 'memory',
+                                'config': {'max_entries': 1000}
+                            }
+                        }
                     }
                 }
                 
@@ -119,8 +132,21 @@ class TestRetrieverServiceEpic2Integration:
                         'reranker': {'type': 'identity'}
                     },
                     'embedder_config': {
-                        'type': 'sentence_transformer',
-                        'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                        'type': 'modular',
+                        'config': {
+                            'model': {
+                                'type': 'sentence_transformer',
+                                'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                            },
+                            'batch_processor': {
+                                'type': 'dynamic',
+                                'config': {'initial_batch_size': 32}
+                            },
+                            'cache': {
+                                'type': 'memory',
+                                'config': {'max_entries': 1000}
+                            }
+                        }
                     }
                 }
                 
@@ -194,8 +220,21 @@ class TestRetrieverServiceEpic2Integration:
                         'reranker': {'type': 'identity'}
                     },
                     'embedder_config': {
-                        'type': 'sentence_transformer',
-                        'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                        'type': 'modular',
+                        'config': {
+                            'model': {
+                                'type': 'sentence_transformer',
+                                'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                            },
+                            'batch_processor': {
+                                'type': 'dynamic',
+                                'config': {'initial_batch_size': 32}
+                            },
+                            'cache': {
+                                'type': 'memory',
+                                'config': {'max_entries': 1000}
+                            }
+                        }
                     }
                 }
                 
@@ -335,8 +374,21 @@ class TestRetrieverServiceEpic2Integration:
                 }
                 
                 embedder_config = {
-                    'type': 'sentence_transformer',
-                    'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                    'type': 'modular',
+                    'config': {
+                        'model': {
+                            'type': 'sentence_transformer',
+                            'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                        },
+                        'batch_processor': {
+                            'type': 'dynamic',
+                            'config': {'initial_batch_size': 32}
+                        },
+                        'cache': {
+                            'type': 'memory',
+                            'config': {'max_entries': 1000}
+                        }
+                    }
                 }
                 
                 # Initialize service
@@ -377,11 +429,14 @@ class TestRetrieverServiceEpic2Integration:
                 # Index same documents through direct Epic 2
                 direct_docs = []
                 for doc_data in test_docs_data:
+                    # Create metadata with doc_id and source
+                    metadata = doc_data["metadata"].copy()
+                    metadata["doc_id"] = doc_data["doc_id"]
+                    metadata["source"] = doc_data["source"]
+                    
                     doc = Document(
                         content=doc_data["content"],
-                        metadata=doc_data["metadata"],
-                        doc_id=doc_data["doc_id"],
-                        source=doc_data["source"]
+                        metadata=metadata
                     )
                     doc.embedding = direct_embedder.embed([doc.content])[0]
                     direct_docs.append(doc)
@@ -410,7 +465,7 @@ class TestRetrieverServiceEpic2Integration:
                 direct_results_data = []
                 for result in direct_results:
                     direct_results_data.append({
-                        "doc_id": result.document.doc_id,
+                        "doc_id": result.document.metadata.get("doc_id", "unknown"),
                         "score": result.score,
                         "content": result.document.content
                     })
@@ -450,8 +505,21 @@ class TestRetrieverServiceEpic2Integration:
                         'composite_filtering': {'enabled': True}
                     },
                     'embedder_config': {
-                        'type': 'sentence_transformer',
-                        'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                        'type': 'modular',
+                        'config': {
+                            'model': {
+                                'type': 'sentence_transformer',
+                                'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                            },
+                            'batch_processor': {
+                                'type': 'dynamic',
+                                'config': {'initial_batch_size': 32}
+                            },
+                            'cache': {
+                                'type': 'memory',
+                                'config': {'max_entries': 1000}
+                            }
+                        }
                     }
                 }
                 
@@ -544,8 +612,21 @@ class TestRetrieverServicePerformanceVsEpic2:
                 }
                 
                 embedder_config = {
-                    'type': 'sentence_transformer',
-                    'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                    'type': 'modular',
+                    'config': {
+                        'model': {
+                            'type': 'sentence_transformer',
+                            'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                        },
+                        'batch_processor': {
+                            'type': 'dynamic',
+                            'config': {'initial_batch_size': 32}
+                        },
+                        'cache': {
+                            'type': 'memory',
+                            'config': {'max_entries': 1000}
+                        }
+                    }
                 }
                 
                 # Setup service
@@ -584,11 +665,14 @@ class TestRetrieverServicePerformanceVsEpic2:
                 # Direct Epic 2 indexing
                 direct_docs = []
                 for doc_data in test_docs_data:
+                    # Create metadata with doc_id and source
+                    metadata = doc_data["metadata"].copy()
+                    metadata["doc_id"] = doc_data["doc_id"]
+                    metadata["source"] = doc_data["source"]
+                    
                     doc = Document(
                         content=doc_data["content"],
-                        metadata=doc_data["metadata"],
-                        doc_id=doc_data["doc_id"],
-                        source=doc_data["source"]
+                        metadata=metadata
                     )
                     doc.embedding = direct_embedder.embed([doc.content])[0]
                     direct_docs.append(doc)
@@ -663,8 +747,21 @@ class TestRetrieverServicePerformanceVsEpic2:
                 }
                 
                 embedder_config = {
-                    'type': 'sentence_transformer',
-                    'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                    'type': 'modular',
+                    'config': {
+                        'model': {
+                            'type': 'sentence_transformer',
+                            'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                        },
+                        'batch_processor': {
+                            'type': 'dynamic',
+                            'config': {'initial_batch_size': 32}
+                        },
+                        'cache': {
+                            'type': 'memory',
+                            'config': {'max_entries': 1000}
+                        }
+                    }
                 }
                 
                 # Setup service
@@ -742,12 +839,44 @@ class TestRetrieverServiceResilience:
                 # Invalid embedder model
                 {
                     'retriever_config': {'vector_index': {'type': 'faiss'}},
-                    'embedder_config': {'type': 'sentence_transformer', 'config': {'model_name': 'nonexistent-model'}}
+                    'embedder_config': {
+                        'type': 'modular', 
+                        'config': {
+                            'model': {
+                                'type': 'sentence_transformer',
+                                'config': {'model_name': 'nonexistent-model'}
+                            },
+                            'batch_processor': {
+                                'type': 'dynamic',
+                                'config': {'initial_batch_size': 32}
+                            },
+                            'cache': {
+                                'type': 'memory',
+                                'config': {'max_entries': 1000}
+                            }
+                        }
+                    }
                 },
                 # Invalid retriever config
                 {
                     'retriever_config': {'vector_index': {'type': 'invalid_type'}},
-                    'embedder_config': {'type': 'sentence_transformer'}
+                    'embedder_config': {
+                        'type': 'modular',
+                        'config': {
+                            'model': {
+                                'type': 'sentence_transformer',
+                                'config': {'model_name': 'all-MiniLM-L6-v2'}
+                            },
+                            'batch_processor': {
+                                'type': 'dynamic',
+                                'config': {'initial_batch_size': 32}
+                            },
+                            'cache': {
+                                'type': 'memory',
+                                'config': {'max_entries': 1000}
+                            }
+                        }
+                    }
                 }
             ]
             
@@ -784,8 +913,21 @@ class TestRetrieverServiceResilience:
                         'reranker': {'type': 'identity'}
                     },
                     'embedder_config': {
-                        'type': 'sentence_transformer',
-                        'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                        'type': 'modular',
+                        'config': {
+                            'model': {
+                                'type': 'sentence_transformer',
+                                'config': {'model_name': 'all-MiniLM-L6-v2', 'device': 'cpu'}
+                            },
+                            'batch_processor': {
+                                'type': 'dynamic',
+                                'config': {'initial_batch_size': 32}
+                            },
+                            'cache': {
+                                'type': 'memory',
+                                'config': {'max_entries': 1000}
+                            }
+                        }
                     }
                 }
                 

@@ -95,24 +95,33 @@ class RetrieverService:
                 embedder_config = self.config.get('embedder_config', {})
                 logger.info("Creating embedder with config", config=embedder_config)
                 
-                # Extract individual parameters for SentenceTransformerEmbedder
-                config_dict = embedder_config.get('config', {})
+                embedder_type = embedder_config.get('type', 'modular')
                 
-                # Map config parameters to constructor arguments (only supported parameters)
-                embedder_kwargs = {}
-                if 'model_name' in config_dict:
-                    embedder_kwargs['model_name'] = config_dict['model_name']
-                if 'batch_size' in config_dict:
-                    embedder_kwargs['batch_size'] = config_dict['batch_size']
-                if 'device' in config_dict:
-                    # Map device to use_mps for SentenceTransformerEmbedder
-                    embedder_kwargs['use_mps'] = config_dict['device'] in ['mps', 'cuda']
-                # Note: normalize_embeddings is not supported by SentenceTransformerEmbedder - removed
+                if embedder_type == 'modular':
+                    # For ModularEmbedder, pass the entire config structure
+                    self.embedder = ComponentFactory.create_embedder(
+                        embedder_type=embedder_type,
+                        config=embedder_config.get('config', {})
+                    )
+                else:
+                    # For other embedders (like SentenceTransformerEmbedder), use the legacy parameter extraction
+                    config_dict = embedder_config.get('config', {})
                     
-                self.embedder = ComponentFactory.create_embedder(
-                    embedder_type=embedder_config.get('type', 'modular'),
-                    **embedder_kwargs
-                )
+                    # Map config parameters to constructor arguments (only supported parameters)
+                    embedder_kwargs = {}
+                    if 'model_name' in config_dict:
+                        embedder_kwargs['model_name'] = config_dict['model_name']
+                    if 'batch_size' in config_dict:
+                        embedder_kwargs['batch_size'] = config_dict['batch_size']
+                    if 'device' in config_dict:
+                        # Map device to use_mps for SentenceTransformerEmbedder
+                        embedder_kwargs['use_mps'] = config_dict['device'] in ['mps', 'cuda']
+                    # Note: normalize_embeddings is not supported by SentenceTransformerEmbedder - removed
+                        
+                    self.embedder = ComponentFactory.create_embedder(
+                        embedder_type=embedder_type,
+                        **embedder_kwargs
+                    )
                 
                 # Initialize the Epic 2 ModularUnifiedRetriever
                 retriever_config = self.config.get('retriever_config', {})
