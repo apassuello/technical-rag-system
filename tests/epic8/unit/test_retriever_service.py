@@ -74,6 +74,28 @@ if IMPORTS_AVAILABLE:
 del _setup_service_imports, imported_classes
 
 
+def create_minimal_service_config():
+    """Create minimal but valid service configuration for testing."""
+    return {
+        'embedder_config': {
+            'type': 'modular',
+            'config': {
+                'model': {
+                    'model_name': 'sentence-transformers/all-MiniLM-L6-v2',
+                    'device': 'cpu'
+                }
+            }
+        },
+        'retriever_config': {
+            'type': 'modular_unified',
+            'vector_index': {'type': 'faiss'},
+            'sparse': {'type': 'bm25'},
+            'fusion': {'type': 'rrf'},
+            'reranker': {'type': 'identity'}
+        }
+    }
+
+
 # Pytest fixtures for Epic 8 testing infrastructure
 @pytest.fixture(autouse=True)  
 def isolate_prometheus_registry():
@@ -115,12 +137,12 @@ class TestRetrieverServiceBasics:
         """Test that service can be initialized without crashing (Hard Fail test)."""
         try:
             # Test default initialization
-            service = RetrieverService()
+            service = RetrieverService(config=create_minimal_service_config())
             assert service is not None
             assert not service._initialized  # Should start uninitialized
             assert service.retriever is None
             assert service.embedder is None
-            assert service.config == {}
+            assert service.config is not None
             
             # Test initialization with configuration
             test_config = {
@@ -149,7 +171,7 @@ class TestRetrieverServiceBasics:
     @pytest.mark.asyncio
     async def test_health_check_basic(self):
         """Test basic health check functionality (Hard Fail test)."""
-        service = RetrieverService()
+        service = RetrieverService(config=create_minimal_service_config())
         
         # Health check should not return 500 error or crash
         start_time = time.time()
@@ -214,7 +236,8 @@ class TestRetrieverServiceDocumentRetrieval:
     async def test_document_retrieval_basic(self):
         """Test basic document retrieval functionality (CT-8.3.1)."""
         try:
-            service = RetrieverService()
+            # Create service with minimal but valid configuration
+            service = RetrieverService(config=create_minimal_service_config())
             
             # First, index some test documents for retrieval
             test_documents = [
@@ -294,7 +317,7 @@ class TestRetrieverServiceDocumentRetrieval:
     @pytest.mark.asyncio
     async def test_retrieval_strategies(self):
         """Test different retrieval strategies with real components."""
-        service = RetrieverService()
+        service = RetrieverService(config=create_minimal_service_config())
         
         strategies = ["hybrid", "semantic", "keyword"]
         
@@ -347,7 +370,7 @@ class TestRetrieverServiceDocumentRetrieval:
                 mock_factory.create_embedder.return_value = mock_embedder
                 mock_retriever.return_value = mock_retriever_instance
                 
-                service = RetrieverService()
+                service = RetrieverService(config=create_minimal_service_config())
                 
                 try:
                     result = await service.retrieve_documents(
@@ -380,7 +403,7 @@ class TestRetrieverServiceDocumentRetrieval:
         """Test parameter validation for retrieval requests."""
         with mock.patch('retriever_app.core.retriever.ComponentFactory'):
             with mock.patch('retriever_app.core.retriever.ModularUnifiedRetriever'):
-                service = RetrieverService()
+                service = RetrieverService(config=create_minimal_service_config())
                 
                 # Test valid parameters
                 try:
@@ -428,7 +451,7 @@ class TestRetrieverServiceBatchRetrieval:
                 mock_factory.create_embedder.return_value = mock_embedder
                 mock_retriever.return_value = mock_retriever_instance
                 
-                service = RetrieverService()
+                service = RetrieverService(config=create_minimal_service_config())
                 
                 try:
                     queries = [
@@ -506,7 +529,7 @@ class TestRetrieverServiceBatchRetrieval:
                 mock_factory.create_embedder.return_value = mock_embedder
                 mock_retriever.return_value = mock_retriever_instance
                 
-                service = RetrieverService()
+                service = RetrieverService(config=create_minimal_service_config())
                 
                 try:
                     queries = ["Query 1", "Query 2 (will fail)", "Query 3"]
@@ -590,7 +613,7 @@ class TestRetrieverServiceDocumentIndexing:
                 mock_factory.create_embedder.return_value = mock_embedder
                 mock_retriever.return_value = mock_retriever_instance
                 
-                service = RetrieverService()
+                service = RetrieverService(config=create_minimal_service_config())
                 
                 try:
                     # Test indexing
@@ -653,7 +676,7 @@ class TestRetrieverServiceDocumentIndexing:
                 mock_factory.create_embedder.return_value = mock_embedder
                 mock_retriever.return_value = mock_retriever_instance
                 
-                service = RetrieverService()
+                service = RetrieverService(config=create_minimal_service_config())
                 
                 try:
                     # Test with pre-computed embeddings
@@ -704,7 +727,7 @@ class TestRetrieverServiceDocumentIndexing:
                 mock_factory.create_embedder.return_value = mock_embedder
                 mock_retriever.return_value = mock_retriever_instance
                 
-                service = RetrieverService()
+                service = RetrieverService(config=create_minimal_service_config())
                 
                 try:
                     start_time = time.time()
@@ -747,7 +770,7 @@ class TestRetrieverServiceDocumentIndexing:
                 mock_factory.create_embedder.return_value = mock_embedder
                 mock_retriever.return_value = mock_retriever_instance
                 
-                service = RetrieverService()
+                service = RetrieverService(config=create_minimal_service_config())
                 
                 try:
                     documents = [
@@ -844,7 +867,7 @@ class TestRetrieverServiceStatus:
     @pytest.mark.asyncio
     async def test_service_shutdown(self):
         """Test graceful service shutdown."""
-        service = RetrieverService()
+        service = RetrieverService(config=create_minimal_service_config())
         
         try:
             # Initialize some state
@@ -876,7 +899,7 @@ class TestRetrieverServiceErrorHandling:
     @pytest.mark.asyncio
     async def test_uninitialized_service_behavior(self):
         """Test behavior when service is not initialized."""
-        service = RetrieverService()
+        service = RetrieverService(config=create_minimal_service_config())
         
         # Service should initialize itself on first use
         with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
@@ -904,7 +927,7 @@ class TestRetrieverServiceErrorHandling:
     @pytest.mark.asyncio
     async def test_concurrent_initialization(self):
         """Test concurrent initialization safety."""
-        service = RetrieverService()
+        service = RetrieverService(config=create_minimal_service_config())
         
         with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
             with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
@@ -934,7 +957,7 @@ class TestRetrieverServiceErrorHandling:
     @pytest.mark.asyncio
     async def test_circuit_breaker_behavior(self):
         """Test circuit breaker pattern for retrieval failures."""
-        service = RetrieverService()
+        service = RetrieverService(config=create_minimal_service_config())
         
         # Test that repeated failures trigger circuit breaker
         # (This is more of an integration test with the @circuit decorator)
@@ -981,7 +1004,7 @@ class TestRetrieverServiceResources:
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB
         
-        service = RetrieverService()
+        service = RetrieverService(config=create_minimal_service_config())
         
         with mock.patch('src.core.component_factory.ComponentFactory') as mock_factory:
             with mock.patch('src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever') as mock_retriever:
@@ -1015,7 +1038,7 @@ class TestRetrieverServiceResources:
     @pytest.mark.asyncio
     async def test_thread_pool_resource_management(self):
         """Test thread pool resource management."""
-        service = RetrieverService()
+        service = RetrieverService(config=create_minimal_service_config())
         
         try:
             # Verify thread pool exists and has reasonable limits

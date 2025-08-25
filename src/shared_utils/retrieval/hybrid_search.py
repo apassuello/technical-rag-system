@@ -14,7 +14,7 @@ sys.path.append(str(project_root))
 
 from src.sparse_retrieval import BM25SparseRetriever
 from src.fusion import reciprocal_rank_fusion, adaptive_fusion
-from shared_utils.embeddings.generator import generate_embeddings
+from src.shared_utils.embeddings.generator import generate_embeddings
 import faiss
 
 
