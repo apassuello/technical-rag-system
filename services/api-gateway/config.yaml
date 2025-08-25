@@ -16,7 +16,7 @@ server:
 # External Service Endpoints
 services:
   query_analyzer:
-    host: "query-analyzer-service"
+    host: "query-analyzer"
     port: 8082
     scheme: "http"
     path: "/api/v1"
@@ -24,7 +24,7 @@ services:
     retries: 3
   
   generator:
-    host: "generator-service"
+    host: "generator"
     port: 8081
     scheme: "http" 
     path: "/api/v1"
@@ -32,7 +32,7 @@ services:
     retries: 2
   
   retriever:
-    host: "retriever-service"
+    host: "retriever"
     port: 8083
     scheme: "http"
     path: "/api/v1"
@@ -40,7 +40,7 @@ services:
     retries: 3
   
   cache:
-    host: "cache-service"
+    host: "cache"
     port: 8084
     scheme: "http"
     path: "/api/v1"
@@ -48,7 +48,7 @@ services:
     retries: 2
   
   analytics:
-    host: "analytics-service"
+    host: "analytics"
     port: 8085
     scheme: "http"
     path: "/api/v1"

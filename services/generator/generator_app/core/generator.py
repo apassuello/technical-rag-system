@@ -17,8 +17,9 @@ import structlog
 from prometheus_client import Counter, Histogram, Gauge
 
 # Add main project to path to import existing components
-# From services/generator/app/core/generator.py go up 5 levels to project root
-project_root = Path(__file__).parent.parent.parent.parent.parent  # 5 levels up to project root
+# Use environment variable for containerized deployment
+import os
+project_root = Path(os.getenv('PROJECT_ROOT', Path(__file__).parent.parent.parent.parent.parent))
 src_path = project_root / "src"
 if src_path.exists():
     sys.path.insert(0, str(project_root))  # Add project root to path
@@ -168,8 +169,16 @@ class GeneratorService:
             
             # Extract routing information from the answer metadata
             routing_metadata = answer.metadata.get('routing', {})
-            selected_model = routing_metadata.get('model_used', 'unknown')
-            cost = routing_metadata.get('cost', 0.0)
+            selected_model_info = routing_metadata.get('selected_model', {})
+            
+            # Build model identifier from provider and model
+            if selected_model_info.get('provider') and selected_model_info.get('model'):
+                selected_model = f"{selected_model_info['provider']}/{selected_model_info['model']}"
+            else:
+                selected_model = routing_metadata.get('model_used', 'unknown')
+            
+            # Extract cost information
+            cost = routing_metadata.get('cost', selected_model_info.get('estimated_cost', 0.0))
             
             # Convert cost to decimal for precision
             if isinstance(cost, (int, float)):
@@ -276,7 +285,10 @@ class GeneratorService:
             # Check if Ollama is accessible
             try:
                 import requests
-                response = requests.get("http://localhost:11434/api/tags", timeout=5)
+                import os
+                # Use environment variable if available, otherwise use docker service name
+                ollama_url = os.getenv("OLLAMA_URL", "http://ollama:11434")
+                response = requests.get(f"{ollama_url}/api/tags", timeout=5)
                 if response.status_code == 200:
                     ollama_models = response.json().get('models', [])
                     for model in ollama_models:

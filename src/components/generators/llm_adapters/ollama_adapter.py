@@ -41,8 +41,8 @@ class OllamaAdapter(BaseLLMAdapter):
     """
     
     def __init__(self,
-                 model_name: str = "llama3.2",
-                 base_url: str = "http://localhost:11434",
+                 model_name: str = "llama3.2:3b",
+                 base_url: str = None,
                  timeout: int = 120,
                  auto_pull: bool = False,
                  config: Optional[Dict[str, Any]] = None):
@@ -56,6 +56,11 @@ class OllamaAdapter(BaseLLMAdapter):
             auto_pull: Automatically pull models if not found
             config: Additional configuration
         """
+        # Use environment variable or default if base_url not provided
+        if base_url is None:
+            import os
+            base_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
+        
         # Merge config
         adapter_config = {
             'base_url': base_url,

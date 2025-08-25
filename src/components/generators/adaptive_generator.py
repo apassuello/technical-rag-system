@@ -69,7 +69,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         temperature: float = 0.3,
         max_tokens: int = 512,
         use_ollama: bool = False,
-        ollama_url: str = "http://localhost:11434",
+        ollama_url: str = None,
         use_inference_providers: bool = False,
         enable_adaptive_prompts: bool = True,
         enable_chain_of_thought: bool = False,
@@ -84,7 +84,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             temperature: Sampling temperature for generation (default: 0.3)
             max_tokens: Maximum tokens to generate (default: 512)
             use_ollama: Use local Ollama server (default: False)
-            ollama_url: URL for Ollama server (default: http://localhost:11434)
+            ollama_url: URL for Ollama server (default: from OLLAMA_URL env var or http://ollama:11434)
             use_inference_providers: Use inference API providers (default: False)
             enable_adaptive_prompts: Enable adaptive prompt optimization (default: True)
             enable_chain_of_thought: Enable chain-of-thought reasoning (default: False)
@@ -95,6 +95,10 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.use_ollama = use_ollama
+        # Use environment variable if ollama_url not provided
+        if ollama_url is None:
+            import os
+            ollama_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
         self.ollama_url = ollama_url
         self.use_inference_providers = use_inference_providers
         self.enable_adaptive_prompts = enable_adaptive_prompts

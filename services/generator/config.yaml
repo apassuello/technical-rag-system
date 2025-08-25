@@ -87,7 +87,7 @@ generator:
   # LLM Adapter Configuration
   adapters:
     ollama:
-      endpoint: "http://localhost:11434"
+      endpoint: "http://ollama:11434"
       timeout: 30
       max_retries: 3
       models:

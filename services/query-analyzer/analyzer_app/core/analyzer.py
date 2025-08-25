@@ -27,8 +27,9 @@ import structlog
 from prometheus_client import Counter, Histogram, Gauge
 
 # Add main project to path to import existing components
-# From query-analyzer service to project root: ../../
-project_root = Path(__file__).parent.parent.parent.parent.parent  # 5 levels up to project root
+# Use environment variable for containerized deployment
+import os
+project_root = Path(os.getenv('PROJECT_ROOT', Path(__file__).parent.parent.parent.parent.parent))
 if project_root.exists():
     sys.path.insert(0, str(project_root))
 

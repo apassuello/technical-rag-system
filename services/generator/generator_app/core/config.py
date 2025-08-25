@@ -100,7 +100,7 @@ class GeneratorConfig(BaseSettings):
     adapters: Dict[str, Any] = Field(
         default_factory=lambda: {
             "ollama": {
-                "endpoint": "http://localhost:11434",
+                "endpoint": "http://ollama:11434",
                 "timeout": 30,
                 "max_retries": 3,
                 "models": {

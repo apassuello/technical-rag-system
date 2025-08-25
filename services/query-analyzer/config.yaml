@@ -4,7 +4,7 @@ service_version: "1.0.0"
 
 # Server Configuration
 host: "0.0.0.0"
-port: 8080
+port: 8082
 workers: 1
 
 # gRPC Configuration (for Phase 1.3)

@@ -85,7 +85,8 @@ class TestQueryAnalyzerEpic1Integration:
             # Quality flag: Missing Epic1 fields
             if len(present_fields) < len(epic1_fields):
                 missing = set(epic1_fields) - set(present_fields)
-                pytest.warns(UserWarning, f"Missing Epic1 fields: {missing}")
+                import warnings
+                warnings.warn(f"Missing Epic1 fields: {missing}", UserWarning)
             
             print(f"Epic1 integration test passed: {len(present_fields)}/{len(epic1_fields)} fields present")
             print(f"Analyzer type: {type(service.analyzer).__name__}")
@@ -165,9 +166,11 @@ class TestQueryAnalyzerEpic1Integration:
                 if len(present_metrics) > 0:
                     print(f"Performance metrics available: {present_metrics}")
                 else:
-                    pytest.warns(UserWarning, "No Epic1 performance metrics found")
+                    import warnings
+                    warnings.warn("No Epic1 performance metrics found", UserWarning)
             else:
-                pytest.warns(UserWarning, "No performance data in status")
+                import warnings
+                warnings.warn("No performance data in status", UserWarning)
             
             print(f"Performance integration test passed")
             
@@ -193,7 +196,8 @@ class TestQueryAnalyzerServiceStartup:
             
             # Quality flag: Service creation should be very fast
             if init_time > 1.0:
-                pytest.warns(UserWarning, f"Slow service creation: {init_time:.2f}s")
+                import warnings
+                warnings.warn(f"Slow service creation: {init_time:.2f}s", UserWarning)
             
             # Test lazy initialization timing
             start_time = time.time()
@@ -205,7 +209,8 @@ class TestQueryAnalyzerServiceStartup:
             
             # Quality flag: First query should be faster than 10s
             if first_query_time > 10.0:
-                pytest.warns(UserWarning, f"Slow first query (initialization): {first_query_time:.2f}s")
+                import warnings
+                warnings.warn(f"Slow first query (initialization): {first_query_time:.2f}s", UserWarning)
             
             # Test subsequent query timing
             start_time = time.time()
@@ -251,7 +256,8 @@ class TestQueryAnalyzerServiceStartup:
             # Quality check: Most should succeed
             success_rate = len(successful_results) / len(queries)
             if success_rate < 0.8:
-                pytest.warns(UserWarning, f"Low concurrent initialization success rate: {success_rate:.2%}")
+                import warnings
+                warnings.warn(f"Low concurrent initialization success rate: {success_rate:.2%}", UserWarning)
             
             # Service should be initialized after concurrent requests
             assert service._initialized is True, "Service not initialized after concurrent requests"
@@ -439,9 +445,11 @@ class TestQueryAnalyzerHealthMonitoring:
                         assert avg_time < 60000, f"Average response time {avg_time}ms seems too high"
                         
                 else:
-                    pytest.warns(UserWarning, "No basic metrics found in performance data")
+                    import warnings
+                    warnings.warn("No basic metrics found in performance data", UserWarning)
             else:
-                pytest.warns(UserWarning, "No performance data available")
+                import warnings
+                warnings.warn("No performance data available", UserWarning)
             
             print(f"Metrics collection test completed")
             
@@ -543,10 +551,12 @@ class TestQueryAnalyzerEndToEndIntegration:
             
             # Quality checks
             if accuracy < 0.67:  # 2/3 correct
-                pytest.warns(UserWarning, f"End-to-end accuracy low: {accuracy:.2%}")
+                import warnings
+                warnings.warn(f"End-to-end accuracy low: {accuracy:.2%}", UserWarning)
             
             if avg_time > 3.0:
-                pytest.warns(UserWarning, f"End-to-end average time high: {avg_time:.2f}s")
+                import warnings
+                warnings.warn(f"End-to-end average time high: {avg_time:.2f}s", UserWarning)
             
             print(f"End-to-end integration test completed:")
             print(f"  Accuracy: {accuracy:.2%} ({correct_predictions}/{len(test_cases)})")

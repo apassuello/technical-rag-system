@@ -55,7 +55,7 @@ except ImportError as e:
 
 # Test configuration
 GENERATOR_BASE_URL = "http://localhost:8081"
-QUERY_ANALYZER_BASE_URL = "http://localhost:8080"
+QUERY_ANALYZER_BASE_URL = "http://localhost:8082"
 
 # Integration test data
 INTEGRATION_TEST_DOCUMENTS = [

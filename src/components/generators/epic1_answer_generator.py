@@ -592,11 +592,13 @@ class Epic1AnswerGenerator(AnswerGenerator):
         
         # Ensure we have a base LLM configuration for fallback
         if 'llm_client' not in routing_config:
+            import os
+            ollama_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
             routing_config['llm_client'] = {
                 'type': 'ollama',
                 'config': {
                     'model_name': 'llama3.2:3b',
-                    'base_url': 'http://localhost:11434'
+                    'base_url': ollama_url
                 }
             }
         
