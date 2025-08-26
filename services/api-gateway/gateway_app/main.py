@@ -170,7 +170,7 @@ def create_app() -> FastAPI:
                     error="InternalServerError",
                     message="An unexpected error occurred",
                     details={"error": str(e)}
-                ).dict()
+                ).model_dump()
             )
     
     # Include API routers
@@ -205,7 +205,7 @@ def create_app() -> FastAPI:
                     "Check service status at /api/v1/status",
                     "Contact support if problem persists"
                 ]
-            ).dict()
+            ).model_dump()
         )
     
     return app

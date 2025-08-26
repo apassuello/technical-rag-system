@@ -58,7 +58,7 @@ class TestAPIGatewayService:
             strategy_used="balanced"
         )
         
-        mock_gateway_service.cache.get_cached_response.return_value = cached_response.dict()
+        mock_gateway_service.cache.get_cached_response.return_value = cached_response.model_dump()
         
         # Create request
         request = UnifiedQueryRequest(**sample_query_request)

@@ -24,7 +24,7 @@ import unittest.mock as mock
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
 
 # Simple fix: Mock prometheus_client to prevent registry collisions
@@ -481,7 +481,7 @@ class TestAPIGatewayServicePipelineOrchestration:
                 warnings.warn(f"Batch success rate {success_rate:.2%} below 95% target", UserWarning)
             
             # Validate summary statistics
-            assert "summary" in response.dict()
+            assert "summary" in response.model_dump()
             summary = response.summary
             assert "total_cost" in summary
             assert "success_rate" in summary
@@ -572,7 +572,7 @@ class TestAPIGatewayServicePipelineOrchestration:
                 },
                 "query_id": str(uuid.uuid4()),
                 "session_id": "cache-test",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "strategy_used": "balanced",
                 "fallback_used": False,
                 "warnings": []

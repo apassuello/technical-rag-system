@@ -3,7 +3,7 @@ Analytics service client.
 """
 
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import structlog
 
 from .base import BaseServiceClient, ServiceError
@@ -41,7 +41,7 @@ class AnalyticsClient(BaseServiceClient):
             request_data = {
                 "event_type": "cache_hit",
                 "query_hash": query_hash,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
             if session_id:
@@ -97,7 +97,7 @@ class AnalyticsClient(BaseServiceClient):
                 },
                 "performance_data": query_response.get("metrics", {}),
                 "cost_data": query_response.get("cost", {}),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
             response = await self.post("/record-query", json=request_data)
@@ -140,7 +140,7 @@ class AnalyticsClient(BaseServiceClient):
                 "event_type": "error",
                 "error_type": error_type,
                 "error_message": error_message,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
             if query:

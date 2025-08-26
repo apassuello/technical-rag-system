@@ -121,7 +121,7 @@ async def process_unified_query(
                     "Verify query format and parameters",
                     "Try again with simpler query if complex"
                 ]
-            ).dict()
+            ).model_dump()
         )
     
     finally:
@@ -211,7 +211,7 @@ async def process_batch_queries(
                     "Reduce batch size if too large",
                     "Check service status at /api/v1/status"
                 ]
-            ).dict()
+            ).model_dump()
         )
     
     finally:

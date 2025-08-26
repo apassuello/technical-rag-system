@@ -135,7 +135,7 @@ class TestAnalyzeRequest:
             context={"user": "test"}
         )
         
-        dict_data = request.dict()
+        dict_data = request.model_dump()
         expected = {
             "query": "test query",
             "context": {"user": "test"},
@@ -444,7 +444,7 @@ class TestSchemaIntegration:
         json_str = original.json()
         
         # Deserialize from JSON
-        parsed = AnalyzeResponse.parse_raw(json_str)
+        parsed = AnalyzeResponse.model_validate_json(json_str)
         
         # Should be equal
         assert parsed.query == original.query
@@ -481,7 +481,7 @@ class TestSchemaIntegration:
         }
         
         # Should not raise error
-        request = AnalyzeRequest.parse_obj(data)
+        request = AnalyzeRequest.model_validate(data)
         assert request.query == "test"
         assert not hasattr(request, 'extra_field')
 
