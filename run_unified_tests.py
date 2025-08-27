@@ -226,14 +226,12 @@ class UnifiedTestRunner:
             "unit_tests_all": {
                 "paths": ["tests/unit/"],
                 "description": "Complete Unit Test Suite",
-                "priority": 2,
-                "extra_args": ["--maxfail=15"]
+                "priority": 2
             },
             "diagnostic_tests": {
                 "paths": ["tests/diagnostic/"],
                 "description": "Diagnostic and Forensic Tests",
-                "priority": 2,
-                "extra_args": ["--maxfail=5"]
+                "priority": 2
             },
             "quality_tests": {
                 "paths": ["tests/quality/"],
@@ -250,8 +248,7 @@ class UnifiedTestRunner:
             "integration_all": {
                 "paths": ["tests/integration/"],
                 "description": "Complete Integration Test Suite",
-                "priority": 3,
-                "extra_args": ["--maxfail=10"]
+                "priority": 3
             },
             "system_tests": {
                 "paths": ["tests/system/"],
@@ -261,14 +258,12 @@ class UnifiedTestRunner:
             "epic8_integration": {
                 "paths": ["tests/epic8/integration/"],
                 "description": "Epic 8 Integration Tests",
-                "priority": 3,
-                "extra_args": ["--maxfail=10"]
+                "priority": 3
             },
             "epic8_api": {
                 "paths": ["tests/epic8/api/"],
                 "description": "Epic 8 API Tests",
-                "priority": 3,
-                "extra_args": ["--maxfail=8"]  # API tests may have service dependencies
+                "priority": 3
             },
             
             # Priority 4 - Epic-specific tests
@@ -279,34 +274,29 @@ class UnifiedTestRunner:
                     "tests/epic2_production_validation.py"
                 ],
                 "description": "Epic 2 Standalone Integration Tests",
-                "priority": 4,
-                "extra_args": ["--maxfail=5"]
+                "priority": 4
             },
             "epic2_validation": {
                 "paths": ["tests/epic2_validation/"],
                 "description": "Epic 2 Validation Test Suite",
-                "priority": 4,
-                "extra_args": ["--maxfail=10"]
+                "priority": 4
             },
             "epic1_integration": {
                 "paths": ["tests/epic1/integration/"],
                 "description": "Epic 1 Integration Tests",
-                "priority": 4,
-                "extra_args": ["--maxfail=8"]
+                "priority": 4
             },
             "epic1_phase2": {
                 "paths": ["tests/epic1/phase2/"],
                 "description": "Epic 1 Phase 2 Tests",
-                "priority": 4,
-                "extra_args": ["--maxfail=12"]
+                "priority": 4
             },
             
             # Priority 5 - Validation and comprehensive tests
             "integration_validation": {
                 "paths": ["tests/integration_validation/"],
                 "description": "Integration Validation Suite",
-                "priority": 5,
-                "extra_args": ["--maxfail=8"]
+                "priority": 5
             }
         }
     
@@ -320,20 +310,17 @@ class UnifiedTestRunner:
             "epic1_all": {
                 "paths": ["tests/epic1/"],
                 "description": "Epic 1 Complete Test Suite",
-                "priority": 6,
-                "extra_args": ["--maxfail=25"]
+                "priority": 6
             },
             "epic1_smoke": {
                 "paths": ["tests/epic1/smoke/"],
                 "description": "Epic 1 Smoke Tests",
-                "priority": 6,
-                "extra_args": ["--maxfail=5"]
+                "priority": 6
             },
             "epic1_regression": {
                 "paths": ["tests/epic1/regression/"],
                 "description": "Epic 1 Regression Tests",
-                "priority": 6,
-                "extra_args": ["--maxfail=8"]
+                "priority": 6
             },
             
             # Epic 8 comprehensive testing
@@ -341,7 +328,7 @@ class UnifiedTestRunner:
                 "paths": ["tests/epic8/performance/"],
                 "description": "Epic 8 Performance Tests",
                 "priority": 6,
-                "extra_args": ["--maxfail=12", "--timeout=600"]  # Performance tests may take longer
+                "extra_args": ["--timeout=600"]  # Performance tests may take longer
             },
             "epic8_smoke": {
                 "paths": ["tests/epic8/smoke/"],
@@ -356,22 +343,19 @@ class UnifiedTestRunner:
                     "services/*/test_*.py"
                 ],
                 "description": "Microservice-Specific Tests",
-                "priority": 7,
-                "extra_args": ["--maxfail=15"]
+                "priority": 7
             },
             
             # Development and debug tests
             "epic1_ml_infrastructure": {
                 "paths": ["tests/epic1/ml_infrastructure/"],
                 "description": "Epic 1 ML Infrastructure Tests",
-                "priority": 8,
-                "extra_args": ["--maxfail=20"]
+                "priority": 8
             },
             "epic1_legacy": {
                 "paths": ["tests/epic1/legacy/"],
                 "description": "Epic 1 Legacy Tests",
-                "priority": 8,
-                "extra_args": ["--maxfail=15"]
+                "priority": 8
             },
             
             # Standalone test files (comprehensive)
