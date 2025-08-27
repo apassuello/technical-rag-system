@@ -19,7 +19,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.rag_with_generation import RAGWithGeneration
-from shared_utils.generation.answer_generator import AnswerGenerator
+from src.shared_utils.generation.answer_generator import AnswerGenerator
 
 def debug_confidence_discrepancy():
     """Debug confidence score discrepancy between direct and integrated calls."""

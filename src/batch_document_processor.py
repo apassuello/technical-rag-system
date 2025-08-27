@@ -24,7 +24,7 @@ sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.rag_with_generation import RAGWithGeneration
-from shared_utils.document_processing.hybrid_parser import HybridParser
+from src.shared_utils.document_processing.hybrid_parser import HybridParser
 
 logger = logging.getLogger(__name__)
 

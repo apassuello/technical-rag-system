@@ -322,7 +322,7 @@ class BasicRAG:
 
         try:
             # Enhancement enabled (NOT RECOMMENDED - adds overhead without benefit)
-            from shared_utils.query_processing.query_enhancer import QueryEnhancer
+            from src.shared_utils.query_processing.query_enhancer import QueryEnhancer
 
             # Initialize enhancer
             enhancer = QueryEnhancer()

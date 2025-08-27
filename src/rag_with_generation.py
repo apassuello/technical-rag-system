@@ -16,17 +16,17 @@ from src.core.platform_orchestrator import PlatformOrchestrator
 
 # Import from shared utils - Support HF API, Ollama, and Inference Providers
 sys.path.append(str(Path(__file__).parent.parent))
-from shared_utils.generation.hf_answer_generator import (
+from src.shared_utils.generation.hf_answer_generator import (
     HuggingFaceAnswerGenerator,
     GeneratedAnswer,
 )
-from shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
-from shared_utils.generation.inference_providers_generator import (
+from src.shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
+from src.shared_utils.generation.inference_providers_generator import (
     InferenceProvidersGenerator,
 )
-from shared_utils.generation.prompt_templates import TechnicalPromptTemplates
-from shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
-from shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
+from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates
+from src.shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
+from src.shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
 
 
 class RAGWithGeneration:

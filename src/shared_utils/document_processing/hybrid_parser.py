@@ -465,8 +465,8 @@ def parse_pdf_with_hybrid_approach(pdf_path: Path, pdf_data: Dict[str, Any],
         List of high-quality, filtered chunks ready for RAG indexing
         
     Example:
-        >>> from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
-        >>> from shared_utils.document_processing.hybrid_parser import parse_pdf_with_hybrid_approach
+        >>> from src.shared_utils.document_processing.pdf_parser import extract_text_with_metadata
+        >>> from src.shared_utils.document_processing.hybrid_parser import parse_pdf_with_hybrid_approach
         >>> 
         >>> pdf_data = extract_text_with_metadata("document.pdf")
         >>> chunks = parse_pdf_with_hybrid_approach(Path("document.pdf"), pdf_data)

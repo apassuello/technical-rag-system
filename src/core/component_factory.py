@@ -837,6 +837,20 @@ class ComponentFactory:
             ) from e
     
     @classmethod
+    def create_answer_generator(cls, generator_type: str = "adaptive", **kwargs) -> AnswerGenerator:
+        """
+        Alias for create_generator() for backward compatibility.
+        
+        Args:
+            generator_type: Type of generator (default: "adaptive")
+            **kwargs: Arguments to pass to the generator constructor
+            
+        Returns:
+            Instantiated AnswerGenerator
+        """
+        return cls.create_generator(generator_type, **kwargs)
+    
+    @classmethod
     def create_query_analyzer(cls, analyzer_type: str, **kwargs):
         """
         Create a query analyzer instance.

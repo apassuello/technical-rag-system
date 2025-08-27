@@ -14,7 +14,7 @@ sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_u
 
 from src.sparse_retrieval import BM25SparseRetriever
 from src.fusion import reciprocal_rank_fusion
-from shared_utils.retrieval.hybrid_search import HybridRetriever
+from src.shared_utils.retrieval.hybrid_search import HybridRetriever
 
 
 def main():

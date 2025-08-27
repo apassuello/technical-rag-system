@@ -11,7 +11,7 @@ import re
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from shared_utils.generation.answer_generator import AnswerGenerator
+from src.shared_utils.generation.answer_generator import AnswerGenerator
 
 
 def test_regex_patterns():
