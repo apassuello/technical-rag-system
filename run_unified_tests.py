@@ -128,7 +128,24 @@ class UnifiedTestRunner:
         ] + test_paths + [
             "-v", "--tb=short",
             "--disable-warnings"
-        ] + extra_args
+        ]
+        
+        # Add parallel execution for suitable test categories
+        parallel_safe_categories = [
+            "unit_tests_all", "component_tests", "epic8_unit_complete", 
+            "tools_tests", "quality_tests", "epic8_api", "epic1_integration",
+            "epic1_phase2", "epic1_all", "epic1_smoke", "epic1_regression",
+            "epic1_ml_infrastructure", "epic1_legacy", "service_tests"
+        ]
+        
+        if category in parallel_safe_categories:
+            # Use auto-detection for number of CPUs (or specify manually)
+            cpu_count = os.cpu_count()
+            parallel_workers = min(cpu_count, 8)  # Cap at 8 to avoid overwhelming
+            cmd.extend(["-n", str(parallel_workers)])
+            print(f"🚀 Running with {parallel_workers} parallel workers")
+        
+        cmd.extend(extra_args)
         
         print(f"\n{'='*80}")
         print(f"🧪 {description}")
@@ -145,38 +162,51 @@ class UnifiedTestRunner:
         start_time = time.time()
         
         try:
-            # Run with captured output for parsing test results
-            result = subprocess.run(
+            # Use Popen for real-time output with capture capability
+            import subprocess
+            process = subprocess.Popen(
                 cmd,
                 env=env,
                 cwd=self.project_root,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
-                timeout=1800  # 30 minutes
+                bufsize=1,  # Line buffered
+                universal_newlines=True
             )
             
-            # Print the output in real-time (simulate real-time)
-            if result.stdout:
-                print(result.stdout)
-            if result.stderr and "warning" not in result.stderr.lower():
-                print(result.stderr)
+            # Capture output while showing it in real-time
+            output_lines = []
+            while True:
+                output = process.stdout.readline()
+                if output == '' and process.poll() is not None:
+                    break
+                if output:
+                    print(output.strip())  # Show real-time output
+                    output_lines.append(output)  # Capture for parsing
+            
+            # Wait for process to complete and get return code
+            return_code = process.wait(timeout=1800)  # 30 minutes
             
             end_time = time.time()
             execution_time = end_time - start_time
             
+            # Join captured output for parsing
+            full_output = ''.join(output_lines)
+            
             # Parse test statistics from output
-            test_stats = self._parse_test_output(result.stdout)
+            test_stats = self._parse_test_output(full_output)
             
             return {
                 'category': category,
                 'description': description,
                 'command': ' '.join(cmd),
-                'success': result.returncode == 0,
-                'returncode': result.returncode,
+                'success': return_code == 0,
+                'returncode': return_code,
                 'execution_time': execution_time,
                 'test_paths': test_paths,
                 'test_stats': test_stats,
-                'output': result.stdout[:5000] if result.stdout else ""  # Keep first 5000 chars for report
+                'output': full_output[:5000] if full_output else ""  # Keep first 5000 chars for report
             }
             
         except subprocess.TimeoutExpired:
@@ -379,20 +409,34 @@ class UnifiedTestRunner:
         print("📊 Running Comprehensive Coverage Analysis")
         print(f"{'='*80}")
         
+        # Use comprehensive test suite to match dedicated coverage scripts
+        # Exclude problematic API tests that have configuration issues
+        coverage_test_paths = [
+            "tests/unit/",
+            "tests/integration/", 
+            "tests/component/test_modular_document_processor.py",
+            "tests/component/test_pdf_parser.py",
+            "tests/component/test_embeddings.py",
+            "tests/epic1/integration/",
+            "tests/epic1/smoke/",
+            # Skip epic1/phase2 and epic1/demos/scripts as they may have API dependencies
+            "tests/epic8/unit/",
+            "tests/epic8/integration/",
+            # Skip epic8/api/ due to pydantic configuration issues
+        ]
+        
         coverage_cmd = [
-            sys.executable, "-m", "pytest",
+            sys.executable, "-m", "pytest"
+        ] + coverage_test_paths + [
             "--cov=src", "--cov=services", 
             "--cov-report=html:htmlcov",
             "--cov-report=json:coverage.json",
             "--cov-report=xml:coverage.xml",
             "--cov-report=term-missing",
-            # Run on working test categories for coverage
-            "tests/component/",
-            "tests/smoke/", 
-            "tests/epic8/unit/test_query_analyzer_service.py",
-            "tests/epic8/unit/test_generator_service.py",
             "--disable-warnings",
-            "-q"  # Quiet mode for coverage
+            "-v",  # Verbose mode to see coverage progress
+            "--tb=short",
+            "--maxfail=50"  # Don't stop at first failures
         ]
         
         env = os.environ.copy()
