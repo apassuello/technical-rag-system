@@ -10,8 +10,8 @@ import time
 import logging
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, 'src')
+# Add src to path - fix path resolution for Epic 1 tests
+sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
 
 # Load environment variables
 try:
@@ -93,7 +93,6 @@ def test_epic1_with_config():
     try:
         from src.core.component_factory import ComponentFactory
         from src.core.config import load_config
-        from pathlib import Path
         
         # Load configuration
         config_path = Path("config/epic1_multi_model.yaml")

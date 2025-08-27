@@ -13,14 +13,15 @@ import asyncio
 import json
 from pathlib import Path
 import sys
+import pytest
 
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent.parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
+# Add src to path - fix path resolution for Epic 1 tests
+sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
 
 from src.components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer
 from src.components.query_processors.analyzers.ml_views.view_result import ComplexityLevel
 
+@pytest.mark.asyncio
 async def test_epic1_integration():
     """Test Epic1MLAnalyzer with trained models."""
     

@@ -7,10 +7,12 @@ This focuses ONLY on the cost tracking requirements, ignoring routing inconsiste
 
 import os
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 from decimal import Decimal
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Add src to path - fix path resolution for Epic 1 tests
+sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
 
 from src.components.generators.epic1_answer_generator import Epic1AnswerGenerator
 from src.core.interfaces import Document, Answer

@@ -10,8 +10,8 @@ import logging
 from pathlib import Path
 import json
 
-# Add src to Python path
-sys.path.append(str(Path(__file__).parent / 'src'))
+# Add src to Python path - fix path resolution for Epic 1 tests
+sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
 
 # Test imports
 try:

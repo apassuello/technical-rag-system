@@ -6,16 +6,17 @@ import asyncio
 import logging
 from pathlib import Path
 import sys
+import pytest
 
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.append(str(project_root))
+# Add src to path - fix path resolution for Epic 1 tests
+sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
 
 from src.components.query_processors.analyzers.ml_models.model_manager import ModelManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+@pytest.mark.asyncio
 async def test_single_model():
     """Test loading just one model."""
     logger.info("=== SINGLE MODEL TEST ===")

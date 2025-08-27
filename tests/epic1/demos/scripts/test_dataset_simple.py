@@ -7,9 +7,14 @@ import json
 import numpy as np
 import asyncio
 import logging
+import sys
 from pathlib import Path
 from typing import Dict, List
 from datetime import datetime
+import pytest
+
+# Add src to path - fix path resolution for Epic 1 tests
+sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
