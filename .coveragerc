@@ -1,0 +1,73 @@
+[run]
+source = src/, services/
+omit = 
+    */tests/*
+    */test_*
+    */__pycache__/*
+    */venv/*
+    */env/*
+    */.venv/*
+    */node_modules/*
+    */build/*
+    */dist/*
+    */htmlcov/*
+    */coverage/*
+    # Test and development files
+    */conftest.py
+    */test_*.py
+    run_*.py
+    */debug_*.py
+    */demo*.py
+    # Exclude problematic imports that cause coverage issues
+    */shared_utils/*
+    */legacy/*
+    */archive/*
+    */migrations/*
+
+parallel = true
+branch = true
+
+[report]
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+    
+    # Don't complain about missing debug-only code
+    def __repr__
+    if self\.debug
+    
+    # Don't complain if tests don't hit defensive assertion code
+    raise AssertionError
+    raise NotImplementedError
+    
+    # Don't complain if non-runnable code isn't run
+    if 0:
+    if __name__ .__main__.:
+    if __name__.__main__:
+    
+    # Don't complain about abstract methods
+    @(abc\.)?abstractmethod
+    
+    # Don't complain about type checking imports
+    if TYPE_CHECKING:
+    
+    # Don't complain about platform specific code
+    pragma: platform
+    
+    # Don't complain about deprecated code
+    pragma: deprecated
+
+precision = 2
+show_missing = true
+skip_covered = false
+
+[html]
+directory = htmlcov
+title = RAG Portfolio - Unified Test Coverage Report
+
+[xml]
+output = coverage.xml
+
+[json]
+output = coverage.json
+pretty_print = true
