@@ -54,7 +54,7 @@ case "${1:-default}" in
         if [ -n "$LATEST_REPORT" ]; then
             open "$LATEST_REPORT" 2>/dev/null || echo "Test report: $LATEST_REPORT"
         fi
-        open htmlcov/index.html 2>/dev/null || echo "Coverage report: htmlcov/index.html"
+        open reports/coverage/html/index.html 2>/dev/null || echo "Coverage report: reports/coverage/html/index.html"
         ;;
     "no-coverage"|"nc")
         echo -e "${YELLOW}📋 Running working tests without coverage${NC}"

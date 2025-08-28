@@ -3,14 +3,14 @@
 # Import all component modules to trigger auto-registration
 from . import processors
 from . import embedders
-from . import vector_stores
 from . import retrievers
 from . import generators
+from . import query_processors
 
 __all__ = [
     'processors',
     'embedders', 
-    'vector_stores',
     'retrievers',
-    'generators'
+    'generators',
+    'query_processors'
 ]

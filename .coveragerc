@@ -1,8 +1,16 @@
 [run]
 # Focus coverage on actual system architecture
-source = src, services
+# Explicitly include service app directories where the actual code lives
+source = 
+    src
+    services/query-analyzer/analyzer_app
+    services/cache/cache_app
+    services/api-gateway/gateway_app
+    services/retriever/retriever_app
+    services/generator/generator_app
+    services/analytics/analytics_app
 
-# Exclude test files, build artifacts, and legacy code
+# Exclude test files, build artifacts, demo files, and legacy code
 omit = 
     tests/*
     */tests/*
@@ -13,6 +21,13 @@ omit =
     */venv/*
     */env/*
     */.git/*
+    # Demo and presentation files (not part of core system)
+    demo/*
+    */demo/*
+    *_demo.py
+    */demos/*
+    scripts/demos/*
+    scripts/streamlit_*
     # Legacy/archive code
     src/legacy/*
     src/archive/*
@@ -62,10 +77,17 @@ exclude_lines =
     @abstractmethod
 
 [paths]
-# Architecture-aligned path mapping
+# Map different execution contexts to same logical source
+# This helps when running tests from different directories or in CI/CD
 source = 
     src/
-    services/
+    /Users/*/rag-portfolio/project-1-technical-rag/src/
+    services/*/analyzer_app/
+    services/*/cache_app/
+    services/*/gateway_app/
+    services/*/retriever_app/
+    services/*/generator_app/
+    services/*/analytics_app/
 
 [html]
 # HTML report configuration

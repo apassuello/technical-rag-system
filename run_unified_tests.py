@@ -117,7 +117,8 @@ class UnifiedTestRunner:
         return ":".join(paths)
     
     def run_test_category(self, category: str, test_paths: List[str], 
-                         description: str, extra_args: List[str] = None) -> Dict[str, Any]:
+                         description: str, extra_args: List[str] = None, 
+                         enable_coverage: bool = False) -> Dict[str, Any]:
         """Run a test category with proper environment setup."""
         if extra_args is None:
             extra_args = []
@@ -129,6 +130,14 @@ class UnifiedTestRunner:
             "-v", "--tb=short",
             "--disable-warnings"
         ]
+        
+        # Add coverage collection if enabled
+        if enable_coverage:
+            cmd.extend([
+                "--cov",  # Use .coveragerc for source specification
+                "--cov-config=.coveragerc",
+                "--cov-append"  # Append to existing coverage data
+            ])
         
         # Add parallel execution for suitable test categories
         parallel_safe_categories = [
@@ -404,77 +413,122 @@ class UnifiedTestRunner:
         return categories
     
     def run_coverage_analysis(self) -> Dict[str, Any]:
-        """Run comprehensive coverage analysis."""
+        """Generate coverage reports from collected test data."""
         print(f"\n{'='*80}")
-        print("📊 Running Comprehensive Coverage Analysis")
+        print("📊 Generating Coverage Reports")
         print(f"{'='*80}")
         
-        # Use comprehensive test suite to match dedicated coverage scripts
-        # Exclude problematic API tests that have configuration issues
-        coverage_test_paths = [
-            "tests/unit/",
-            "tests/integration/", 
-            "tests/component/test_modular_document_processor.py",
-            "tests/component/test_pdf_parser.py",
-            "tests/component/test_embeddings.py",
-            "tests/epic1/integration/",
-            "tests/epic1/smoke/",
-            # Skip epic1/phase2 and epic1/demos/scripts as they may have API dependencies
-            "tests/epic8/unit/",
-            "tests/epic8/integration/",
-            # Skip epic8/api/ due to pydantic configuration issues
-        ]
-        
-        coverage_cmd = [
-            sys.executable, "-m", "pytest"
-        ] + coverage_test_paths + [
-            # Use .coveragerc configuration for source specification
-            "--cov",  # No source specified - use .coveragerc file
-            "--cov-config=.coveragerc",  # Explicitly specify config file
-            "--cov-report=html:reports/coverage/html",
-            "--cov-report=json:reports/coverage/coverage.json",
-            "--cov-report=xml:reports/coverage/coverage.xml",
-            "--cov-report=term-missing",
-            "--disable-warnings",
-            "-v",  # Verbose mode to see coverage progress
-            "--tb=short",
-            "--maxfail=50"  # Don't stop at first failures
-        ]
-        
-        env = os.environ.copy()
-        env["PYTHONPATH"] = self.pythonpath
-        env["PYTHONWARNINGS"] = "ignore"
-        
-        start_time = time.time()
-        
+        # First, combine any existing coverage data from parallel test runs
+        print("🔄 Combining coverage data from parallel test execution...")
         try:
-            result = subprocess.run(
-                coverage_cmd,
-                env=env,
+            # Combine all .coverage.* files into a single .coverage file
+            combine_result = subprocess.run(
+                ["coverage", "combine"],
                 cwd=self.project_root,
+                timeout=30,
                 capture_output=True,
-                text=True,
-                timeout=600  # 10 minutes for coverage
+                text=True
             )
-            
-            return {
-                'success': result.returncode == 0,
-                'execution_time': time.time() - start_time,
-                'command': ' '.join(coverage_cmd),
-                'stdout': result.stdout,
-                'stderr': result.stderr
-            }
-            
+            if combine_result.returncode == 0:
+                print("✅ Coverage data combined successfully")
+            else:
+                print(f"⚠️ Coverage combine warning: {combine_result.stderr}")
+        except subprocess.CalledProcessError as e:
+            print(f"⚠️ Coverage combine failed: {e}")
+        except FileNotFoundError:
+            print("⚠️ Coverage tool not found, skipping combine step")
+        
+        # Now generate reports from the combined coverage data
+        print("📈 Generating coverage reports...")
+        coverage_reports = []
+        
+        # Generate HTML report
+        try:
+            subprocess.run(
+                ["coverage", "html", "-d", "reports/coverage/html"],
+                cwd=self.project_root,
+                timeout=30,
+                check=True,
+                capture_output=True
+            )
+            coverage_reports.append("HTML: reports/coverage/html/index.html")
+            print("✅ HTML report generated")
         except Exception as e:
-            return {
-                'success': False,
-                'execution_time': time.time() - start_time,
-                'error': str(e)
-            }
+            print(f"⚠️ HTML report generation failed: {e}")
+        
+        # Generate XML report
+        try:
+            subprocess.run(
+                ["coverage", "xml", "-o", "reports/coverage/coverage.xml"],
+                cwd=self.project_root,
+                timeout=30,
+                check=True,
+                capture_output=True
+            )
+            coverage_reports.append("XML: reports/coverage/coverage.xml")
+            print("✅ XML report generated")
+        except Exception as e:
+            print(f"⚠️ XML report generation failed: {e}")
+        
+        # Generate JSON report
+        try:
+            subprocess.run(
+                ["coverage", "json", "-o", "reports/coverage/coverage.json"],
+                cwd=self.project_root,
+                timeout=30,
+                check=True,
+                capture_output=True
+            )
+            coverage_reports.append("JSON: reports/coverage/coverage.json")
+            print("✅ JSON report generated")
+        except Exception as e:
+            print(f"⚠️ JSON report generation failed: {e}")
+        
+        # Generate terminal report and capture output
+        coverage_output = ""
+        try:
+            terminal_result = subprocess.run(
+                ["coverage", "report", "--show-missing"],
+                cwd=self.project_root,
+                timeout=30,
+                capture_output=True,
+                text=True
+            )
+            coverage_output = terminal_result.stdout
+            print("\n📊 Coverage Summary:")
+            print(coverage_output)
+        except Exception as e:
+            print(f"⚠️ Terminal report generation failed: {e}")
+            coverage_output = str(e)
+        
+        # Return coverage analysis results
+        return {
+            'success': len(coverage_reports) > 0,
+            'execution_time': 0,  # Reports are generated from existing data
+            'reports': coverage_reports,
+            'stdout': coverage_output,
+            'stderr': ''
+        }
     
     def run_tests(self, test_level: str = "working", epics: Optional[List[str]] = None, 
                   coverage: bool = True) -> Dict[str, Any]:
         """Run tests based on specified level and parameters."""
+        
+        # Clear any existing coverage data at the start
+        if coverage:
+            print("🧹 Clearing previous coverage data...")
+            try:
+                subprocess.run(
+                    ["coverage", "erase"],
+                    cwd=self.project_root,
+                    timeout=30,
+                    capture_output=True
+                )
+                print("✅ Previous coverage data cleared")
+            except subprocess.CalledProcessError as e:
+                print(f"⚠️ Coverage erase failed: {e}")
+            except FileNotFoundError:
+                print("⚠️ Coverage tool not found, skipping erase step")
         
         if test_level == "working":
             categories = self.get_working_test_categories()
@@ -528,7 +582,8 @@ class UnifiedTestRunner:
                 category_name,
                 category_info["paths"],
                 category_info["description"],
-                extra_args
+                extra_args,
+                enable_coverage=coverage  # Pass coverage flag to collect coverage during tests
             )
             
             self.results[category_name] = result
@@ -541,20 +596,22 @@ class UnifiedTestRunner:
                 print(f"   Error: {result['error']}")
             print(f"   Return Code: {result['returncode']}")
         
-        # Run coverage analysis
+        # Generate coverage reports from collected data
         if coverage:
             print(f"\n{'='*80}")
-            print("📊 Generating Coverage Analysis")
+            print("📊 Generating Coverage Reports from Collected Data")
             print(f"{'='*80}")
             coverage_result = self.run_coverage_analysis()
             self.results['coverage'] = coverage_result
             
             if coverage_result['success']:
-                print("✅ Coverage analysis completed successfully")
-                print(f"   Duration: {coverage_result['execution_time']:.1f}s")
-                print(f"   Reports: htmlcov/index.html, coverage.json, coverage.xml")
+                print("✅ Coverage reports generated successfully")
+                if coverage_result.get('reports'):
+                    print(f"   Reports Generated:")
+                    for report in coverage_result['reports']:
+                        print(f"   - {report}")
             else:
-                print("❌ Coverage analysis failed")
+                print("❌ Coverage report generation failed")
                 if 'error' in coverage_result:
                     print(f"   Error: {coverage_result['error']}")
         
