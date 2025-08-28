@@ -11,7 +11,7 @@ services:
     ports:
       - "8080:8080"   # Main API Gateway
     environment:
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app:/app/src
       - PROJECT_ROOT=/app
       - QUERY_ANALYZER_URL=http://query-analyzer:8082
       - GENERATOR_URL=http://generator:8081
@@ -45,7 +45,7 @@ services:
     ports:
       - "8082:8082"   # Query Analyzer API
     environment:
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app:/app/src
       - PROJECT_ROOT=/app
       - QUERY_ANALYZER_CONFIG_FILE=/app/config.yaml
     volumes:
@@ -72,10 +72,12 @@ services:
     ports:
       - "8081:8081"   # Generator API
     environment:
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app:/app/src
       - PROJECT_ROOT=/app
       - GENERATOR_CONFIG_FILE=/app/config.yaml
       - OLLAMA_URL=http://ollama:11434
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
     volumes:
       - generator_logs:/app/logs
       - generator_cache:/app/cache
@@ -102,7 +104,7 @@ services:
     ports:
       - "8083:8083"   # Retriever API
     environment:
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app:/app/src
       - PROJECT_ROOT=/app
       - WEAVIATE_URL=http://weaviate:8080
     volumes:
@@ -132,7 +134,7 @@ services:
     ports:
       - "8084:8084"   # Cache API
     environment:
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app:/app/src
       - PROJECT_ROOT=/app
       - REDIS_URL=redis://redis:6379
     volumes:
@@ -160,7 +162,7 @@ services:
     ports:
       - "8085:8085"   # Analytics API
     environment:
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app:/app/src
       - PROJECT_ROOT=/app
       - ANALYTICS_LOG_LEVEL=INFO
       - ANALYTICS_ENABLE_COST_TRACKING=true
@@ -235,9 +237,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 120s
     networks:
       - epic8_network
 

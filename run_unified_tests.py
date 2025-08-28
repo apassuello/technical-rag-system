@@ -428,10 +428,12 @@ class UnifiedTestRunner:
         coverage_cmd = [
             sys.executable, "-m", "pytest"
         ] + coverage_test_paths + [
-            "--cov=src", "--cov=services", 
-            "--cov-report=html:htmlcov",
-            "--cov-report=json:coverage.json",
-            "--cov-report=xml:coverage.xml",
+            # Use .coveragerc configuration for source specification
+            "--cov",  # No source specified - use .coveragerc file
+            "--cov-config=.coveragerc",  # Explicitly specify config file
+            "--cov-report=html:reports/coverage/html",
+            "--cov-report=json:reports/coverage/coverage.json",
+            "--cov-report=xml:reports/coverage/coverage.xml",
             "--cov-report=term-missing",
             "--disable-warnings",
             "-v",  # Verbose mode to see coverage progress

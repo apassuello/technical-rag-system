@@ -50,8 +50,8 @@ python -m pytest \
     tests/epic8/unit/ \
     tests/epic8/integration/ \
     tests/epic8/api/ \
-    --cov=src \
-    --cov=services \
+    --cov \
+    --cov-config=.coveragerc \
     --cov-report=html:reports/coverage/comprehensive_html \
     --cov-report=json:reports/coverage/comprehensive_coverage.json \
     --cov-report=xml:reports/coverage/comprehensive_coverage.xml \

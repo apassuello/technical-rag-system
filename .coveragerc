@@ -1,73 +1,82 @@
 [run]
-source = src/, services/
+# Focus coverage on actual system architecture
+source = src, services
+
+# Exclude test files, build artifacts, and legacy code
 omit = 
+    tests/*
     */tests/*
     */test_*
     */__pycache__/*
-    */venv/*
-    */env/*
-    */.venv/*
-    */node_modules/*
     */build/*
     */dist/*
-    */htmlcov/*
-    */coverage/*
-    # Test and development files
-    */conftest.py
-    */test_*.py
-    run_*.py
-    */debug_*.py
-    */demo*.py
-    # Exclude problematic imports that cause coverage issues
-    */shared_utils/*
-    */legacy/*
-    */archive/*
-    */migrations/*
+    */venv/*
+    */env/*
+    */.git/*
+    # Legacy/archive code
+    src/legacy/*
+    src/archive/*
+    # Development/debug files
+    src/debug/*
+    */debug_*
+    # Migration scripts
+    migrate_*.py
 
-parallel = true
+# Enable branch coverage for better analysis
 branch = true
+parallel = true
 
 [report]
+# Show missing lines in coverage reports
+show_missing = true
+precision = 2
+
+# Set coverage failure threshold
+fail_under = 50
+
+# Skip covered files in report for cleaner output
+skip_covered = false
+skip_empty = true
+
+# Lines to exclude from coverage
 exclude_lines =
-    # Have to re-enable the standard pragma
+    # Standard exclusions
     pragma: no cover
-    
-    # Don't complain about missing debug-only code
     def __repr__
-    if self\.debug
-    
-    # Don't complain if tests don't hit defensive assertion code
+    def __str__
     raise AssertionError
     raise NotImplementedError
+    if __name__ == .__main__.:
     
-    # Don't complain if non-runnable code isn't run
-    if 0:
-    if __name__ .__main__.:
-    if __name__.__main__:
-    
-    # Don't complain about abstract methods
-    @(abc\.)?abstractmethod
-    
-    # Don't complain about type checking imports
+    # Type checking imports
     if TYPE_CHECKING:
     
-    # Don't complain about platform specific code
-    pragma: platform
+    # Debug/development code
+    if DEBUG:
+    if DEVELOPMENT:
     
-    # Don't complain about deprecated code
-    pragma: deprecated
+    # Logging statements (optional)
+    logger\.debug
+    
+    # Abstract methods
+    @abstractmethod
 
-precision = 2
-show_missing = true
-skip_covered = false
+[paths]
+# Architecture-aligned path mapping
+source = 
+    src/
+    services/
 
 [html]
-directory = htmlcov
-title = RAG Portfolio - Unified Test Coverage Report
+# HTML report configuration
+directory = reports/coverage/html
+title = RAG Portfolio Coverage Report
 
 [xml]
-output = coverage.xml
+# XML report for CI/CD integration
+output = reports/coverage/coverage.xml
 
 [json]
-output = coverage.json
-pretty_print = true
+# JSON report for programmatic analysis
+output = reports/coverage/coverage.json
+
