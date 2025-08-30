@@ -5,7 +5,7 @@
 # Don't set source here - use --cov flags instead for flexibility
 # This allows measuring src/, services/, or both as needed
 
-# Exclude test files and cache directories only
+# Exclude test files, cache directories, and utility tools
 omit = 
     # Test files (should never be measured)
     */tests/*
@@ -17,6 +17,9 @@ omit =
     */.pytest_cache/*
     */build/*
     */dist/*
+    
+    # Operational tools and utilities (not core application code)
+    */tools/*
 
 # Branch coverage tracking
 branch = true
