@@ -134,7 +134,8 @@ class UnifiedTestRunner:
         # Add coverage collection if enabled
         if enable_coverage:
             cmd.extend([
-                "--cov",  # Use .coveragerc for source specification
+                "--cov=src",  # Measure core system
+                "--cov=services",  # Measure microservices  
                 "--cov-config=.coveragerc",
                 "--cov-append"  # Append to existing coverage data
             ])
