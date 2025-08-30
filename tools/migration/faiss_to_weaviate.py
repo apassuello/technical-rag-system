@@ -14,8 +14,8 @@ import json
 import numpy as np
 
 from src.core.interfaces import Document
-from ..faiss_backend import FAISSBackend
-from ..weaviate_backend import WeaviateBackend
+from src.components.retrievers.backends.faiss_backend import FAISSBackend
+from src.components.retrievers.backends.weaviate_backend import WeaviateBackend
 from .data_validator import DataValidator
 
 logger = logging.getLogger(__name__)

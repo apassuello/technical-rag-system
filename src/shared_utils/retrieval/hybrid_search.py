@@ -1,6 +1,6 @@
 """
 Hybrid retrieval combining dense semantic search with sparse BM25 keyword matching.
-Uses Reciprocal Rank Fusion (RRF) to combine results from both approaches.
+Uses modern modular components following the architecture specification.
 """
 
 from typing import List, Dict, Tuple, Optional
@@ -9,11 +9,14 @@ from pathlib import Path
 import sys
 
 # Add project root to Python path for imports
-project_root = Path(__file__).parent.parent.parent / "project-1-technical-rag"
+project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.sparse_retrieval import BM25SparseRetriever
-from src.fusion import reciprocal_rank_fusion, adaptive_fusion
+# Modern modular components
+from src.components.retrievers.sparse.bm25_retriever import BM25Retriever
+from src.components.retrievers.fusion.rrf_fusion import RRFFusion
+from src.components.retrievers.fusion.weighted_fusion import WeightedFusion
+from src.components.retrievers.fusion.score_aware_fusion import ScoreAwareFusion
 from src.shared_utils.embeddings.generator import generate_embeddings
 import faiss
 
@@ -21,6 +24,12 @@ import faiss
 class HybridRetriever:
     """
     Hybrid retrieval system combining dense semantic search with sparse BM25.
+    
+    Now uses modern modular components following the architecture specification:
+    - BM25Retriever: Modular sparse retrieval component
+    - RRFFusion: Reciprocal Rank Fusion strategy
+    - WeightedFusion: Score-based fusion strategy
+    - ScoreAwareFusion: Advanced fusion with score awareness
     
     Optimized for technical documentation where both semantic similarity
     and exact keyword matching are important for retrieval quality.
@@ -59,8 +68,26 @@ class HybridRetriever:
         self.use_mps = use_mps
         self.rrf_k = rrf_k
         
-        # Initialize sparse retriever
-        self.sparse_retriever = BM25SparseRetriever(k1=bm25_k1, b=bm25_b)
+        # Initialize modular sparse retriever
+        sparse_config = {
+            "k1": bm25_k1,
+            "b": bm25_b,
+            "lowercase": True,
+            "preserve_technical_terms": True
+        }
+        self.sparse_retriever = BM25Retriever(sparse_config)
+        
+        # Initialize fusion strategies
+        fusion_config = {
+            "k": rrf_k,
+            "weights": {
+                "dense": dense_weight,
+                "sparse": 1.0 - dense_weight
+            }
+        }
+        self.rrf_fusion = RRFFusion(fusion_config)
+        self.weighted_fusion = WeightedFusion(fusion_config)
+        self.score_aware_fusion = ScoreAwareFusion(fusion_config)
         
         # Dense retrieval components (initialized on first index)
         self.dense_index: Optional[faiss.Index] = None
@@ -89,7 +116,25 @@ class HybridRetriever:
         
         # Index for sparse retrieval
         print("Building BM25 sparse index...")
-        self.sparse_retriever.index_documents(chunks)
+        # Import Document interface
+        from src.core.interfaces import Document
+        
+        # Convert chunks to Document objects for modular components
+        documents = []
+        for i, chunk in enumerate(chunks):
+            # Create Document objects expected by modular components
+            doc = Document(
+                content=chunk['text'],
+                metadata={
+                    'source': chunk.get('source', 'unknown'),
+                    'page': chunk.get('page', 1),
+                    'chunk_id': chunk.get('chunk_id', i),
+                    'original_index': i
+                }
+            )
+            documents.append(doc)
+        
+        self.sparse_retriever.index_documents(documents)
         
         # Index for dense retrieval
         print("Building dense semantic index...")
@@ -157,13 +202,15 @@ class HybridRetriever:
         # Sparse BM25 search  
         sparse_results = self.sparse_retriever.search(query, sparse_top_k)
         
-        # Combine using Adaptive Fusion (better for small result sets)
-        fused_results = adaptive_fusion(
-            dense_results=dense_results,
-            sparse_results=sparse_results,
-            dense_weight=self.dense_weight,
-            result_size=top_k
-        )
+        # Use adaptive fusion strategy based on result set size
+        total_results = len(set(idx for idx, _ in dense_results) | set(idx for idx, _ in sparse_results))
+        
+        if total_results <= 20:
+            # For small result sets, use weighted fusion to preserve score variation
+            fused_results = self.weighted_fusion.fuse_results(dense_results, sparse_results)
+        else:
+            # For larger sets, use RRF fusion
+            fused_results = self.rrf_fusion.fuse_results(dense_results, sparse_results)
         
         # Prepare final results with chunk content and apply source diversity
         final_results = []
@@ -254,6 +301,68 @@ class HybridRetriever:
                         break
         
         return diverse_results[:top_k]
+    
+    def search_with_fusion_strategy(
+        self,
+        query: str,
+        fusion_strategy: str = "adaptive",
+        top_k: int = 10,
+        dense_top_k: Optional[int] = None,
+        sparse_top_k: Optional[int] = None
+    ) -> List[Tuple[int, float, Dict]]:
+        """
+        Search using a specific fusion strategy for demonstration purposes.
+        
+        Args:
+            query: Search query string
+            fusion_strategy: One of "rrf", "weighted", "score_aware", "adaptive"
+            top_k: Final number of results to return
+            dense_top_k: Results from dense search (default: 2*top_k)
+            sparse_top_k: Results from sparse search (default: 2*top_k)
+            
+        Returns:
+            List of (chunk_index, fusion_score, chunk_dict) tuples
+        """
+        if self.dense_index is None:
+            raise ValueError("Must call index_documents() before searching")
+            
+        if not query.strip():
+            return []
+            
+        # Set default intermediate result counts
+        if dense_top_k is None:
+            dense_top_k = min(2 * top_k, len(self.chunks))
+        if sparse_top_k is None:
+            sparse_top_k = min(2 * top_k, len(self.chunks))
+            
+        # Get retrieval results
+        dense_results = self._dense_search(query, dense_top_k)
+        sparse_results = self.sparse_retriever.search(query, sparse_top_k)
+        
+        # Apply requested fusion strategy
+        if fusion_strategy == "rrf":
+            fused_results = self.rrf_fusion.fuse_results(dense_results, sparse_results)
+        elif fusion_strategy == "weighted":
+            fused_results = self.weighted_fusion.fuse_results(dense_results, sparse_results)
+        elif fusion_strategy == "score_aware":
+            fused_results = self.score_aware_fusion.fuse_results(dense_results, sparse_results)
+        elif fusion_strategy == "adaptive":
+            # Adaptive strategy based on result set size
+            total_results = len(set(idx for idx, _ in dense_results) | set(idx for idx, _ in sparse_results))
+            if total_results <= 20:
+                fused_results = self.weighted_fusion.fuse_results(dense_results, sparse_results)
+            else:
+                fused_results = self.rrf_fusion.fuse_results(dense_results, sparse_results)
+        else:
+            raise ValueError(f"Unknown fusion strategy: {fusion_strategy}")
+        
+        # Prepare final results
+        final_results = []
+        for chunk_idx, fusion_score in fused_results[:top_k]:
+            chunk_dict = self.chunks[chunk_idx]
+            final_results.append((chunk_idx, fusion_score, chunk_dict))
+        
+        return final_results
         
     def get_retrieval_stats(self) -> Dict[str, any]:
         """
