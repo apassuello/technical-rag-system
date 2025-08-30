@@ -20,7 +20,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.rag_with_generation import RAGWithGeneration
+from src.core.platform_orchestrator import PlatformOrchestrator
 from src.shared_utils.generation.answer_generator import AnswerGenerator
 from src.confidence_calibration import (
     CalibrationEvaluator,

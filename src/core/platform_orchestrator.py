@@ -2153,11 +2153,9 @@ class PlatformOrchestrator:
                 )
                 logger.debug(f"Query processor initialized: {qp_type}")
             else:
-                # For backward compatibility, create a default query processor
+                # For backward compatibility, create a default query processor with proper config
                 self._components['query_processor'] = ComponentFactory.create_query_processor(
-                    "modular",
-                    default_k=5,
-                    min_confidence=0.5
+                    "modular"
                 )
                 logger.debug("Default query processor initialized")
             

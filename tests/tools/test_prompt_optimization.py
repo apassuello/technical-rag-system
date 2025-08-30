@@ -14,7 +14,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))
 
-from src.rag_with_generation import RAGWithGeneration
+from src.core.platform_orchestrator import PlatformOrchestrator
 from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates, QueryType
 from src.shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
 from src.shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine

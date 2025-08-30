@@ -947,6 +947,11 @@ class ComponentFactory:
                     assembler_config=kwargs.pop('assembler_config', {})
                 )
                 
+                # Remove legacy parameters that don't belong to ModularQueryProcessor
+                legacy_params = ['default_k', 'min_confidence', 'enable_performance_monitoring']
+                for param in legacy_params:
+                    kwargs.pop(param, None)
+                
                 # Create processor with correct arguments
                 return cls._create_with_tracking(
                     processor_class,

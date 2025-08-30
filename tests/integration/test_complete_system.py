@@ -35,10 +35,10 @@ def test_generator_modes():
     
     # Import RAG system
     try:
-        from src.rag_with_generation import RAGWithGeneration
-        print("✅ RAGWithGeneration imported successfully")
+        from src.core.platform_orchestrator import PlatformOrchestrator
+        print("✅ PlatformOrchestrator imported successfully")
     except ImportError as e:
-        print(f"❌ Failed to import RAGWithGeneration: {e}")
+        print(f"❌ Failed to import PlatformOrchestrator: {e}")
         return False
     
     # Test data
