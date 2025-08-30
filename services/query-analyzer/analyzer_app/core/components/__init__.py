@@ -13,21 +13,24 @@ All components are adapted to work independently in the microservice
 environment with proper error handling and logging.
 """
 
-from .feature_extractor import FeatureExtractor
-from .complexity_classifier import ComplexityClassifier, ComplexityClassification
-from .model_recommender import (
-    ModelRecommender, 
-    ModelRecommendation, 
-    ModelConfig,
-    RoutingStrategy
-)
+# Temporarily disabled imports due to missing implementation files
+# TODO: Implement the following components or remove references
+
+# from .feature_extractor import FeatureExtractor
+# from .complexity_classifier import ComplexityClassifier, ComplexityClassification
+# from .model_recommender import (
+#     ModelRecommender, 
+#     ModelRecommendation, 
+#     ModelConfig,
+#     RoutingStrategy
+# )
 
 __all__ = [
-    'FeatureExtractor',
-    'ComplexityClassifier',
-    'ComplexityClassification',
-    'ModelRecommender',
-    'ModelRecommendation',
-    'ModelConfig',
-    'RoutingStrategy'
+    # 'FeatureExtractor',
+    # 'ComplexityClassifier', 
+    # 'ComplexityClassification',
+    # 'ModelRecommender',
+    # 'ModelRecommendation',
+    # 'ModelConfig',
+    # 'RoutingStrategy'
 ]

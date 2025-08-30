@@ -80,7 +80,8 @@ class Settings(BaseSettings):
     
     model_config = ConfigDict(
         env_file=".env",
-        env_nested_delimiter="__"
+        env_nested_delimiter="__",
+        extra="ignore"  # Allow extra fields but ignore them
     )
         
     @field_validator('retriever_config')
