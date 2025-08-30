@@ -18,9 +18,7 @@ from typing import Dict, Any, List
 import tempfile
 import os
 
-# Add project paths
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.append(str(project_root))
+import pytest
 
 # Load environment variables
 try:

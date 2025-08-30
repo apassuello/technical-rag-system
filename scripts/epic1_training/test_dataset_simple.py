@@ -13,8 +13,9 @@ from typing import Dict, List
 from datetime import datetime
 import pytest
 
-# Add src to path - fix path resolution for Epic 1 tests
-sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
+# Add src to path - updated for scripts/ location
+project_root = Path(__file__).parents[2]  # scripts/epic1_training/ is 2 levels from root
+sys.path.insert(0, str(project_root / 'src'))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

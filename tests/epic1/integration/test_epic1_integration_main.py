@@ -3,15 +3,13 @@
 Epic 1 Integration Test Script.
 
 Tests the end-to-end Epic 1 Multi-Model Answer Generator functionality.
+Modernized for proper pytest integration with conftest.py import management.
 """
 
-import sys
+import pytest
 import time
 import logging
 from pathlib import Path
-
-# Add src to path - fix path resolution for Epic 1 tests
-sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
 
 # Load environment variables
 try:

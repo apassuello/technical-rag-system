@@ -10,8 +10,9 @@ import logging
 from pathlib import Path
 import json
 
-# Add src to Python path - fix path resolution for Epic 1 tests
-sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
+# Add src to path - updated for scripts/ location
+project_root = Path(__file__).parents[2]  # scripts/epic1_training/ is 2 levels from root
+sys.path.insert(0, str(project_root / 'src'))
 
 # Test imports
 try:

@@ -30,9 +30,8 @@ import torch
 import torch.nn as nn
 import joblib
 
-# Add project paths for imports
-project_root = Path(__file__).parent.parent.parent.parent.parent.parent
-sys.path.append(str(project_root))
+# Imports handled by conftest.py
+import pytest
 
 from .base_analyzer import BaseQueryAnalyzer
 from ..base import QueryAnalysis

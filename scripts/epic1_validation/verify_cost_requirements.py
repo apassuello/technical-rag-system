@@ -11,8 +11,9 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 from decimal import Decimal
 
-# Add src to path - fix path resolution for Epic 1 tests
-sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
+# Add src to path - updated for scripts/ location
+project_root = Path(__file__).parents[2]  # scripts/epic1_validation/ is 2 levels from root
+sys.path.insert(0, str(project_root / 'src'))
 
 from src.components.generators.epic1_answer_generator import Epic1AnswerGenerator
 from src.core.interfaces import Document, Answer

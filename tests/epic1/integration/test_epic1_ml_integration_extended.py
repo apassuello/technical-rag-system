@@ -1,4 +1,4 @@
-#\!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Test Epic1MLAnalyzer integration with trained models.
 
@@ -14,9 +14,6 @@ import json
 from pathlib import Path
 import sys
 import pytest
-
-# Add src to path - fix path resolution for Epic 1 tests
-sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
 
 from src.components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer
 from src.components.query_processors.analyzers.ml_views.view_result import ComplexityLevel

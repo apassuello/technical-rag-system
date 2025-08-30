@@ -12,10 +12,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import pytest
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parents[4] / "src"))
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 from fixtures.base_test import (
     MLInfrastructureTestBase,
     PerformanceTestMixin,

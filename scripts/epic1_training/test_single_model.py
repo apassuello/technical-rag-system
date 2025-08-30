@@ -8,8 +8,9 @@ from pathlib import Path
 import sys
 import pytest
 
-# Add src to path - fix path resolution for Epic 1 tests
-sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
+# Add src to path - updated for scripts/ location
+project_root = Path(__file__).parents[2]  # scripts/epic1_training/ is 2 levels from root
+sys.path.insert(0, str(project_root / 'src'))
 
 from src.components.query_processors.analyzers.ml_models.model_manager import ModelManager
 

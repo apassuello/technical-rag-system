@@ -15,9 +15,9 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
 
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.append(str(project_root))
+# Add src to path - updated for scripts/ location
+project_root = Path(__file__).parents[2]  # scripts/demos/ is 2 levels from root
+sys.path.insert(0, str(project_root / 'src'))
 
 # Suppress warnings for cleaner output
 import warnings

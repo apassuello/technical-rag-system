@@ -18,10 +18,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any
 from decimal import Decimal
-
-# Add project paths
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.append(str(project_root))
+import pytest
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
