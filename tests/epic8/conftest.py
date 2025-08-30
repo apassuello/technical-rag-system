@@ -25,6 +25,33 @@ def isolate_service_imports():
     # Store original sys.path before test
     _original_sys_path = sys.path.copy()
     
+    # Add project root and services to path
+    project_root = Path(__file__).resolve().parents[2]
+    src_path = project_root / "src"
+    services_path = project_root / "services"
+    
+    # Add project root and src
+    for path in [str(project_root), str(src_path)]:
+        if path not in sys.path:
+            sys.path.insert(0, path)
+    
+    # Add each service directory AND its app subdirectory to path
+    if services_path.exists():
+        for service_dir in services_path.iterdir():
+            if service_dir.is_dir():
+                # Add the service directory itself
+                service_path = str(service_dir)
+                if service_path not in sys.path:
+                    sys.path.insert(0, service_path)
+                
+                # Add the service app subdirectory (e.g., cache_app, gateway_app)
+                # Look for directories ending with _app or named app
+                for app_dir in service_dir.iterdir():
+                    if app_dir.is_dir() and (app_dir.name.endswith('_app') or app_dir.name == 'app'):
+                        app_path = str(app_dir)
+                        if app_path not in sys.path:
+                            sys.path.insert(0, app_path)
+    
     # Clear any cached imports from service app modules
     service_prefixes = ['app.', 'gateway_app.', 'cache_app.', 'generator_app.', 'analyzer_app.', 'retriever_app.', 'analytics_app.']
     modules_to_clear = [key for key in sys.modules.keys() if any(key.startswith(prefix) for prefix in service_prefixes)]
