@@ -549,6 +549,13 @@ docker-compose up
 - [Component Documentation](docs/architecture/components/) - Individual component specifications
 - [Test Documentation](docs/test/) - Enterprise-grade testing framework
 
+### **Epic 8 Cloud-Native Platform Documentation**
+- [Epic 8 Comprehensive Progress Report](docs/completion-reports/EPIC8_COMPREHENSIVE_PROGRESS_REPORT.md) - Complete Epic 8 status and achievements
+- [Epic 8 Architectural Compliance](docs/epics/epic8-architectural-compliance-assessment.md) - Production readiness assessment
+- [Platform Orchestrator Test Infrastructure](docs/architecture/components/platform-orchestrator-test-infrastructure-report.md) - Component testing validation
+- [Comprehensive Coverage Analysis](docs/analysis/COMPREHENSIVE_COVERAGE_ANALYSIS_2025.md) - System-wide coverage assessment
+- [Test Coverage Status](docs/test/TEST_COVERAGE_STATUS_UPDATE.md) - Current testing status and strategic component results
+
 ### **Key Technical Achievements**
 
 **Epic 1 Multi-Model Intelligence**:
