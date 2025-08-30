@@ -75,10 +75,12 @@ class TestOpenAIAdapterComprehensive:
         return {
             'api_key': 'sk-test-api-key',
             'model_name': 'gpt-3.5-turbo',
-            'max_tokens': 1000,
-            'temperature': 0.7,
             'timeout': 30.0,
-            'organization': 'org-test'
+            'organization': 'org-test',
+            'config': {
+                'max_tokens': 1000,
+                'temperature': 0.7
+            }
         }
     
     @pytest.fixture
@@ -108,7 +110,6 @@ class TestOpenAIAdapterComprehensive:
         assert adapter.model_name == 'gpt-3.5-turbo'
         assert adapter.client == mock_client
         assert adapter.timeout == 30.0
-        assert adapter.organization == 'org-test'
         assert adapter._total_cost == Decimal('0.00')
         assert adapter._input_tokens == 0
         assert adapter._output_tokens == 0

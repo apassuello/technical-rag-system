@@ -64,10 +64,12 @@ class TestMistralAdapterComprehensive:
         return {
             'api_key': 'test-api-key',
             'model_name': 'mistral-small',
-            'max_tokens': 1000,
-            'temperature': 0.7,
             'timeout': 30.0,
-            'track_costs': True
+            'config': {
+                'max_tokens': 1000,
+                'temperature': 0.7,
+                'track_costs': True
+            }
         }
     
     @pytest.fixture

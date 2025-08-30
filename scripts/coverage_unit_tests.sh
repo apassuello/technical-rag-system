@@ -1,12 +1,14 @@
 #!/bin/bash
-# Coverage analysis for unit tests
-# Focuses on core component coverage in src/
+# Core system (src/) coverage analysis with unit tests
 
-echo "🧪 Running Unit Test Coverage Analysis"
+echo "🧪 Core System (src/) Coverage Analysis"
 echo "====================================="
 
 # Navigate to project directory
 cd "$(dirname "$0")/.."
+
+# Set proper Python path
+export PYTHONPATH="$PWD"
 
 # Activate conda environment if available
 if command -v conda &> /dev/null; then
@@ -20,26 +22,26 @@ fi
 # Create coverage directory
 mkdir -p reports/coverage
 
-# Run unit tests with coverage
-echo "🔍 Running unit tests with coverage..."
-python -m pytest tests/unit/ \
-    --cov \
-    --cov-config=.coveragerc \
-    --cov-report=html:reports/coverage/unit_html \
-    --cov-report=json:reports/coverage/unit_coverage.json \
-    --cov-report=xml:reports/coverage/unit_coverage.xml \
-    --cov-report=term-missing \
-    -v
+# Clean previous coverage data
+echo "🧹 Cleaning previous coverage data..."
+coverage erase
 
-# Always proceed to generate reports - test failures/low coverage reported but don't cause script failure
-if true; then
-    echo ""
-    echo "✅ Unit tests completed successfully!"
-    echo "📊 Coverage reports generated:"
-    echo "  - HTML: reports/coverage/unit_html/index.html"
-    echo "  - JSON: reports/coverage/unit_coverage.json"
-    echo "  - XML: reports/coverage/unit_coverage.xml"
-    echo ""
-    echo "🌐 Open HTML report:"
-    echo "  open reports/coverage/unit_html/index.html"
-fi
+# Run unit tests with src/ coverage measurement
+echo "🔍 Running unit tests with src/ coverage..."
+pytest --cov=src tests/unit/ \
+    --cov-config=.coveragerc \
+    --cov-report=html:reports/coverage/src_html \
+    --cov-report=json:reports/coverage/src_coverage.json \
+    --cov-report=xml:reports/coverage/src_coverage.xml \
+    --cov-report=term-missing \
+    --tb=no -q
+
+echo ""
+echo "✅ Core system coverage analysis complete!"
+echo "📊 Coverage reports generated:"
+echo "  - HTML: reports/coverage/src_html/index.html" 
+echo "  - JSON: reports/coverage/src_coverage.json"
+echo "  - XML: reports/coverage/src_coverage.xml"
+echo ""
+echo "🌐 Open HTML report:"
+echo "  open reports/coverage/src_html/index.html"

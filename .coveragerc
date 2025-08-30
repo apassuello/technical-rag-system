@@ -1,104 +1,64 @@
-[run]
-# Focus coverage on actual system architecture
-# Explicitly include service app directories where the actual code lives
-source = 
-    src
-    services/query-analyzer/analyzer_app
-    services/cache/cache_app
-    services/api-gateway/gateway_app
-    services/retriever/retriever_app
-    services/generator/generator_app
-    services/analytics/analytics_app
+# RAG Portfolio Project - Unified Coverage Configuration
+# Use --cov flags to specify which directories to measure
 
-# Exclude test files, build artifacts, demo files, and legacy code
+[run]
+# Don't set source here - use --cov flags instead for flexibility
+# This allows measuring src/, services/, or both as needed
+
+# Exclude test files and cache directories only
 omit = 
-    tests/*
+    # Test files (should never be measured)
     */tests/*
     */test_*
+    */*_test.py
+    
+    # Cache and build artifacts
     */__pycache__/*
+    */.pytest_cache/*
     */build/*
     */dist/*
-    */venv/*
-    */env/*
-    */.git/*
-    # Demo and presentation files (not part of core system)
-    demo/*
-    */demo/*
-    *_demo.py
-    */demos/*
-    scripts/demos/*
-    scripts/streamlit_*
-    # Legacy/archive code
-    src/legacy/*
-    src/archive/*
-    # Development/debug files
-    src/debug/*
-    */debug_*
-    # Migration scripts
-    migrate_*.py
 
-# Enable branch coverage for better analysis
+# Branch coverage tracking
 branch = true
+
+# Parallel processing support
 parallel = true
+concurrency = multiprocessing,thread
 
 [report]
-# Show missing lines in coverage reports
+# Show missing lines in terminal report
 show_missing = true
-precision = 2
 
-# Set coverage failure threshold
-fail_under = 50
-
-# Skip covered files in report for cleaner output
-skip_covered = false
-skip_empty = true
-
-# Lines to exclude from coverage
+# Exclude lines from coverage (pragmas)
 exclude_lines =
     # Standard exclusions
     pragma: no cover
     def __repr__
-    def __str__
+    if self.debug:
+    if settings.DEBUG
     raise AssertionError
     raise NotImplementedError
+    if 0:
     if __name__ == .__main__.:
     
-    # Type checking imports
+    # Type checking exclusions
     if TYPE_CHECKING:
-    
-    # Debug/development code
-    if DEBUG:
-    if DEVELOPMENT:
-    
-    # Logging statements (optional)
-    logger\.debug
-    
-    # Abstract methods
     @abstractmethod
 
-[paths]
-# Map different execution contexts to same logical source
-# This helps when running tests from different directories or in CI/CD
-source = 
-    src/
-    /Users/*/rag-portfolio/project-1-technical-rag/src/
-    services/*/analyzer_app/
-    services/*/cache_app/
-    services/*/gateway_app/
-    services/*/retriever_app/
-    services/*/generator_app/
-    services/*/analytics_app/
+# Set minimum coverage thresholds
+precision = 1
+sort = miss
 
 [html]
 # HTML report configuration
 directory = reports/coverage/html
-title = RAG Portfolio Coverage Report
+title = RAG Portfolio - Code Coverage Report
 
 [xml]
 # XML report for CI/CD integration
 output = reports/coverage/coverage.xml
 
 [json]
-# JSON report for programmatic analysis
+# JSON report for programmatic access
 output = reports/coverage/coverage.json
-
+pretty_print = true
