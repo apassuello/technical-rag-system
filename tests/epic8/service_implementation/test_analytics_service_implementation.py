@@ -79,7 +79,7 @@ if IMPORTS_AVAILABLE:
 class TestAnalyticsServiceInitialization:
     """Test Analytics Service initialization and configuration."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_service_initialization_basic(self):
         """Test basic service initialization with default settings."""
         with patch('analytics_app.core.analytics.get_analytics_cost_tracker') as mock_cost_tracker, \
@@ -101,7 +101,7 @@ class TestAnalyticsServiceInitialization:
             assert service.circuit_breaker is not None  # Should be enabled by default
             assert isinstance(service._start_time, datetime)
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_service_initialization_with_circuit_breaker(self):
         """Test service initialization with circuit breaker enabled."""
         with patch('analytics_app.core.analytics.get_analytics_cost_tracker') as mock_cost_tracker, \
@@ -172,7 +172,7 @@ class TestAnalyticsServiceQueryRecording:
             
             return service, mock_cost_tracker_instance, mock_metrics_store_instance
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_record_query_completion_success(self, mock_analytics_service):
         """Test successful query completion recording."""
@@ -219,7 +219,7 @@ class TestAnalyticsServiceQueryRecording:
         assert query_metric.cost_usd == 0.002
         assert query_metric.success is True
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_record_query_completion_failed_query(self, mock_analytics_service):
         """Test recording of failed query completion."""
@@ -258,7 +258,7 @@ class TestAnalyticsServiceQueryRecording:
         assert query_metric.error_type == 'timeout'
         assert query_metric.cost_usd == 0.0
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_record_query_completion_disabled_tracking(self):
         """Test query recording with disabled tracking components."""
@@ -305,7 +305,7 @@ class TestAnalyticsServiceQueryRecording:
             mock_cost_tracker_instance.record_query_cost.assert_not_called()
             mock_metrics_store_instance.record_query_metric.assert_not_called()
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_record_query_completion_error_handling(self, mock_analytics_service):
         """Test error handling during query recording."""
@@ -365,7 +365,7 @@ class TestAnalyticsServiceReportGeneration:
             
             return service, mock_cost_tracker_instance, mock_metrics_store_instance
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_cost_report_comprehensive(self, mock_service_with_data):
         """Test comprehensive cost report generation."""
@@ -439,7 +439,7 @@ class TestAnalyticsServiceReportGeneration:
         mock_cost_tracker.get_budget_status.assert_called_once()
         mock_metrics_store.get_performance_metrics.assert_called_once_with(24)
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_performance_report_with_slo_violations(self, mock_service_with_data):
         """Test performance report generation with SLO violations."""
@@ -536,7 +536,7 @@ class TestAnalyticsServiceTrendAnalysis:
             
             return service, mock_metrics_store_instance
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_usage_trends_analysis(self, mock_service_with_trends):
         """Test comprehensive usage trends analysis."""
@@ -626,7 +626,7 @@ class TestAnalyticsServiceTrendAnalysis:
         assert 'complexity_distribution' in first_point
         assert 'provider_distribution' in first_point
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_usage_trends_no_data(self, mock_service_with_trends):
         """Test usage trends with no data available."""
@@ -649,7 +649,7 @@ class TestAnalyticsServiceTrendAnalysis:
         # Time series should be empty
         assert len(report['time_series_data']) == 0
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_trend_calculation_methods(self):
         """Test internal trend calculation methods."""
         with patch('analytics_app.core.analytics.get_analytics_cost_tracker'), \
@@ -722,7 +722,7 @@ class TestAnalyticsServiceHealthAndStatus:
             
             return service, mock_cost_tracker_instance, mock_metrics_store_instance
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_health_check_all_healthy(self, mock_healthy_service):
         """Test health check with all components healthy."""
@@ -738,7 +738,7 @@ class TestAnalyticsServiceHealthAndStatus:
         mock_cost_tracker.health_check.assert_called_once()
         mock_metrics_store.health_check.assert_called_once()
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_health_check_component_failure(self, mock_healthy_service):
         """Test health check with component failure."""
@@ -753,7 +753,7 @@ class TestAnalyticsServiceHealthAndStatus:
         # Verify result
         assert is_healthy is False
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_health_check_exception_handling(self, mock_healthy_service):
         """Test health check exception handling."""
@@ -768,7 +768,7 @@ class TestAnalyticsServiceHealthAndStatus:
         # Verify result (should return False, not raise exception)
         assert is_healthy is False
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_service_status_comprehensive(self, mock_healthy_service):
         """Test comprehensive service status information."""
@@ -812,7 +812,7 @@ class TestAnalyticsServiceHealthAndStatus:
         assert configuration['ab_testing_enabled'] is False
         assert configuration['metrics_retention_hours'] == 168
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_service_status_with_circuit_breaker(self):
         """Test service status with circuit breaker enabled."""
@@ -854,7 +854,7 @@ class TestAnalyticsServiceHealthAndStatus:
             assert circuit_breaker_status['enabled'] is True
             assert circuit_breaker_status['state'] == 'closed'
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_service_status_error_handling(self, mock_healthy_service):
         """Test service status error handling."""

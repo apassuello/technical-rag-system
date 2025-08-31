@@ -76,7 +76,7 @@ COMPLEX_TEST_DOCUMENTS = [
 class TestGeneratorServiceBasics:
     """Test basic service initialization and health checks."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_initialization(self):
         """Test that service can be initialized without crashing (Hard Fail test)."""
@@ -94,7 +94,7 @@ class TestGeneratorServiceBasics:
         except Exception as e:
             pytest.fail(f"Service initialization failed - HARD FAIL: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_health_check_basic(self):
         """Test basic health check functionality (Hard Fail test)."""
@@ -115,7 +115,7 @@ class TestGeneratorServiceBasics:
         except Exception as e:
             pytest.fail(f"Health check crashed - HARD FAIL: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_status_structure(self):
         """Test that service status returns expected structure."""
@@ -143,7 +143,7 @@ class TestGeneratorServiceBasics:
 class TestGeneratorServiceAdapterInterface:
     """Test multi-model adapter interface compliance (CT-8.2.1)."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_available_models_interface(self):
         """Test that service can return available models without crashing."""
@@ -168,7 +168,7 @@ class TestGeneratorServiceAdapterInterface:
         except Exception as e:
             pytest.fail(f"get_available_models failed - HARD FAIL: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_model_costs_interface(self):
         """Test that service can return model costs without crashing."""
@@ -194,7 +194,7 @@ class TestGeneratorServiceAdapterInterface:
         except Exception as e:
             pytest.fail(f"get_model_costs failed - HARD FAIL: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_generation_interface_basic(self):
         """Test basic generation interface without full Epic1 dependency."""
@@ -261,7 +261,7 @@ class TestGeneratorServiceAdapterInterface:
 class TestGeneratorServiceModelSelection:
     """Test model selection logic (CT-8.2.2)."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_model_selection_logic_structure(self):
         """Test that model selection logic has expected structure."""
@@ -298,7 +298,7 @@ class TestGeneratorServiceModelSelection:
         except Exception as e:
             pytest.fail(f"Model selection logic test failed - HARD FAIL: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cost_constraint_handling(self):
         """Test that service handles cost constraints properly."""
@@ -341,7 +341,7 @@ class TestGeneratorServiceModelSelection:
 class TestGeneratorServiceCostTracking:
     """Test cost tracking accuracy and functionality."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cost_tracking_precision(self):
         """Test that cost tracking provides reasonable precision."""
@@ -364,7 +364,7 @@ class TestGeneratorServiceCostTracking:
         except Exception as e:
             pytest.fail(f"Cost tracking precision test failed - HARD FAIL: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio 
     async def test_cost_calculation_consistency(self):
         """Test that cost calculations are consistent across calls."""
@@ -393,7 +393,7 @@ class TestGeneratorServiceCostTracking:
 class TestGeneratorServicePerformance:
     """Test basic performance characteristics."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_status_requests(self):
         """Test that service can handle concurrent status requests."""
@@ -422,7 +422,7 @@ class TestGeneratorServicePerformance:
         except Exception as e:
             pytest.fail(f"Concurrent status requests test failed - HARD FAIL: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_memory_usage_basic(self):
         """Test that service doesn't use excessive memory during basic operations."""
@@ -460,7 +460,7 @@ class TestGeneratorServicePerformance:
 class TestGeneratorServiceErrorHandling:
     """Test error handling and edge cases."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_invalid_query_handling(self):
         """Test that service handles invalid queries gracefully."""
@@ -496,7 +496,7 @@ class TestGeneratorServiceErrorHandling:
         except Exception as e:
             pytest.fail(f"Invalid query handling test failed - HARD FAIL: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_empty_context_handling(self):
         """Test that service handles empty context gracefully."""
@@ -533,7 +533,7 @@ class TestGeneratorServiceErrorHandling:
 class TestGeneratorServiceIntegrationReadiness:
     """Test readiness for integration with other services."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_lifecycle(self):
         """Test complete service lifecycle."""
@@ -560,7 +560,7 @@ class TestGeneratorServiceIntegrationReadiness:
         except Exception as e:
             pytest.fail(f"Service lifecycle test failed - HARD FAIL: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_configuration_flexibility(self):
         """Test that service handles different configurations."""

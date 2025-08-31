@@ -149,7 +149,7 @@ def isolate_prometheus_registry():
 class TestRetrieverServiceBasics:
     """Test basic service initialization and health checks."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_initialization(self):
         """Test that service can be initialized without crashing (Hard Fail test)."""
@@ -185,7 +185,7 @@ class TestRetrieverServiceBasics:
         except Exception as e:
             pytest.fail(f"Service initialization crashed: {e}")
     
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_health_check_basic(self):
         """Test basic health check functionality (Hard Fail test)."""
@@ -211,7 +211,7 @@ class TestRetrieverServiceBasics:
         except Exception as e:
             pytest.fail(f"Health check crashed (Hard Fail): {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_component_initialization(self):
         """Test Epic 8 integration with Epic 2 components (IR-8.1)."""
@@ -249,7 +249,7 @@ class TestRetrieverServiceBasics:
 class TestRetrieverServiceDocumentRetrieval:
     """Test document retrieval functionality based on CT-8.3.1 specifications."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio 
     async def test_document_retrieval_basic(self):
         """Test basic document retrieval functionality (CT-8.3.1)."""
@@ -331,7 +331,7 @@ class TestRetrieverServiceDocumentRetrieval:
         except Exception as e:
             pytest.fail(f"Basic retrieval test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_retrieval_strategies(self):
         """Test different retrieval strategies with real components."""
@@ -372,7 +372,7 @@ class TestRetrieverServiceDocumentRetrieval:
                 else:
                     pytest.fail(f"Strategy {strategy} test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_retrieval_fallback_mechanism(self):
         """Test fallback mechanism when Epic 2 retrieval fails."""
@@ -415,7 +415,7 @@ class TestRetrieverServiceDocumentRetrieval:
                 except Exception as e:
                     pytest.fail(f"Fallback mechanism failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_retrieval_parameter_validation(self):
         """Test parameter validation for retrieval requests."""
@@ -443,7 +443,7 @@ class TestRetrieverServiceDocumentRetrieval:
 class TestRetrieverServiceBatchRetrieval:
     """Test batch retrieval functionality based on CT-8.3.2 specifications."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_retrieval_basic(self):
         """Test basic batch retrieval functionality (CT-8.3.2)."""
@@ -512,7 +512,7 @@ class TestRetrieverServiceBatchRetrieval:
                 except Exception as e:
                     pytest.fail(f"Batch retrieval test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_error_handling(self):
         """Test batch retrieval error handling and partial failures."""
@@ -570,7 +570,7 @@ class TestRetrieverServiceBatchRetrieval:
                 except Exception as e:
                     pytest.fail(f"Batch error handling test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_timeout_handling(self):
         """Test batch retrieval timeout handling."""
@@ -613,7 +613,7 @@ class TestRetrieverServiceBatchRetrieval:
 class TestRetrieverServiceDocumentIndexing:
     """Test document indexing functionality based on CT-8.3.3 specifications."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_document_indexing_basic(self):
         """Test basic document indexing functionality (CT-8.3.3)."""
@@ -678,7 +678,7 @@ class TestRetrieverServiceDocumentIndexing:
                 except Exception as e:
                     pytest.fail(f"Document indexing test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_document_indexing_with_embeddings(self):
         """Test indexing documents with pre-computed embeddings."""
@@ -722,7 +722,7 @@ class TestRetrieverServiceDocumentIndexing:
                 except Exception as e:
                     pytest.fail(f"Document indexing with embeddings test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_document_reindexing(self):
         """Test document reindexing functionality."""
@@ -757,7 +757,7 @@ class TestRetrieverServiceDocumentIndexing:
         except Exception as e:
             pytest.fail(f"Document reindexing test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_indexing_error_handling(self):
         """Test error handling during document indexing."""
@@ -790,7 +790,7 @@ class TestRetrieverServiceDocumentIndexing:
 class TestRetrieverServiceStatus:
     """Test service status and monitoring functionality."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_retriever_status(self):
         """Test retriever status reporting."""
@@ -856,7 +856,7 @@ class TestRetrieverServiceStatus:
                 except Exception as e:
                     pytest.fail(f"Status test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_shutdown(self):
         """Test graceful service shutdown."""
@@ -888,7 +888,7 @@ class TestRetrieverServiceStatus:
 class TestRetrieverServiceErrorHandling:
     """Test error handling and edge cases."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_uninitialized_service_behavior(self):
         """Test behavior when service is not initialized."""
@@ -916,7 +916,7 @@ class TestRetrieverServiceErrorHandling:
                 except Exception as e:
                     pytest.fail(f"Uninitialized service behavior test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_initialization(self):
         """Test concurrent initialization safety."""
@@ -954,7 +954,7 @@ class TestRetrieverServiceErrorHandling:
         except Exception as e:
             pytest.fail(f"Concurrent initialization test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_circuit_breaker_behavior(self):
         """Test circuit breaker pattern for retrieval failures."""
@@ -995,7 +995,7 @@ class TestRetrieverServiceErrorHandling:
 class TestRetrieverServiceResources:
     """Test resource usage and performance characteristics."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_memory_usage_basic(self):
         """Test that service doesn't use excessive memory."""
@@ -1035,7 +1035,7 @@ class TestRetrieverServiceResources:
                 
                 print(f"Memory usage: {initial_memory:.1f}MB -> {final_memory:.1f}MB (+{memory_increase:.1f}MB)")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_thread_pool_resource_management(self):
         """Test thread pool resource management."""

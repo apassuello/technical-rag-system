@@ -77,7 +77,7 @@ del _setup_service_imports, imported_classes
 class TestQueryAnalyzerServiceBasics:
     """Test basic service initialization and health checks."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_initialization(self):
         """Test that service can be initialized without crashing (Hard Fail test)."""
@@ -95,7 +95,7 @@ class TestQueryAnalyzerServiceBasics:
         except Exception as e:
             pytest.fail(f"Service initialization crashed: {e}")
     
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_health_check_basic(self):
         """Test basic health check functionality (Hard Fail test)."""
@@ -139,7 +139,7 @@ class TestQueryAnalyzerServiceComplexityClassification:
         ("What are the differences between supervised and unsupervised learning?", "medium", 0.6)
     ]
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_complexity_classification_basic_queries(self):
         """Test complexity classification on basic test queries (CT-8.1.1)."""
@@ -214,7 +214,7 @@ class TestQueryAnalyzerServiceComplexityClassification:
         for result in all_results:
             print(f"  '{result['query'][:50]}...' -> {result['predicted']} (conf: {result['confidence']:.2f})")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_complexity_classification_extended(self):
         """Test complexity classification on extended test set for robustness."""
@@ -251,7 +251,7 @@ class TestQueryAnalyzerServiceComplexityClassification:
         
         print(f"\nExtended Classification Accuracy: {accuracy:.2%} ({correct_classifications}/{total_queries})")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_confidence_correlation(self):
         """Test that confidence scores correlate with complexity (CT-8.1.1)."""
@@ -314,7 +314,7 @@ class TestQueryAnalyzerServiceComplexityClassification:
 class TestQueryAnalyzerServiceFeatureExtraction:
     """Test feature extraction functionality based on CT-8.1.2 specifications."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_feature_extraction_presence(self):
         """Test that required features are present in analysis results (CT-8.1.2)."""
@@ -385,7 +385,7 @@ class TestQueryAnalyzerServiceFeatureExtraction:
         except Exception as e:
             pytest.fail(f"Feature extraction test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_feature_extraction_deterministic(self):
         """Test that feature extraction produces consistent results (CT-8.1.2)."""
@@ -428,7 +428,7 @@ class TestQueryAnalyzerServiceFeatureExtraction:
 class TestQueryAnalyzerServiceModelRecommendation:
     """Test model recommendation functionality."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_model_recommendation_basic(self):
         """Test that model recommendations are provided."""
@@ -476,7 +476,7 @@ class TestQueryAnalyzerServiceModelRecommendation:
             except Exception as e:
                 pytest.fail(f"Model recommendation test failed for '{query}': {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio 
     async def test_cost_estimation(self):
         """Test cost estimation functionality."""
@@ -510,7 +510,7 @@ class TestQueryAnalyzerServiceModelRecommendation:
 class TestQueryAnalyzerServiceStatus:
     """Test service status and monitoring functionality."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_analyzer_status(self):
         """Test analyzer status reporting."""
@@ -544,7 +544,7 @@ class TestQueryAnalyzerServiceStatus:
         except Exception as e:
             pytest.fail(f"Status test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_shutdown(self):
         """Test graceful service shutdown."""
@@ -571,7 +571,7 @@ class TestQueryAnalyzerServiceStatus:
 class TestQueryAnalyzerServiceErrorHandling:
     """Test error handling and edge cases."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_empty_query_handling(self):
         """Test handling of empty or invalid queries."""
@@ -597,7 +597,7 @@ class TestQueryAnalyzerServiceErrorHandling:
             except Exception as e:
                 pytest.fail(f"Unexpected error for query '{query}': {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_very_long_query_handling(self):
         """Test handling of very long queries."""
@@ -634,7 +634,7 @@ class TestQueryAnalyzerServiceErrorHandling:
             else:
                 pytest.fail(f"Unexpected error for long query: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_requests(self):
         """Test handling of concurrent requests."""
@@ -674,7 +674,7 @@ class TestQueryAnalyzerServiceErrorHandling:
 class TestQueryAnalyzerServiceResources:
     """Test resource usage and performance characteristics."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_memory_usage_basic(self):
         """Test that service doesn't use excessive memory."""

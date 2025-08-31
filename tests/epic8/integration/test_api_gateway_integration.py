@@ -221,7 +221,7 @@ class TestAPIGatewayQueryAnalyzerIntegration:
         
         return client
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_query_analyzer_integration_success(self, mock_query_analyzer_client):
         """Test successful integration with Query Analyzer (CT-8.5.1)."""
@@ -275,7 +275,7 @@ class TestAPIGatewayQueryAnalyzerIntegration:
         except Exception as e:
             pytest.fail(f"Query Analyzer integration failed (Hard Fail): {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_query_analyzer_integration_failure(self):
         """Test Query Analyzer integration failure handling (CT-8.5.1)."""
@@ -310,7 +310,7 @@ class TestAPIGatewayQueryAnalyzerIntegration:
         except Exception as e:
             pytest.fail(f"Query Analyzer failure handling failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_query_analyzer_circuit_breaker_integration(self, mock_query_analyzer_client):
         """Test circuit breaker behavior with Query Analyzer (CT-8.5.1)."""
@@ -420,7 +420,7 @@ class TestAPIGatewayGeneratorIntegration:
             }
         ]
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_generator_integration_success(self, mock_generator_client, sample_documents):
         """Test successful integration with Generator service (CT-8.5.2)."""
@@ -475,7 +475,7 @@ class TestAPIGatewayGeneratorIntegration:
         except Exception as e:
             pytest.fail(f"Generator integration failed (Hard Fail): {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_generator_integration_failure(self):
         """Test Generator integration failure handling (CT-8.5.2)."""
@@ -502,7 +502,7 @@ class TestAPIGatewayGeneratorIntegration:
         except Exception as e:
             pytest.fail(f"Generator failure handling unexpected error: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_generator_model_availability_integration(self, mock_generator_client):
         """Test model availability integration (CT-8.5.2)."""
@@ -590,7 +590,7 @@ class TestAPIGatewayRetrieverIntegration:
         
         return client
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_retriever_integration_success(self, mock_retriever_client):
         """Test successful integration with Retriever service (CT-8.5.3)."""
@@ -656,7 +656,7 @@ class TestAPIGatewayRetrieverIntegration:
         except Exception as e:
             pytest.fail(f"Retriever integration failed (Hard Fail): {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_retriever_integration_failure(self):
         """Test Retriever integration failure handling (CT-8.5.3)."""
@@ -683,7 +683,7 @@ class TestAPIGatewayRetrieverIntegration:
         except Exception as e:
             pytest.fail(f"Retriever failure handling failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_retriever_integration_document_limits(self, mock_retriever_client):
         """Test document limit handling in retriever integration (CT-8.5.3)."""
@@ -747,7 +747,7 @@ class TestAPIGatewayCacheIntegration:
         
         return client
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_integration_miss_and_store(self, mock_cache_client):
         """Test cache miss and subsequent storage (CT-8.5.4)."""
@@ -815,7 +815,7 @@ class TestAPIGatewayCacheIntegration:
         except Exception as e:
             pytest.fail(f"Cache integration failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio 
     async def test_cache_integration_hit(self, mock_cache_client):
         """Test cache hit scenario (CT-8.5.4)."""
@@ -864,7 +864,7 @@ class TestAPIGatewayCacheIntegration:
         except Exception as e:
             pytest.fail(f"Cache hit integration failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_integration_failure(self):
         """Test cache integration failure handling (CT-8.5.4)."""
@@ -933,7 +933,7 @@ class TestAPIGatewayAnalyticsIntegration:
         
         return client
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_analytics_integration_query_completion(self, mock_analytics_client):
         """Test analytics integration for query completion (CT-8.5.5)."""
@@ -992,7 +992,7 @@ class TestAPIGatewayAnalyticsIntegration:
         except Exception as e:
             pytest.fail(f"Analytics query completion integration failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_analytics_integration_cache_hit(self, mock_analytics_client):
         """Test analytics integration for cache hits (CT-8.5.5)."""
@@ -1025,7 +1025,7 @@ class TestAPIGatewayAnalyticsIntegration:
         except Exception as e:
             pytest.fail(f"Analytics cache hit integration failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_analytics_integration_error_recording(self, mock_analytics_client):
         """Test analytics integration for error recording (CT-8.5.5)."""
@@ -1058,7 +1058,7 @@ class TestAPIGatewayAnalyticsIntegration:
         except Exception as e:
             pytest.fail(f"Analytics error recording integration failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_analytics_integration_failure(self):
         """Test analytics integration failure handling (CT-8.5.5)."""
@@ -1197,7 +1197,7 @@ class TestAPIGatewayCompletePipelineIntegration:
         
         return gateway
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_complete_pipeline_integration_success(self, full_mock_gateway):
         """Test complete end-to-end pipeline integration (CT-8.5.6)."""
@@ -1279,7 +1279,7 @@ class TestAPIGatewayCompletePipelineIntegration:
         except Exception as e:
             pytest.fail(f"Complete pipeline integration failed (Hard Fail): {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_pipeline_integration(self, full_mock_gateway):
         """Test batch processing complete integration (CT-8.5.6)."""
@@ -1352,7 +1352,7 @@ class TestAPIGatewayCompletePipelineIntegration:
         except Exception as e:
             pytest.fail(f"Batch pipeline integration failed (Hard Fail): {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_pipeline_integration_with_cache_hit(self, full_mock_gateway):
         """Test pipeline integration with cache hit scenario (CT-8.5.6)."""
@@ -1420,7 +1420,7 @@ class TestAPIGatewayCompletePipelineIntegration:
         except Exception as e:
             pytest.fail(f"Cache hit pipeline integration failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_pipeline_integration_with_service_failures(self, full_mock_gateway):
         """Test pipeline integration resilience with partial service failures (CT-8.5.6)."""

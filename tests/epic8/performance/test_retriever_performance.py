@@ -41,7 +41,7 @@ except ImportError as e:
 class TestRetrieverServiceBasicPerformance:
     """Test basic performance characteristics of retrieval operations."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_single_query_latency(self):
         """Test latency of single query operations (CT-8.3.1)."""
@@ -128,7 +128,7 @@ class TestRetrieverServiceBasicPerformance:
             except Exception as e:
                 pytest.fail(f"Single query latency test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_indexing_throughput(self):
         """Test document indexing throughput performance (CT-8.3.3)."""
@@ -209,7 +209,7 @@ class TestRetrieverServiceBasicPerformance:
             except Exception as e:
                 pytest.fail(f"Indexing throughput test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_query_performance(self):
         """Test performance under concurrent query load (CT-8.3.2)."""
@@ -312,7 +312,7 @@ class TestRetrieverServiceBasicPerformance:
 class TestRetrieverServiceScalabilityPerformance:
     """Test scalability characteristics with increasing data sizes."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_dataset_size_scaling(self):
         """Test how performance scales with dataset size."""
@@ -414,7 +414,7 @@ class TestRetrieverServiceScalabilityPerformance:
             except Exception as e:
                 pytest.fail(f"Dataset size scaling test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_query_complexity_scaling(self):
         """Test performance with different query complexities and k values."""
@@ -532,7 +532,7 @@ class TestRetrieverServiceScalabilityPerformance:
 class TestRetrieverServiceResourceUsage:
     """Test resource usage characteristics and limits."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_memory_usage_profiling(self):
         """Test memory usage patterns during operations."""
@@ -624,7 +624,7 @@ class TestRetrieverServiceResourceUsage:
         except Exception as e:
             pytest.fail(f"Memory usage profiling test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cpu_usage_patterns(self):
         """Test CPU usage during different operations."""
@@ -690,7 +690,7 @@ class TestRetrieverServiceResourceUsage:
             # CPU monitoring can be flaky, so warn but don't fail
             pytest.warns(UserWarning, f"CPU usage monitoring failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_disk_usage_patterns(self):
         """Test disk usage for index storage."""
@@ -772,7 +772,7 @@ class TestRetrieverServiceResourceUsage:
 class TestRetrieverServiceStressTest:
     """Stress testing and edge case performance."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_sustained_load_performance(self):
         """Test performance under sustained load over time."""
@@ -874,7 +874,7 @@ class TestRetrieverServiceStressTest:
             except Exception as e:
                 pytest.fail(f"Sustained load performance test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_edge_case_performance(self):
         """Test performance with edge cases like very long queries, large k values."""

@@ -97,7 +97,7 @@ del _setup_service_imports, imported_classes
 class TestCacheServiceBasics:
     """Test basic cache service initialization and configuration."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_initialization(self):
         """Test that cache service can be initialized without crashing (Hard Fail test)."""
@@ -135,7 +135,7 @@ class TestCacheServiceBasics:
         except Exception as e:
             pytest.fail(f"Cache service initialization crashed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_initialization_and_cleanup(self):
         """Test service initialization and proper cleanup."""
@@ -160,7 +160,7 @@ class TestCacheServiceBasics:
             except Exception as e:
                 pytest.fail(f"Service cleanup crashed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_health_check_basic(self):
         """Test basic health check functionality (Hard Fail test)."""
@@ -303,7 +303,7 @@ class TestInMemoryCache:
 class TestCacheServiceOperations:
     """Test core cache service operations with mocked Redis."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_get_operation_performance(self):
         """Test cache get operation performance (sub-millisecond target)."""
@@ -345,7 +345,7 @@ class TestCacheServiceOperations:
             
             print(f"Cache get performance: {operation_time*1000:.2f}ms")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_set_operation_performance(self):
         """Test cache set operation performance (<5ms target for sets)."""
@@ -375,7 +375,7 @@ class TestCacheServiceOperations:
             
             print(f"Cache set performance: {operation_time*1000:.2f}ms")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_hit_rate_optimization(self):
         """Test cache hit rate optimization (>60% target)."""
@@ -428,7 +428,7 @@ class TestCacheServiceOperations:
 class TestCacheServiceTTLStrategies:
     """Test TTL (Time To Live) strategies and cache eviction."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_ttl_strategy_selection(self):
         """Test that different content types get appropriate TTL values."""
@@ -463,7 +463,7 @@ class TestCacheServiceTTLStrategies:
         
         print(f"TTL strategies: simple={simple_ttl}s, medium={medium_ttl}s, complex={complex_ttl}s")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio 
     async def test_cache_expiration_behavior(self):
         """Test that cached items expire according to TTL."""
@@ -496,7 +496,7 @@ class TestCacheServiceTTLStrategies:
 class TestCacheServiceCircuitBreaker:
     """Test circuit breaker functionality for Redis failures."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_circuit_breaker_behavior(self):
         """Test circuit breaker opens after Redis failures and closes after timeout."""
@@ -543,7 +543,7 @@ class TestCacheServiceCircuitBreaker:
         
         print("Circuit breaker test passed")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_fallback_cache_resilience(self):
         """Test that fallback cache works when Redis is completely unavailable."""
@@ -579,7 +579,7 @@ class TestCacheServiceCircuitBreaker:
 class TestCacheServiceStatistics:
     """Test cache statistics and monitoring functionality."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_statistics_collection(self):
         """Test comprehensive statistics collection."""
@@ -639,7 +639,7 @@ class TestCacheServiceStatistics:
             
             print(f"Statistics test passed - Hit rate: {overall.get('hit_rate', 0):.2%}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_clear_operations(self):
         """Test cache clearing functionality."""
@@ -681,7 +681,7 @@ class TestCacheServiceStatistics:
 class TestCacheServiceErrorHandling:
     """Test error handling and edge cases."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_invalid_input_handling(self):
         """Test handling of invalid inputs."""
@@ -703,7 +703,7 @@ class TestCacheServiceErrorHandling:
             except Exception as e:
                 pytest.fail(f"Unexpected error for invalid hash {invalid_hash}: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_large_data_handling(self):
         """Test handling of large cached data."""
@@ -750,7 +750,7 @@ class TestCacheServiceErrorHandling:
             except Exception as e:
                 pytest.fail(f"Large data handling failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_operations(self):
         """Test handling of concurrent cache operations."""
@@ -804,7 +804,7 @@ class TestCacheServiceErrorHandling:
 class TestCacheServiceResources:
     """Test resource usage and performance characteristics."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_memory_usage_basic(self):
         """Test that service doesn't use excessive memory."""
@@ -845,7 +845,7 @@ class TestCacheServiceResources:
         
         print(f"Memory usage: {initial_memory:.1f}MB -> {final_memory:.1f}MB (+{memory_increase:.1f}MB)")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_high_throughput_simulation(self):
         """Test service under high throughput conditions."""

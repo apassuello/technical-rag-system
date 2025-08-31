@@ -171,7 +171,7 @@ def integration_test_data():
 class TestRedisIntegration:
     """Test Redis integration functionality."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.skipif(not REDIS_AVAILABLE, reason="Redis not available for integration tests")
     @pytest.mark.asyncio
     async def test_redis_connection_establishment(self, cache_service_with_redis):
@@ -200,7 +200,7 @@ class TestRedisIntegration:
         except Exception as e:
             pytest.fail(f"Redis connection test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.skipif(not REDIS_AVAILABLE, reason="Redis not available for integration tests")
     @pytest.mark.asyncio
     async def test_redis_cache_operations_basic(self, cache_service_with_redis, integration_test_data):
@@ -242,7 +242,7 @@ class TestRedisIntegration:
         
         print(f"Redis cache operations: store {store_time*1000:.2f}ms, retrieve {retrieve_time*1000:.2f}ms")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.skipif(not REDIS_AVAILABLE, reason="Redis not available for integration tests")
     @pytest.mark.asyncio
     async def test_redis_ttl_behavior(self, cache_service_with_redis):
@@ -281,7 +281,7 @@ class TestRedisIntegration:
         
         print("Redis TTL expiration test passed")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.skipif(not REDIS_AVAILABLE, reason="Redis not available for integration tests")
     @pytest.mark.asyncio
     async def test_redis_failover_to_fallback(self, redis_integration_config):
@@ -328,7 +328,7 @@ class TestRedisIntegration:
 class TestCacheHitMissScenarios:
     """Test realistic cache hit/miss scenarios."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_realistic_cache_hit_patterns(self, cache_service_with_redis, integration_test_data):
         """Test realistic cache hit patterns with technical documentation queries."""
@@ -395,7 +395,7 @@ class TestCacheHitMissScenarios:
         
         print(f"Cache hit/miss test: {hit_rate:.2%} hit rate ({hit_count}/{total_requests}), avg {avg_time*1000:.2f}ms")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_invalidation_scenarios(self, cache_service_with_redis, integration_test_data):
         """Test various cache invalidation scenarios."""
@@ -464,7 +464,7 @@ class TestCacheHitMissScenarios:
 class TestCachePerformanceUnderLoad:
     """Test cache performance under different load conditions."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_moderate_load_performance(self, cache_service_with_redis, integration_test_data):
         """Test cache performance under moderate load (100 operations)."""
@@ -538,7 +538,7 @@ class TestCachePerformanceUnderLoad:
         print(f"Moderate load test: Store {store_throughput:.1f} ops/sec, Retrieve {retrieve_throughput:.1f} ops/sec")
         print(f"Average times: Store {avg_store_time*1000:.2f}ms, Retrieve {avg_retrieve_time*1000:.2f}ms")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_operations_performance(self, cache_service_with_redis):
         """Test cache performance with concurrent operations."""
@@ -609,7 +609,7 @@ class TestCachePerformanceUnderLoad:
         if failed_operations:
             print(f"Failed operations: {len(failed_operations)}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_memory_usage_under_load(self, cache_service_with_redis):
         """Test memory usage under sustained load."""
@@ -675,7 +675,7 @@ class TestCachePerformanceUnderLoad:
 class TestServiceResilience:
     """Test service resilience and error recovery."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_circuit_breaker_integration(self, redis_integration_config):
         """Test circuit breaker behavior with Redis failures."""
@@ -750,7 +750,7 @@ class TestServiceResilience:
         
         await service.close()
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_data_integrity_under_stress(self, cache_service_with_redis):
         """Test data integrity under stress conditions."""
@@ -831,7 +831,7 @@ class TestServiceResilience:
 class TestAPIGatewayIntegration:
     """Test integration with API Gateway patterns (simulated)."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_request_correlation_ids(self, cache_service_with_redis):
         """Test request correlation and tracing integration."""
@@ -890,7 +890,7 @@ class TestAPIGatewayIntegration:
         
         print("Request correlation integration test passed")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_rate_limiting_simulation(self, cache_service_with_redis):
         """Test cache behavior under simulated rate limiting scenarios."""

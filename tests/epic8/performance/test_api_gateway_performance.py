@@ -104,7 +104,7 @@ class TestAPIGatewayResponseTimePerformance:
         
         return gateway
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_single_query_response_time_performance(self, fast_mock_gateway):
         """Test single query response time performance (CT-8.6.1)."""
@@ -170,7 +170,7 @@ class TestAPIGatewayResponseTimePerformance:
         except Exception as e:
             pytest.fail(f"Single query response time performance test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_query_response_time_performance(self, fast_mock_gateway):
         """Test batch query response time performance (CT-8.6.1)."""
@@ -292,7 +292,7 @@ class TestAPIGatewayConcurrentRequestHandling:
         
         return gateway
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_query_performance(self, concurrent_mock_gateway):
         """Test concurrent query handling performance (CT-8.6.2)."""
@@ -350,7 +350,7 @@ class TestAPIGatewayConcurrentRequestHandling:
             except Exception as e:
                 pytest.fail(f"Concurrent performance test failed at concurrency {concurrency}: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_sustained_load_performance(self, concurrent_mock_gateway):
         """Test performance under sustained load (CT-8.6.2)."""
@@ -440,7 +440,7 @@ class TestAPIGatewayConcurrentRequestHandling:
 class TestAPIGatewayMemoryUsage:
     """Test memory usage under load (CT-8.6.3)."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_memory_usage_under_load(self):
         """Test memory usage during high load (CT-8.6.3)."""
@@ -566,7 +566,7 @@ class TestAPIGatewayTimeoutBehavior:
         
         return gateway
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_timeout_handling(self, slow_mock_gateway):
         """Test handling of service timeouts (CT-8.6.4)."""
@@ -640,7 +640,7 @@ class TestAPIGatewayTimeoutBehavior:
 class TestAPIGatewayCircuitBreakerPerformance:
     """Test circuit breaker performance characteristics (CT-8.6.5)."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_circuit_breaker_performance_impact(self):
         """Test circuit breaker performance impact (CT-8.6.5)."""
@@ -685,7 +685,7 @@ class TestAPIGatewayCircuitBreakerPerformance:
         
         print("Circuit breaker performance test completed")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_circuit_breaker_failure_recovery_performance(self):
         """Test circuit breaker failure and recovery performance (CT-8.6.5)."""
@@ -793,7 +793,7 @@ class TestAPIGatewayBatchProcessingPerformance:
         
         return gateway
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_size_performance_scaling(self, batch_mock_gateway):
         """Test performance scaling with different batch sizes (CT-8.6.6)."""
@@ -869,7 +869,7 @@ class TestAPIGatewayBatchProcessingPerformance:
         for result in performance_results:
             print(f"  Size {result['batch_size']:3d}: {result['parallel_throughput']:6.1f} req/s, {result['speedup']:5.2f}x speedup")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_parallelization_efficiency(self, batch_mock_gateway):
         """Test efficiency of batch parallelization (CT-8.6.6)."""

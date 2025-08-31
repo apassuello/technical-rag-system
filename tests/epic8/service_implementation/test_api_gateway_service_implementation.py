@@ -108,7 +108,7 @@ if IMPORTS_AVAILABLE:
 class TestSimpleCircuitBreaker:
     """Test simple circuit breaker implementation."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_circuit_breaker_closed_state(self):
         """Test circuit breaker in closed state allows operations."""
         cb = SimpleCircuitBreaker(failure_threshold=3, recovery_timeout=60)
@@ -124,7 +124,7 @@ class TestSimpleCircuitBreaker:
         assert cb.state == "closed"
         assert cb.failure_count == 0
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_circuit_breaker_failure_accumulation(self):
         """Test circuit breaker failure accumulation and state transition."""
         cb = SimpleCircuitBreaker(failure_threshold=2, recovery_timeout=60)
@@ -149,7 +149,7 @@ class TestSimpleCircuitBreaker:
         assert cb.state == "open"
         assert cb.failure_count == 2
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_circuit_breaker_open_state_blocks_operations(self):
         """Test circuit breaker blocks operations when open."""
         cb = SimpleCircuitBreaker(failure_threshold=1, recovery_timeout=60)
@@ -168,7 +168,7 @@ class TestSimpleCircuitBreaker:
             with cb:
                 pass
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_circuit_breaker_half_open_recovery(self):
         """Test circuit breaker recovery to half-open state."""
         cb = SimpleCircuitBreaker(failure_threshold=1, recovery_timeout=1)  # 1 second timeout
@@ -205,7 +205,7 @@ class TestAPIGatewayServiceInitialization:
         settings.circuit_breaker_recovery_timeout = 60
         return settings
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_gateway_service_initialization_basic(self, mock_settings):
         """Test basic gateway service initialization."""
         service = APIGatewayService(settings=mock_settings)
@@ -221,7 +221,7 @@ class TestAPIGatewayServiceInitialization:
         assert service.requests_processed == 0
         assert service.error_count == 0
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_gateway_service_full_initialization(self, mock_settings):
         """Test full gateway service initialization with all clients."""
@@ -267,7 +267,7 @@ class TestAPIGatewayServiceInitialization:
                 assert service_name in service.circuit_breakers
                 assert isinstance(service.circuit_breakers[service_name], SimpleCircuitBreaker)
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_gateway_initialization_health_check_failures(self, mock_settings):
         """Test gateway initialization handles health check failures gracefully."""
@@ -334,7 +334,7 @@ class TestUnifiedQueryProcessing:
             
             return service
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_unified_query_processing_cache_miss_full_pipeline(self, mock_gateway_with_clients):
         """Test complete query processing pipeline with cache miss."""
@@ -439,7 +439,7 @@ class TestUnifiedQueryProcessing:
         assert service.requests_processed == 1
         assert service.error_count == 0
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_unified_query_processing_cache_hit(self, mock_gateway_with_clients):
         """Test query processing with cache hit (short circuit)."""
@@ -482,7 +482,7 @@ class TestUnifiedQueryProcessing:
         # Should record cache hit
         service.analytics.record_cache_hit.assert_called_once()
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_unified_query_processing_with_service_failures(self, mock_gateway_with_clients):
         """Test query processing with service failures and fallbacks."""
@@ -520,7 +520,7 @@ class TestUnifiedQueryProcessing:
         # Should use fallback model recommendation
         assert "ollama/llama3.2:3b" in str(response.cost.model_used)
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_unified_query_processing_generation_failure_with_fallback(self, mock_gateway_with_clients):
         """Test query processing when generation fails and fallback is used."""
@@ -572,7 +572,7 @@ class TestBatchQueryProcessing:
         
         return service
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_query_processing_sequential(self, mock_gateway_for_batch):
         """Test batch query processing in sequential mode."""
@@ -632,7 +632,7 @@ class TestBatchQueryProcessing:
         # Verify all queries were processed
         assert service.process_unified_query.call_count == 3
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_query_processing_parallel(self, mock_gateway_for_batch):
         """Test batch query processing in parallel mode."""
@@ -686,7 +686,7 @@ class TestBatchQueryProcessing:
             assert result.success is True
             assert "Parallel answer for:" in result.result.answer
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_query_processing_with_failures(self, mock_gateway_for_batch):
         """Test batch processing with some query failures."""
@@ -753,7 +753,7 @@ class TestBatchQueryProcessing:
         assert batch_response.total_cost == 0.002  # Only successful queries contribute
         assert batch_response.average_cost_per_query == 0.001
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_complexity_distribution_calculation(self, mock_gateway_for_batch):
         """Test complexity distribution calculation for batch results."""
         service = mock_gateway_for_batch
@@ -840,7 +840,7 @@ class TestGatewayServiceHealthAndStatus:
         service._initialize_circuit_breakers()
         return service
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_gateway_status_all_services_healthy(self, mock_gateway_with_status):
         """Test gateway status when all services are healthy."""
@@ -890,7 +890,7 @@ class TestGatewayServiceHealthAndStatus:
             assert service_name in status.circuit_breakers
             assert status.circuit_breakers[service_name] == "closed"
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_gateway_status_with_service_failures(self, mock_gateway_with_status):
         """Test gateway status when some services are unhealthy."""
@@ -928,7 +928,7 @@ class TestGatewayServiceHealthAndStatus:
         assert status.cache_hit_rate is None
         assert status.cache_size is None
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_available_models_success(self, mock_gateway_with_status):
         """Test getting available models from generator service."""
@@ -988,7 +988,7 @@ class TestGatewayServiceHealthAndStatus:
         llama_model = next(m for m in models_response.models if m.id == "ollama/llama3.2:3b")
         assert llama_model.available is False
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_available_models_failure(self, mock_gateway_with_status):
         """Test handling of generator service failure when getting models."""
@@ -1001,7 +1001,7 @@ class TestGatewayServiceHealthAndStatus:
         with pytest.raises(Exception, match="Generator service unavailable"):
             await service.get_available_models()
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_gateway_service_close_cleanup(self, mock_gateway_with_status):
         """Test proper cleanup when closing gateway service."""

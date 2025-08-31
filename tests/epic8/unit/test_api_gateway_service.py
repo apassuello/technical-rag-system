@@ -124,7 +124,7 @@ del _setup_service_imports, imported_classes
 class TestAPIGatewayServiceBasics:
     """Test basic service initialization and health checks (CT-8.3.1)."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_initialization(self):
         """Test that service can be initialized without crashing (Hard Fail test)."""
@@ -154,7 +154,7 @@ class TestAPIGatewayServiceBasics:
         except Exception as e:
             pytest.fail(f"Service initialization crashed (Hard Fail): {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_client_initialization(self):
         """Test service client initialization (CT-8.3.1)."""
@@ -210,7 +210,7 @@ class TestAPIGatewayServiceBasics:
             except Exception as e:
                 pytest.fail(f"Service initialization crashed (Hard Fail): {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_circuit_breaker_initialization(self):
         """Test circuit breaker initialization and configuration (CT-8.3.3)."""
@@ -315,7 +315,7 @@ class TestAPIGatewayServicePipelineOrchestration:
             "analytics": analytics
         }
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_unified_query_processing_pipeline(self, mock_service_clients):
         """Test complete unified query processing pipeline (CT-8.3.2)."""
@@ -407,7 +407,7 @@ class TestAPIGatewayServicePipelineOrchestration:
         except Exception as e:
             pytest.fail(f"Unified query processing failed (Hard Fail): {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_batch_query_processing(self, mock_service_clients):
         """Test batch query processing functionality (CT-8.3.2)."""
@@ -492,7 +492,7 @@ class TestAPIGatewayServicePipelineOrchestration:
         except Exception as e:
             pytest.fail(f"Batch query processing failed (Hard Fail): {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_integration(self, mock_service_clients):
         """Test cache integration in pipeline (CT-8.3.2)."""
@@ -599,7 +599,7 @@ class TestAPIGatewayServicePipelineOrchestration:
 class TestAPIGatewayServiceCircuitBreaker:
     """Test circuit breaker behavior and resilience (CT-8.3.3)."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_circuit_breaker_basic_functionality(self):
         """Test basic circuit breaker functionality (CT-8.3.3)."""
@@ -652,7 +652,7 @@ class TestAPIGatewayServiceCircuitBreaker:
         
         print("Circuit breaker basic functionality test passed")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_circuit_breaker_service_protection(self):
         """Test circuit breaker protecting service calls (CT-8.3.3)."""
@@ -714,7 +714,7 @@ class TestAPIGatewayServiceCircuitBreaker:
 class TestAPIGatewayServiceErrorHandling:
     """Test error handling and fallback scenarios (CT-8.3.4)."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_fallback_response_generation(self):
         """Test fallback response when services fail (CT-8.3.4)."""
@@ -764,7 +764,7 @@ class TestAPIGatewayServiceErrorHandling:
             else:
                 pytest.fail(f"Unexpected error in fallback test: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_partial_service_failure_handling(self):
         """Test handling when only some services fail (CT-8.3.4)."""
@@ -833,7 +833,7 @@ class TestAPIGatewayServiceErrorHandling:
         except Exception as e:
             pytest.fail(f"Partial failure handling failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_invalid_request_handling(self):
         """Test handling of invalid requests (CT-8.3.4)."""
@@ -892,7 +892,7 @@ class TestAPIGatewayServiceStatus:
             clients[service_name] = client
         return clients
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_gateway_status_healthy(self, mock_healthy_clients):
         """Test gateway status when all services are healthy."""
@@ -944,7 +944,7 @@ class TestAPIGatewayServiceStatus:
         except Exception as e:
             pytest.fail(f"Gateway status test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_available_models(self):
         """Test getting available models from generator service."""
@@ -1002,7 +1002,7 @@ class TestAPIGatewayServiceStatus:
 class TestAPIGatewayServiceConfiguration:
     """Test configuration loading and validation (CT-8.3.5)."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_configuration(self):
         """Test service configuration options."""
@@ -1041,7 +1041,7 @@ class TestAPIGatewayServiceConfiguration:
             except Exception as e:
                 pytest.fail(f"Configuration test failed for {config}: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_cleanup(self):
         """Test service cleanup and resource management."""
@@ -1077,7 +1077,7 @@ class TestAPIGatewayServiceConfiguration:
 class TestAPIGatewayServiceResources:
     """Test resource usage and performance characteristics."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_memory_usage_basic(self):
         """Test that service doesn't use excessive memory."""
@@ -1113,7 +1113,7 @@ class TestAPIGatewayServiceResources:
         except Exception as e:
             pytest.fail(f"Memory usage test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_request_handling(self):
         """Test handling of concurrent requests."""

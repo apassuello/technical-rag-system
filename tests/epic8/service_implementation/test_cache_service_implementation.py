@@ -79,7 +79,7 @@ if IMPORTS_AVAILABLE:
 class TestCacheServiceInitialization:
     """Test Cache Service initialization and configuration."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_cache_service_initialization_basic(self):
         """Test basic cache service initialization."""
         config = {
@@ -99,7 +99,7 @@ class TestCacheServiceInitialization:
         assert service.circuit_breaker_open is False
         assert service.circuit_breaker_failures == 0
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_cache_service_initialization_with_ttl_strategies(self):
         """Test cache service initialization with custom TTL strategies."""
         config = {
@@ -127,7 +127,7 @@ class TestCacheServiceInitialization:
         assert service.circuit_breaker_threshold == 10
         assert service.circuit_breaker_timeout == 120
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_service_async_context_manager(self):
         """Test cache service as async context manager."""
@@ -149,7 +149,7 @@ class TestCacheServiceInitialization:
 class TestCacheServiceTTLStrategies:
     """Test TTL calculation and strategy logic."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_ttl_calculation_content_types(self):
         """Test TTL calculation for different content types."""
         config = {
@@ -175,7 +175,7 @@ class TestCacheServiceTTLStrategies:
         assert service._calculate_ttl("simple_query", custom_ttl=900) == 900
         assert service._calculate_ttl("medium_query", custom_ttl=None) == 3600
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_cache_key_generation(self):
         """Test cache key generation logic."""
         config = {"redis_url": "redis://localhost:6379", "default_ttl": 3600}
@@ -188,7 +188,7 @@ class TestCacheServiceTTLStrategies:
         assert cache_key == f"epic8:response:{query_hash}"
         assert cache_key.startswith("epic8:response:")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_ttl_strategy_performance_characteristics(self):
         """Test that TTL strategy reflects performance characteristics."""
         config = {
@@ -217,7 +217,7 @@ class TestCacheServiceTTLStrategies:
 class TestCacheServiceCircuitBreaker:
     """Test circuit breaker functionality for Redis failures."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_circuit_breaker_state_management(self):
         """Test circuit breaker state transitions."""
         config = {
@@ -244,7 +244,7 @@ class TestCacheServiceCircuitBreaker:
         assert service.circuit_breaker_open is True
         assert service._is_circuit_breaker_open() is True
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     def test_circuit_breaker_timeout_recovery(self):
         """Test circuit breaker recovery after timeout."""
         config = {
@@ -272,7 +272,7 @@ class TestCacheServiceCircuitBreaker:
         assert service.circuit_breaker_open is False
         assert service.circuit_breaker_failures == 0
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_operations_with_circuit_breaker_open(self):
         """Test cache operations when circuit breaker is open."""
@@ -328,7 +328,7 @@ class TestCacheServiceCoreOperations:
             
             return service, mock_redis_instance
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_cached_response_redis_hit(self, mock_cache_service):
         """Test cache hit from Redis backend."""
@@ -353,7 +353,7 @@ class TestCacheServiceCoreOperations:
         assert service.stats.hits == 1
         assert service.stats.misses == 0
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_get_cached_response_redis_miss_fallback_hit(self, mock_cache_service):
         """Test cache miss from Redis but hit from fallback cache."""
@@ -385,7 +385,7 @@ class TestCacheServiceCoreOperations:
         # Verify statistics (hit from fallback counts as hit)
         assert service.stats.hits == 1
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_response_redis_and_fallback(self, mock_cache_service):
         """Test caching response to both Redis and fallback."""
@@ -426,7 +426,7 @@ class TestCacheServiceCoreOperations:
         # Verify statistics
         assert service.stats.sets == 1
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_response_redis_failure_fallback_success(self, mock_cache_service):
         """Test caching when Redis fails but fallback succeeds."""
@@ -453,7 +453,7 @@ class TestCacheServiceCoreOperations:
         assert fallback_result is not None
         assert fallback_result.response_data == response_data
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_delete_cached_response(self, mock_cache_service):
         """Test cache deletion from both Redis and fallback."""
@@ -489,7 +489,7 @@ class TestCacheServiceCoreOperations:
         # Verify statistics
         assert service.stats.deletes == 1
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_operations_performance_timing(self, mock_cache_service):
         """Test cache operation performance characteristics."""
@@ -521,7 +521,7 @@ class TestCacheServiceCoreOperations:
 class TestInMemoryCacheBehavior:
     """Test in-memory fallback cache business logic."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_lru_eviction_algorithm(self):
         """Test LRU eviction algorithm in fallback cache."""
@@ -554,7 +554,7 @@ class TestInMemoryCacheBehavior:
         assert "key_2" in cache.cache      # Should still be present
         assert "key_3" in cache.cache      # Should be newly added
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_ttl_expiration_logic(self):
         """Test TTL-based expiration in fallback cache."""
@@ -595,7 +595,7 @@ class TestInMemoryCacheBehavior:
         assert fresh_result is not None
         assert fresh_result.response_data == {"answer": "still fresh"}
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_statistics_accuracy(self):
         """Test accuracy of cache statistics calculation."""
@@ -632,7 +632,7 @@ class TestInMemoryCacheBehavior:
         assert stats.key_count == 1       # key2 remains
         assert stats.memory_usage_bytes == 75  # Only response2 remains
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_cache_operations(self):
         """Test concurrent operations on fallback cache."""
@@ -671,7 +671,7 @@ class TestInMemoryCacheBehavior:
             assert result is not None
             assert result.response_data == {"data": f"concurrent_{i}"}
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_clear_functionality(self):
         """Test cache clearing functionality."""
@@ -701,7 +701,7 @@ class TestInMemoryCacheBehavior:
 class TestCacheServiceStatistics:
     """Test cache statistics and monitoring functionality."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_comprehensive_statistics_collection(self):
         """Test comprehensive cache statistics collection."""
@@ -759,7 +759,7 @@ class TestCacheServiceStatistics:
         assert "current_size" in fallback_stats
         assert "hit_rate" in fallback_stats
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_statistics_with_redis_unavailable(self):
         """Test statistics collection when Redis is unavailable."""
@@ -796,7 +796,7 @@ class TestCacheServiceStatistics:
 class TestCacheServiceHealthChecks:
     """Test cache service health monitoring."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_health_check_redis_healthy(self):
         """Test health check with Redis available."""
@@ -819,7 +819,7 @@ class TestCacheServiceHealthChecks:
         assert health["memory_usage"] == "2.1M"
         assert len(health["issues"]) == 0
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_health_check_redis_failed(self):
         """Test health check with Redis failed."""
@@ -841,7 +841,7 @@ class TestCacheServiceHealthChecks:
         assert len(health["issues"]) >= 1
         assert any("Redis connection failed" in issue for issue in health["issues"])
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_health_check_circuit_breaker_open(self):
         """Test health check with circuit breaker open."""
@@ -869,7 +869,7 @@ class TestCacheServiceHealthChecks:
         assert health["fallback_available"] is True
         assert "circuit breaker open" in health["issues"][0]
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_clear_operations(self):
         """Test cache clearing operations."""

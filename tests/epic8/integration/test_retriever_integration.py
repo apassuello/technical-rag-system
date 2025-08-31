@@ -45,7 +45,7 @@ except ImportError as e:
 class TestRetrieverServiceEpic2Integration:
     """Test direct integration with Epic 2 ModularUnifiedRetriever."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Epic 2 imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_epic2_component_initialization(self):
         """Test that RetrieverService properly initializes Epic 2 components."""
@@ -119,7 +119,7 @@ class TestRetrieverServiceEpic2Integration:
             except Exception as e:
                 pytest.fail(f"Epic 2 component initialization test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Epic 2 imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_document_indexing_integration(self):
         """Test document indexing through service preserves Epic 2 functionality."""
@@ -208,7 +208,7 @@ class TestRetrieverServiceEpic2Integration:
             except Exception as e:
                 pytest.fail(f"Document indexing integration test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Epic 2 imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_retrieval_accuracy_preservation(self):
         """Test that service preserves Epic 2 retrieval accuracy and functionality."""
@@ -368,7 +368,7 @@ class TestRetrieverServiceEpic2Integration:
             except Exception as e:
                 pytest.fail(f"Retrieval accuracy preservation test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Epic 2 imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_epic2_vs_service_comparison(self):
         """Test that RetrieverService produces similar results to direct Epic 2 usage."""
@@ -500,7 +500,7 @@ class TestRetrieverServiceEpic2Integration:
             except Exception as e:
                 pytest.fail(f"Epic 2 vs Service comparison test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Epic 2 imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_preserves_epic2_features(self):
         """Test that all Epic 2 features are preserved through the service."""
@@ -609,7 +609,7 @@ class TestRetrieverServiceEpic2Integration:
 class TestRetrieverServicePerformanceVsEpic2:
     """Test performance characteristics compared to direct Epic 2 usage."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Epic 2 imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_service_overhead_measurement(self):
         """Measure performance overhead of service vs direct Epic 2 usage."""
@@ -773,7 +773,7 @@ class TestRetrieverServicePerformanceVsEpic2:
             except Exception as e:
                 pytest.fail(f"Service overhead measurement test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Epic 2 imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_access_vs_epic2(self):
         """Test concurrent access performance compared to direct Epic 2."""
@@ -871,7 +871,7 @@ class TestRetrieverServicePerformanceVsEpic2:
 class TestRetrieverServiceResilience:
     """Test service resilience and error handling with Epic 2 integration."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Epic 2 imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_epic2_component_failure_handling(self):
         """Test handling of Epic 2 component failures."""
@@ -941,7 +941,7 @@ class TestRetrieverServiceResilience:
         except Exception as e:
             pytest.fail(f"Epic 2 component failure handling test failed: {e}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Epic 2 imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_data_consistency_with_epic2(self):
         """Test data consistency when using service vs direct Epic 2 access."""

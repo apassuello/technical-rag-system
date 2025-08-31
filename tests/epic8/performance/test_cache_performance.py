@@ -163,7 +163,7 @@ def performance_test_data():
 class TestSubMillisecondOperations:
     """Test sub-millisecond cache operation targets."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_get_sub_millisecond_target(self, optimized_cache_service, performance_test_data):
         """Test cache GET operations meet sub-millisecond target (<1ms)."""
@@ -232,7 +232,7 @@ class TestSubMillisecondOperations:
         print(f"Cache GET performance: avg={avg_time*1000:.2f}ms, median={median_time*1000:.2f}ms, p95={p95_time*1000:.2f}ms")
         print(f"Sub-millisecond operations: {sub_ms_rate:.1%} ({sub_ms_operations}/{len(retrieval_times)})")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_set_five_millisecond_target(self, optimized_cache_service, performance_test_data):
         """Test cache SET operations meet 5ms target."""
@@ -287,7 +287,7 @@ class TestSubMillisecondOperations:
         print(f"Cache SET performance: avg={avg_time*1000:.2f}ms, median={median_time*1000:.2f}ms, p95={p95_time*1000:.2f}ms")
         print(f"Sub-5ms operations: {fast_rate:.1%} ({fast_operations}/{len(storage_times)})")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_mixed_operations_performance(self, optimized_cache_service, performance_test_data):
         """Test mixed GET/SET operations performance."""
@@ -361,7 +361,7 @@ class TestSubMillisecondOperations:
 class TestHighThroughputScenarios:
     """Test high-throughput scenarios targeting 10,000+ ops/sec."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_sequential_high_throughput(self, optimized_cache_service, performance_test_data):
         """Test sequential high-throughput operations."""
@@ -410,7 +410,7 @@ class TestHighThroughputScenarios:
         
         print(f"Sequential throughput: SET {set_throughput:.1f} ops/sec, GET {get_throughput:.1f} ops/sec")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_concurrent_high_throughput(self, optimized_cache_service, performance_test_data):
         """Test concurrent high-throughput operations."""
@@ -481,7 +481,7 @@ class TestHighThroughputScenarios:
         if failed_operations:
             print(f"Failures: {len(failed_operations)}")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_burst_load_handling(self, optimized_cache_service, performance_test_data):
         """Test handling of burst loads followed by sustained load."""
@@ -539,7 +539,7 @@ class TestHighThroughputScenarios:
 class TestConcurrentRequestHandling:
     """Test concurrent request handling capabilities."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_many_concurrent_readers(self, optimized_cache_service, performance_test_data):
         """Test many concurrent readers accessing same data."""
@@ -598,7 +598,7 @@ class TestConcurrentRequestHandling:
         
         print(f"Concurrent readers: {read_throughput:.1f} ops/sec, {success_rate:.1%} success rate")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio  
     async def test_concurrent_writers_different_keys(self, optimized_cache_service, performance_test_data):
         """Test concurrent writers to different keys."""
@@ -651,7 +651,7 @@ class TestConcurrentRequestHandling:
         print(f"Concurrent writers: {write_throughput:.1f} ops/sec, {success_rate:.1%} success rate")
         print(f"Data verification: {verification_rate:.1%} retrievable")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_mixed_concurrent_workload(self, optimized_cache_service, performance_test_data):
         """Test realistic mixed concurrent workload."""
@@ -737,7 +737,7 @@ class TestConcurrentRequestHandling:
 class TestMemoryUsageAndEfficiency:
     """Test memory usage and efficiency characteristics."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.skipif(not PERFORMANCE_MONITORING_AVAILABLE, reason="psutil not available for memory testing")
     @pytest.mark.asyncio
     async def test_memory_efficiency_under_load(self, optimized_cache_service, performance_test_data):
@@ -810,7 +810,7 @@ class TestMemoryUsageAndEfficiency:
         print(f"Memory usage: {initial_memory:.1f}MB -> {final_memory:.1f}MB (+{total_memory_increase:.1f}MB)")
         print(f"After cleanup: {cleanup_memory:.1f}MB (freed {memory_freed:.1f}MB)")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.skipif(not PERFORMANCE_MONITORING_AVAILABLE, reason="psutil not available for memory testing")
     @pytest.mark.asyncio
     async def test_memory_leak_detection(self, optimized_cache_service, performance_test_data):
@@ -881,7 +881,7 @@ class TestMemoryUsageAndEfficiency:
 class TestCacheHitRateOptimization:
     """Test cache hit rate optimization targeting >60%."""
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_realistic_hit_rate_patterns(self, optimized_cache_service, performance_test_data):
         """Test realistic hit rate patterns with optimized strategies."""
@@ -956,7 +956,7 @@ class TestCacheHitRateOptimization:
         
         print(f"Realistic hit rate test: {hit_rate:.1%} ({hits}/{total_requests})")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_ttl_strategy_effectiveness(self, optimized_cache_service, performance_test_data):
         """Test TTL strategy effectiveness for hit rate optimization."""
@@ -1040,7 +1040,7 @@ class TestCacheHitRateOptimization:
         print(f"TTL strategy test: {immediate_hit_rate:.1%} immediate hit rate")
         print(f"TTL strategies validated: {len(ttl_test_cases)} different content types")
 
-    @pytest.mark.skipif(not IMPORTS_AVAILABLE, reason=f"Service imports not available: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}")
+    # Service availability handled by fixtures
     @pytest.mark.asyncio
     async def test_cache_warming_effectiveness(self, optimized_cache_service, performance_test_data):
         """Test cache warming effectiveness for hit rate improvement."""
