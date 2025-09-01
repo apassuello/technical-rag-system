@@ -41,6 +41,10 @@ case "${1:-default}" in
         echo -e "${YELLOW}📋 Running Epic 8 tests only${NC}"
         python run_unified_tests.py --level working --epics epic8 || true
         ;;
+    "epic8-docker"|"e8d")
+        echo -e "${YELLOW}🐳 Running Epic 8 tests with Docker services${NC}"
+        python run_unified_tests.py --level working --epics epic8 --docker || true
+        ;;
     "epic1"|"e1")
         echo -e "${YELLOW}📋 Running Epic 1 tests only${NC}"
         python run_unified_tests.py --level working --epics epic1 || true

@@ -4,12 +4,7 @@ Response schemas for API Gateway Service.
 
 from typing import Dict, Any, List, Optional, Union
 from pydantic import BaseModel, Field
-from datetime import datetime, timezone
-
-
-def utc_now() -> datetime:
-    """Get current UTC datetime using timezone-aware format."""
-    return datetime.now(timezone.utc)
+import time
 
 class DocumentSource(BaseModel):
     """Document source information."""
@@ -82,7 +77,7 @@ class UnifiedQueryResponse(BaseModel):
     # Metadata
     query_id: str = Field(..., description="Unique query identifier")
     session_id: Optional[str] = Field(None, description="Session identifier")
-    timestamp: datetime = Field(default_factory=utc_now)
+    timestamp: float = Field(default_factory=time.time)
     
     # Gateway-specific
     strategy_used: str = Field(..., description="Strategy used for processing")
@@ -131,7 +126,7 @@ class BatchQueryResponse(BaseModel):
     average_cost_per_query: float = Field(..., description="Average cost per query", ge=0.0)
     
     # Metadata
-    timestamp: datetime = Field(default_factory=utc_now)
+    timestamp: float = Field(default_factory=time.time)
     session_id: Optional[str] = Field(None, description="Session identifier")
 
 
@@ -142,7 +137,7 @@ class ServiceStatus(BaseModel):
     status: str = Field(..., description="Service status")
     url: str = Field(..., description="Service URL")
     response_time: Optional[float] = Field(None, description="Last response time")
-    last_check: datetime = Field(default_factory=utc_now)
+    last_check: float = Field(default_factory=time.time)
     error: Optional[str] = Field(None, description="Last error message")
 
 
@@ -173,7 +168,7 @@ class GatewayStatusResponse(BaseModel):
     cache_size: Optional[int] = Field(None, description="Current cache size")
     
     # Timestamp
-    timestamp: datetime = Field(default_factory=utc_now)
+    timestamp: float = Field(default_factory=time.time)
 
 
 class ModelInfo(BaseModel):
@@ -187,7 +182,7 @@ class ModelInfo(BaseModel):
     description: Optional[str] = Field(None, description="Model description")
     capabilities: List[str] = Field(default_factory=list, description="Model capabilities")
     available: bool = Field(..., description="Whether model is currently available")
-    last_checked: datetime = Field(default_factory=utc_now)
+    last_checked: float = Field(default_factory=time.time)
 
 
 class AvailableModelsResponse(BaseModel):
@@ -197,7 +192,7 @@ class AvailableModelsResponse(BaseModel):
     total_models: int = Field(..., description="Total number of models")
     available_models: int = Field(..., description="Number of available models")
     providers: List[str] = Field(..., description="Available providers")
-    last_updated: datetime = Field(default_factory=utc_now)
+    last_updated: float = Field(default_factory=time.time)
 
 
 class ErrorResponse(BaseModel):
@@ -207,5 +202,5 @@ class ErrorResponse(BaseModel):
     message: str = Field(..., description="Error message")
     details: Optional[Dict[str, Any]] = Field(None, description="Error details")
     request_id: Optional[str] = Field(None, description="Request identifier")
-    timestamp: datetime = Field(default_factory=utc_now)
+    timestamp: float = Field(default_factory=time.time)
     suggestions: Optional[List[str]] = Field(None, description="Suggested actions")

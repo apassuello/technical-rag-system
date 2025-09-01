@@ -19,6 +19,8 @@ from pathlib import Path
 import os
 import sys
 from typing import List, Dict, Any, Optional
+import signal
+import atexit
 
 class UnifiedTestRunner:
     def __init__(self):
@@ -26,6 +28,8 @@ class UnifiedTestRunner:
         self.pythonpath = self._setup_pythonpath()
         self.results = {}
         self.start_time = time.time()
+        self.docker_compose_file = self.project_root / "docker-compose.yml"
+        self.docker_services_started = False
         
     def _parse_test_output(self, output: str) -> Dict[str, Any]:
         """Parse pytest output to extract test statistics."""
@@ -79,6 +83,152 @@ class UnifiedTestRunner:
             stats['total'] = stats['passed'] + stats['failed'] + stats['skipped'] + stats['errors']
             
         return stats
+    
+    def _check_docker_compose_file(self) -> bool:
+        """Check if docker-compose.yml exists."""
+        if not self.docker_compose_file.exists():
+            # Try alternative locations
+            alternatives = [
+                self.project_root / "docker-compose.test.yml",
+                self.project_root / "services" / "docker-compose.yml",
+                self.project_root / "epic8" / "docker-compose.yml"
+            ]
+            for alt in alternatives:
+                if alt.exists():
+                    self.docker_compose_file = alt
+                    return True
+            return False
+        return True
+    
+    def _start_docker_services(self) -> bool:
+        """Build and start Docker services for Epic 8 testing."""
+        if not self._check_docker_compose_file():
+            print(f"⚠️  No docker-compose file found. Skipping Docker service startup.")
+            return False
+            
+        print(f"\n{'='*80}")
+        print("🐳 Docker Service Management for Epic 8")
+        print(f"{'='*80}")
+        print(f"📁 Using compose file: {self.docker_compose_file}")
+        
+        try:
+            # Check if Docker is running
+            print("🔍 Checking Docker status...")
+            docker_check = subprocess.run(
+                ["docker", "info"],
+                capture_output=True,
+                timeout=5
+            )
+            if docker_check.returncode != 0:
+                print("⚠️  Docker is not running. Please start Docker Desktop first.")
+                return False
+            
+            # Build Docker images
+            print("\n🔨 Building Docker images...")
+            build_cmd = ["docker-compose", "-f", str(self.docker_compose_file), "build"]
+            build_result = subprocess.run(
+                build_cmd,
+                cwd=self.project_root,
+                timeout=600  # 10 minutes timeout for building
+            )
+            if build_result.returncode != 0:
+                print("⚠️  Docker build failed. Some services may not work correctly.")
+            else:
+                print("✅ Docker images built successfully")
+            
+            # Start services
+            print("\n🚀 Starting Docker services...")
+            start_cmd = ["docker-compose", "-f", str(self.docker_compose_file), "up", "-d"]
+            start_result = subprocess.run(
+                start_cmd,
+                cwd=self.project_root,
+                timeout=60
+            )
+            if start_result.returncode != 0:
+                print("⚠️  Failed to start Docker services")
+                return False
+            
+            self.docker_services_started = True
+            print("✅ Docker services started")
+            
+            # Wait for services to be ready
+            print("\n⏳ Waiting for services to be ready...")
+            service_ports = {
+                "API Gateway": 8080,
+                "Generator": 8081,
+                "Query Analyzer": 8082,
+                "Retriever": 8083,
+                "Cache": 8084,
+                "Analytics": 8085
+            }
+            
+            import socket
+            all_ready = False
+            max_attempts = 30  # 30 seconds total
+            
+            for attempt in range(max_attempts):
+                ready_count = 0
+                for service_name, port in service_ports.items():
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(1)
+                    result = sock.connect_ex(('localhost', port))
+                    sock.close()
+                    
+                    if result == 0:
+                        ready_count += 1
+                        if attempt == 0:
+                            print(f"   ✅ {service_name} (port {port}) is ready")
+                    elif attempt == 0:
+                        print(f"   ⏳ {service_name} (port {port}) starting...")
+                
+                if ready_count == len(service_ports):
+                    all_ready = True
+                    break
+                
+                time.sleep(1)
+                if attempt > 0 and attempt % 5 == 0:
+                    print(f"   ... waiting for services ({attempt}s elapsed)")
+            
+            if all_ready:
+                print("\n✅ All services are ready!")
+            else:
+                print("\n⚠️  Some services may not be fully ready")
+            
+            # Register cleanup
+            atexit.register(self._stop_docker_services)
+            
+            return True
+            
+        except subprocess.TimeoutExpired:
+            print("⚠️  Docker operation timed out")
+            return False
+        except FileNotFoundError:
+            print("⚠️  docker-compose not found. Please install Docker and docker-compose.")
+            return False
+        except Exception as e:
+            print(f"⚠️  Docker service startup failed: {e}")
+            return False
+    
+    def _stop_docker_services(self) -> None:
+        """Stop Docker services if they were started."""
+        if not self.docker_services_started:
+            return
+            
+        print(f"\n{'='*80}")
+        print("🧹 Cleaning up Docker services...")
+        print(f"{'='*80}")
+        
+        try:
+            stop_cmd = ["docker-compose", "-f", str(self.docker_compose_file), "down"]
+            subprocess.run(
+                stop_cmd,
+                cwd=self.project_root,
+                timeout=30
+            )
+            print("✅ Docker services stopped")
+        except Exception as e:
+            print(f"⚠️  Failed to stop Docker services: {e}")
+            print("   You may need to stop them manually with: docker-compose down")
     
     def _setup_pythonpath(self) -> str:
         """Set up proper PYTHONPATH for module imports."""
@@ -512,8 +662,43 @@ class UnifiedTestRunner:
         }
     
     def run_tests(self, test_level: str = "working", epics: Optional[List[str]] = None, 
-                  coverage: bool = True) -> Dict[str, Any]:
-        """Run tests based on specified level and parameters."""
+                  coverage: bool = True, docker: bool = False) -> Dict[str, Any]:
+        """Run tests based on specified level and parameters.
+        
+        Args:
+            test_level: Level of tests to run (basic, working, comprehensive)
+            epics: List of epic names to filter tests
+            coverage: Whether to run coverage analysis
+            docker: Whether to start Docker services for Epic 8 integration tests
+        """
+        
+        # Auto-detect if Docker services are needed based on test categories
+        epic8_needs_docker = epics and 'epic8' in epics
+        comprehensive_needs_docker = test_level in ['comprehensive', 'integration'] or (epics is None)
+        
+        # Check if any Epic 8 integration/API tests will be run
+        categories = self.get_comprehensive_test_categories() if test_level == 'comprehensive' else self.get_working_test_categories()
+        docker_dependent_categories = ['epic8_integration', 'epic8_api']
+        
+        # Filter categories that will actually run
+        will_run_docker_tests = any(
+            category_name in categories and categories[category_name].get("priority", 1) <= (2 if test_level == 'working' else 5)
+            for category_name in docker_dependent_categories
+        )
+        
+        if docker or epic8_needs_docker or comprehensive_needs_docker or will_run_docker_tests:
+            if epic8_needs_docker:
+                print("🐳 Auto-starting Docker services for Epic 8 tests...")
+                self._start_docker_services()
+            elif will_run_docker_tests:
+                print("🐳 Auto-starting Docker services for Epic 8 integration/API tests...")
+                self._start_docker_services()
+            elif comprehensive_needs_docker:
+                print("🐳 Auto-starting Docker services for comprehensive/integration tests...")
+                self._start_docker_services()
+            else:
+                # Explicit --docker flag
+                self._start_docker_services()
         
         # Clear any existing coverage data at the start
         if coverage:
@@ -1030,6 +1215,8 @@ def main():
                        default='working', help='Test level to run')
     parser.add_argument('--epics', nargs='*', help='Filter by epic names (e.g., epic8 epic1)')
     parser.add_argument('--no-coverage', action='store_true', help='Skip coverage analysis')
+    parser.add_argument('--docker', action='store_true', 
+                       help='Build and start Docker services for Epic 8 integration tests')
     parser.add_argument('--save-results', help='Save results to JSON file')
     
     args = parser.parse_args()
@@ -1040,7 +1227,8 @@ def main():
         results = runner.run_tests(
             test_level=args.level,
             epics=args.epics,
-            coverage=not args.no_coverage
+            coverage=not args.no_coverage,
+            docker=args.docker
         )
         
         # Print final summary
