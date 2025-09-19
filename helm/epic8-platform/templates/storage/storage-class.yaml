@@ -1,0 +1,111 @@
+{{/*
+Epic 8 Platform - Storage Class Template
+High-performance storage configuration for Epic 8 platform
+*/}}
+
+{{- if .Values.storageClass.create }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storageClass.name }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: storage
+    epic8.platform/storage-type: fast-ssd
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "High-performance SSD storage class for Epic 8 platform"
+    epic8.platform/cloud-provider: {{ .Values.global.cloudProvider | quote }}
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: {{ .Values.storageClass.provisioner }}
+parameters:
+  {{- range $key, $value := .Values.storageClass.parameters }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+reclaimPolicy: {{ .Values.storageClass.reclaimPolicy }}
+allowVolumeExpansion: {{ .Values.storageClass.allowVolumeExpansion }}
+volumeBindingMode: WaitForFirstConsumer
+{{- end }}
+
+{{/*
+Persistent Volume Claims for services that need persistent storage
+*/}}
+
+{{- if and .Values.retriever.enabled .Values.retriever.vectorIndex.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "retriever" "context" .) }}-data
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "retriever" "tier" "backend" "component" "retriever" "context" .) | nindent 4 }}
+    epic8.platform/storage-purpose: vector-index
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Persistent storage for vector index data"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.retriever.vectorIndex.persistence.storageClass }}
+  storageClassName: {{ .Values.retriever.vectorIndex.persistence.storageClass }}
+  {{- else if .Values.storageClass.create }}
+  storageClassName: {{ .Values.storageClass.name }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.retriever.vectorIndex.persistence.size }}
+{{- end }}
+
+{{- if and .Values.cache.enabled .Values.cache.redis.enabled (not .Values.cache.redis.external.enabled) .Values.cache.redis.internal.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "cache" "context" .) }}-redis-data
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "cache" "tier" "backend" "component" "cache" "context" .) | nindent 4 }}
+    epic8.platform/storage-purpose: redis-data
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Persistent storage for Redis cache data"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.cache.redis.internal.persistence.storageClass }}
+  storageClassName: {{ .Values.cache.redis.internal.persistence.storageClass }}
+  {{- else if .Values.storageClass.create }}
+  storageClassName: {{ .Values.storageClass.name }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.cache.redis.internal.persistence.size }}
+{{- end }}
+
+{{- if and .Values.analytics.enabled .Values.analytics.postgresql.enabled (not .Values.analytics.postgresql.external.enabled) .Values.analytics.postgresql.internal.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}-postgres-data
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "analytics" "tier" "backend" "component" "analytics" "context" .) | nindent 4 }}
+    epic8.platform/storage-purpose: postgres-data
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Persistent storage for PostgreSQL analytics data"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.analytics.postgresql.internal.persistence.storageClass }}
+  storageClassName: {{ .Values.analytics.postgresql.internal.persistence.storageClass }}
+  {{- else if .Values.storageClass.create }}
+  storageClassName: {{ .Values.storageClass.name }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.analytics.postgresql.internal.persistence.size }}
+{{- end }}

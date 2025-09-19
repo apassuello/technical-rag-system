@@ -1,0 +1,307 @@
+{{/*
+Epic 8 Platform - RBAC Role Bindings Template
+Role binding definitions for Epic 8 platform services
+*/}}
+
+{{- if .Values.rbac.create }}
+
+{{/*
+Custom Role Bindings from values
+*/}}
+{{- range .Values.rbac.roleBindings }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "epic8-platform.namespace" $ }}
+  labels:
+    {{- include "epic8-platform.labels" $ | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role-binding
+  annotations:
+    {{- include "epic8-platform.annotations" $ | nindent 4 }}
+    epic8.platform/description: {{ .description | default "Custom role binding for Epic 8 platform" | quote }}
+subjects:
+{{- range .subjects }}
+- kind: {{ .kind }}
+  name: {{ .name }}
+  {{- if .namespace }}
+  namespace: {{ .namespace }}
+  {{- end }}
+  {{- if .apiGroup }}
+  apiGroup: {{ .apiGroup }}
+  {{- end }}
+{{- end }}
+roleRef:
+  kind: {{ .roleRef.kind }}
+  name: {{ .roleRef.name }}
+  apiGroup: {{ .roleRef.apiGroup }}
+{{- end }}
+
+{{/*
+Custom Cluster Role Bindings from values
+*/}}
+{{- range .Values.rbac.clusterRoleBindings }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "epic8-platform.fullname" $ }}-{{ .name }}
+  labels:
+    {{- include "epic8-platform.labels" $ | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: cluster-role-binding
+  annotations:
+    {{- include "epic8-platform.annotations" $ | nindent 4 }}
+    epic8.platform/description: {{ .description | default "Custom cluster role binding for Epic 8 platform" | quote }}
+subjects:
+{{- range .subjects }}
+- kind: {{ .kind }}
+  name: {{ .name }}
+  {{- if .namespace }}
+  namespace: {{ .namespace }}
+  {{- else }}
+  namespace: {{ include "epic8-platform.namespace" $ }}
+  {{- end }}
+  {{- if .apiGroup }}
+  apiGroup: {{ .apiGroup }}
+  {{- end }}
+{{- end }}
+roleRef:
+  kind: {{ .roleRef.kind }}
+  name: {{ include "epic8-platform.fullname" $ }}-{{ .roleRef.name }}
+  apiGroup: {{ .roleRef.apiGroup }}
+{{- end }}
+
+{{/*
+Default Role Bindings for Epic 8 Services
+*/}}
+
+{{- if .Values.rbac.serviceAccounts.apiGateway.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}-default
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "api-gateway" "tier" "frontend" "component" "gateway" "context" .) | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role-binding
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Default role binding for API Gateway service"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "epic8-platform.fullname" . }}-default
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+
+{{- if .Values.rbac.serviceAccounts.queryAnalyzer.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "query-analyzer" "context" .) }}-default
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "query-analyzer" "tier" "backend" "component" "analyzer" "context" .) | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role-binding
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Default role binding for Query Analyzer service"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "epic8-platform.serviceName" (dict "service" "query-analyzer" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "epic8-platform.fullname" . }}-default
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+
+{{- if .Values.rbac.serviceAccounts.generator.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "generator" "context" .) }}-default
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "generator" "tier" "backend" "component" "generator" "context" .) | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role-binding
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Default role binding for Generator service"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "epic8-platform.serviceName" (dict "service" "generator" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "epic8-platform.fullname" . }}-default
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+
+{{- if .Values.rbac.serviceAccounts.retriever.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "retriever" "context" .) }}-default
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "retriever" "tier" "backend" "component" "retriever" "context" .) | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role-binding
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Default role binding for Retriever service"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "epic8-platform.serviceName" (dict "service" "retriever" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "epic8-platform.fullname" . }}-default
+  apiGroup: rbac.authorization.k8s.io
+
+{{- if .Values.retriever.vectorIndex.persistence.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "retriever" "context" .) }}-storage
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "retriever" "tier" "backend" "component" "retriever" "context" .) | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role-binding
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Storage role binding for Retriever service"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "epic8-platform.serviceName" (dict "service" "retriever" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "epic8-platform.fullname" . }}-storage
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- end }}
+
+{{- if .Values.rbac.serviceAccounts.cache.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "cache" "context" .) }}-default
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "cache" "tier" "backend" "component" "cache" "context" .) | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role-binding
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Default role binding for Cache service"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "epic8-platform.serviceName" (dict "service" "cache" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "epic8-platform.fullname" . }}-default
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+
+{{- if .Values.rbac.serviceAccounts.analytics.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}-default
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "analytics" "tier" "backend" "component" "analytics" "context" .) | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role-binding
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Default role binding for Analytics service"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "epic8-platform.fullname" . }}-default
+  apiGroup: rbac.authorization.k8s.io
+
+{{- if .Values.analytics.postgresql.internal.persistence.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}-storage
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "analytics" "tier" "backend" "component" "analytics" "context" .) | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role-binding
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Storage role binding for Analytics service"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "epic8-platform.fullname" . }}-storage
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- end }}
+
+{{/*
+Monitoring Role Bindings
+*/}}
+{{- if include "epic8-platform.monitoring.enabled" . }}
+{{- range $service := list "api-gateway" "query-analyzer" "generator" "retriever" "cache" "analytics" }}
+{{- $serviceConfig := index $.Values $service | default dict }}
+{{- $serviceAccount := index $.Values.rbac.serviceAccounts $service | default dict }}
+{{- if and $serviceConfig.enabled $serviceAccount.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" $service "context" $) }}-monitoring
+  namespace: {{ include "epic8-platform.namespace" $ }}
+  labels:
+    {{- include "epic8-platform.labels" $ | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role-binding
+    epic8.platform/role-scope: monitoring
+  annotations:
+    {{- include "epic8-platform.annotations" $ | nindent 4 }}
+    epic8.platform/description: "Monitoring role binding for {{ $service }} service"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "epic8-platform.serviceName" (dict "service" $service "context" $) }}
+  namespace: {{ include "epic8-platform.namespace" $ }}
+roleRef:
+  kind: Role
+  name: {{ include "epic8-platform.fullname" $ }}-monitoring
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{- end }}

@@ -1,0 +1,706 @@
+---
+# Epic 8 Platform - Comprehensive Ingress Monitoring and Observability
+# Swiss Engineering Standards: Full-stack Observability
+# Prometheus, Grafana, Jaeger, and custom metrics for networking
+
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: epic8-ingress-controller-metrics
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/type: ingress-monitoring
+    epic8.platform/tier: infrastructure
+    prometheus.io/scrape: "true"
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nginx-ingress
+      app.kubernetes.io/component: controller
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics
+    scheme: http
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: namespace
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'nginx_ingress_controller_.*'
+      targetLabel: epic8_component
+      replacement: 'ingress-controller'
+    - sourceLabels: [__name__]
+      regex: 'nginx_ingress_controller_requests_total'
+      targetLabel: epic8_metric_type
+      replacement: 'request_count'
+
+---
+# ServiceMonitor for Cert-Manager
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: epic8-cert-manager-metrics
+  namespace: cert-manager
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/type: cert-manager-monitoring
+    epic8.platform/tier: infrastructure
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cert-manager
+      app.kubernetes.io/component: controller
+  endpoints:
+  - port: tcp-prometheus-servicemonitor
+    interval: 30s
+    path: /metrics
+    scheme: http
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: namespace
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'certmanager_.*'
+      targetLabel: epic8_component
+      replacement: 'cert-manager'
+
+---
+# Custom Metrics ConfigMap for Epic 8 Platform
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-ingress-custom-metrics
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/type: custom-metrics
+    epic8.platform/tier: configuration
+data:
+  # Prometheus recording rules for Epic 8 specific metrics
+  recording-rules.yaml: |
+    groups:
+    - name: epic8_ingress_recording_rules
+      interval: 15s
+      rules:
+      # Swiss traffic percentage
+      - record: epic8:swiss_traffic_percentage
+        expr: |
+          (
+            sum(rate(nginx_ingress_controller_requests_total{country="CH"}[5m])) /
+            sum(rate(nginx_ingress_controller_requests_total[5m]))
+          ) * 100
+
+      # API tier request rates
+      - record: epic8:api_tier_request_rate
+        expr: |
+          sum(rate(nginx_ingress_controller_requests_total[5m])) by (epic8_api_tier)
+
+      # Request latency by Swiss compliance
+      - record: epic8:request_latency_swiss_compliant
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{epic8_swiss_compliant="true"}[5m]))
+            by (le, epic8_swiss_compliant)
+          )
+
+      # Error rate by service
+      - record: epic8:error_rate_by_service
+        expr: |
+          sum(rate(nginx_ingress_controller_requests_total{status=~"5.."}[5m])) by (service) /
+          sum(rate(nginx_ingress_controller_requests_total[5m])) by (service)
+
+      # Certificate expiry tracking
+      - record: epic8:certificate_expiry_days
+        expr: |
+          (certmanager_certificate_expiration_timestamp_seconds - time()) / 86400
+
+      # Rate limiting efficiency
+      - record: epic8:rate_limit_efficiency
+        expr: |
+          sum(rate(nginx_ingress_controller_requests_total{status="429"}[5m])) /
+          sum(rate(nginx_ingress_controller_requests_total[5m]))
+
+  # Custom Lua script for advanced metrics
+  custom-metrics.lua: |
+    -- Epic 8 Platform Custom Metrics Collector
+    -- Swiss Engineering Standards: Comprehensive Observability
+
+    local prometheus = require "resty.prometheus"
+    local metrics = prometheus.init("epic8_metrics")
+
+    -- Custom counters
+    local swiss_requests = metrics:counter(
+        "epic8_swiss_requests_total",
+        "Total requests from Swiss IPs",
+        {"service", "endpoint", "api_tier"}
+    )
+
+    local gdpr_requests = metrics:counter(
+        "epic8_gdpr_requests_total",
+        "Total GDPR compliant requests",
+        {"service", "data_residency"}
+    )
+
+    local api_key_usage = metrics:counter(
+        "epic8_api_key_usage_total",
+        "API key usage by tier",
+        {"api_tier", "client_id"}
+    )
+
+    local security_events = metrics:counter(
+        "epic8_security_events_total",
+        "Security events detected",
+        {"event_type", "severity", "source_ip"}
+    )
+
+    -- Custom histograms
+    local request_size = metrics:histogram(
+        "epic8_request_size_bytes",
+        "Request size distribution",
+        {"service", "endpoint"},
+        {1024, 4096, 16384, 65536, 262144, 1048576}
+    )
+
+    local response_size = metrics:histogram(
+        "epic8_response_size_bytes",
+        "Response size distribution",
+        {"service", "endpoint", "status"},
+        {1024, 4096, 16384, 65536, 262144, 1048576}
+    )
+
+    local processing_time = metrics:histogram(
+        "epic8_processing_time_seconds",
+        "Request processing time",
+        {"service", "operation", "model"},
+        {0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10, 30, 60}
+    )
+
+    -- Custom gauges
+    local active_connections = metrics:gauge(
+        "epic8_active_connections",
+        "Active connections by source",
+        {"source_country", "api_tier"}
+    )
+
+    local cache_hit_rate = metrics:gauge(
+        "epic8_cache_hit_rate",
+        "Cache hit rate percentage",
+        {"service", "cache_type"}
+    )
+
+    local swiss_compliance_score = metrics:gauge(
+        "epic8_swiss_compliance_score",
+        "Swiss compliance score (0-100)",
+        {"service", "check_type"}
+    )
+
+    -- Metric collection function
+    local function collect_epic8_metrics()
+        local headers = ngx.req.get_headers()
+        local uri = ngx.var.uri
+        local method = ngx.var.request_method
+        local status = ngx.status
+        local request_time = ngx.var.request_time
+        local request_length = ngx.var.request_length
+        local bytes_sent = ngx.var.bytes_sent
+
+        -- Extract Epic 8 specific headers
+        local api_tier = headers["x-epic8-api-tier"] or "public"
+        local client_id = headers["x-epic8-client-id"] or "anonymous"
+        local service = headers["x-epic8-service"] or "api-gateway"
+        local swiss_ip = ngx.var.swiss_ip == "1"
+        local gdpr_compliant = headers["x-epic8-gdpr-compliant"] == "true"
+
+        -- Count requests by geographic origin
+        if swiss_ip then
+            swiss_requests:inc(1, {service, uri, api_tier})
+        end
+
+        if gdpr_compliant then
+            gdpr_requests:inc(1, {service, "compliant"})
+        end
+
+        -- API key usage tracking
+        if client_id ~= "anonymous" then
+            api_key_usage:inc(1, {api_tier, client_id})
+        end
+
+        -- Request/response size tracking
+        if request_length then
+            request_size:observe(tonumber(request_length), {service, uri})
+        end
+
+        if bytes_sent then
+            response_size:observe(tonumber(bytes_sent), {service, uri, tostring(status)})
+        end
+
+        -- Processing time tracking
+        if request_time then
+            processing_time:observe(tonumber(request_time), {service, "request", "unknown"})
+        end
+
+        -- Security event detection
+        local user_agent = headers["user-agent"] or ""
+        if string.match(user_agent:lower(), "bot") or
+           string.match(user_agent:lower(), "scanner") or
+           string.match(user_agent:lower(), "curl") then
+            security_events:inc(1, {"suspicious_user_agent", "medium", ngx.var.remote_addr})
+        end
+
+        -- Rate limiting events
+        if status == 429 then
+            security_events:inc(1, {"rate_limit_exceeded", "low", ngx.var.remote_addr})
+        end
+
+        -- Authentication failures
+        if status == 401 or status == 403 then
+            security_events:inc(1, {"auth_failure", "high", ngx.var.remote_addr})
+        end
+    end
+
+    -- Export metrics
+    return {
+        collect = collect_epic8_metrics,
+        metrics = metrics
+    }
+
+---
+# Prometheus Alerting Rules for Ingress
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: epic8-ingress-alerts
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/type: alerting-rules
+    epic8.platform/tier: infrastructure
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: epic8-ingress-performance
+    interval: 30s
+    rules:
+    # High request latency
+    - alert: Epic8IngressHighLatency
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m]))
+          by (le, ingress, namespace)
+        ) > 2
+      for: 5m
+      labels:
+        severity: warning
+        component: ingress
+        epic8_component: ingress-controller
+        swiss_compliance: "performance_sla"
+      annotations:
+        summary: "Epic 8 Ingress high latency detected"
+        description: |
+          95th percentile latency is {{ $value }}s for ingress {{ $labels.ingress }}
+          in namespace {{ $labels.namespace }}. SLA threshold is 2s.
+        runbook_url: "https://epic8-platform.swiss/docs/runbooks/ingress-latency"
+        dashboard_url: "https://monitoring.epic8-platform.swiss/grafana/d/epic8-ingress/epic8-ingress-performance"
+
+    # High error rate
+    - alert: Epic8IngressHighErrorRate
+      expr: |
+        sum(rate(nginx_ingress_controller_requests_total{status=~"5.."}[5m])) by (ingress, namespace) /
+        sum(rate(nginx_ingress_controller_requests_total[5m])) by (ingress, namespace) > 0.05
+      for: 2m
+      labels:
+        severity: critical
+        component: ingress
+        epic8_component: ingress-controller
+        swiss_compliance: "availability_sla"
+      annotations:
+        summary: "Epic 8 Ingress high error rate detected"
+        description: |
+          Error rate is {{ $value | humanizePercentage }} for ingress {{ $labels.ingress }}
+          in namespace {{ $labels.namespace }}. SLA threshold is 5%.
+        runbook_url: "https://epic8-platform.swiss/docs/runbooks/ingress-errors"
+
+    # Rate limiting threshold reached
+    - alert: Epic8IngressRateLimitingActive
+      expr: |
+        increase(nginx_ingress_controller_requests_total{status="429"}[5m]) > 100
+      for: 1m
+      labels:
+        severity: warning
+        component: ingress
+        epic8_component: rate-limiting
+        swiss_compliance: "security_protection"
+      annotations:
+        summary: "Epic 8 Ingress rate limiting actively blocking requests"
+        description: |
+          {{ $value }} requests have been rate limited in the last 5 minutes
+          for ingress {{ $labels.ingress }}.
+        runbook_url: "https://epic8-platform.swiss/docs/runbooks/rate-limiting"
+
+  - name: epic8-ssl-certificates
+    interval: 60s
+    rules:
+    # Certificate expiration warning
+    - alert: Epic8CertificateExpirationWarning
+      expr: |
+        (certmanager_certificate_expiration_timestamp_seconds - time()) / 86400 < 30
+      for: 1m
+      labels:
+        severity: warning
+        component: cert-manager
+        epic8_component: ssl-certificates
+        swiss_compliance: "security_requirements"
+      annotations:
+        summary: "Epic 8 SSL certificate expiring soon"
+        description: |
+          Certificate {{ $labels.name }} in namespace {{ $labels.namespace }}
+          will expire in {{ $value | humanizeDuration }}.
+        runbook_url: "https://epic8-platform.swiss/docs/runbooks/certificate-renewal"
+
+    # Certificate expiration critical
+    - alert: Epic8CertificateExpirationCritical
+      expr: |
+        (certmanager_certificate_expiration_timestamp_seconds - time()) / 86400 < 7
+      for: 1m
+      labels:
+        severity: critical
+        component: cert-manager
+        epic8_component: ssl-certificates
+        swiss_compliance: "security_requirements"
+      annotations:
+        summary: "Epic 8 SSL certificate expiring very soon"
+        description: |
+          Certificate {{ $labels.name }} in namespace {{ $labels.namespace }}
+          will expire in {{ $value | humanizeDuration }}. Immediate action required.
+        runbook_url: "https://epic8-platform.swiss/docs/runbooks/certificate-emergency"
+
+  - name: epic8-swiss-compliance
+    interval: 30s
+    rules:
+    # Swiss traffic percentage monitoring
+    - alert: Epic8SwissTrafficLow
+      expr: epic8:swiss_traffic_percentage < 30
+      for: 10m
+      labels:
+        severity: info
+        component: compliance
+        epic8_component: geo-routing
+        swiss_compliance: "data_residency"
+      annotations:
+        summary: "Epic 8 Swiss traffic percentage is low"
+        description: |
+          Only {{ $value }}% of traffic is originating from Switzerland.
+          Expected minimum is 30% for optimal Swiss compliance.
+        runbook_url: "https://epic8-platform.swiss/docs/runbooks/swiss-traffic"
+
+    # GDPR compliance monitoring
+    - alert: Epic8GDPRComplianceViolation
+      expr: |
+        increase(epic8_security_events_total{event_type="gdpr_violation"}[5m]) > 0
+      for: 1m
+      labels:
+        severity: critical
+        component: compliance
+        epic8_component: data-protection
+        swiss_compliance: "gdpr_violation"
+      annotations:
+        summary: "Epic 8 GDPR compliance violation detected"
+        description: |
+          {{ $value }} GDPR violations detected in the last 5 minutes.
+          Immediate investigation required.
+        runbook_url: "https://epic8-platform.swiss/docs/runbooks/gdpr-violation"
+
+---
+# Grafana Dashboard ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-ingress-dashboard
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/type: grafana-dashboard
+    epic8.platform/tier: visualization
+    grafana_dashboard: "1"
+data:
+  epic8-ingress-performance.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Epic 8 Platform - Ingress Performance",
+        "tags": ["epic8", "ingress", "performance", "swiss-engineering"],
+        "style": "dark",
+        "timezone": "Europe/Zurich",
+        "refresh": "30s",
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate (Swiss Engineering Standards)",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(rate(nginx_ingress_controller_requests_total[5m]))",
+                "legendFormat": "Total RPS"
+              },
+              {
+                "expr": "sum(rate(nginx_ingress_controller_requests_total{country=\"CH\"}[5m]))",
+                "legendFormat": "Swiss RPS"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "reqps",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 100},
+                    {"color": "red", "value": 1000}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Response Time Distribution (P95 SLA: 2s)",
+            "type": "heatmap",
+            "targets": [
+              {
+                "expr": "sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le)",
+                "legendFormat": "{{ le }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Swiss Compliance Metrics",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "epic8:swiss_traffic_percentage",
+                "legendFormat": "Swiss Traffic %"
+              },
+              {
+                "expr": "epic8:certificate_expiry_days",
+                "legendFormat": "Cert Expiry Days"
+              },
+              {
+                "expr": "epic8:swiss_compliance_score",
+                "legendFormat": "Compliance Score"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Error Rate by Service (SLA: <5%)",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "epic8:error_rate_by_service * 100",
+                "legendFormat": "{{ service }}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "max": 10,
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 2},
+                    {"color": "red", "value": 5}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 5,
+            "title": "Rate Limiting Activity",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "rate(nginx_ingress_controller_requests_total{status=\"429\"}[5m])",
+                "legendFormat": "Rate Limited RPS"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ],
+        "templating": {
+          "list": [
+            {
+              "name": "namespace",
+              "type": "query",
+              "query": "label_values(nginx_ingress_controller_requests_total, namespace)",
+              "current": {"value": "epic8-dev"}
+            },
+            {
+              "name": "ingress",
+              "type": "query",
+              "query": "label_values(nginx_ingress_controller_requests_total{namespace=\"$namespace\"}, ingress)",
+              "current": {"value": "All"}
+            }
+          ]
+        },
+        "annotations": {
+          "list": [
+            {
+              "name": "Deployments",
+              "type": "kubernetes",
+              "query": "kube_deployment_status_replicas_updated{namespace=\"$namespace\"}"
+            }
+          ]
+        }
+      }
+    }
+
+---
+# Jaeger Tracing Configuration for Ingress
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-ingress-tracing-config
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/type: distributed-tracing
+    epic8.platform/tier: observability
+data:
+  jaeger-config.yaml: |
+    # Epic 8 Platform Distributed Tracing Configuration
+    # Swiss Engineering Standards: Full Request Traceability
+
+    tracing:
+      enabled: true
+      jaeger:
+        collector_endpoint: "http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces"
+        sampling_rate: 0.1  # 10% sampling for production
+        service_name: "epic8-ingress-controller"
+        tags:
+          epic8.platform.version: "1.0.0"
+          epic8.platform.environment: "production"
+          epic8.platform.swiss_compliant: "true"
+          epic8.platform.component: "ingress-controller"
+
+      # Custom span tags for Epic 8 Platform
+      custom_tags:
+        - name: "epic8.request_id"
+          header: "X-Epic8-Request-ID"
+        - name: "epic8.api_tier"
+          header: "X-Epic8-API-Tier"
+        - name: "epic8.swiss_ip"
+          variable: "$swiss_ip"
+        - name: "epic8.gdpr_compliant"
+          header: "X-Epic8-GDPR-Compliant"
+        - name: "epic8.service"
+          header: "X-Epic8-Service"
+
+      # Baggage propagation for Epic 8 context
+      baggage:
+        - "epic8-request-id"
+        - "epic8-user-id"
+        - "epic8-session-id"
+        - "epic8-compliance-level"
+
+    # Trace sampling strategies
+    sampling_strategies:
+      default_strategy:
+        type: "probabilistic"
+        param: 0.1
+
+      per_service_strategies:
+        - service: "epic8-api-gateway"
+          type: "probabilistic"
+          param: 0.2  # Higher sampling for API gateway
+
+        - service: "epic8-analytics"
+          type: "probabilistic"
+          param: 0.05  # Lower sampling for analytics
+
+      per_operation_strategies:
+        - service: "epic8-api-gateway"
+          operation: "health_check"
+          type: "probabilistic"
+          param: 0.01  # Very low sampling for health checks
+
+        - service: "epic8-api-gateway"
+          operation: "error_handling"
+          type: "probabilistic"
+          param: 1.0  # Always trace errors
+
+  # OpenTelemetry configuration
+  otel-config.yaml: |
+    # Epic 8 Platform OpenTelemetry Configuration
+    # Swiss Engineering Standards: Unified Observability
+
+    receivers:
+      nginx:
+        endpoint: "http://nginx-ingress-controller:10254/metrics"
+        collection_interval: 30s
+
+    processors:
+      batch:
+        timeout: 5s
+        send_batch_size: 1024
+
+      resource:
+        attributes:
+          - key: epic8.platform.version
+            value: "1.0.0"
+            action: upsert
+          - key: epic8.platform.environment
+            value: "production"
+            action: upsert
+          - key: epic8.platform.swiss_compliant
+            value: "true"
+            action: upsert
+
+      # Swiss compliance processor
+      epic8_compliance:
+        rules:
+          - include:
+              match_type: regexp
+              attribute_names: ["http.url", "http.target"]
+              attributes:
+                epic8.data_residency: "required"
+            action: drop  # Drop non-compliant requests from traces
+
+    exporters:
+      jaeger:
+        endpoint: "jaeger-collector.istio-system.svc.cluster.local:14250"
+        tls:
+          insecure: true
+
+      prometheus:
+        endpoint: "prometheus.monitoring.svc.cluster.local:9090"
+        namespace: "epic8_platform"
+
+    service:
+      pipelines:
+        traces:
+          receivers: [nginx]
+          processors: [epic8_compliance, resource, batch]
+          exporters: [jaeger]
+
+        metrics:
+          receivers: [nginx]
+          processors: [resource, batch]
+          exporters: [prometheus]

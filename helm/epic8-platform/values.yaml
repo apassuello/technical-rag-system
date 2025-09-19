@@ -1,0 +1,771 @@
+# Epic 8 Platform - Default Production Values
+# Swiss Engineering Quality Standards for Enterprise Deployment
+
+#============================================================================
+# Global Configuration
+#============================================================================
+global:
+  # Environment Configuration
+  environment: production
+  cloudProvider: aws  # aws, gcp, azure, on-premises
+  clusterDomain: cluster.local
+  timezone: Europe/Zurich
+
+  # Epic 8 Platform Metadata
+  platform:
+    name: epic8-rag-platform
+    version: "1.0.0"
+    description: "Cloud-Native Multi-Model RAG Platform"
+
+  # Image Configuration
+  image:
+    registry: ""  # Use default registry
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+
+  # Resource Defaults (Swiss Engineering Standards)
+  resources:
+    small:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+        ephemeral-storage: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+        ephemeral-storage: 1Gi
+    medium:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+        ephemeral-storage: 1Gi
+      limits:
+        cpu: "1"
+        memory: 2Gi
+        ephemeral-storage: 2Gi
+    large:
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        ephemeral-storage: 2Gi
+      limits:
+        cpu: "2"
+        memory: 4Gi
+        ephemeral-storage: 4Gi
+
+  # Security Defaults
+  security:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+    seccompProfile:
+      type: RuntimeDefault
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+  # Monitoring and Observability
+  monitoring:
+    enabled: true
+    prometheus:
+      enabled: true
+      port: 9090
+      path: "/metrics"
+      scrapeInterval: "30s"
+    grafana:
+      enabled: true
+    jaeger:
+      enabled: true
+    logging:
+      level: INFO
+      format: json
+      timestamp: true
+
+  # Service Mesh Configuration
+  serviceMesh:
+    enabled: true
+    type: istio  # istio, linkerd, consul-connect
+    mtls:
+      enabled: true
+      mode: STRICT
+    tracing:
+      enabled: true
+
+#============================================================================
+# Namespace Configuration
+#============================================================================
+namespace:
+  create: true
+  name: ""  # Use release name if empty
+  labels:
+    epic8.platform/tier: enterprise
+    epic8.platform/environment: production
+    epic8.platform/compliance: swiss-engineering
+  annotations:
+    epic8.platform/description: "Epic 8 Cloud-Native RAG Platform"
+    epic8.platform/maintainer: "arthur.passuello@example.com"
+
+#============================================================================
+# Service Configurations
+#============================================================================
+
+# API Gateway Service
+apiGateway:
+  enabled: true
+  name: api-gateway
+  replicaCount: 3
+  image:
+    repository: epic8/api-gateway
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+    metricsPort: 9090
+    external:
+      enabled: true
+      type: LoadBalancer
+      ports:
+        http: 80
+        https: 443
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      loadBalancerSourceRanges:
+        - "0.0.0.0/0"  # Restrict in production
+
+  resources: medium  # References global.resources.medium
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  # Health Checks
+  health:
+    liveness:
+      path: /health/live
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    startup:
+      path: /health/startup
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+  # Environment Variables
+  env:
+    - name: QUERY_ANALYZER_URL
+      value: "http://query-analyzer:8082"
+    - name: GENERATOR_URL
+      value: "http://generator:8081"
+    - name: RETRIEVER_URL
+      value: "http://retriever:8083"
+    - name: CACHE_URL
+      value: "http://cache:8084"
+    - name: ANALYTICS_URL
+      value: "http://analytics:8085"
+
+  # Security Context
+  securityContext: {}  # Uses global security defaults
+
+  # Pod Disruption Budget
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  # Affinity and Topology
+  affinity:
+    podAntiAffinity:
+      enabled: true
+      weight: 100
+  topologySpreadConstraints:
+    enabled: true
+    maxSkew: 1
+
+# Query Analyzer Service
+queryAnalyzer:
+  enabled: true
+  name: query-analyzer
+  replicaCount: 2
+  image:
+    repository: epic8/query-analyzer
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 8082
+    targetPort: 8082
+    metricsPort: 9090
+
+  resources: medium
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  health:
+    liveness:
+      path: /health/live
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    startup:
+      path: /health/startup
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+  # ML Model Configuration
+  model:
+    complexity_classifier:
+      enabled: true
+      accuracy_threshold: 0.95
+    feature_extractor:
+      enabled: true
+      max_features: 1000
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# Generator Service
+generator:
+  enabled: true
+  name: generator
+  replicaCount: 2
+  image:
+    repository: epic8/generator
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 8081
+    targetPort: 8081
+    metricsPort: 9090
+
+  resources: large  # Needs more resources for LLM inference
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  health:
+    liveness:
+      path: /health/live
+      initialDelaySeconds: 120  # Longer for model loading
+      periodSeconds: 30
+      timeoutSeconds: 15
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 60
+      periodSeconds: 15
+      timeoutSeconds: 10
+      failureThreshold: 3
+    startup:
+      path: /health/startup
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      timeoutSeconds: 10
+      failureThreshold: 40
+
+  # Multi-Model Configuration
+  models:
+    ollama:
+      enabled: true
+      endpoint: "http://ollama:11434"
+      models:
+        - "llama3.2:3b"
+        - "llama3.2:1b"
+    openai:
+      enabled: true
+      api_key_secret: epic8-secrets
+      api_key_key: openai-api-key
+    anthropic:
+      enabled: true
+      api_key_secret: epic8-secrets
+      api_key_key: anthropic-api-key
+    mistral:
+      enabled: false
+      api_key_secret: epic8-secrets
+      api_key_key: mistral-api-key
+
+  # Cost Optimization
+  cost:
+    tracking:
+      enabled: true
+      precision: 0.001
+    optimization:
+      enabled: true
+      target_cost_per_query: 0.01
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# Retriever Service
+retriever:
+  enabled: true
+  name: retriever
+  replicaCount: 2
+  image:
+    repository: epic8/retriever
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 8083
+    targetPort: 8083
+    metricsPort: 9090
+
+  resources: large  # Needs resources for vector operations
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  health:
+    liveness:
+      path: /health/live
+      initialDelaySeconds: 90  # Time for index loading
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 45
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    startup:
+      path: /health/startup
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 40
+
+  # Vector Index Configuration
+  vectorIndex:
+    faiss:
+      enabled: true
+      dimension: 384
+      index_type: "HNSW"
+    persistence:
+      enabled: true
+      storageClass: ""  # Use default
+      size: 10Gi
+
+  # BM25 Configuration
+  bm25:
+    enabled: true
+    k1: 1.2
+    b: 0.75
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# Cache Service
+cache:
+  enabled: true
+  name: cache
+  replicaCount: 2
+  image:
+    repository: epic8/cache
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 8084
+    targetPort: 8084
+    metricsPort: 9090
+
+  resources: medium
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  health:
+    liveness:
+      path: /health/live
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    startup:
+      path: /health/startup
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 20
+
+  # Redis Configuration
+  redis:
+    enabled: true
+    external:
+      enabled: false  # Use internal Redis by default
+      host: ""
+      port: 6379
+      password_secret: ""
+      password_key: ""
+    internal:
+      persistence:
+        enabled: true
+        storageClass: ""
+        size: 5Gi
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+
+  # Cache Configuration
+  cache:
+    ttl: 3600
+    maxSize: 1000
+    hitRateTarget: 0.6
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# Analytics Service
+analytics:
+  enabled: true
+  name: analytics
+  replicaCount: 2
+  image:
+    repository: epic8/analytics
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 8085
+    targetPort: 8085
+    metricsPort: 9090
+
+  resources: medium
+
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  health:
+    liveness:
+      path: /health/live
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    startup:
+      path: /health/startup
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+  # Database Configuration
+  postgresql:
+    enabled: true
+    external:
+      enabled: false
+      host: ""
+      port: 5432
+      database: epic8_analytics
+      username: epic8_user
+      password_secret: ""
+      password_key: ""
+    internal:
+      persistence:
+        enabled: true
+        storageClass: ""
+        size: 20Gi
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: "1"
+          memory: 2Gi
+
+  # Analytics Features
+  features:
+    cost_optimization: true
+    ab_testing: false
+    real_time_metrics: true
+    performance_monitoring: true
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+#============================================================================
+# Infrastructure Configuration
+#============================================================================
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: nginx  # nginx, traefik, istio
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+  hosts:
+    - host: epic8-platform.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: api-gateway
+          port: 8080
+        - path: /api/v1
+          pathType: Prefix
+          service: api-gateway
+          port: 8080
+
+  tls:
+    - secretName: epic8-platform-tls
+      hosts:
+        - epic8-platform.example.com
+
+# Network Policies
+networkPolicies:
+  enabled: true
+  defaultDeny: true
+  allowPrometheus: true
+  allowDNS: true
+
+  # Custom policies for service communication
+  policies:
+    - name: api-gateway-egress
+      podSelector:
+        matchLabels:
+          epic8.platform/service: api-gateway
+      egress:
+        - to:
+          - podSelector:
+              matchLabels:
+                epic8.platform/tier: backend
+
+    - name: backend-services-ingress
+      podSelector:
+        matchLabels:
+          epic8.platform/tier: backend
+      ingress:
+        - from:
+          - podSelector:
+              matchLabels:
+                epic8.platform/service: api-gateway
+
+# Storage Classes
+storageClass:
+  create: true
+  name: epic8-ssd
+  provisioner: ebs.csi.aws.com  # Cloud provider specific
+  parameters:
+    type: gp3
+    fsType: ext4
+  reclaimPolicy: Retain
+  allowVolumeExpansion: true
+
+# RBAC Configuration
+rbac:
+  create: true
+
+  serviceAccounts:
+    apiGateway:
+      create: true
+      name: epic8-api-gateway
+      annotations: {}
+    queryAnalyzer:
+      create: true
+      name: epic8-query-analyzer
+      annotations: {}
+    generator:
+      create: true
+      name: epic8-generator
+      annotations: {}
+    retriever:
+      create: true
+      name: epic8-retriever
+      annotations: {}
+    cache:
+      create: true
+      name: epic8-cache
+      annotations: {}
+    analytics:
+      create: true
+      name: epic8-analytics
+      annotations: {}
+
+  # Custom roles and bindings
+  roles: []
+  roleBindings: []
+  clusterRoles: []
+  clusterRoleBindings: []
+
+#============================================================================
+# Configuration Management
+#============================================================================
+
+# ConfigMaps
+configMaps:
+  common:
+    create: true
+    data:
+      LOG_LEVEL: "INFO"
+      LOG_FORMAT: "json"
+      LOG_TIMESTAMP: "true"
+      EPIC8_PLATFORM_NAME: "epic8-rag-platform"
+      EPIC8_PLATFORM_VERSION: "1.0.0"
+      EPIC8_ENVIRONMENT: "production"
+      SERVICE_DISCOVERY_ENABLED: "true"
+      SERVICE_MESH_ENABLED: "true"
+      HEALTH_CHECK_INTERVAL: "30"
+      HEALTH_CHECK_TIMEOUT: "10"
+      HEALTH_CHECK_RETRIES: "3"
+      METRICS_ENABLED: "true"
+      METRICS_PORT: "9090"
+      METRICS_PATH: "/metrics"
+      PROMETHEUS_ENABLED: "true"
+      REQUEST_TIMEOUT: "30"
+      MAX_CONCURRENT_REQUESTS: "100"
+      CONNECTION_POOL_SIZE: "10"
+      SECURITY_ENABLED: "true"
+      TLS_ENABLED: "true"
+      CORS_ENABLED: "true"
+      CORS_ORIGINS: "*"
+      CACHE_TTL: "3600"
+      CACHE_MAX_SIZE: "1000"
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_REQUESTS_PER_MINUTE: "100"
+      FEATURE_ANALYTICS: "true"
+      FEATURE_COST_TRACKING: "true"
+      FEATURE_PERFORMANCE_MONITORING: "true"
+      FEATURE_A_B_TESTING: "false"
+
+  serviceSpecific:
+    create: true
+    data: {}
+
+# Secrets
+secrets:
+  platform:
+    create: true
+    data: {}  # Will be populated via external secret management
+
+#============================================================================
+# Monitoring and Observability
+#============================================================================
+
+# Prometheus Configuration
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    path: /metrics
+    labels: {}
+
+# Grafana Dashboards
+grafana:
+  enabled: true
+  dashboards:
+    enabled: true
+
+# Jaeger Tracing
+jaeger:
+  enabled: true
+  agent:
+    enabled: true
+
+#============================================================================
+# Advanced Features
+#============================================================================
+
+# External Dependencies
+externalDependencies:
+  redis:
+    enabled: false
+  postgresql:
+    enabled: false
+  elasticsearch:
+    enabled: false
+
+# Feature Flags
+features:
+  monitoring: true
+  security: true
+  ingress: true
+  networkPolicies: true
+  autoscaling: true
+  serviceMesh: true
+  externalSecrets: false
+
+# Tests
+tests:
+  enabled: true
+  image:
+    repository: epic8/test-runner
+    tag: "latest"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi

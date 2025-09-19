@@ -1,0 +1,37 @@
+{{/*
+Epic 8 Platform - Query Analyzer Service Template
+ML-powered query complexity analysis service
+*/}}
+
+{{- if .Values.queryAnalyzer.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "query-analyzer" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "query-analyzer" "tier" "backend" "component" "analyzer" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Query Analyzer Service - ML-based query complexity classification"
+    {{- if include "epic8-platform.monitoring.enabled" . }}
+    {{- include "epic8-platform.prometheusAnnotations" (dict "port" (.Values.queryAnalyzer.service.port | toString) "path" "/metrics") | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.queryAnalyzer.service.type }}
+  ports:
+  - name: http
+    port: {{ .Values.queryAnalyzer.service.port }}
+    targetPort: {{ .Values.queryAnalyzer.service.targetPort }}
+    protocol: TCP
+  {{- if include "epic8-platform.monitoring.enabled" . }}
+  - name: metrics
+    port: {{ .Values.queryAnalyzer.service.metricsPort }}
+    targetPort: metrics
+    protocol: TCP
+  {{- end }}
+  selector:
+    {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "query-analyzer" "context" .) | nindent 4 }}
+  sessionAffinity: None
+{{- end }}

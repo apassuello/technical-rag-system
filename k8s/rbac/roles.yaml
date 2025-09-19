@@ -1,0 +1,176 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: epic8-service-role
+  labels:
+    epic8.platform/component: rbac
+    epic8.platform/role-type: service
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: rbac
+  annotations:
+    epic8.platform/description: "Basic role for Epic 8 services"
+rules:
+# ConfigMaps - read access for service configuration
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+  resourceNames: ["epic8-common-config", "query-analyzer-config", "generator-config", "retriever-config", "cache-config", "analytics-config"]
+
+# Secrets - read access for service secrets
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+  resourceNames: ["epic8-secrets", "llm-api-keys"]
+
+# Services - read access for service discovery
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+
+# Endpoints - read access for service discovery
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get", "list", "watch"]
+
+# Pods - read access for metadata and health checks
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+  resourceNames: []
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: epic8-api-gateway-role
+  labels:
+    epic8.platform/service: api-gateway
+    epic8.platform/component: rbac
+    epic8.platform/role-type: gateway
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Extended role for API Gateway service"
+rules:
+# Include all basic service permissions
+- apiGroups: [""]
+  resources: ["configmaps", "secrets", "services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch"]
+
+# Additional permissions for gateway functionality
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+
+# Events - create access for audit logging
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: epic8-analytics-role
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: rbac
+    epic8.platform/role-type: analytics
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Extended role for Analytics service"
+rules:
+# Include all basic service permissions
+- apiGroups: [""]
+  resources: ["configmaps", "secrets", "services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch"]
+
+# Additional permissions for analytics and monitoring
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch", "create"]
+
+# Metrics access for cost and performance tracking
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+
+# Custom resources for analytics data
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: epic8-monitoring-role
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/role-type: monitoring
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Role for monitoring and observability stack"
+rules:
+# Full access to monitoring secrets
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+  resourceNames: ["monitoring-secrets"]
+
+# ConfigMaps for monitoring configuration
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+# Services and endpoints for service discovery
+- apiGroups: [""]
+  resources: ["services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch"]
+
+# Metrics access
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+
+# Events for alerting
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: epic8-cluster-reader
+  labels:
+    epic8.platform/component: rbac
+    epic8.platform/role-type: cluster
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: rbac
+  annotations:
+    epic8.platform/description: "Cluster-level read access for Epic 8 platform"
+rules:
+# Node information for analytics and monitoring
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]
+
+# Namespace information
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch"]
+
+# Cluster-level metrics
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["nodes", "pods"]
+  verbs: ["get", "list"]
+
+# Custom Resource Definitions (for future extensions)
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list", "watch"]

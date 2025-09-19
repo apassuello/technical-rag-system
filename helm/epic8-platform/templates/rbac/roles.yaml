@@ -1,0 +1,174 @@
+{{/*
+Epic 8 Platform - RBAC Roles Template
+Role definitions for Epic 8 platform services
+*/}}
+
+{{- if .Values.rbac.create }}
+
+{{- range .Values.rbac.roles }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "epic8-platform.namespace" $ }}
+  labels:
+    {{- include "epic8-platform.labels" $ | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role
+  annotations:
+    {{- include "epic8-platform.annotations" $ | nindent 4 }}
+    epic8.platform/description: {{ .description | default "Custom role for Epic 8 platform" | quote }}
+rules:
+{{- range .rules }}
+- apiGroups:
+  {{- range .apiGroups }}
+  - {{ . | quote }}
+  {{- end }}
+  resources:
+  {{- range .resources }}
+  - {{ . | quote }}
+  {{- end }}
+  verbs:
+  {{- range .verbs }}
+  - {{ . | quote }}
+  {{- end }}
+  {{- if .resourceNames }}
+  resourceNames:
+  {{- range .resourceNames }}
+  - {{ . | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{- range .Values.rbac.clusterRoles }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "epic8-platform.fullname" $ }}-{{ .name }}
+  labels:
+    {{- include "epic8-platform.labels" $ | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: cluster-role
+  annotations:
+    {{- include "epic8-platform.annotations" $ | nindent 4 }}
+    epic8.platform/description: {{ .description | default "Custom cluster role for Epic 8 platform" | quote }}
+rules:
+{{- range .rules }}
+- apiGroups:
+  {{- range .apiGroups }}
+  - {{ . | quote }}
+  {{- end }}
+  resources:
+  {{- range .resources }}
+  - {{ . | quote }}
+  {{- end }}
+  verbs:
+  {{- range .verbs }}
+  - {{ . | quote }}
+  {{- end }}
+  {{- if .resourceNames }}
+  resourceNames:
+  {{- range .resourceNames }}
+  - {{ . | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Default Epic 8 Platform Role - Basic permissions for all services
+*/}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-default
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role
+    epic8.platform/role-scope: default
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Default role for Epic 8 platform services"
+rules:
+# Basic pod permissions
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+# ConfigMap and Secret read access
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+# Service discovery
+- apiGroups: [""]
+  resources: ["services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+# Event creation for logging
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+
+{{/*
+Monitoring Role - Permissions for Prometheus and monitoring tools
+*/}}
+{{- if include "epic8-platform.monitoring.enabled" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-monitoring
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role
+    epic8.platform/role-scope: monitoring
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Monitoring role for Prometheus and observability tools"
+rules:
+# Metrics scraping
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+# ServiceMonitor access (if using Prometheus Operator)
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["servicemonitors", "podmonitors"]
+  verbs: ["get", "list", "watch"]
+{{- end }}
+
+{{/*
+Storage Role - Permissions for persistent volume operations
+*/}}
+{{- if or .Values.retriever.vectorIndex.persistence.enabled .Values.cache.redis.internal.persistence.enabled .Values.analytics.postgresql.internal.persistence.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-storage
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: rbac
+    epic8.platform/rbac-type: role
+    epic8.platform/role-scope: storage
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Storage role for persistent volume operations"
+rules:
+# PVC operations
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+# Volume access
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["get", "list", "watch"]
+{{- end }}
+
+{{- end }}

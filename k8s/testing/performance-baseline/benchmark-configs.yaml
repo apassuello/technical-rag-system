@@ -1,0 +1,411 @@
+---
+# Epic 8 Performance Baseline Configuration
+# Swiss engineering precision for measurable performance standards
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-performance-baselines
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: performance-baselines
+    epic8.platform/tier: benchmarking
+    app.kubernetes.io/name: epic8-baselines
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "Performance baselines and benchmarking standards"
+    epic8.platform/swiss-engineering: "precision-measurement"
+    epic8.platform/version: "1.0.0"
+data:
+  # System-wide Performance Baselines
+  system-baselines.yaml: |
+    # Epic 8 Platform Performance Standards
+    epic8_platform:
+      # End-to-End Performance Targets
+      end_to_end_latency:
+        p50_target_ms: 800    # 50th percentile target
+        p95_target_ms: 2000   # 95th percentile target (SLO)
+        p99_target_ms: 5000   # 99th percentile target
+        max_acceptable_ms: 10000  # Hard limit
+
+      # Throughput Targets
+      throughput:
+        min_rps: 50           # Minimum requests per second
+        target_rps: 200       # Target requests per second
+        max_rps: 1000         # Maximum sustainable RPS
+        burst_rps: 1500       # Short-term burst capacity
+
+      # Concurrent User Support
+      concurrent_users:
+        baseline: 100         # Baseline concurrent users
+        target: 500          # Target concurrent users
+        max_supported: 1000  # Maximum concurrent users
+        stress_test: 1500    # Stress test limit
+
+      # Resource Utilization Efficiency (Swiss Engineering)
+      resource_efficiency:
+        cpu_utilization_target: 0.70      # 70% CPU utilization target
+        memory_utilization_target: 0.70   # 70% memory utilization target
+        storage_utilization_target: 0.80  # 80% storage utilization target
+        network_utilization_target: 0.60  # 60% network utilization target
+
+      # Cost Efficiency Targets
+      cost_efficiency:
+        cost_per_query_target_usd: 0.01   # $0.01 per query target
+        cost_per_user_hour_usd: 0.10      # $0.10 per user hour
+        cost_per_gb_storage_usd: 0.02     # $0.02 per GB storage
+        spot_instance_percentage: 0.60    # 60% spot instances for cost optimization
+
+      # Availability and Reliability
+      availability:
+        uptime_target: 0.999              # 99.9% uptime SLO
+        mttr_minutes: 5                   # Mean Time To Recovery < 5 minutes
+        mtbf_hours: 720                   # Mean Time Between Failures > 30 days
+        error_rate_threshold: 0.01        # Error rate < 1%
+
+  # Service-Specific Performance Baselines
+  service-baselines.yaml: |
+    # API Gateway Performance Standards
+    api_gateway:
+      latency:
+        p95_target_ms: 500
+        p99_target_ms: 1000
+        connect_timeout_ms: 5000
+        read_timeout_ms: 30000
+
+      throughput:
+        target_rps: 500
+        max_rps: 1000
+        connections_per_pod: 1000
+
+      scaling:
+        min_replicas: 2
+        max_replicas: 5
+        target_cpu_utilization: 70
+        target_memory_utilization: 80
+        scale_up_threshold_rps: 400
+        scale_down_threshold_rps: 100
+
+    # Generator Service Performance Standards (ML Workload)
+    generator:
+      latency:
+        p95_target_ms: 1500   # ML inference time
+        p99_target_ms: 3000
+        model_load_timeout_ms: 30000
+        generation_timeout_ms: 15000
+
+      throughput:
+        target_rps: 50        # Lower RPS due to ML complexity
+        max_rps: 100
+        concurrent_generations: 10
+
+      scaling:
+        min_replicas: 3
+        max_replicas: 10
+        target_cpu_utilization: 60    # Lower due to ML workload
+        target_memory_utilization: 75
+        model_switching_overhead_ms: 100
+
+      ml_metrics:
+        accuracy_threshold: 0.95
+        relevance_score_threshold: 0.8
+        cost_per_generation_usd: 0.005
+
+    # Query Analyzer Performance Standards (ML Classification)
+    query_analyzer:
+      latency:
+        p95_target_ms: 200    # Fast classification
+        p99_target_ms: 500
+        feature_extraction_ms: 50
+        classification_timeout_ms: 1000
+
+      throughput:
+        target_rps: 200
+        max_rps: 400
+        concurrent_analyses: 20
+
+      scaling:
+        min_replicas: 2
+        max_replicas: 6
+        target_cpu_utilization: 65
+        target_memory_utilization: 70
+
+      ml_metrics:
+        classification_accuracy: 0.95
+        feature_dimensionality: 500
+        model_inference_ms: 150
+
+    # Retriever Service Performance Standards (Vector Search)
+    retriever:
+      latency:
+        p95_target_ms: 100    # Fast vector search
+        p99_target_ms: 250
+        index_build_timeout_ms: 300000
+        search_timeout_ms: 5000
+
+      throughput:
+        target_rps: 300
+        max_rps: 600
+        concurrent_searches: 50
+
+      scaling:
+        min_replicas: 2
+        max_replicas: 8
+        target_cpu_utilization: 75
+        target_memory_utilization: 85  # High memory for vector indices
+
+      vector_metrics:
+        index_hit_rate: 0.95
+        search_precision_at_10: 0.85
+        index_size_mb: 1024
+        vector_dimension: 384
+
+    # Cache Service Performance Standards
+    cache:
+      latency:
+        p95_target_ms: 10     # Very fast cache access
+        p99_target_ms: 25
+        eviction_time_ms: 100
+
+      throughput:
+        target_rps: 1000      # High throughput for cache
+        max_rps: 2000
+        concurrent_connections: 500
+
+      scaling:
+        min_replicas: 1
+        max_replicas: 3
+        target_cpu_utilization: 70
+        target_memory_utilization: 90  # High memory utilization for cache
+
+      cache_metrics:
+        hit_rate: 0.90
+        eviction_rate_per_minute: 100
+        memory_efficiency: 0.85
+        ttl_average_seconds: 3600
+
+    # Analytics Service Performance Standards
+    analytics:
+      latency:
+        p95_target_ms: 5000   # Background processing
+        p99_target_ms: 10000
+        batch_processing_timeout_ms: 300000
+
+      throughput:
+        target_tasks_per_minute: 1000
+        max_tasks_per_minute: 2000
+        concurrent_processes: 5
+
+      scaling:
+        min_replicas: 1
+        max_replicas: 2
+        target_cpu_utilization: 80
+        target_memory_utilization: 75
+
+      analytics_metrics:
+        processing_lag_minutes: 60
+        data_integrity_rate: 0.999
+        cost_tracking_accuracy: 0.999
+
+  # Auto-scaling Performance Baselines
+  autoscaling-baselines.yaml: |
+    # HPA (Horizontal Pod Autoscaler) Performance Standards
+    hpa_performance:
+      scaling_responsiveness:
+        scale_up_time_seconds: 60      # Time to scale up
+        scale_down_time_seconds: 300   # Time to scale down
+        stabilization_time_seconds: 120 # Time to stabilize
+
+      scaling_accuracy:
+        target_utilization_variance: 0.05  # ±5% variance acceptable
+        overshoot_threshold: 0.15          # Max 15% overshoot
+        undershoot_threshold: 0.10         # Max 10% undershoot
+
+      scaling_efficiency:
+        resource_waste_threshold: 0.20     # Max 20% resource waste
+        scaling_frequency_per_hour: 6      # Max 6 scaling events per hour
+
+    # VPA (Vertical Pod Autoscaler) Performance Standards
+    vpa_performance:
+      recommendation_accuracy:
+        cpu_recommendation_variance: 0.10  # ±10% variance
+        memory_recommendation_variance: 0.15 # ±15% variance
+        recommendation_frequency_hours: 24   # Daily recommendations
+
+      resource_optimization:
+        cost_reduction_target: 0.15        # 15% cost reduction target
+        performance_impact_threshold: 0.05  # Max 5% performance impact
+
+    # Cluster Autoscaler Performance Standards
+    cluster_autoscaler_performance:
+      node_provisioning:
+        provision_time_minutes: 5          # Max 5 minutes to provision node
+        deprovision_time_minutes: 10       # Max 10 minutes to deprovision
+
+      cost_optimization:
+        spot_instance_success_rate: 0.95   # 95% spot instance success
+        node_utilization_target: 0.70      # 70% node utilization target
+
+  # Load Testing Performance Baselines
+  load-testing-baselines.yaml: |
+    # K6 Load Testing Standards
+    k6_performance:
+      test_execution:
+        baseline_duration_minutes: 20      # Baseline test duration
+        peak_duration_minutes: 10          # Peak load test duration
+        stress_duration_minutes: 15        # Stress test duration
+        endurance_duration_minutes: 60     # Endurance test duration
+
+      success_criteria:
+        error_rate_threshold: 0.01         # Max 1% error rate
+        p95_latency_degradation: 0.20      # Max 20% latency degradation
+        throughput_degradation: 0.10       # Max 10% throughput degradation
+
+    # Gatling Load Testing Standards
+    gatling_performance:
+      test_scenarios:
+        ramp_up_duration_seconds: 120      # 2 minutes ramp up
+        steady_state_duration_seconds: 600  # 10 minutes steady state
+        ramp_down_duration_seconds: 60     # 1 minute ramp down
+
+      reporting:
+        percentile_precision: 2            # 2 decimal places
+        response_time_buckets: [50, 95, 99, 99.9]
+        throughput_sampling_seconds: 1     # 1 second sampling
+
+  # Swiss Engineering Quality Standards
+  swiss-engineering-standards.yaml: |
+    # Precision Standards
+    precision:
+      measurement_accuracy: 0.01          # 1% measurement accuracy
+      timing_precision_ms: 1              # 1ms timing precision
+      resource_allocation_precision: 0.05  # 5% resource precision
+
+    # Efficiency Standards
+    efficiency:
+      resource_utilization_target: 0.70   # 70% efficiency target
+      waste_threshold: 0.15               # Max 15% waste
+      optimization_cycle_hours: 24        # Daily optimization cycles
+
+    # Reliability Standards
+    reliability:
+      availability_target: 0.999          # 99.9% availability
+      recovery_time_minutes: 5            # Max 5 minutes recovery
+      consistency_variance: 0.05          # Max 5% variance
+
+    # Quality Standards
+    quality:
+      performance_regression_threshold: 0.10  # Max 10% regression
+      reliability_improvement_target: 0.05    # 5% improvement target
+      efficiency_improvement_target: 0.10     # 10% efficiency improvement
+
+---
+# Performance Monitoring Job
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: epic8-performance-baseline-monitor
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: performance-monitoring
+    epic8.platform/automation: baseline-validation
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: epic8-monitoring
+          containers:
+          - name: baseline-monitor
+            image: prom/prometheus:latest
+            command: ["sh", "-c"]
+            args:
+              - |
+                echo "🔍 Swiss Engineering Performance Baseline Validation"
+                echo "📊 Checking Epic 8 performance against baselines..."
+
+                # Query Prometheus for current metrics
+                prometheus_url="http://prometheus:9090"
+
+                # Validate end-to-end latency
+                p95_latency=$(curl -s "${prometheus_url}/api/v1/query?query=histogram_quantile(0.95,rate(epic8_system_end_to_end_duration_seconds_bucket[5m]))" | jq '.data.result[0].value[1]' | tr -d '"')
+
+                if (( $(echo "$p95_latency > 2.0" | bc -l) )); then
+                  echo "⚠️ P95 latency ($p95_latency s) exceeds 2s baseline"
+                else
+                  echo "✅ P95 latency ($p95_latency s) within baseline"
+                fi
+
+                # Validate throughput
+                current_rps=$(curl -s "${prometheus_url}/api/v1/query?query=rate(epic8_api_gateway_requests_total[5m])" | jq '.data.result[0].value[1]' | tr -d '"')
+
+                if (( $(echo "$current_rps < 50" | bc -l) )); then
+                  echo "⚠️ Throughput ($current_rps RPS) below 50 RPS baseline"
+                else
+                  echo "✅ Throughput ($current_rps RPS) meets baseline"
+                fi
+
+                # Validate resource efficiency
+                cpu_util=$(curl -s "${prometheus_url}/api/v1/query?query=avg(epic8_cluster_cpu_utilization)" | jq '.data.result[0].value[1]' | tr -d '"')
+
+                if (( $(echo "$cpu_util < 0.70" | bc -l) )); then
+                  echo "💡 CPU utilization ($cpu_util) below 70% efficiency target"
+                else
+                  echo "✅ CPU utilization ($cpu_util) meets efficiency target"
+                fi
+
+                echo "📈 Performance baseline validation complete"
+
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 200m
+                memory: 256Mi
+          restartPolicy: OnFailure
+
+---
+# Performance Regression Detection
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-regression-detection
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: regression-detection
+data:
+  detection-rules.yaml: |
+    # Performance Regression Detection Rules
+    regression_thresholds:
+      # Latency regression thresholds
+      latency:
+        p95_increase_threshold: 0.20      # 20% increase = regression
+        p99_increase_threshold: 0.25      # 25% increase = regression
+        moving_average_window_minutes: 60  # 1 hour moving average
+
+      # Throughput regression thresholds
+      throughput:
+        decrease_threshold: 0.15          # 15% decrease = regression
+        moving_average_window_minutes: 30  # 30 minute moving average
+
+      # Error rate regression thresholds
+      error_rate:
+        increase_threshold: 0.005         # 0.5% increase = regression
+        baseline_window_hours: 24         # 24 hour baseline
+
+      # Resource efficiency regression thresholds
+      efficiency:
+        cpu_efficiency_decrease: 0.10     # 10% decrease = regression
+        memory_efficiency_decrease: 0.10  # 10% decrease = regression
+        cost_increase_threshold: 0.15     # 15% cost increase = regression
+
+    # Detection methodology
+    detection_methodology:
+      statistical_method: "mann_whitney_u"  # Non-parametric statistical test
+      confidence_level: 0.95               # 95% confidence level
+      minimum_sample_size: 100             # Minimum samples for valid test
+      outlier_removal_method: "iqr"        # Interquartile range outlier removal

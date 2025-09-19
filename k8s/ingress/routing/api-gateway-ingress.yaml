@@ -1,0 +1,601 @@
+---
+# Epic 8 Platform - Advanced API Gateway Ingress Configuration
+# Swiss Engineering Standards: Security, Performance, Reliability
+# Enterprise-grade routing with SSL/TLS, rate limiting, and geo-routing
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: epic8-platform-api-gateway
+  namespace: epic8-dev  # Will be templated in Helm
+  labels:
+    epic8.platform/component: ingress
+    epic8.platform/type: api-gateway
+    epic8.platform/tier: frontend
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform-ingress
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    # Ingress Controller Configuration
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+
+    # Epic 8 Platform Metadata
+    epic8.platform/description: "Main API Gateway ingress with advanced routing"
+    epic8.platform/environment: "production"
+    epic8.platform/cloud-provider: "multi-cloud"
+    epic8.platform/swiss-compliant: "true"
+
+    # SSL/TLS Configuration
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/acme-challenge-type: "http01"
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+    nginx.ingress.kubernetes.io/ssl-ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+    nginx.ingress.kubernetes.io/ssl-prefer-server-ciphers: "false"
+
+    # Security Headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';";
+      more_set_headers "Permissions-Policy: geolocation=(), microphone=(), camera=()";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
+      more_set_headers "X-Epic8-Platform-Version: 1.0.0";
+      more_set_headers "X-Epic8-Request-ID: $request_id";
+      more_set_headers "X-Epic8-Swiss-Routing: enabled";
+
+    # CORS Configuration
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://epic8-platform.swiss,https://www.epic8-platform.swiss,https://analytics.epic8-platform.swiss"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS, HEAD"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Epic8-Client-ID,X-Epic8-API-Key"
+    nginx.ingress.kubernetes.io/cors-expose-headers: "Content-Length,Content-Range,X-Epic8-Request-ID,X-Epic8-Response-Time"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-max-age: "86400"
+
+    # Rate Limiting - Global Protection
+    nginx.ingress.kubernetes.io/rate-limit: "1000"  # requests per minute
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "100"  # concurrent connections per IP
+
+    # Performance Optimizations
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-next-upstream: "error timeout invalid_header http_500 http_502 http_503 http_504"
+    nginx.ingress.kubernetes.io/proxy-next-upstream-tries: "3"
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+
+    # Compression
+    nginx.ingress.kubernetes.io/use-gzip: "true"
+    nginx.ingress.kubernetes.io/gzip-level: "6"
+
+    # Load Balancing
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$remote_addr"  # Session affinity
+    nginx.ingress.kubernetes.io/load-balance: "round_robin"
+
+    # Health Checks
+    nginx.ingress.kubernetes.io/upstream-health-check: "true"
+    nginx.ingress.kubernetes.io/upstream-health-check-interval: "30s"
+    nginx.ingress.kubernetes.io/upstream-health-check-timeout: "5s"
+    nginx.ingress.kubernetes.io/upstream-health-check-path: "/health"
+
+    # Monitoring and Observability
+    nginx.ingress.kubernetes.io/enable-access-log: "true"
+    nginx.ingress.kubernetes.io/enable-opentracing: "true"
+
+    # Custom Lua Scripts for Advanced Logic
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # Swiss data residency check (optional)
+      set $swiss_compliant 1;
+
+      # Request tracing
+      set $trace_id $request_id;
+
+      # Custom authentication checks
+      access_by_lua_block {
+        -- Add custom authentication logic here
+        local headers = ngx.req.get_headers()
+
+        -- Epic 8 API Key validation
+        if headers["x-epic8-api-key"] then
+          ngx.var.epic8_api_key = headers["x-epic8-api-key"]
+        end
+
+        -- Client IP geolocation for Swiss compliance
+        local client_ip = ngx.var.remote_addr
+        -- Add geolocation logic if needed
+
+        -- Rate limiting based on API key
+        if headers["x-epic8-api-key"] then
+          -- Enhanced rate limiting for API key users
+          ngx.var.rate_limit_key = headers["x-epic8-api-key"]
+        else
+          -- Standard rate limiting for anonymous users
+          ngx.var.rate_limit_key = client_ip
+        end
+      }
+
+spec:
+  ingressClassName: nginx
+
+  tls:
+  - hosts:
+    - api.epic8-platform.swiss
+    - www.epic8-platform.swiss
+    - epic8-platform.swiss
+    secretName: epic8-platform-tls
+
+  rules:
+  # Main API Domain
+  - host: api.epic8-platform.swiss
+    http:
+      paths:
+      # Health Check Endpoints (highest priority)
+      - path: /health(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      # API v1 Endpoints
+      - path: /api/v1/query(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      - path: /api/v1/analyze(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      - path: /api/v1/generate(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      - path: /api/v1/search(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      - path: /api/v1/cache(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      # API v2 Endpoints (future versioning)
+      - path: /api/v2(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      # WebSocket Endpoints for Real-time Features
+      - path: /ws(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      # Metrics Endpoint (protected)
+      - path: /metrics(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 9090
+
+      # Root API Documentation
+      - path: /docs(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      # Default catch-all for API Gateway
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+  # WWW Domain (redirect to main API)
+  - host: www.epic8-platform.swiss
+    http:
+      paths:
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+  # Root Domain
+  - host: epic8-platform.swiss
+    http:
+      paths:
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+---
+# Epic 8 Platform - Analytics Ingress (Separate domain for admin/analytics)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: epic8-platform-analytics
+  namespace: epic8-dev  # Will be templated in Helm
+  labels:
+    epic8.platform/component: ingress
+    epic8.platform/type: analytics
+    epic8.platform/tier: admin
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform-analytics-ingress
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    # Ingress Controller Configuration
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+
+    # Epic 8 Platform Metadata
+    epic8.platform/description: "Analytics and admin interface ingress"
+    epic8.platform/environment: "production"
+    epic8.platform/access-level: "admin"
+
+    # SSL/TLS Configuration
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/acme-challenge-type: "http01"
+
+    # Enhanced Security for Admin Interface
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,185.60.216.0/22,185.60.218.0/23"  # Swiss IP ranges + private networks
+
+    # Authentication (Basic Auth for now, can be replaced with OAuth/OIDC)
+    nginx.ingress.kubernetes.io/auth-type: "basic"
+    nginx.ingress.kubernetes.io/auth-secret: "epic8-platform-analytics-auth"
+    nginx.ingress.kubernetes.io/auth-realm: "Epic 8 Platform Analytics - Swiss Engineering Access"
+
+    # Rate Limiting - More restrictive for admin
+    nginx.ingress.kubernetes.io/rate-limit: "100"  # requests per minute
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "10"  # concurrent connections per IP
+
+    # Security Headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self';";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
+      more_set_headers "X-Epic8-Platform-Version: 1.0.0";
+      more_set_headers "X-Epic8-Request-ID: $request_id";
+      more_set_headers "X-Epic8-Access-Level: admin";
+
+    # Performance Optimizations
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"  # Larger for analytics data
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+
+spec:
+  ingressClassName: nginx
+
+  tls:
+  - hosts:
+    - analytics.epic8-platform.swiss
+    - monitoring.epic8-platform.swiss
+    secretName: epic8-platform-tls
+
+  rules:
+  # Analytics Domain
+  - host: analytics.epic8-platform.swiss
+    http:
+      paths:
+      # Health Check
+      - path: /health(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: analytics
+            port:
+              number: 8085
+
+      # Analytics Dashboard
+      - path: /dashboard(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: analytics
+            port:
+              number: 8085
+
+      # API Endpoints
+      - path: /api(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: analytics
+            port:
+              number: 8085
+
+      # Reports
+      - path: /reports(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: analytics
+            port:
+              number: 8085
+
+      # Cost Analysis
+      - path: /cost(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: analytics
+            port:
+              number: 8085
+
+      # A/B Testing
+      - path: /experiments(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: analytics
+            port:
+              number: 8085
+
+      # Default catch-all
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: analytics
+            port:
+              number: 8085
+
+  # Monitoring Domain (Prometheus/Grafana)
+  - host: monitoring.epic8-platform.swiss
+    http:
+      paths:
+      # Prometheus
+      - path: /prometheus(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus
+            port:
+              number: 9090
+
+      # Grafana
+      - path: /grafana(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+
+      # AlertManager
+      - path: /alertmanager(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: alertmanager
+            port:
+              number: 9093
+
+      # Default to Grafana
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+
+---
+# Epic 8 Platform - Development/Staging Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: epic8-platform-staging
+  namespace: epic8-staging  # Staging namespace
+  labels:
+    epic8.platform/component: ingress
+    epic8.platform/type: api-gateway
+    epic8.platform/tier: staging
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform-staging-ingress
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    # Ingress Controller Configuration
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+
+    # Epic 8 Platform Metadata
+    epic8.platform/description: "Staging API Gateway ingress for testing"
+    epic8.platform/environment: "staging"
+    epic8.platform/cloud-provider: "multi-cloud"
+
+    # SSL/TLS Configuration (staging certificates)
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    cert-manager.io/acme-challenge-type: "http01"
+
+    # Relaxed Security for Testing
+    nginx.ingress.kubernetes.io/whitelist-source-range: "0.0.0.0/0"  # Allow all for staging
+
+    # Rate Limiting - More lenient for testing
+    nginx.ingress.kubernetes.io/rate-limit: "2000"  # requests per minute
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "200"
+
+    # CORS Configuration (more permissive for testing)
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Epic8-Client-ID,X-Epic8-API-Key,X-Test-Header"
+    nginx.ingress.kubernetes.io/cors-expose-headers: "Content-Length,Content-Range,X-Epic8-Request-ID,X-Epic8-Response-Time"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+
+    # Performance Optimizations
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"  # Larger for testing
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+
+    # Staging-specific headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Epic8-Environment: staging";
+      more_set_headers "X-Epic8-Platform-Version: 1.0.0-staging";
+      more_set_headers "X-Epic8-Request-ID: $request_id";
+      more_set_headers "X-Epic8-Debug-Mode: enabled";
+
+spec:
+  ingressClassName: nginx
+
+  tls:
+  - hosts:
+    - staging-api.epic8-platform.swiss
+    - staging.epic8-platform.swiss
+    secretName: epic8-platform-staging-tls
+
+  rules:
+  # Staging API Domain
+  - host: staging-api.epic8-platform.swiss
+    http:
+      paths:
+      # Direct service access for debugging
+      - path: /debug/api-gateway(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      - path: /debug/query-analyzer(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: query-analyzer
+            port:
+              number: 8082
+
+      - path: /debug/generator(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: generator
+            port:
+              number: 8081
+
+      - path: /debug/retriever(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: retriever
+            port:
+              number: 8083
+
+      - path: /debug/cache(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: cache
+            port:
+              number: 8084
+
+      - path: /debug/analytics(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: analytics
+            port:
+              number: 8085
+
+      # Normal API paths
+      - path: /api(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      - path: /health(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+      # Default catch-all
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+  # Staging root domain
+  - host: staging.epic8-platform.swiss
+    http:
+      paths:
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080

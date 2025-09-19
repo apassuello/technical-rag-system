@@ -1,0 +1,195 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generator
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: generator
+    epic8.platform/tier: backend
+    epic8.platform/version: v1
+    app.kubernetes.io/name: generator
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: generator
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    epic8.platform/description: "Generator Service - Multi-model answer generation with Epic 1 integration"
+    epic8.platform/documentation: "https://github.com/epic8/docs/services/generator"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      epic8.platform/service: generator
+      app.kubernetes.io/name: generator
+  template:
+    metadata:
+      labels:
+        epic8.platform/service: generator
+        epic8.platform/component: generator
+        epic8.platform/tier: backend
+        epic8.platform/version: v1
+        app.kubernetes.io/name: generator
+        app.kubernetes.io/part-of: epic8-platform
+        app.kubernetes.io/component: generator
+        app.kubernetes.io/version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: epic8-generator
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: generator
+        image: epic8/generator:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8081
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: PYTHONPATH
+          value: "/app:/app/src"
+        - name: PROJECT_ROOT
+          value: "/app"
+        - name: GENERATOR_CONFIG_FILE
+          value: "/app/config.yaml"
+        - name: OLLAMA_URL
+          value: "http://ollama:11434"
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        envFrom:
+        - configMapRef:
+            name: epic8-common-config
+        - configMapRef:
+            name: generator-config
+        - secretRef:
+            name: epic8-secrets
+        - secretRef:
+            name: llm-api-keys
+        resources:
+          requests:
+            cpu: "1"
+            memory: 2Gi
+            ephemeral-storage: 2Gi
+          limits:
+            cpu: "2"
+            memory: 4Gi
+            ephemeral-storage: 4Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 15
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 90
+          periodSeconds: 10
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 40
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: var-run
+          mountPath: /var/run
+        - name: logs
+          mountPath: /app/logs
+        - name: cache
+          mountPath: /app/cache
+        - name: models
+          mountPath: /app/models
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: var-run
+        emptyDir: {}
+      - name: logs
+        persistentVolumeClaim:
+          claimName: generator-logs
+      - name: cache
+        persistentVolumeClaim:
+          claimName: generator-cache
+      - name: models
+        persistentVolumeClaim:
+          claimName: generator-models
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: epic8.platform/service
+                  operator: In
+                  values:
+                  - generator
+              topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            epic8.platform/service: generator
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: generator-pdb
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: generator
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      epic8.platform/service: generator

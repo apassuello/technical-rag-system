@@ -1,0 +1,154 @@
+{{/*
+Epic 8 Platform - Namespace Template
+Dedicated namespace for Epic 8 platform with proper labeling and security
+*/}}
+
+{{- if .Values.namespace.create }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: namespace
+    {{- with .Values.namespace.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+    # Kubernetes standard labels
+    kubernetes.io/metadata.name: {{ include "epic8-platform.namespace" . }}
+
+    # Security and networking labels
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+
+    # Service mesh labels (Istio)
+    {{- if and .Values.global.serviceMesh.enabled (eq .Values.global.serviceMesh.type "istio") }}
+    istio-injection: enabled
+    istio.io/rev: default
+    {{- end }}
+
+    # Monitoring labels
+    {{- if include "epic8-platform.monitoring.enabled" . }}
+    prometheus.io/scrape: "true"
+    {{- end }}
+
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Dedicated namespace for Epic 8 Cloud-Native RAG Platform"
+    epic8.platform/security-level: "enterprise"
+    epic8.platform/network-policy: {{ .Values.networkPolicies.enabled | quote }}
+    epic8.platform/service-mesh: {{ .Values.global.serviceMesh.enabled | quote }}
+    epic8.platform/created-by: "helm-chart"
+    {{- with .Values.namespace.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+    # Security annotations
+    pod-security.kubernetes.io/enforce-version: "v1.28"
+    pod-security.kubernetes.io/audit-version: "v1.28"
+    pod-security.kubernetes.io/warn-version: "v1.28"
+
+    # Resource management annotations
+    {{- if eq .Values.global.environment "production" }}
+    scheduler.alpha.kubernetes.io/node-selector: "epic8.platform/workload=production"
+    {{- else if eq .Values.global.environment "staging" }}
+    scheduler.alpha.kubernetes.io/node-selector: "epic8.platform/workload=staging"
+    {{- end }}
+
+{{/*
+Additional namespace configuration objects
+*/}}
+
+{{/*
+Resource Quota for the namespace
+*/}}
+{{- if eq .Values.global.environment "production" }}
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-resource-quota
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: resource-quota
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Resource quota for Epic 8 platform namespace"
+spec:
+  hard:
+    # Compute resources
+    requests.cpu: "20"
+    requests.memory: "40Gi"
+    limits.cpu: "40"
+    limits.memory: "80Gi"
+
+    # Storage resources
+    requests.storage: "500Gi"
+    persistentvolumeclaims: "20"
+
+    # Object counts
+    pods: "100"
+    services: "20"
+    secrets: "50"
+    configmaps: "50"
+
+    # Network resources
+    services.loadbalancers: "5"
+    services.nodeports: "0"  # Restrict NodePort services in production
+{{- end }}
+
+{{/*
+Limit Range for the namespace
+*/}}
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-limit-range
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: limit-range
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Resource limits for Epic 8 platform pods and containers"
+spec:
+  limits:
+  # Container limits
+  - type: Container
+    default:
+      cpu: "1"
+      memory: "2Gi"
+      ephemeral-storage: "2Gi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "256Mi"
+      ephemeral-storage: "256Mi"
+    max:
+      cpu: "4"
+      memory: "8Gi"
+      ephemeral-storage: "8Gi"
+    min:
+      cpu: "50m"
+      memory: "128Mi"
+      ephemeral-storage: "128Mi"
+
+  # Pod limits
+  - type: Pod
+    max:
+      cpu: "8"
+      memory: "16Gi"
+      ephemeral-storage: "16Gi"
+
+  # PVC limits
+  - type: PersistentVolumeClaim
+    max:
+      storage: "100Gi"
+    min:
+      storage: "1Gi"
+
+{{- end }}

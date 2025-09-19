@@ -1,0 +1,577 @@
+---
+# Epic 8 Platform - Multi-Cloud Load Balancing Configuration
+# Swiss Engineering Standards: High Availability, Performance, Reliability
+# Cloud-agnostic load balancing with Swiss data residency compliance
+
+#============================================================================
+# AWS Application Load Balancer Configuration
+#============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: epic8-platform-aws-alb
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: load-balancer
+    epic8.platform/type: aws-alb
+    epic8.platform/cloud-provider: aws
+    epic8.platform/tier: infrastructure
+  annotations:
+    # AWS Load Balancer Controller annotations
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+
+    # SSL/TLS Configuration
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:eu-central-1:123456789012:certificate/abcd1234-5678-90ab-cdef-1234567890ab"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-negotiation-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+
+    # Health Check Configuration
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "2"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "3"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval-seconds: "30"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout-seconds: "5"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/health"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "HTTP"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "8080"
+
+    # Advanced Configuration
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "60"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-timeout: "300"
+
+    # Security Groups
+    service.beta.kubernetes.io/aws-load-balancer-security-groups: "sg-epic8-platform-alb"
+    service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules: "true"
+
+    # Subnets (Swiss/EU regions preferred)
+    service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-epic8-public-eu-central-1a,subnet-epic8-public-eu-central-1b,subnet-epic8-public-eu-central-1c"
+
+    # Access Logs
+    service.beta.kubernetes.io/aws-load-balancer-access-log-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-access-log-s3-bucket-name: "epic8-platform-access-logs"
+    service.beta.kubernetes.io/aws-load-balancer-access-log-s3-bucket-prefix: "alb"
+
+    # Epic 8 Platform specific
+    epic8.platform/description: "AWS Application Load Balancer for Epic 8 Platform"
+    epic8.platform/swiss-compliant: "true"
+    epic8.platform/data-residency: "eu-central-1"
+    epic8.platform/load-balancer-type: "application"
+
+    # Monitoring
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: service.k8s.aws/nlb
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  selector:
+    epic8.platform/service: api-gateway
+    app.kubernetes.io/name: api-gateway
+
+---
+# AWS Load Balancer Ingress Configuration
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: epic8-platform-aws-ingress
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: load-balancer
+    epic8.platform/type: aws-ingress
+    epic8.platform/cloud-provider: aws
+  annotations:
+    # AWS Load Balancer Controller
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: "internet-facing"
+    alb.ingress.kubernetes.io/target-type: "ip"
+    alb.ingress.kubernetes.io/load-balancer-name: "epic8-platform-alb"
+
+    # SSL Configuration
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:eu-central-1:123456789012:certificate/abcd1234-5678-90ab-cdef-1234567890ab"
+    alb.ingress.kubernetes.io/ssl-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+
+    # Health Check
+    alb.ingress.kubernetes.io/healthcheck-path: "/health"
+    alb.ingress.kubernetes.io/healthcheck-protocol: "HTTP"
+    alb.ingress.kubernetes.io/healthcheck-port: "8080"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "30"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+
+    # WAF Integration
+    alb.ingress.kubernetes.io/wafv2-acl-arn: "arn:aws:wafv2:eu-central-1:123456789012:global/webacl/epic8-platform-waf/abcd1234-5678-90ab-cdef-1234567890ab"
+
+    # Security Groups
+    alb.ingress.kubernetes.io/security-groups: "sg-epic8-platform-alb"
+    alb.ingress.kubernetes.io/manage-backend-security-group-rules: "true"
+
+    # Access Logs
+    alb.ingress.kubernetes.io/load-balancer-attributes: |
+      access_logs.s3.enabled=true,
+      access_logs.s3.bucket=epic8-platform-access-logs,
+      access_logs.s3.prefix=alb,
+      idle_timeout.timeout_seconds=60,
+      routing.http.drop_invalid_header_fields.enabled=true,
+      routing.http.preserve_host_header.enabled=true,
+      routing.http.x_amzn_tls_version_and_cipher_suite.enabled=true,
+      routing.http.xff_client_port.enabled=true
+
+    # Swiss compliance tags
+    alb.ingress.kubernetes.io/tags: |
+      Environment=production,
+      Project=epic8-platform,
+      DataResidency=swiss-compliant,
+      Compliance=gdpr,
+      Owner=swiss-engineering-team
+spec:
+  ingressClassName: alb
+  rules:
+  - host: api.epic8-platform.swiss
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+---
+#============================================================================
+# Google Cloud Load Balancer Configuration
+#============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: epic8-platform-gcp-lb
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: load-balancer
+    epic8.platform/type: gcp-lb
+    epic8.platform/cloud-provider: gcp
+    epic8.platform/tier: infrastructure
+  annotations:
+    # GCP Load Balancer annotations
+    cloud.google.com/load-balancer-type: "External"
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"ports": {"8080":"epic8-platform-backend-config"}}'
+
+    # SSL Configuration
+    cloud.google.com/ssl-certificate: "epic8-platform-ssl-cert"
+
+    # Health Check
+    cloud.google.com/health-check: '{"port": 8080, "path": "/health", "protocol": "HTTP"}'
+
+    # CDN Configuration
+    cloud.google.com/cdn-cache-policy: '{"includeHost": true, "includeProtocol": true, "includeQueryString": false}'
+
+    # Epic 8 Platform specific
+    epic8.platform/description: "GCP Global Load Balancer for Epic 8 Platform"
+    epic8.platform/swiss-compliant: "true"
+    epic8.platform/data-residency: "europe-west6"  # Zurich region
+    epic8.platform/load-balancer-type: "global"
+
+    # Monitoring
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: service.k8s.gcp/glb
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  selector:
+    epic8.platform/service: api-gateway
+    app.kubernetes.io/name: api-gateway
+
+---
+# GCP Backend Configuration
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: epic8-platform-backend-config
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: load-balancer
+    epic8.platform/type: gcp-backend-config
+    epic8.platform/cloud-provider: gcp
+spec:
+  # Health Check Configuration
+  healthCheck:
+    checkIntervalSec: 30
+    timeoutSec: 5
+    healthyThreshold: 2
+    unhealthyThreshold: 3
+    type: HTTP
+    requestPath: /health
+    port: 8080
+
+  # Connection Draining
+  connectionDraining:
+    drainingTimeoutSec: 300
+
+  # Session Affinity
+  sessionAffinity:
+    affinityType: "CLIENT_IP"
+    affinityCookieTtlSec: 3600
+
+  # Security Policy
+  securityPolicy:
+    name: "epic8-platform-security-policy"
+
+  # CDN Configuration
+  cdn:
+    enabled: true
+    cachePolicy:
+      includeHost: true
+      includeProtocol: true
+      includeQueryString: false
+
+  # Logging
+  logging:
+    enable: true
+    sampleRate: 1.0
+
+  # IAP (Identity-Aware Proxy) for admin endpoints
+  iap:
+    enabled: false  # Enable for admin endpoints
+    oauthclientCredentials:
+      secretName: "epic8-platform-iap-secret"
+
+---
+#============================================================================
+# Azure Application Gateway Configuration
+#============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: epic8-platform-azure-appgw
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: load-balancer
+    epic8.platform/type: azure-appgw
+    epic8.platform/cloud-provider: azure
+    epic8.platform/tier: infrastructure
+  annotations:
+    # Azure Application Gateway annotations
+    service.beta.kubernetes.io/azure-load-balancer-internal: "false"
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: "epic8-platform-rg"
+
+    # Swiss compliance (Switzerland North region)
+    service.beta.kubernetes.io/azure-load-balancer-subnet: "epic8-platform-subnet"
+    service.beta.kubernetes.io/azure-allowed-service-tags: "Internet"
+
+    # Epic 8 Platform specific
+    epic8.platform/description: "Azure Application Gateway for Epic 8 Platform"
+    epic8.platform/swiss-compliant: "true"
+    epic8.platform/data-residency: "switzerland-north"
+    epic8.platform/load-balancer-type: "application-gateway"
+
+    # Monitoring
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  selector:
+    epic8.platform/service: api-gateway
+    app.kubernetes.io/name: api-gateway
+
+---
+# Azure Application Gateway Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: epic8-platform-azure-ingress
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: load-balancer
+    epic8.platform/type: azure-ingress
+    epic8.platform/cloud-provider: azure
+  annotations:
+    # Azure Application Gateway Ingress Controller
+    kubernetes.io/ingress.class: "azure/application-gateway"
+    appgw.ingress.kubernetes.io/backend-path-prefix: "/"
+    appgw.ingress.kubernetes.io/ssl-redirect: "true"
+
+    # Health Check
+    appgw.ingress.kubernetes.io/health-probe-path: "/health"
+    appgw.ingress.kubernetes.io/health-probe-status-codes: "200-399"
+    appgw.ingress.kubernetes.io/health-probe-interval: "30"
+    appgw.ingress.kubernetes.io/health-probe-timeout: "5"
+    appgw.ingress.kubernetes.io/health-probe-unhealthy-threshold: "3"
+
+    # Connection Draining
+    appgw.ingress.kubernetes.io/connection-draining: "true"
+    appgw.ingress.kubernetes.io/connection-draining-timeout: "300"
+
+    # Request Routing
+    appgw.ingress.kubernetes.io/request-timeout: "30"
+    appgw.ingress.kubernetes.io/cookie-based-affinity: "Disabled"
+
+    # WAF Policy
+    appgw.ingress.kubernetes.io/waf-policy-for-path: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/epic8-platform-rg/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/epic8-platform-waf"
+spec:
+  ingressClassName: azure-application-gateway
+  tls:
+  - hosts:
+    - api.epic8-platform.swiss
+    secretName: epic8-platform-tls
+  rules:
+  - host: api.epic8-platform.swiss
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8080
+
+---
+#============================================================================
+# Global DNS and Traffic Management
+#============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-global-dns-config
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: dns
+    epic8.platform/type: global-dns
+    epic8.platform/tier: infrastructure
+data:
+  # GeoDNS configuration for Swiss compliance
+  geodns-config.yaml: |
+    # Epic 8 Platform Global DNS Configuration
+    # Swiss Engineering Standards: Data Residency and Performance
+
+    zones:
+      epic8-platform.swiss:
+        type: "primary"
+        records:
+          # Swiss users preference (lowest latency)
+          - name: "api"
+            type: "A"
+            geo_policy: "swiss"
+            targets:
+              - ip: "185.60.216.10"  # Switzerland North (Azure)
+                weight: 70
+                health_check: true
+              - ip: "185.60.218.10"  # Switzerland West (potential)
+                weight: 30
+                health_check: true
+
+          # EU users (GDPR compliant)
+          - name: "api"
+            type: "A"
+            geo_policy: "eu"
+            targets:
+              - ip: "34.65.10.10"    # europe-west6 (GCP Zurich)
+                weight: 50
+                health_check: true
+              - ip: "18.196.10.10"   # eu-central-1 (AWS Frankfurt)
+                weight: 50
+                health_check: true
+
+          # Global fallback
+          - name: "api"
+            type: "A"
+            geo_policy: "global"
+            targets:
+              - ip: "34.65.10.10"    # GCP Global LB
+                weight: 100
+                health_check: true
+
+          # Analytics (admin access - more restrictive)
+          - name: "analytics"
+            type: "CNAME"
+            value: "api.epic8-platform.swiss"
+            geo_policy: "swiss_only"
+
+          # Monitoring (internal access)
+          - name: "monitoring"
+            type: "CNAME"
+            value: "api.epic8-platform.swiss"
+            geo_policy: "swiss_only"
+
+    health_checks:
+      - name: "epic8-api-health"
+        type: "https"
+        path: "/health"
+        interval: 30
+        timeout: 5
+        retries: 3
+        expected_codes: ["200", "201", "202"]
+
+    geo_policies:
+      swiss:
+        countries: ["CH"]
+        regions: ["CH-ZH", "CH-GE", "CH-BS", "CH-BE"]
+
+      eu:
+        countries: ["DE", "FR", "IT", "AT", "LI"]
+        exclude_countries: ["CH"]  # Switzerland has its own policy
+
+      swiss_only:
+        countries: ["CH"]
+        strict: true  # Block non-Swiss access
+
+      global:
+        default: true
+
+  # Traffic management rules
+  traffic-management.yaml: |
+    # Epic 8 Platform Traffic Management
+    # Swiss Engineering Standards: Performance and Reliability
+
+    load_balancing:
+      algorithms:
+        primary: "weighted_round_robin"
+        fallback: "least_connections"
+
+    failover:
+      primary_region: "switzerland-north"
+      secondary_regions:
+        - "europe-west6"  # GCP Zurich
+        - "eu-central-1"  # AWS Frankfurt
+
+      health_check_interval: 30
+      failover_threshold: 3
+      recovery_threshold: 2
+
+    performance:
+      connection_timeout: 10
+      read_timeout: 30
+      keep_alive: true
+      compression: true
+
+    swiss_compliance:
+      data_residency: true
+      gdpr_compliant: true
+      log_retention_days: 365
+      encryption_in_transit: true
+      encryption_at_rest: true
+
+---
+#============================================================================
+# Multi-Cloud Load Balancer Monitoring
+#============================================================================
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: epic8-multi-cloud-lb-monitoring
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/type: load-balancer
+    epic8.platform/tier: infrastructure
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/component: load-balancer
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scheme: http
+
+---
+# Prometheus Rules for Load Balancer Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: epic8-load-balancer-alerts
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/type: alerts
+    epic8.platform/target: load-balancer
+spec:
+  groups:
+  - name: epic8-load-balancer
+    rules:
+    # High latency alert
+    - alert: Epic8LoadBalancerHighLatency
+      expr: histogram_quantile(0.95, rate(epic8_request_duration_seconds_bucket[5m])) > 2
+      for: 5m
+      labels:
+        severity: warning
+        component: load-balancer
+        swiss_compliance: "required"
+      annotations:
+        summary: "Epic 8 Load Balancer high latency detected"
+        description: "95th percentile latency is {{ $value }}s for {{ $labels.instance }}"
+        runbook_url: "https://epic8-platform.swiss/docs/runbooks/load-balancer-latency"
+
+    # High error rate alert
+    - alert: Epic8LoadBalancerHighErrorRate
+      expr: rate(epic8_http_requests_total{status=~"5.."}[5m]) / rate(epic8_http_requests_total[5m]) > 0.05
+      for: 2m
+      labels:
+        severity: critical
+        component: load-balancer
+        swiss_compliance: "required"
+      annotations:
+        summary: "Epic 8 Load Balancer high error rate detected"
+        description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+        runbook_url: "https://epic8-platform.swiss/docs/runbooks/load-balancer-errors"
+
+    # Swiss compliance health check
+    - alert: Epic8SwissComplianceHealthCheck
+      expr: up{epic8_swiss_compliant="true"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: load-balancer
+        swiss_compliance: "violation"
+      annotations:
+        summary: "Epic 8 Swiss compliant endpoint is down"
+        description: "Swiss compliant endpoint {{ $labels.instance }} is not responding"
+        runbook_url: "https://epic8-platform.swiss/docs/runbooks/swiss-compliance"

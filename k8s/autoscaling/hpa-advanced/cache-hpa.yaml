@@ -1,0 +1,182 @@
+---
+# Cache Service Advanced HPA Configuration
+# Optimized for high-throughput caching with >90% hit rate targets
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cache-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: cache
+    epic8.platform/component: caching
+    epic8.platform/tier: data
+    epic8.platform/autoscaling: advanced
+    app.kubernetes.io/name: cache-hpa
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: autoscaling
+  annotations:
+    epic8.platform/description: "Advanced HPA for Cache with memory and hit rate optimization"
+    epic8.platform/target-hit-rate: "0.90"
+    epic8.platform/target-access-time: "10ms"
+    epic8.platform/memory-optimization: "enabled"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cache
+
+  # Scaling Range: 1-3 replicas for cache distribution
+  minReplicas: 1
+  maxReplicas: 3
+
+  # Multi-metric scaling for cache workloads
+  metrics:
+  # Primary Metric: Memory utilization (90% target for cache efficiency)
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 90
+
+  # Secondary Metric: CPU utilization (70% target for cache operations)
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+
+  # Custom Metric: Cache hit rate (scale when < 90%)
+  - type: Pods
+    pods:
+      metric:
+        name: cache_hit_rate
+        selector:
+          matchLabels:
+            epic8.platform/service: cache
+      target:
+        type: AverageValue
+        averageValue: "0.90"  # Scale up if hit rate drops below 90%
+
+  # Custom Metric: Cache access time (scale when > 10ms)
+  - type: Pods
+    pods:
+      metric:
+        name: cache_access_time_ms
+        selector:
+          matchLabels:
+            epic8.platform/service: cache
+      target:
+        type: AverageValue
+        averageValue: "10"  # Scale when access time > 10ms
+
+  # Custom Metric: Cache eviction rate
+  - type: Pods
+    pods:
+      metric:
+        name: cache_eviction_rate_per_minute
+        selector:
+          matchLabels:
+            epic8.platform/service: cache
+      target:
+        type: AverageValue
+        averageValue: "100"  # Scale when > 100 evictions per minute
+
+  # Custom Metric: Active connections to cache
+  - type: Pods
+    pods:
+      metric:
+        name: cache_active_connections
+        selector:
+          matchLabels:
+            epic8.platform/service: cache
+      target:
+        type: AverageValue
+        averageValue: "500"  # Scale when > 500 active connections per pod
+
+  # Cache-optimized scaling behavior
+  behavior:
+    scaleUp:
+      # Moderate scale-up for cache warming
+      stabilizationWindowSeconds: 180  # Wait 3 minutes for cache stabilization
+      selectPolicy: Max
+      policies:
+      # Conservative scaling to maintain cache consistency
+      - type: Percent
+        value: 50  # Increase by 50% for cache distribution
+        periodSeconds: 120
+      # Single pod addition for precise cache scaling
+      - type: Pods
+        value: 1  # Add 1 pod at a time for cache distribution
+        periodSeconds: 180
+
+    scaleDown:
+      # Very conservative scale-down to preserve cache data
+      stabilizationWindowSeconds: 600  # Wait 10 minutes before scaling down
+      selectPolicy: Min
+      policies:
+      # Minimal scale-down to preserve cache efficiency
+      - type: Percent
+        value: 33  # Remove max 33% of replicas (1 of 3)
+        periodSeconds: 300
+      # Single pod removal only
+      - type: Pods
+        value: 1  # Remove 1 pod at a time
+        periodSeconds: 360
+
+---
+# ServiceMonitor for Cache metrics collection
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cache-hpa-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: cache
+    epic8.platform/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: cache
+  endpoints:
+  - port: metrics
+    interval: 30s  # Moderate sampling for cache metrics
+    path: /metrics
+    honorLabels: true
+    metricRelabelings:
+    # Cache-specific metric relabeling
+    - sourceLabels: [__name__]
+      regex: 'cache_hits_total'
+      targetLabel: __name__
+      replacement: 'cache_hit_rate'
+    - sourceLabels: [__name__]
+      regex: 'cache_access_duration_ms'
+      targetLabel: __name__
+      replacement: 'cache_access_time_ms'
+    - sourceLabels: [__name__]
+      regex: 'cache_evictions_total'
+      targetLabel: __name__
+      replacement: 'cache_eviction_rate_per_minute'
+    - sourceLabels: [__name__]
+      regex: 'cache_connections_active'
+      targetLabel: __name__
+      replacement: 'cache_active_connections'
+
+---
+# PodDisruptionBudget for cache availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cache-pdb-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: cache
+    epic8.platform/component: availability
+spec:
+  minAvailable: 1  # Always keep at least 1 pod for cache availability
+  selector:
+    matchLabels:
+      epic8.platform/service: cache
+  unhealthyPodEvictionPolicy: IfHealthyBudget  # Protect cache data integrity
+  maxUnavailable: 1  # Allow only 1 pod unavailable at a time

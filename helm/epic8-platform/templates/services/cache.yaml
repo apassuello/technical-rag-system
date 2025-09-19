@@ -1,0 +1,37 @@
+{{/*
+Epic 8 Platform - Cache Service Template
+Redis-based caching service for performance optimization
+*/}}
+
+{{- if .Values.cache.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "cache" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "cache" "tier" "backend" "component" "cache" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Cache Service - Redis-based caching for performance optimization"
+    {{- if include "epic8-platform.monitoring.enabled" . }}
+    {{- include "epic8-platform.prometheusAnnotations" (dict "port" (.Values.cache.service.port | toString) "path" "/metrics") | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.cache.service.type }}
+  ports:
+  - name: http
+    port: {{ .Values.cache.service.port }}
+    targetPort: {{ .Values.cache.service.targetPort }}
+    protocol: TCP
+  {{- if include "epic8-platform.monitoring.enabled" . }}
+  - name: metrics
+    port: {{ .Values.cache.service.metricsPort }}
+    targetPort: metrics
+    protocol: TCP
+  {{- end }}
+  selector:
+    {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "cache" "context" .) | nindent 4 }}
+  sessionAffinity: None
+{{- end }}

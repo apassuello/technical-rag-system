@@ -1,0 +1,45 @@
+{{/*
+Epic 8 Platform - Common Configuration Template
+Shared configuration across all Epic 8 services
+*/}}
+
+{{- if .Values.configMaps.common.create }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-common-config
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: config
+    epic8.platform/config-type: common
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Common configuration shared across all Epic 8 services"
+    epic8.platform/config-version: {{ .Chart.Version | quote }}
+data:
+  {{- with .Values.configMaps.common.data }}
+  {{- range $key, $value := . }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+
+  # Dynamic configuration based on global settings
+  EPIC8_CLUSTER_DOMAIN: {{ .Values.global.clusterDomain | quote }}
+  EPIC8_CLOUD_PROVIDER: {{ .Values.global.cloudProvider | quote }}
+  EPIC8_TIMEZONE: {{ .Values.global.timezone | quote }}
+
+  # Service mesh configuration
+  SERVICE_MESH_TYPE: {{ .Values.global.serviceMesh.type | quote }}
+  SERVICE_MESH_MTLS_MODE: {{ .Values.global.serviceMesh.mtls.mode | quote }}
+
+  # Monitoring configuration
+  MONITORING_PROMETHEUS_SCRAPE_INTERVAL: {{ .Values.global.monitoring.prometheus.scrapeInterval | quote }}
+
+  # Feature flags
+  FEATURE_SERVICE_MESH: {{ .Values.global.serviceMesh.enabled | quote }}
+  FEATURE_MONITORING: {{ .Values.global.monitoring.enabled | quote }}
+  FEATURE_JAEGER_TRACING: {{ .Values.global.monitoring.jaeger.enabled | quote }}
+  FEATURE_GRAFANA_DASHBOARDS: {{ .Values.global.monitoring.grafana.enabled | quote }}
+{{- end }}

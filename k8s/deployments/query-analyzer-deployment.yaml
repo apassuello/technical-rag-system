@@ -1,0 +1,191 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: query-analyzer
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: analyzer
+    epic8.platform/tier: backend
+    epic8.platform/version: v1
+    app.kubernetes.io/name: query-analyzer
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: analyzer
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    epic8.platform/description: "Query Analyzer - ML-based query complexity analysis"
+    epic8.platform/documentation: "https://github.com/epic8/docs/services/query-analyzer"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      epic8.platform/service: query-analyzer
+      app.kubernetes.io/name: query-analyzer
+  template:
+    metadata:
+      labels:
+        epic8.platform/service: query-analyzer
+        epic8.platform/component: analyzer
+        epic8.platform/tier: backend
+        epic8.platform/version: v1
+        app.kubernetes.io/name: query-analyzer
+        app.kubernetes.io/part-of: epic8-platform
+        app.kubernetes.io/component: analyzer
+        app.kubernetes.io/version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: epic8-query-analyzer
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: query-analyzer
+        image: epic8/query-analyzer:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8082
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: PYTHONPATH
+          value: "/app:/app/src"
+        - name: PROJECT_ROOT
+          value: "/app"
+        - name: QUERY_ANALYZER_CONFIG_FILE
+          value: "/app/config.yaml"
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        envFrom:
+        - configMapRef:
+            name: epic8-common-config
+        - configMapRef:
+            name: query-analyzer-config
+        - secretRef:
+            name: epic8-secrets
+        resources:
+          requests:
+            cpu: 750m
+            memory: 1.5Gi
+            ephemeral-storage: 2Gi
+          limits:
+            cpu: "1.5"
+            memory: 3Gi
+            ephemeral-storage: 4Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 90
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 60
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: var-run
+          mountPath: /var/run
+        - name: logs
+          mountPath: /app/logs
+        - name: cache
+          mountPath: /app/cache
+        - name: models
+          mountPath: /app/models
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: var-run
+        emptyDir: {}
+      - name: logs
+        persistentVolumeClaim:
+          claimName: query-analyzer-logs
+      - name: cache
+        persistentVolumeClaim:
+          claimName: query-analyzer-cache
+      - name: models
+        persistentVolumeClaim:
+          claimName: query-analyzer-models
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: epic8.platform/service
+                  operator: In
+                  values:
+                  - query-analyzer
+              topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            epic8.platform/service: query-analyzer
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: query-analyzer-pdb
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: analyzer
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      epic8.platform/service: query-analyzer

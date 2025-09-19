@@ -1,0 +1,309 @@
+# Query Analyzer Storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: query-analyzer-logs
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: storage
+    epic8.platform/storage-type: logs
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Query Analyzer logs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-standard
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: query-analyzer-cache
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: storage
+    epic8.platform/storage-type: cache
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Query Analyzer cache"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-fast-ssd
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: query-analyzer-models
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: storage
+    epic8.platform/storage-type: models
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Query Analyzer ML models"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-fast-ssd
+  resources:
+    requests:
+      storage: 20Gi
+
+# Generator Storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-logs
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: logs
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator logs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-standard
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-cache
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: cache
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator cache"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-fast-ssd
+  resources:
+    requests:
+      storage: 15Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-models
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: models
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator models"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-fast-ssd
+  resources:
+    requests:
+      storage: 50Gi
+
+# Retriever Storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: retriever-logs
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: storage
+    epic8.platform/storage-type: logs
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Retriever logs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-standard
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: retriever-cache
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: storage
+    epic8.platform/storage-type: cache
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Retriever cache"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-fast-ssd
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: retriever-vector-indices
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: storage
+    epic8.platform/storage-type: indices
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Retriever vector indices"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-fast-ssd
+  resources:
+    requests:
+      storage: 100Gi
+
+# Shared Document Data Storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: epic8-document-data
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-type: documents
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "Shared persistent storage for document data"
+spec:
+  accessModes:
+    - ReadWriteMany  # Shared across multiple pods
+  storageClassName: epic8-standard
+  resources:
+    requests:
+      storage: 200Gi
+
+# Cache Service Storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cache-logs
+  labels:
+    epic8.platform/service: cache
+    epic8.platform/component: storage
+    epic8.platform/storage-type: logs
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Cache service logs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-standard
+  resources:
+    requests:
+      storage: 5Gi
+
+# Analytics Service Storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: analytics-logs
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: storage
+    epic8.platform/storage-type: logs
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Analytics logs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-standard
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: analytics-data
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: storage
+    epic8.platform/storage-type: data
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Analytics data and metrics"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-fast-ssd
+  resources:
+    requests:
+      storage: 50Gi
+
+# Monitoring Storage (for Prometheus, Grafana, etc.)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/storage-type: metrics
+    epic8.platform/version: v1
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "Persistent storage for Prometheus metrics data"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-fast-ssd
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/storage-type: dashboards
+    epic8.platform/version: v1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "Persistent storage for Grafana dashboards and data"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-standard
+  resources:
+    requests:
+      storage: 10Gi

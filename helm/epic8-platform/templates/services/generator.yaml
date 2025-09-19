@@ -1,0 +1,37 @@
+{{/*
+Epic 8 Platform - Generator Service Template
+Multi-model LLM answer generation service
+*/}}
+
+{{- if .Values.generator.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "generator" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "generator" "tier" "backend" "component" "generator" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Generator Service - Multi-model LLM answer generation with cost optimization"
+    {{- if include "epic8-platform.monitoring.enabled" . }}
+    {{- include "epic8-platform.prometheusAnnotations" (dict "port" (.Values.generator.service.port | toString) "path" "/metrics") | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.generator.service.type }}
+  ports:
+  - name: http
+    port: {{ .Values.generator.service.port }}
+    targetPort: {{ .Values.generator.service.targetPort }}
+    protocol: TCP
+  {{- if include "epic8-platform.monitoring.enabled" . }}
+  - name: metrics
+    port: {{ .Values.generator.service.metricsPort }}
+    targetPort: metrics
+    protocol: TCP
+  {{- end }}
+  selector:
+    {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "generator" "context" .) | nindent 4 }}
+  sessionAffinity: None
+{{- end }}

@@ -1,0 +1,263 @@
+---
+# Node Pool Configuration for Epic 8 Cluster Autoscaler
+# Multi-cloud optimized for cost efficiency and performance
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-node-pool-config
+  namespace: kube-system
+  labels:
+    epic8.platform/component: node-pool-config
+    epic8.platform/tier: infrastructure
+    app.kubernetes.io/name: node-pool-config
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "Node pool configuration for Epic 8 cost-optimized scaling"
+    epic8.platform/optimization-target: "cost-performance"
+    epic8.platform/swiss-engineering: "efficiency-precision"
+data:
+  # AWS Node Pool Configuration
+  aws-config.yaml: |
+    # General Purpose Node Pool (Primary workloads)
+    general-purpose:
+      instance_types:
+        - m6i.large     # 2 vCPU, 8 GiB - Cost-optimized baseline
+        - m6i.xlarge    # 4 vCPU, 16 GiB - Standard workloads
+        - m6i.2xlarge   # 8 vCPU, 32 GiB - High-demand periods
+      min_size: 2
+      max_size: 20
+      desired_capacity: 3
+      spot_enabled: true
+      spot_percentage: 60  # 60% spot instances for cost optimization
+      availability_zones:
+        - eu-central-1a  # Switzerland preference
+        - eu-central-1b
+        - eu-central-1c
+      tags:
+        epic8.platform/node-pool: general-purpose
+        epic8.platform/workload: mixed
+        k8s.io/cluster-autoscaler/enabled: "true"
+        k8s.io/cluster-autoscaler/epic8-cluster: "owned"
+
+    # Compute-Optimized Node Pool (ML workloads)
+    compute-optimized:
+      instance_types:
+        - c6i.large     # 2 vCPU, 4 GiB - Light ML tasks
+        - c6i.xlarge    # 4 vCPU, 8 GiB - Standard ML inference
+        - c6i.2xlarge   # 8 vCPU, 16 GiB - Heavy ML processing
+      min_size: 1
+      max_size: 10
+      desired_capacity: 2
+      spot_enabled: true
+      spot_percentage: 40  # Lower spot % for ML stability
+      node_labels:
+        epic8.platform/workload-type: ml-compute
+        epic8.platform/optimization: cpu-intensive
+      taints:
+        - key: epic8.platform/ml-workload
+          value: "true"
+          effect: NoSchedule
+      tags:
+        epic8.platform/node-pool: compute-optimized
+        epic8.platform/workload: ml-inference
+        k8s.io/cluster-autoscaler/enabled: "true"
+        k8s.io/cluster-autoscaler/epic8-cluster: "owned"
+
+    # Memory-Optimized Node Pool (Vector search, Cache)
+    memory-optimized:
+      instance_types:
+        - r6i.large     # 2 vCPU, 16 GiB - Vector indices
+        - r6i.xlarge    # 4 vCPU, 32 GiB - Large vector datasets
+        - r6i.2xlarge   # 8 vCPU, 64 GiB - Comprehensive caching
+      min_size: 1
+      max_size: 6
+      desired_capacity: 1
+      spot_enabled: true
+      spot_percentage: 30  # Lower spot % for data persistence
+      node_labels:
+        epic8.platform/workload-type: memory-intensive
+        epic8.platform/optimization: memory-optimized
+      tags:
+        epic8.platform/node-pool: memory-optimized
+        epic8.platform/workload: vector-cache
+        k8s.io/cluster-autoscaler/enabled: "true"
+        k8s.io/cluster-autoscaler/epic8-cluster: "owned"
+
+    # Burstable Node Pool (Traffic spikes)
+    burstable:
+      instance_types:
+        - t3.medium     # 2 vCPU, 4 GiB - Burstable baseline
+        - t3.large      # 2 vCPU, 8 GiB - Higher burst credits
+        - t3.xlarge     # 4 vCPU, 16 GiB - Extended burst capacity
+      min_size: 0
+      max_size: 15
+      desired_capacity: 0
+      spot_enabled: true
+      spot_percentage: 80  # High spot % for cost optimization
+      node_labels:
+        epic8.platform/workload-type: burstable
+        epic8.platform/optimization: cost-efficient
+      tags:
+        epic8.platform/node-pool: burstable
+        epic8.platform/workload: traffic-spikes
+        k8s.io/cluster-autoscaler/enabled: "true"
+        k8s.io/cluster-autoscaler/epic8-cluster: "owned"
+
+  # GCP Node Pool Configuration
+  gcp-config.yaml: |
+    # General Purpose Node Pool (Primary workloads)
+    general-purpose:
+      machine_types:
+        - e2-standard-2   # 2 vCPU, 8 GiB - Cost-optimized
+        - e2-standard-4   # 4 vCPU, 16 GiB - Standard workloads
+        - e2-standard-8   # 8 vCPU, 32 GiB - High-demand
+      min_size: 2
+      max_size: 20
+      initial_node_count: 3
+      preemptible: true
+      preemptible_percentage: 60
+      zones:
+        - europe-west6-a  # Zurich region
+        - europe-west6-b
+        - europe-west6-c
+      labels:
+        epic8.platform/node-pool: general-purpose
+        epic8.platform/workload: mixed
+
+    # Compute-Optimized Node Pool (ML workloads)
+    compute-optimized:
+      machine_types:
+        - c2-standard-4   # 4 vCPU, 16 GiB - ML tasks
+        - c2-standard-8   # 8 vCPU, 32 GiB - Heavy ML
+        - c2-standard-16  # 16 vCPU, 64 GiB - Complex ML
+      min_size: 1
+      max_size: 10
+      initial_node_count: 2
+      preemptible: true
+      preemptible_percentage: 40
+      node_taints:
+        - key: epic8.platform/ml-workload
+          value: "true"
+          effect: NO_SCHEDULE
+      labels:
+        epic8.platform/node-pool: compute-optimized
+        epic8.platform/workload: ml-inference
+
+    # Memory-Optimized Node Pool
+    memory-optimized:
+      machine_types:
+        - n2-highmem-2    # 2 vCPU, 16 GiB
+        - n2-highmem-4    # 4 vCPU, 32 GiB
+        - n2-highmem-8    # 8 vCPU, 64 GiB
+      min_size: 1
+      max_size: 6
+      initial_node_count: 1
+      preemptible: true
+      preemptible_percentage: 30
+      labels:
+        epic8.platform/node-pool: memory-optimized
+        epic8.platform/workload: vector-cache
+
+  # Azure Node Pool Configuration
+  azure-config.yaml: |
+    # General Purpose Node Pool
+    general-purpose:
+      vm_sizes:
+        - Standard_D2s_v3   # 2 vCPU, 8 GiB
+        - Standard_D4s_v3   # 4 vCPU, 16 GiB
+        - Standard_D8s_v3   # 8 vCPU, 32 GiB
+      min_count: 2
+      max_count: 20
+      node_count: 3
+      spot_enabled: true
+      spot_percentage: 60
+      availability_zones:
+        - "1"  # Switzerland North
+        - "2"
+        - "3"
+      node_labels:
+        epic8.platform/node-pool: general-purpose
+        epic8.platform/workload: mixed
+
+    # Compute-Optimized Node Pool
+    compute-optimized:
+      vm_sizes:
+        - Standard_F4s_v2   # 4 vCPU, 8 GiB
+        - Standard_F8s_v2   # 8 vCPU, 16 GiB
+        - Standard_F16s_v2  # 16 vCPU, 32 GiB
+      min_count: 1
+      max_count: 10
+      node_count: 2
+      spot_enabled: true
+      spot_percentage: 40
+      node_taints:
+        - key: epic8.platform/ml-workload
+          value: "true"
+          effect: NoSchedule
+      node_labels:
+        epic8.platform/node-pool: compute-optimized
+        epic8.platform/workload: ml-inference
+
+    # Memory-Optimized Node Pool
+    memory-optimized:
+      vm_sizes:
+        - Standard_E4s_v3   # 4 vCPU, 32 GiB
+        - Standard_E8s_v3   # 8 vCPU, 64 GiB
+        - Standard_E16s_v3  # 16 vCPU, 128 GiB
+      min_count: 1
+      max_count: 6
+      node_count: 1
+      spot_enabled: true
+      spot_percentage: 30
+      node_labels:
+        epic8.platform/node-pool: memory-optimized
+        epic8.platform/workload: vector-cache
+
+  # Cost Optimization Configuration
+  cost-optimization.yaml: |
+    # Cost optimization parameters
+    optimization:
+      target_utilization: 70           # Swiss engineering efficiency target
+      scale_down_threshold: 50         # Scale down when utilization < 50%
+      scale_up_threshold: 80           # Scale up when utilization > 80%
+      spot_instance_preference: 60     # Prefer 60% spot instances
+      reserved_instance_coverage: 30   # 30% reserved for baseline
+
+    # Scheduling preferences
+    scheduling:
+      prefer_spot_instances: true
+      spot_interruption_handling: graceful
+      node_affinity_weight: 100
+      cost_optimization_weight: 80
+      performance_weight: 60
+
+    # Swiss engineering precision constraints
+    constraints:
+      max_cost_increase_percentage: 15
+      min_performance_threshold: 95
+      availability_target: 99.9
+      resource_efficiency_target: 70
+
+---
+# Priority Class for cost-optimized workloads
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: epic8-cost-optimized
+  labels:
+    epic8.platform/component: priority-class
+value: 100
+globalDefault: false
+description: "Priority class for Epic 8 cost-optimized workloads"
+
+---
+# Priority Class for performance-critical workloads
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: epic8-performance-critical
+  labels:
+    epic8.platform/component: priority-class
+value: 1000
+globalDefault: false
+description: "Priority class for Epic 8 performance-critical workloads"

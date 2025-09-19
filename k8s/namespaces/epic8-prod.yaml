@@ -1,0 +1,88 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: epic8-prod
+  labels:
+    epic8.platform/environment: prod
+    epic8.platform/project: technical-rag
+    epic8.platform/version: v1
+    kubernetes.io/managed-by: epic8-platform
+  annotations:
+    epic8.platform/description: "Epic 8 Production Environment - 99.9% Uptime SLA"
+    epic8.platform/created-by: "kubernetes-architect"
+    epic8.platform/documentation: "https://github.com/epic8/docs/environments/prod"
+    epic8.platform/sla: "99.9%"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: epic8-prod-quota
+  namespace: epic8-prod
+  labels:
+    epic8.platform/environment: prod
+    epic8.platform/component: resource-quota
+spec:
+  hard:
+    # Compute Resources (Production-scale)
+    requests.cpu: "16"
+    requests.memory: 32Gi
+    limits.cpu: "32"
+    limits.memory: 64Gi
+
+    # Storage Resources
+    requests.storage: 500Gi
+    persistentvolumeclaims: "50"
+
+    # Object Counts
+    pods: "200"
+    services: "50"
+    secrets: "50"
+    configmaps: "50"
+    replicationcontrollers: "30"
+    deployments.apps: "30"
+    statefulsets.apps: "20"
+
+    # Network Resources
+    count/ingresses.networking.k8s.io: "20"
+    services.loadbalancers: "10"
+    services.nodeports: "0"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: epic8-prod-limits
+  namespace: epic8-prod
+  labels:
+    epic8.platform/environment: prod
+    epic8.platform/component: limit-range
+spec:
+  limits:
+  # Pod limits
+  - type: Pod
+    max:
+      cpu: "8"
+      memory: 16Gi
+    min:
+      cpu: 100m
+      memory: 128Mi
+  # Container limits
+  - type: Container
+    default:
+      cpu: "1"
+      memory: 1Gi
+    defaultRequest:
+      cpu: 500m
+      memory: 512Mi
+    max:
+      cpu: "4"
+      memory: 8Gi
+    min:
+      cpu: 100m
+      memory: 128Mi
+  # PVC limits
+  - type: PersistentVolumeClaim
+    max:
+      storage: 100Gi
+    min:
+      storage: 5Gi
