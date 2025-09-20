@@ -1,0 +1,44 @@
+---
+# Critical PVCs needed to get Epic 8 services started in Kind
+# Using minimal storage to fit within quota constraints
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: analytics-data
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: storage
+    epic8.platform/storage-type: data
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Analytics data and metrics (minimal for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 2Gi  # Minimal size
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: retriever-cache
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: storage
+    epic8.platform/storage-type: cache
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Retriever cache (minimal for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 2Gi  # Minimal size
