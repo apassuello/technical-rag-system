@@ -39,8 +39,8 @@ spec:
     secrets: "30"
     configmaps: "30"
     replicationcontrollers: "20"
-    deployments.apps: "20"
-    statefulsets.apps: "10"
+    count/deployments.apps: "20"
+    count/statefulsets.apps: "10"
 
     # Network Resources
     count/ingresses.networking.k8s.io: "10"
