@@ -68,6 +68,8 @@ spec:
           value: "/app"
         - name: QUERY_ANALYZER_CONFIG_FILE
           value: "/app/config.yaml"
+        - name: SERVICE_PORT
+          value: "8082"
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:
@@ -89,13 +91,13 @@ spec:
             name: epic8-secrets
         resources:
           requests:
-            cpu: 750m
-            memory: 1.5Gi
-            ephemeral-storage: 2Gi
+            cpu: 500m
+            memory: 1Gi
+            ephemeral-storage: 1Gi
           limits:
-            cpu: "1.5"
-            memory: 3Gi
-            ephemeral-storage: 4Gi
+            cpu: "1"
+            memory: 2Gi
+            ephemeral-storage: 2Gi
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true

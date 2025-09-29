@@ -164,7 +164,7 @@ class ServiceSettings(BaseSettings):
     
     # Server Configuration
     host: str = Field(default="0.0.0.0", description="Server host")
-    port: int = Field(default=8081, description="Server port")
+    port: int = Field(default=8081, description="Server port", env="SERVICE_PORT")
     workers: int = Field(default=1, description="Number of worker processes")
     
     # gRPC Configuration

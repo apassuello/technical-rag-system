@@ -70,6 +70,8 @@ spec:
           value: "/app/config.yaml"
         - name: OLLAMA_URL
           value: "http://ollama:11434"
+        - name: SERVICE_PORT
+          value: "8081"
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:
@@ -93,13 +95,13 @@ spec:
             name: llm-api-keys
         resources:
           requests:
+            cpu: 500m
+            memory: 1Gi
+            ephemeral-storage: 1Gi
+          limits:
             cpu: "1"
             memory: 2Gi
             ephemeral-storage: 2Gi
-          limits:
-            cpu: "2"
-            memory: 4Gi
-            ephemeral-storage: 4Gi
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true

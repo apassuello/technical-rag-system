@@ -153,10 +153,11 @@ async def readiness_probe():
 
 
 if __name__ == "__main__":
+    settings = get_settings()
     uvicorn.run(
         "app.main:app",
-        host="0.0.0.0",
-        port=8081,
+        host=settings.host,
+        port=settings.port,
         reload=True,
         log_level="info"
     )

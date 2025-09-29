@@ -150,10 +150,12 @@ async def readiness_probe():
 
 
 if __name__ == "__main__":
+    from .core.config import get_settings
+    settings = get_settings()
     uvicorn.run(
         "analyzer_app.main:app",
-        host="0.0.0.0",
-        port=8080,
+        host=settings.host,
+        port=settings.port,
         reload=True,
         log_level="info"
     )
