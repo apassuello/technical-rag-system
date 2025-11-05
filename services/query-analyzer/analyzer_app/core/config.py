@@ -11,7 +11,7 @@ from pathlib import Path
 from functools import lru_cache
 
 import yaml
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -107,8 +107,50 @@ class ServiceSettings(BaseSettings):
     
     # Server Configuration
     host: str = Field(default="0.0.0.0", description="Server host")
-    port: int = Field(default=8082, description="Server port", env="SERVICE_PORT")
+    port: int = Field(default=8082, description="Server port")
     workers: int = Field(default=1, description="Number of worker processes")
+
+    @field_validator('port', mode='before')
+    @classmethod
+    def sanitize_port(cls, v):
+        """Handle Kubernetes service discovery environment variables.
+
+        Kubernetes creates environment variables like:
+        QUERY_ANALYZER_PORT=tcp://10.96.29.145:8082
+
+        This validator extracts the port number from the tcp://IP:PORT format
+        or falls back to the default port (8082) on any error.
+
+        Args:
+            v: The raw port value (could be int, string with port, or K8s URL)
+
+        Returns:
+            int: The validated port number
+
+        Examples:
+            - "tcp://10.96.29.145:8082" -> 8082
+            - "8082" -> 8082
+            - 8082 -> 8082
+            - Invalid values -> 8082 (default)
+        """
+        if isinstance(v, str):
+            # Handle Kubernetes tcp://IP:PORT format
+            if v.startswith('tcp://'):
+                try:
+                    # Extract port from tcp://IP:PORT format
+                    port_str = v.split(':')[-1]
+                    return int(port_str)
+                except (ValueError, IndexError):
+                    # Return default port on parsing error
+                    return 8082
+            # Try parsing as int if it's a number string
+            try:
+                return int(v)
+            except ValueError:
+                # Return default port if string is not numeric
+                return 8082
+        # Return as-is if already an int or other type
+        return v
     
     # gRPC Configuration
     grpc_port: int = Field(default=50051, description="gRPC server port")

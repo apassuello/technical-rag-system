@@ -118,7 +118,7 @@ def create_app() -> FastAPI:
         path = request.url.path
         
         # Skip metrics for health checks and metrics endpoint
-        skip_metrics = path in ["/health", "/health/live", "/health/ready", "/metrics"]
+        skip_metrics = path in ["/health", "/health/live", "/health/ready", "/health/startup", "/metrics"]
         
         if not skip_metrics:
             logger.info(
@@ -232,6 +232,73 @@ async def root_health_check():
         "version": "1.0.0",
         "timestamp": time.time()
     }
+
+
+@app.get("/health/live")
+async def liveness_check():
+    """Kubernetes liveness probe endpoint.
+
+    Indicates whether the container is alive and should not be restarted.
+    Returns 200 if the application is running.
+    """
+    return {
+        "status": "alive",
+        "service": "api-gateway",
+        "timestamp": time.time()
+    }
+
+
+@app.get("/health/ready")
+async def readiness_check():
+    """Kubernetes readiness probe endpoint.
+
+    Indicates whether the container is ready to accept traffic.
+    Returns 200 if gateway service is initialized, 503 otherwise.
+    """
+    global gateway_service
+
+    if gateway_service:
+        return {
+            "status": "ready",
+            "service": "api-gateway",
+            "timestamp": time.time()
+        }
+
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "not_ready",
+            "service": "api-gateway",
+            "timestamp": time.time()
+        }
+    )
+
+
+@app.get("/health/startup")
+async def startup_check():
+    """Kubernetes startup probe endpoint.
+
+    Indicates whether the application has started successfully.
+    Returns 200 if gateway service is initialized, 503 otherwise.
+    Used to delay liveness/readiness checks until startup is complete.
+    """
+    global gateway_service
+
+    if gateway_service:
+        return {
+            "status": "started",
+            "service": "api-gateway",
+            "timestamp": time.time()
+        }
+
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "starting",
+            "service": "api-gateway",
+            "timestamp": time.time()
+        }
+    )
 
 
 @app.get("/")

@@ -141,12 +141,20 @@ async def readiness_probe():
     """Kubernetes readiness probe."""
     if analyzer_service is None:
         raise HTTPException(status_code=503, detail="Service not ready")
-    
+
     is_ready = await analyzer_service.health_check()
     if not is_ready:
         raise HTTPException(status_code=503, detail="Service not ready")
-    
+
     return {"status": "ready"}
+
+
+@app.get("/health/startup")
+async def startup_probe():
+    """Kubernetes startup probe."""
+    if analyzer_service is None:
+        raise HTTPException(status_code=503, detail="Service not started")
+    return {"status": "started"}
 
 
 if __name__ == "__main__":
