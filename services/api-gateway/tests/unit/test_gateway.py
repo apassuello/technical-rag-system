@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 from gateway_app.core.gateway import APIGatewayService
 from gateway_app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
-from gateway_app.schemas.responses import UnifiedQueryResponse, BatchQueryResponse
+from gateway_app.schemas.responses import UnifiedQueryResponse, BatchQueryResponse, CostBreakdown, ProcessingMetrics
 
 
 class TestAPIGatewayService:
@@ -44,16 +44,20 @@ class TestAPIGatewayService:
             sources=[],
             complexity="medium",
             confidence=0.8,
-            cost={"model_used": "cached", "total_cost": 0.0},
-            metrics={
-                "analysis_time": 0.0,
-                "retrieval_time": 0.0, 
-                "generation_time": 0.0,
-                "total_time": 0.001,
-                "documents_retrieved": 0,
-                "cache_hit": True,
-                "cache_key": "test-hash"
-            },
+            cost=CostBreakdown(
+                model_used="cached",
+                model_cost=0.0,
+                total_cost=0.0
+            ),
+            metrics=ProcessingMetrics(
+                analysis_time=0.0,
+                retrieval_time=0.0,
+                generation_time=0.0,
+                total_time=0.001,
+                documents_retrieved=0,
+                cache_hit=True,
+                cache_key="test-hash"
+            ),
             query_id="cached-query-123",
             strategy_used="balanced"
         )

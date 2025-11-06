@@ -121,23 +121,43 @@ class APIGatewayService:
             raise
     
     async def _initialize_clients(self):
-        """Initialize all service clients."""
+        """Initialize all service clients with validation."""
+        if not self.settings:
+            raise ValueError("Settings not configured")
+
+        services = ["query-analyzer", "generator", "retriever", "cache", "analytics"]
+
+        # Validate all endpoint configurations first
+        for service_name in services:
+            endpoint = self.settings.get_service_endpoint(service_name)
+
+            # Validate endpoint configuration
+            if not endpoint.host:
+                raise ValueError(f"Missing host for {service_name}")
+            if endpoint.port <= 0 or endpoint.port > 65535:
+                raise ValueError(f"Invalid port for {service_name}: {endpoint.port}")
+
+            self.logger.info(
+                f"Initializing {service_name} client",
+                url=endpoint.url
+            )
+
         # Query Analyzer client
         analyzer_endpoint = self.settings.get_service_endpoint("query-analyzer")
         self.query_analyzer = QueryAnalyzerClient(analyzer_endpoint)
-        
+
         # Generator client
         generator_endpoint = self.settings.get_service_endpoint("generator")
         self.generator = GeneratorClient(generator_endpoint)
-        
+
         # Retriever client
         retriever_endpoint = self.settings.get_service_endpoint("retriever")
         self.retriever = RetrieverClient(retriever_endpoint)
-        
+
         # Cache client
         cache_endpoint = self.settings.get_service_endpoint("cache")
         self.cache = CacheClient(cache_endpoint)
-        
+
         # Analytics client
         analytics_endpoint = self.settings.get_service_endpoint("analytics")
         self.analytics = AnalyticsClient(analytics_endpoint)
