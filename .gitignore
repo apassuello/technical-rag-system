@@ -130,4 +130,4 @@ epic2_portfolio_assessment_*.txt
 
 # Validation results
 validation_results/
-sessions/
+sessions/docker-compose.yml

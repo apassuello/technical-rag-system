@@ -1,0 +1,139 @@
+{{/*
+Epic 8 Platform - Analytics Deployment Template
+Real-time analytics and metrics collection service
+*/}}
+
+{{- if .Values.analytics.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "analytics" "tier" "backend" "component" "analytics" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Analytics - Real-time analytics and metrics collection"
+spec:
+  replicas: {{ .Values.analytics.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "analytics" "context" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "epic8-platform.serviceLabels" (dict "service" "analytics" "tier" "backend" "component" "analytics" "context" .) | nindent 8 }}
+      annotations:
+        {{- include "epic8-platform.annotations" . | nindent 8 }}
+        {{- if include "epic8-platform.monitoring.enabled" . }}
+        {{- include "epic8-platform.prometheusAnnotations" (dict "port" "9090" "path" "/metrics") | nindent 8 }}
+        {{- end }}
+        {{- include "epic8-platform.serviceMeshAnnotations" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}
+      securityContext:
+        {{- include "epic8-platform.podSecurityContext" . | nindent 8 }}
+      containers:
+      - name: analytics
+        image: {{ include "epic8-platform.image" (dict "repository" .Values.analytics.image.repository "tag" (.Values.analytics.image.tag | default .Chart.AppVersion) "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.analytics.service.targetPort }}
+          protocol: TCP
+        {{- if include "epic8-platform.monitoring.enabled" . }}
+        - name: metrics
+          containerPort: {{ .Values.analytics.service.metricsPort }}
+          protocol: TCP
+        {{- end }}
+        env:
+        {{- include "epic8-platform.commonEnvVars" . | nindent 8 }}
+        {{- if .Values.analytics.postgresql.enabled }}
+        {{- if .Values.analytics.postgresql.external.enabled }}
+        - name: POSTGRES_HOST
+          value: {{ .Values.analytics.postgresql.external.host | quote }}
+        - name: POSTGRES_PORT
+          value: {{ .Values.analytics.postgresql.external.port | quote }}
+        - name: POSTGRES_DB
+          value: {{ .Values.analytics.postgresql.external.database | quote }}
+        - name: POSTGRES_USER
+          value: {{ .Values.analytics.postgresql.external.username | quote }}
+        {{- if .Values.analytics.postgresql.external.password_secret }}
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            {{- include "epic8-platform.secretKeyRef" (dict "secret" .Values.analytics.postgresql.external.password_secret "key" .Values.analytics.postgresql.external.password_key) | nindent 12 }}
+        {{- end }}
+        {{- else }}
+        - name: POSTGRES_HOST
+          value: "postgresql"
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_DB
+          value: "epic8_analytics"
+        - name: POSTGRES_USER
+          value: "epic8_user"
+        {{- end }}
+        {{- end }}
+        - name: FEATURE_COST_OPTIMIZATION
+          value: {{ .Values.analytics.features.cost_optimization | quote }}
+        - name: FEATURE_AB_TESTING
+          value: {{ .Values.analytics.features.ab_testing | quote }}
+        - name: FEATURE_REAL_TIME_METRICS
+          value: {{ .Values.analytics.features.real_time_metrics | quote }}
+        - name: FEATURE_PERFORMANCE_MONITORING
+          value: {{ .Values.analytics.features.performance_monitoring | quote }}
+        envFrom:
+        {{- if .Values.configMaps.common.create }}
+        - configMapRef:
+            name: {{ include "epic8-platform.fullname" . }}-common-config
+        {{- end }}
+        {{- if .Values.secrets.platform.create }}
+        - secretRef:
+            name: {{ include "epic8-platform.fullname" . }}-secrets
+        {{- end }}
+        resources:
+          {{- include "epic8-platform.resources" (dict "service" .Values.analytics "global" .Values.global "context" .) | nindent 10 }}
+        securityContext:
+          {{- include "epic8-platform.containerSecurityContext" . | nindent 10 }}
+        livenessProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.analytics.health.liveness.path "port" "http" "config" .Values.analytics.health.liveness) | nindent 10 }}
+        readinessProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.analytics.health.readiness.path "port" "http" "config" .Values.analytics.health.readiness) | nindent 10 }}
+        startupProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.analytics.health.startup.path "port" "http" "config" .Values.analytics.health.startup) | nindent 10 }}
+        volumeMounts:
+        {{- include "epic8-platform.standardVolumeMounts" . | nindent 8 }}
+      volumes:
+      {{- include "epic8-platform.standardVolumes" . | nindent 6 }}
+      {{- if .Values.analytics.affinity.podAntiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          {{- include "epic8-platform.podAntiAffinity" (dict "service" "analytics" "weight" 100 "required" false) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.analytics.topologySpreadConstraints.enabled }}
+      topologySpreadConstraints:
+      {{- include "epic8-platform.topologySpreadConstraints" (dict "service" "analytics" "maxSkew" 1) | nindent 6 }}
+      {{- end }}
+
+{{- if .Values.analytics.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}-pdb
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "analytics" "tier" "backend" "component" "analytics" "context" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.analytics.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "analytics" "context" .) | nindent 6 }}
+{{- end }}
+{{- end }}

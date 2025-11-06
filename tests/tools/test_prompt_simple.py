@@ -12,7 +12,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))
 
-from shared_utils.generation.prompt_templates import TechnicalPromptTemplates, QueryType
+from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates, QueryType
 
 
 def test_prompt_templates():
@@ -111,7 +111,7 @@ def test_adaptive_engine():
     print("=" * 50)
 
     try:
-        from shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
+        from src.shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
 
         engine = AdaptivePromptEngine()
 
@@ -171,7 +171,7 @@ def test_chain_of_thought():
     print("=" * 50)
 
     try:
-        from shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
+        from src.shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
 
         cot_engine = ChainOfThoughtEngine()
 
@@ -184,7 +184,7 @@ def test_chain_of_thought():
         print(f"Query type: {query_type.value}")
 
         # Get base template
-        from shared_utils.generation.prompt_templates import PromptTemplate
+        from src.shared_utils.generation.prompt_templates import PromptTemplate
 
         base_template = PromptTemplate(
             system_prompt="You are a technical assistant.",

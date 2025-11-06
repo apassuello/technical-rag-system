@@ -61,8 +61,8 @@ class RetrievalResult:
         """Validate retrieval result data."""
         if not isinstance(self.document, Document):
             raise TypeError("document must be a Document instance")
-        if not 0 <= self.score <= 1:
-            raise ValueError("Score must be between 0 and 1")
+        if not isinstance(self.score, (int, float)) or self.score < 0:
+            raise ValueError("Score must be a non-negative number")
 
 
 @dataclass

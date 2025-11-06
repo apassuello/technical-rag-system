@@ -1,0 +1,435 @@
+# Epic 8 Platform - Advanced Ingress Configuration Values
+# Swiss Engineering Standards: Enterprise-grade networking configuration
+
+#============================================================================
+# Ingress Configuration
+#============================================================================
+ingress:
+  enabled: true
+  className: "nginx"  # nginx, traefik, haproxy, or cloud-specific
+
+  # Swiss Compliance
+  swissCompliant: true
+  dataResidency: "swiss-preferred"  # swiss-preferred, eu-compliant, global
+
+  # SSL/TLS Configuration
+  ssl:
+    enabled: true
+    redirect: true
+    forceRedirect: true
+    issuer: "letsencrypt-prod"  # letsencrypt-prod, letsencrypt-staging, epic8-ca-issuer
+    challengeType: "http01"  # http01, dns01
+    protocols: "TLSv1.2 TLSv1.3"
+    ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+    preferServerCiphers: false
+
+  # TLS Certificate Configuration
+  tls:
+  - hosts:
+    - api.epic8-platform.swiss
+    - www.epic8-platform.swiss
+    - epic8-platform.swiss
+    secretName: epic8-platform-tls
+  - hosts:
+    - analytics.epic8-platform.swiss
+    - monitoring.epic8-platform.swiss
+    secretName: epic8-platform-tls
+
+  # Host Configuration
+  hosts:
+  - host: api.epic8-platform.swiss
+    paths:
+    - path: /
+      pathType: Prefix
+      service: api-gateway
+      port: 8080
+  - host: www.epic8-platform.swiss
+    paths:
+    - path: /
+      pathType: Prefix
+      service: api-gateway
+      port: 8080
+  - host: epic8-platform.swiss
+    paths:
+    - path: /
+      pathType: Prefix
+      service: api-gateway
+      port: 8080
+
+  # Rate Limiting Configuration
+  rateLimiting:
+    enabled: true
+    requestsPerMinute: 1000
+    window: "1m"
+    connectionsPerIP: 100
+    burstSize: 20
+
+  # CORS Configuration
+  cors:
+    enabled: true
+    allowOrigin: "https://epic8-platform.swiss,https://www.epic8-platform.swiss,https://analytics.epic8-platform.swiss"
+    allowMethods: "GET, POST, PUT, DELETE, OPTIONS, HEAD"
+    allowHeaders: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Epic8-Client-ID,X-Epic8-API-Key"
+    exposeHeaders: "Content-Length,Content-Range,X-Epic8-Request-ID,X-Epic8-Response-Time"
+    allowCredentials: true
+    maxAge: 86400
+
+  # Performance Configuration
+  performance:
+    bodySize: "50m"
+    connectTimeout: 10
+    sendTimeout: 30
+    readTimeout: 30
+    buffering: "on"
+    bufferSize: "8k"
+
+  # Compression Configuration
+  compression:
+    enabled: true
+    level: 6
+    minLength: 1000
+    types: "application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/javascript text/plain text/x-component"
+
+  # Health Check Configuration
+  healthCheck:
+    enabled: true
+    path: "/health"
+    interval: "30s"
+    timeout: "5s"
+    upstreamHealthCheck: true
+
+  # Security Configuration
+  security:
+    # IP Whitelisting (optional)
+    ipWhitelist: []
+    # - "10.0.0.0/8"
+    # - "172.16.0.0/12"
+    # - "192.168.0.0/16"
+    # - "185.60.216.0/22"  # Swiss IP ranges
+
+    # Security Headers
+    headers:
+      frameOptions: "DENY"
+      contentTypeOptions: "nosniff"
+      xssProtection: "1; mode=block"
+      referrerPolicy: "strict-origin-when-cross-origin"
+      contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
+      permissionsPolicy: "geolocation=(), microphone=(), camera=()"
+      hsts: "max-age=31536000; includeSubDomains; preload"
+
+  # API Configuration
+  api:
+    versioning:
+      enabled: true
+      versions: ["v1", "v2"]
+
+  # WebSocket Support
+  websocket:
+    enabled: true
+    timeout: 0  # No timeout for WebSocket connections
+
+  # Metrics Exposure
+  exposeMetrics: false  # Set to true for development, false for production
+
+  # Custom Annotations (cloud-specific)
+  annotations: {}
+    # AWS ALB specific
+    # service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+    # service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    #
+    # GCP specific
+    # cloud.google.com/backend-config: '{"ports": {"80":"epic8-backend-config"}}'
+    # cloud.google.com/neg: '{"ingress": true}'
+    #
+    # Azure specific
+    # appgw.ingress.kubernetes.io/backend-path-prefix: "/"
+    # appgw.ingress.kubernetes.io/ssl-redirect: "true"
+
+#============================================================================
+# Analytics Ingress Configuration (Admin Interface)
+#============================================================================
+analytics:
+  ingress:
+    enabled: true
+    className: "nginx"
+
+    # SSL/TLS Configuration
+    ssl:
+      enabled: true
+      issuer: "letsencrypt-prod"
+      challengeType: "http01"
+
+    # TLS Configuration
+    tls:
+    - hosts:
+      - analytics.epic8-platform.swiss
+      - monitoring.epic8-platform.swiss
+      secretName: epic8-platform-tls
+
+    # Host Configuration
+    hosts:
+    - host: analytics.epic8-platform.swiss
+      paths:
+      - path: /
+        pathType: Prefix
+        service: analytics
+        port: 8085
+    - host: monitoring.epic8-platform.swiss
+      paths:
+      - path: /
+        pathType: Prefix
+        service: analytics
+        port: 8085
+
+    # Enhanced Security for Admin Interface
+    security:
+      # IP Whitelisting for Admin Access
+      ipWhitelist:
+      - "10.0.0.0/8"        # Private networks
+      - "172.16.0.0/12"     # Private networks
+      - "192.168.0.0/16"    # Private networks
+      - "185.60.216.0/22"   # Swiss IP ranges (example)
+      - "185.60.218.0/23"   # Swiss IP ranges (example)
+
+    # Authentication Configuration
+    auth:
+      enabled: true
+      type: "basic"  # basic, oauth2, oidc
+      secret: "epic8-platform-analytics-auth"
+      realm: "Epic 8 Platform Analytics - Swiss Engineering Access"
+
+    # Rate Limiting - More restrictive for admin
+    rateLimiting:
+      requestsPerMinute: 100
+      window: "1m"
+      connectionsPerIP: 10
+
+    # Performance Configuration for Analytics
+    performance:
+      bodySize: "100m"  # Larger for analytics data
+      connectTimeout: 30
+      sendTimeout: 120
+      readTimeout: 120
+
+#============================================================================
+# Staging/Development Ingress Configuration
+#============================================================================
+staging:
+  ingress:
+    enabled: false  # Enable for non-production environments
+    className: "nginx"
+
+    # SSL/TLS Configuration (staging certificates)
+    ssl:
+      enabled: true
+      issuer: "letsencrypt-staging"
+      challengeType: "http01"
+
+    # TLS Configuration
+    tls:
+    - hosts:
+      - staging-api.epic8-platform.swiss
+      - staging.epic8-platform.swiss
+      secretName: epic8-platform-staging-tls
+
+    # Host Configuration
+    hosts:
+    - host: staging-api.epic8-platform.swiss
+      paths:
+      - path: /
+        pathType: Prefix
+        service: api-gateway
+        port: 8080
+    - host: staging.epic8-platform.swiss
+      paths:
+      - path: /
+        pathType: Prefix
+        service: api-gateway
+        port: 8080
+
+    # Authentication for staging access
+    auth:
+      enabled: false  # Enable if needed
+      type: "basic"
+      secret: "epic8-platform-debug-auth"
+      realm: "Epic 8 Debug Access"
+
+    # Rate Limiting - More lenient for testing
+    rateLimiting:
+      requestsPerMinute: 2000
+      window: "1m"
+      connectionsPerIP: 200
+
+    # CORS Configuration (more permissive for testing)
+    cors:
+      allowOrigin: "*"
+      allowMethods: "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH"
+      allowHeaders: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Epic8-Client-ID,X-Epic8-API-Key,X-Test-Header"
+      allowCredentials: true
+
+    # Performance Configuration
+    performance:
+      bodySize: "100m"  # Larger for testing
+      connectTimeout: 30
+      sendTimeout: 120
+      readTimeout: 120
+
+#============================================================================
+# Multi-Cloud Load Balancer Configuration
+#============================================================================
+loadBalancer:
+  # Multi-cloud support
+  multiCloud:
+    enabled: true
+    primary: "aws"  # aws, gcp, azure
+    fallback: ["gcp", "azure"]
+
+  # AWS Configuration
+  aws:
+    enabled: true
+    type: "alb"  # alb, nlb
+    scheme: "internet-facing"
+    sslPolicy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    accessLogs:
+      enabled: true
+      bucket: "epic8-platform-access-logs"
+      prefix: "alb"
+    waf:
+      enabled: true
+      aclArn: ""  # Set if WAF is enabled
+
+  # GCP Configuration
+  gcp:
+    enabled: true
+    type: "global"  # global, regional
+    cdn:
+      enabled: true
+    iap:
+      enabled: false  # Identity-Aware Proxy for admin endpoints
+
+  # Azure Configuration
+  azure:
+    enabled: true
+    type: "application-gateway"
+    waf:
+      enabled: true
+      policyName: "epic8-platform-waf"
+
+#============================================================================
+# DNS and Geo-Routing Configuration
+#============================================================================
+dns:
+  # Global DNS configuration
+  global:
+    enabled: true
+    provider: "cloudflare"  # cloudflare, route53, azure-dns, google-dns
+
+  # Geographic routing for Swiss compliance
+  geoRouting:
+    enabled: true
+    swissPreference: true
+    policies:
+      swiss:
+        countries: ["CH"]
+        weight: 100
+      eu:
+        countries: ["DE", "FR", "IT", "AT", "LI"]
+        exclude: ["CH"]
+        weight: 80
+      global:
+        default: true
+        weight: 60
+
+  # Health checks
+  healthChecks:
+    enabled: true
+    interval: 30
+    timeout: 5
+    retries: 3
+    path: "/health"
+
+#============================================================================
+# Service Mesh Integration
+#============================================================================
+serviceMesh:
+  # Istio configuration
+  istio:
+    enabled: false  # Enable for service mesh
+    gateway:
+      enabled: true
+      ssl:
+        mode: "SIMPLE"  # SIMPLE, MUTUAL, PASSTHROUGH
+        credentialName: "epic8-platform-tls"
+    virtualService:
+      enabled: true
+      retries:
+        attempts: 3
+        perTryTimeout: "10s"
+      timeout: "30s"
+
+  # mTLS configuration
+  mtls:
+    enabled: false  # Enable for service mesh
+    mode: "STRICT"  # STRICT, PERMISSIVE
+
+#============================================================================
+# Monitoring and Observability
+#============================================================================
+monitoring:
+  # Ingress monitoring
+  ingress:
+    enabled: true
+    metrics:
+      enabled: true
+      interval: "15s"
+    alerts:
+      enabled: true
+      thresholds:
+        latencyP95: 2  # seconds
+        errorRate: 0.05  # 5%
+        rateLimitHits: 100  # per 5 minutes
+
+  # Distributed tracing
+  tracing:
+    enabled: true
+    jaeger:
+      enabled: true
+      collector: "jaeger-collector.istio-system.svc.cluster.local:14268"
+      samplingRate: 0.1  # 10%
+
+  # Access logs
+  accessLogs:
+    enabled: true
+    format: "json"
+    includeHeaders: true
+
+#============================================================================
+# Documentation
+#============================================================================
+documentation:
+  enabled: true
+  path: "/docs"
+  swagger:
+    enabled: true
+    ui: "swagger-ui"  # swagger-ui, redoc
+
+#============================================================================
+# Development Features
+#============================================================================
+development:
+  # Debug endpoints
+  debug:
+    enabled: false  # Enable for non-production
+    endpoints:
+      enabled: true
+      prefix: "/debug"
+
+  # Fault injection for testing
+  faultInjection:
+    enabled: false  # Enable for testing
+    delay:
+      percentage: 0.1
+      fixedDelay: "5s"
+    abort:
+      percentage: 0.1
+      httpStatus: 503

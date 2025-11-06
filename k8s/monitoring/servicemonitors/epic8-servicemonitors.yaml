@@ -1,0 +1,354 @@
+---
+# Epic 8 Service Monitors for comprehensive metrics collection
+# Optimized for auto-scaling metrics and SLO monitoring
+
+# API Gateway ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-gateway-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: api-gateway
+    epic8.platform/component: monitoring
+    epic8.platform/tier: frontend
+    app.kubernetes.io/name: api-gateway-monitor
+    app.kubernetes.io/part-of: epic8-platform
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: api-gateway
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics
+    honorLabels: true
+    scrapeTimeout: 10s
+    metricRelabelings:
+    # HPA metrics
+    - sourceLabels: [__name__]
+      regex: 'http_requests_total'
+      targetLabel: __name__
+      replacement: 'epic8_api_gateway_requests_per_second'
+    - sourceLabels: [__name__]
+      regex: 'http_request_duration_seconds'
+      targetLabel: __name__
+      replacement: 'epic8_api_gateway_request_duration_seconds'
+    - sourceLabels: [__name__]
+      regex: 'active_connections'
+      targetLabel: __name__
+      replacement: 'epic8_api_gateway_active_connections'
+    # SLO metrics
+    - sourceLabels: [__name__]
+      regex: 'http_requests_total'
+      targetLabel: __name__
+      replacement: 'epic8_api_gateway_requests_total'
+  namespaceSelector:
+    matchNames:
+    - epic8-prod
+
+---
+# Generator ServiceMonitor (ML-optimized)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: generator-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: monitoring
+    epic8.platform/tier: compute
+    epic8.platform/workload-type: ml-inference
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: generator
+  endpoints:
+  - port: metrics
+    interval: 30s  # Longer interval for ML metrics
+    path: /metrics
+    honorLabels: true
+    scrapeTimeout: 15s
+    metricRelabelings:
+    # HPA metrics for ML workloads
+    - sourceLabels: [__name__]
+      regex: 'generation_requests_queued'
+      targetLabel: __name__
+      replacement: 'epic8_generator_queue_length'
+    - sourceLabels: [__name__]
+      regex: 'generation_duration_seconds'
+      targetLabel: __name__
+      replacement: 'epic8_generator_generation_duration_seconds'
+    - sourceLabels: [__name__]
+      regex: 'model_switching_duration_ms'
+      targetLabel: __name__
+      replacement: 'epic8_generator_model_switching_overhead_ms'
+    - sourceLabels: [__name__]
+      regex: 'cost_per_query_usd'
+      targetLabel: __name__
+      replacement: 'epic8_generator_cost_per_query_usd'
+    # SLO metrics
+    - sourceLabels: [__name__]
+      regex: 'generation_success_rate'
+      targetLabel: __name__
+      replacement: 'epic8_generator_success_rate'
+
+---
+# Query Analyzer ServiceMonitor (ML Classification)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: query-analyzer-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: monitoring
+    epic8.platform/tier: intelligence
+    epic8.platform/workload-type: ml-classification
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: query-analyzer
+  endpoints:
+  - port: metrics
+    interval: 20s
+    path: /metrics
+    honorLabels: true
+    scrapeTimeout: 10s
+    metricRelabelings:
+    # HPA metrics for analysis workloads
+    - sourceLabels: [__name__]
+      regex: 'analysis_requests_queued'
+      targetLabel: __name__
+      replacement: 'epic8_query_analyzer_queue_length'
+    - sourceLabels: [__name__]
+      regex: 'analysis_duration_seconds'
+      targetLabel: __name__
+      replacement: 'epic8_query_analyzer_analysis_duration_seconds'
+    - sourceLabels: [__name__]
+      regex: 'classification_accuracy'
+      targetLabel: __name__
+      replacement: 'epic8_query_analyzer_accuracy'
+    - sourceLabels: [__name__]
+      regex: 'feature_extraction_duration_ms'
+      targetLabel: __name__
+      replacement: 'epic8_query_analyzer_feature_extraction_time_ms'
+
+---
+# Retriever ServiceMonitor (Vector Search)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: retriever-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: monitoring
+    epic8.platform/tier: data
+    epic8.platform/workload-type: vector-search
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: retriever
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics
+    honorLabels: true
+    scrapeTimeout: 10s
+    metricRelabelings:
+    # HPA metrics for vector search
+    - sourceLabels: [__name__]
+      regex: 'retrieval_requests_queued'
+      targetLabel: __name__
+      replacement: 'epic8_retriever_queue_length'
+    - sourceLabels: [__name__]
+      regex: 'retrieval_duration_seconds'
+      targetLabel: __name__
+      replacement: 'epic8_retriever_retrieval_duration_seconds'
+    - sourceLabels: [__name__]
+      regex: 'vector_index_hit_rate'
+      targetLabel: __name__
+      replacement: 'epic8_retriever_vector_index_hit_ratio'
+    - sourceLabels: [__name__]
+      regex: 'bm25_retrieval_duration_ms'
+      targetLabel: __name__
+      replacement: 'epic8_retriever_bm25_retrieval_time_ms'
+    # SLO metrics
+    - sourceLabels: [__name__]
+      regex: 'search_precision_at_10'
+      targetLabel: __name__
+      replacement: 'epic8_retriever_precision_at_10'
+
+---
+# Cache ServiceMonitor (Memory-optimized)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cache-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: cache
+    epic8.platform/component: monitoring
+    epic8.platform/tier: data
+    epic8.platform/workload-type: caching
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: cache
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    honorLabels: true
+    scrapeTimeout: 10s
+    metricRelabelings:
+    # HPA metrics for cache workloads
+    - sourceLabels: [__name__]
+      regex: 'cache_hit_ratio'
+      targetLabel: __name__
+      replacement: 'epic8_cache_hit_rate'
+    - sourceLabels: [__name__]
+      regex: 'cache_access_duration_ms'
+      targetLabel: __name__
+      replacement: 'epic8_cache_access_time_ms'
+    - sourceLabels: [__name__]
+      regex: 'cache_evictions_per_minute'
+      targetLabel: __name__
+      replacement: 'epic8_cache_eviction_rate_per_minute'
+    - sourceLabels: [__name__]
+      regex: 'cache_active_connections'
+      targetLabel: __name__
+      replacement: 'epic8_cache_active_connections'
+    # SLO metrics
+    - sourceLabels: [__name__]
+      regex: 'cache_hits_total'
+      targetLabel: __name__
+      replacement: 'epic8_cache_hits_total'
+    - sourceLabels: [__name__]
+      regex: 'cache_requests_total'
+      targetLabel: __name__
+      replacement: 'epic8_cache_requests_total'
+
+---
+# Analytics ServiceMonitor (Background Processing)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: analytics-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: monitoring
+    epic8.platform/tier: processing
+    epic8.platform/workload-type: background-processing
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: analytics
+  endpoints:
+  - port: metrics
+    interval: 60s  # Longer interval for analytics
+    path: /metrics
+    honorLabels: true
+    scrapeTimeout: 15s
+    metricRelabelings:
+    # HPA metrics for analytics workloads
+    - sourceLabels: [__name__]
+      regex: 'analytics_tasks_queued'
+      targetLabel: __name__
+      replacement: 'epic8_analytics_queue_length'
+    - sourceLabels: [__name__]
+      regex: 'processing_lag_seconds'
+      targetLabel: __name__
+      replacement: 'epic8_analytics_processing_lag_minutes'
+    - sourceLabels: [__name__]
+      regex: 'cost_tracking_accuracy'
+      targetLabel: __name__
+      replacement: 'epic8_analytics_cost_tracking_accuracy'
+    - sourceLabels: [__name__]
+      regex: 'data_integrity_failures'
+      targetLabel: __name__
+      replacement: 'epic8_analytics_data_integrity_failure_rate'
+
+---
+# System-wide ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: epic8-system-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: system-monitoring
+    epic8.platform/tier: infrastructure
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/monitoring: system
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    honorLabels: true
+    metricRelabelings:
+    # System-wide SLO metrics
+    - sourceLabels: [__name__]
+      regex: 'end_to_end_duration_seconds'
+      targetLabel: __name__
+      replacement: 'epic8_system_end_to_end_duration_seconds'
+    - sourceLabels: [__name__]
+      regex: 'cluster_cpu_utilization'
+      targetLabel: __name__
+      replacement: 'epic8_cluster_cpu_utilization'
+    - sourceLabels: [__name__]
+      regex: 'cluster_memory_utilization'
+      targetLabel: __name__
+      replacement: 'epic8_cluster_memory_utilization'
+    - sourceLabels: [__name__]
+      regex: 'concurrent_users'
+      targetLabel: __name__
+      replacement: 'epic8_system_concurrent_users'
+
+---
+# Autoscaling-specific ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: epic8-autoscaling-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: autoscaling-monitoring
+    epic8.platform/tier: infrastructure
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/component: autoscaling
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    honorLabels: true
+    metricRelabelings:
+    # HPA metrics
+    - sourceLabels: [__name__]
+      regex: 'kube_hpa_status_current_replicas'
+      targetLabel: __name__
+      replacement: 'epic8_hpa_current_replicas'
+    - sourceLabels: [__name__]
+      regex: 'kube_hpa_status_desired_replicas'
+      targetLabel: __name__
+      replacement: 'epic8_hpa_desired_replicas'
+    - sourceLabels: [__name__]
+      regex: 'kube_hpa_spec_target_metric'
+      targetLabel: __name__
+      replacement: 'epic8_hpa_target_metric'
+    # VPA metrics
+    - sourceLabels: [__name__]
+      regex: 'kube_vpa_status_recommendation'
+      targetLabel: __name__
+      replacement: 'epic8_vpa_recommendation'
+    # Cluster Autoscaler metrics
+    - sourceLabels: [__name__]
+      regex: 'cluster_autoscaler_nodes_count'
+      targetLabel: __name__
+      replacement: 'epic8_cluster_nodes_count'

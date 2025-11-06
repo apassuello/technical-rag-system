@@ -1,0 +1,37 @@
+{{/*
+Epic 8 Platform - Analytics Service Template
+Real-time analytics and metrics collection service
+*/}}
+
+{{- if .Values.analytics.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "analytics" "tier" "backend" "component" "analytics" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Analytics Service - Real-time analytics and metrics collection"
+    {{- if include "epic8-platform.monitoring.enabled" . }}
+    {{- include "epic8-platform.prometheusAnnotations" (dict "port" (.Values.analytics.service.port | toString) "path" "/metrics") | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.analytics.service.type }}
+  ports:
+  - name: http
+    port: {{ .Values.analytics.service.port }}
+    targetPort: {{ .Values.analytics.service.targetPort }}
+    protocol: TCP
+  {{- if include "epic8-platform.monitoring.enabled" . }}
+  - name: metrics
+    port: {{ .Values.analytics.service.metricsPort }}
+    targetPort: metrics
+    protocol: TCP
+  {{- end }}
+  selector:
+    {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "analytics" "context" .) | nindent 4 }}
+  sessionAffinity: None
+{{- end }}

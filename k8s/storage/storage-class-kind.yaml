@@ -1,0 +1,64 @@
+---
+# Kind-specific storage classes for Epic 8 Platform
+# These use local-path provisioner for development and testing
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: epic8-kind-fast
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-tier: fast
+    epic8.platform/environment: kind
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: storage
+  annotations:
+    epic8.platform/description: "Kind local-path storage for Epic 8 services (fast tier)"
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: false  # local-path doesn't support expansion
+reclaimPolicy: Delete
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: epic8-kind-standard
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-tier: standard
+    epic8.platform/environment: kind
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: storage
+  annotations:
+    epic8.platform/description: "Kind local-path storage for Epic 8 logs and cache (standard tier)"
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: false  # local-path doesn't support expansion
+reclaimPolicy: Delete
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: epic8-kind-archive
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-tier: archive
+    epic8.platform/environment: kind
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: storage
+  annotations:
+    epic8.platform/description: "Kind local-path storage for Epic 8 archival data"
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: false  # local-path doesn't support expansion
+reclaimPolicy: Retain

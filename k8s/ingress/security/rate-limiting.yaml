@@ -1,0 +1,486 @@
+---
+# Epic 8 Platform - Advanced Rate Limiting and DDoS Protection
+# Swiss Engineering Standards: Security, Performance, Reliability
+# Multi-tier rate limiting with Swiss compliance considerations
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-rate-limiting-config
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: security
+    epic8.platform/type: rate-limiting
+    epic8.platform/tier: infrastructure
+data:
+  # Global Rate Limiting Zones
+  rate-limiting.conf: |
+    # Epic 8 Platform Rate Limiting Configuration
+    # Swiss Engineering Standards for API Protection
+
+    # Zone definitions for different API tiers
+    limit_req_zone $binary_remote_addr zone=api_public:10m rate=100r/m;
+    limit_req_zone $binary_remote_addr zone=api_authenticated:10m rate=500r/m;
+    limit_req_zone $binary_remote_addr zone=api_premium:10m rate=2000r/m;
+    limit_req_zone $binary_remote_addr zone=api_admin:10m rate=50r/m;
+
+    # API key based rate limiting
+    limit_req_zone $http_x_epic8_api_key zone=api_key_tier1:10m rate=1000r/m;
+    limit_req_zone $http_x_epic8_api_key zone=api_key_tier2:10m rate=5000r/m;
+    limit_req_zone $http_x_epic8_api_key zone=api_key_tier3:10m rate=10000r/m;
+
+    # Connection limiting zones
+    limit_conn_zone $binary_remote_addr zone=addr:10m;
+    limit_conn_zone $http_x_epic8_api_key zone=api_key:10m;
+
+    # Request size limiting
+    limit_req_zone $binary_remote_addr zone=upload:10m rate=10r/m;
+
+    # Swiss-specific zones (for geo-compliance)
+    limit_req_zone $binary_remote_addr zone=swiss_public:10m rate=200r/m;
+    limit_req_zone $binary_remote_addr zone=eu_public:10m rate=150r/m;
+    limit_req_zone $binary_remote_addr zone=global_public:10m rate=100r/m;
+
+    # Burst configurations
+    map $http_x_epic8_api_key $rate_limit_key {
+        default $binary_remote_addr;
+        ~^tier1_ $http_x_epic8_api_key;
+        ~^tier2_ $http_x_epic8_api_key;
+        ~^tier3_ $http_x_epic8_api_key;
+    }
+
+    map $http_x_epic8_api_key $rate_limit_zone {
+        default "api_public";
+        ~^tier1_ "api_key_tier1";
+        ~^tier2_ "api_key_tier2";
+        ~^tier3_ "api_key_tier3";
+    }
+
+    # Geo-based rate limiting
+    geo $swiss_ip {
+        default 0;
+        # Swiss IP ranges (example - update with actual ranges)
+        193.5.0.0/16 1;      # Switzerland
+        130.59.0.0/16 1;     # SWITCH (Swiss universities)
+        149.126.0.0/16 1;    # Swiss government
+        # Add more Swiss IP ranges as needed
+    }
+
+    geo $eu_ip {
+        default 0;
+        # EU IP ranges (major ranges only)
+        2.0.0.0/8 1;         # European allocation
+        31.0.0.0/8 1;        # European allocation
+        # Add more EU ranges as needed
+    }
+
+    map $swiss_ip$eu_ip $geo_zone {
+        10 "swiss_public";
+        01 "eu_public";
+        00 "global_public";
+    }
+
+---
+# Rate Limiting Middleware Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-rate-limiting-middleware
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: security
+    epic8.platform/type: rate-limiting
+    epic8.platform/middleware: true
+data:
+  middleware.lua: |
+    -- Epic 8 Platform Rate Limiting Middleware
+    -- Swiss Engineering Standards: Intelligent Rate Limiting
+
+    local _M = {}
+
+    function _M.check_rate_limit()
+        local headers = ngx.req.get_headers()
+        local client_ip = ngx.var.remote_addr
+        local api_key = headers["x-epic8-api-key"]
+        local user_agent = headers["user-agent"] or ""
+
+        -- API Key validation and tier detection
+        if api_key then
+            -- Validate API key format
+            if string.match(api_key, "^epic8_[a-zA-Z0-9]{32}$") then
+                -- Extract tier from API key
+                local tier = string.sub(api_key, 7, 11)  -- Extract tier info
+
+                if tier == "tier1" then
+                    ngx.var.rate_limit_zone = "api_key_tier1"
+                    ngx.var.rate_limit_burst = "20"
+                elseif tier == "tier2" then
+                    ngx.var.rate_limit_zone = "api_key_tier2"
+                    ngx.var.rate_limit_burst = "50"
+                elseif tier == "tier3" then
+                    ngx.var.rate_limit_zone = "api_key_tier3"
+                    ngx.var.rate_limit_burst = "100"
+                else
+                    ngx.var.rate_limit_zone = "api_authenticated"
+                    ngx.var.rate_limit_burst = "10"
+                end
+            else
+                -- Invalid API key format
+                ngx.status = 401
+                ngx.say('{"error": "Invalid API key format", "code": "INVALID_API_KEY"}')
+                ngx.exit(401)
+            end
+        else
+            -- No API key - use IP-based limiting
+            ngx.var.rate_limit_zone = "api_public"
+            ngx.var.rate_limit_burst = "5"
+        end
+
+        -- Bot detection (simple)
+        if string.match(string.lower(user_agent), "bot") or
+           string.match(string.lower(user_agent), "crawler") or
+           string.match(string.lower(user_agent), "spider") then
+            ngx.var.rate_limit_zone = "api_public"
+            ngx.var.rate_limit_burst = "2"  -- Stricter for bots
+        end
+
+        -- Swiss compliance headers
+        if ngx.var.swiss_ip == "1" then
+            ngx.header["X-Epic8-Geo-Zone"] = "swiss"
+            ngx.header["X-Epic8-Data-Residency"] = "compliant"
+        elseif ngx.var.eu_ip == "1" then
+            ngx.header["X-Epic8-Geo-Zone"] = "eu"
+            ngx.header["X-Epic8-Data-Residency"] = "gdpr-compliant"
+        else
+            ngx.header["X-Epic8-Geo-Zone"] = "global"
+            ngx.header["X-Epic8-Data-Residency"] = "standard"
+        end
+
+        -- Rate limit information headers
+        ngx.header["X-Epic8-Rate-Limit-Zone"] = ngx.var.rate_limit_zone
+        ngx.header["X-Epic8-Rate-Limit-Burst"] = ngx.var.rate_limit_burst
+    end
+
+    function _M.handle_rate_limit_exceeded()
+        ngx.status = 429
+        ngx.header["Retry-After"] = "60"
+        ngx.header["X-Epic8-Error"] = "Rate limit exceeded"
+        ngx.header["X-Epic8-Error-Code"] = "RATE_LIMIT_EXCEEDED"
+
+        local response = {
+            error = "Rate limit exceeded",
+            code = "RATE_LIMIT_EXCEEDED",
+            message = "Please reduce your request rate or upgrade your API tier",
+            retry_after = 60,
+            support = "https://epic8-platform.swiss/support",
+            docs = "https://epic8-platform.swiss/docs/rate-limits"
+        }
+
+        ngx.say(require("cjson").encode(response))
+        ngx.exit(429)
+    end
+
+    return _M
+
+---
+# NGINX Ingress Rate Limiting Annotations Template
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-rate-limiting-annotations
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: security
+    epic8.platform/type: rate-limiting
+    epic8.platform/template: annotations
+data:
+  # Public API endpoints (most restrictive)
+  public-api.yaml: |
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "10"
+    nginx.ingress.kubernetes.io/rate-limit-rps: "2"
+    nginx.ingress.kubernetes.io/limit-req-status-code: "429"
+    nginx.ingress.kubernetes.io/limit-conn-status-code: "429"
+
+  # Authenticated API endpoints
+  authenticated-api.yaml: |
+    nginx.ingress.kubernetes.io/rate-limit: "500"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "50"
+    nginx.ingress.kubernetes.io/rate-limit-rps: "10"
+    nginx.ingress.kubernetes.io/limit-req-status-code: "429"
+    nginx.ingress.kubernetes.io/limit-conn-status-code: "429"
+
+  # Premium API endpoints
+  premium-api.yaml: |
+    nginx.ingress.kubernetes.io/rate-limit: "2000"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "200"
+    nginx.ingress.kubernetes.io/rate-limit-rps: "50"
+    nginx.ingress.kubernetes.io/limit-req-status-code: "429"
+    nginx.ingress.kubernetes.io/limit-conn-status-code: "429"
+
+  # Admin endpoints (very restrictive)
+  admin-api.yaml: |
+    nginx.ingress.kubernetes.io/rate-limit: "50"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "5"
+    nginx.ingress.kubernetes.io/rate-limit-rps: "1"
+    nginx.ingress.kubernetes.io/limit-req-status-code: "429"
+    nginx.ingress.kubernetes.io/limit-conn-status-code: "429"
+
+  # Upload endpoints (file size limited)
+  upload-api.yaml: |
+    nginx.ingress.kubernetes.io/rate-limit: "10"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "2"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/limit-req-status-code: "429"
+    nginx.ingress.kubernetes.io/limit-conn-status-code: "429"
+
+---
+# DDoS Protection Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-ddos-protection
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: security
+    epic8.platform/type: ddos-protection
+    epic8.platform/tier: infrastructure
+data:
+  ddos-protection.conf: |
+    # Epic 8 Platform DDoS Protection
+    # Swiss Engineering Standards: Multi-layer Protection
+
+    # Connection rate limiting (per IP)
+    limit_conn addr 20;
+    limit_conn_log_level warn;
+    limit_conn_status 503;
+
+    # Request rate limiting with burst
+    limit_req zone=api_public burst=10 nodelay;
+    limit_req_log_level warn;
+    limit_req_status 429;
+
+    # Large request protection
+    client_max_body_size 50m;
+    client_body_timeout 30s;
+    client_header_timeout 30s;
+
+    # Slow request protection
+    client_body_buffer_size 1m;
+    client_header_buffer_size 1k;
+    large_client_header_buffers 4 8k;
+
+    # Keep-alive optimization
+    keepalive_timeout 30s;
+    keepalive_requests 1000;
+
+    # Worker optimization
+    worker_connections 16384;
+    worker_rlimit_nofile 65536;
+
+  suspicious-patterns.conf: |
+    # Suspicious request patterns
+    map $request_uri $suspicious_request {
+        default 0;
+        ~*\.(asp|jsp|php|cgi)$ 1;  # Suspicious extensions
+        ~*union.*select 1;          # SQL injection
+        ~*<script 1;                # XSS attempts
+        ~*\.\./\.\. 1;             # Directory traversal
+        ~*proc/self/environ 1;      # System access attempts
+    }
+
+    map $http_user_agent $suspicious_agent {
+        default 0;
+        ~*masscan 1;
+        ~*nmap 1;
+        ~*nikto 1;
+        ~*sqlmap 1;
+        ~*dirb 1;
+        ~*gobuster 1;
+    }
+
+    map $suspicious_request$suspicious_agent $block_request {
+        default 0;
+        ~1 1;  # Block if any suspicious pattern matches
+    }
+
+  geo-blocking.conf: |
+    # Geo-blocking configuration (optional)
+    # Uncomment and configure based on requirements
+
+    # geo $blocked_country {
+    #     default 0;
+    #     # Block specific countries if needed
+    #     # Example: Block known attack sources
+    #     include /etc/nginx/blocked-countries.conf;
+    # }
+
+    # Swiss compliance geo-routing
+    geo $swiss_preferred {
+        default 0;
+        193.5.0.0/16 1;      # Switzerland
+        130.59.0.0/16 1;     # SWITCH
+        149.126.0.0/16 1;    # Swiss government
+    }
+
+---
+# Rate Limiting Monitoring
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-rate-limiting-monitoring
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: security
+    epic8.platform/type: monitoring
+    epic8.platform/monitoring-target: rate-limiting
+data:
+  monitoring.conf: |
+    # Rate limiting metrics for Prometheus
+
+    # Custom log format for rate limiting analysis
+    log_format rate_limit_log '$remote_addr - $remote_user [$time_local] '
+                             '"$request" $status $body_bytes_sent '
+                             '"$http_referer" "$http_user_agent" '
+                             'rate_limit_zone="$rate_limit_zone" '
+                             'rate_limit_exceeded="$limit_req_status" '
+                             'connections_exceeded="$limit_conn_status" '
+                             'api_key="$http_x_epic8_api_key" '
+                             'geo_zone="$geo_zone" '
+                             'swiss_ip="$swiss_ip" '
+                             'request_time=$request_time '
+                             'upstream_response_time=$upstream_response_time';
+
+    # Access log with rate limiting information
+    access_log /var/log/nginx/rate_limit.log rate_limit_log;
+
+  prometheus-metrics.lua: |
+    -- Epic 8 Platform Rate Limiting Metrics
+    -- Export metrics to Prometheus
+
+    local prometheus = require("resty.prometheus").init("prometheus_metrics")
+
+    local rate_limit_counter = prometheus:counter(
+        "epic8_rate_limit_total",
+        "Total rate limit triggers",
+        {"zone", "api_tier", "geo_zone"}
+    )
+
+    local rate_limit_exceeded = prometheus:counter(
+        "epic8_rate_limit_exceeded_total",
+        "Total rate limit exceeded events",
+        {"zone", "api_tier", "geo_zone"}
+    )
+
+    local request_duration = prometheus:histogram(
+        "epic8_request_duration_seconds",
+        "Request duration",
+        {"api_tier", "endpoint", "status"},
+        {0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10}
+    )
+
+    -- Export function for NGINX
+    local function collect()
+        prometheus:collect()
+    end
+
+    return {
+        rate_limit_counter = rate_limit_counter,
+        rate_limit_exceeded = rate_limit_exceeded,
+        request_duration = request_duration,
+        collect = collect
+    }
+
+---
+# Rate Limiting Secrets (API Keys and Auth)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: epic8-platform-analytics-auth
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: security
+    epic8.platform/type: authentication
+    epic8.platform/access-level: admin
+type: Opaque
+data:
+  # Basic auth for analytics access (admin:epic8-swiss-admin)
+  # Generated with: htpasswd -nb admin epic8-swiss-admin
+  auth: YWRtaW46JGFwcjEkSDZ1a1FkV0kkeFNRczdvVVcvQ2JOV29LM05LUGpJLg==
+
+---
+# API Key Validation Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: epic8-api-key-validation
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: security
+    epic8.platform/type: api-key
+    epic8.platform/tier: authentication
+type: Opaque
+data:
+  # JWT secret for API key validation
+  jwt-secret: ZXBpYzgtcGxhdGZvcm0tc3dpc3MtZW5naW5lZXJpbmctc2VjcmV0LWtleQ==
+
+  # API key encryption key
+  encryption-key: c3dpc3MtZW5naW5lZXJpbmctc2VjdXJpdHktZXBpYzgtcGxhdGZvcm0=
+
+---
+# Network Policy for Rate Limiting Service
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rate-limiting-network-policy
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: security
+    epic8.platform/type: network-policy
+    epic8.platform/tier: infrastructure
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: nginx-ingress
+      app.kubernetes.io/component: controller
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector: {}  # Allow from all namespaces
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 10254  # Metrics
+  egress:
+  - to: []  # Allow all egress for upstream services
+    ports:
+    - protocol: TCP
+      port: 8080  # API Gateway
+    - protocol: TCP
+      port: 8081  # Generator
+    - protocol: TCP
+      port: 8082  # Query Analyzer
+    - protocol: TCP
+      port: 8083  # Retriever
+    - protocol: TCP
+      port: 8084  # Cache
+    - protocol: TCP
+      port: 8085  # Analytics
+    - protocol: TCP
+      port: 9090  # Prometheus metrics
+    - protocol: TCP
+      port: 53   # DNS
+    - protocol: UDP
+      port: 53   # DNS

@@ -1,0 +1,67 @@
+# RAG Portfolio Project - Unified Coverage Configuration
+# Use --cov flags to specify which directories to measure
+
+[run]
+# Don't set source here - use --cov flags instead for flexibility
+# This allows measuring src/, services/, or both as needed
+
+# Exclude test files, cache directories, and utility tools
+omit = 
+    # Test files (should never be measured)
+    */tests/*
+    */test_*
+    */*_test.py
+    
+    # Cache and build artifacts
+    */__pycache__/*
+    */.pytest_cache/*
+    */build/*
+    */dist/*
+    
+    # Operational tools and utilities (not core application code)
+    */tools/*
+
+# Branch coverage tracking
+branch = true
+
+# Parallel processing support
+parallel = true
+concurrency = multiprocessing,thread
+
+[report]
+# Show missing lines in terminal report
+show_missing = true
+
+# Exclude lines from coverage (pragmas)
+exclude_lines =
+    # Standard exclusions
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    
+    # Type checking exclusions
+    if TYPE_CHECKING:
+    @abstractmethod
+
+# Set minimum coverage thresholds
+precision = 1
+sort = miss
+
+[html]
+# HTML report configuration
+directory = reports/coverage/html
+title = RAG Portfolio - Code Coverage Report
+
+[xml]
+# XML report for CI/CD integration
+output = reports/coverage/coverage.xml
+
+[json]
+# JSON report for programmatic access
+output = reports/coverage/coverage.json
+pretty_print = true

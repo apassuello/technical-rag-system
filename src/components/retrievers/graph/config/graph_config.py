@@ -51,12 +51,26 @@ class RelationshipDetectionConfig:
 class GraphRetrievalConfig:
     """Configuration for GraphRetriever."""
     algorithms: List[str] = field(default_factory=lambda: ["shortest_path", "random_walk", "subgraph_expansion"])
-    max_graph_results: int = 10
+    max_graph_results: int = 20
     max_path_length: int = 3
     random_walk_steps: int = 10
     subgraph_radius: int = 2
     score_aggregation: str = "weighted_average"
     enable_path_scoring: bool = True
+    
+    def __post_init__(self):
+        """Validate configuration after initialization."""
+        valid_algorithms = {"shortest_path", "random_walk", "subgraph_expansion"}
+        for algo in self.algorithms:
+            if algo not in valid_algorithms:
+                raise ValueError(f"Unknown algorithm: {algo}")
+        
+        if self.max_path_length <= 0:
+            raise ValueError("max_path_length must be positive")
+            
+        valid_aggregations = {"max", "average", "weighted_average"}
+        if self.score_aggregation not in valid_aggregations:
+            raise ValueError(f"Invalid score_aggregation: {self.score_aggregation}")
 
 
 @dataclass

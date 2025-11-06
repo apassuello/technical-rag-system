@@ -8,9 +8,9 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))
 
-from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
-from shared_utils.document_processing.chunker import chunk_technical_text
-from shared_utils.embeddings.generator import generate_embeddings
+from src.shared_utils.document_processing.pdf_parser import extract_text_with_metadata
+from src.shared_utils.document_processing.chunker import chunk_technical_text
+from src.shared_utils.embeddings.generator import generate_embeddings
 
 
 def test_full_pipeline():

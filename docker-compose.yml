@@ -1,0 +1,353 @@
+# Epic 8 Cloud-Native RAG Platform - Docker Compose
+# Complete microservices deployment with Epic 1 component integration
+
+services:
+  # API Gateway - Entry point for all requests
+  api-gateway:
+    build:
+      context: .  # Build from project root
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: epic8_api_gateway
+    ports:
+      - "8080:8080"   # Main API Gateway
+    environment:
+      - PYTHONPATH=/app:/app/src
+      - PROJECT_ROOT=/app
+      - QUERY_ANALYZER_URL=http://query-analyzer:8082
+      - GENERATOR_URL=http://generator:8081
+      - RETRIEVER_URL=http://retriever:8083
+      - CACHE_URL=http://cache:8084
+      - ANALYTICS_URL=http://analytics:8085
+    depends_on:
+      - query-analyzer
+      - generator
+      - retriever
+      - cache
+      - analytics
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - epic8_network
+    labels:
+      - "com.epic8.service=api-gateway"
+
+  # Query Analyzer Service - ML-based query complexity analysis
+  query-analyzer:
+    build:
+      context: .  # Build from project root
+      dockerfile: services/query-analyzer/Dockerfile
+    container_name: epic8_query_analyzer
+    ports:
+      - "8082:8082"   # Query Analyzer API
+    environment:
+      - PYTHONPATH=/app:/app/src
+      - PROJECT_ROOT=/app
+      - QUERY_ANALYZER_CONFIG_FILE=/app/config.yaml
+    volumes:
+      - query_analyzer_logs:/app/logs
+      - query_analyzer_cache:/app/cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - epic8_network
+    labels:
+      - "com.epic8.service=query-analyzer"
+
+  # Generator Service - Multi-model answer generation
+  generator:
+    build:
+      context: .  # Build from project root
+      dockerfile: services/generator/Dockerfile
+    container_name: epic8_generator
+    ports:
+      - "8081:8081"   # Generator API
+    environment:
+      - PYTHONPATH=/app:/app/src
+      - PROJECT_ROOT=/app
+      - GENERATOR_CONFIG_FILE=/app/config.yaml
+      - OLLAMA_URL=http://ollama:11434
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+    volumes:
+      - generator_logs:/app/logs
+      - generator_cache:/app/cache
+    depends_on:
+      - ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - epic8_network
+    labels:
+      - "com.epic8.service=generator"
+
+  # Retriever Service - Epic 2 ModularUnifiedRetriever integration
+  retriever:
+    build:
+      context: .  # Build from project root
+      dockerfile: services/retriever/Dockerfile
+    container_name: epic8_retriever
+    ports:
+      - "8083:8083"   # Retriever API
+    environment:
+      - PYTHONPATH=/app:/app/src
+      - PROJECT_ROOT=/app
+      - WEAVIATE_URL=http://weaviate:8080
+    volumes:
+      - retriever_logs:/app/logs
+      - retriever_cache:/app/cache
+      - ./data:/app/data:ro  # Document data (read-only)
+    depends_on:
+      - weaviate
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - epic8_network
+    labels:
+      - "com.epic8.service=retriever"
+
+  # Cache Service - Redis-backed caching layer
+  cache:
+    build:
+      context: .  # Build from project root
+      dockerfile: services/cache/Dockerfile
+    container_name: epic8_cache
+    ports:
+      - "8084:8084"   # Cache API
+    environment:
+      - PYTHONPATH=/app:/app/src
+      - PROJECT_ROOT=/app
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - cache_logs:/app/logs
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - epic8_network
+    labels:
+      - "com.epic8.service=cache"
+
+  # Analytics Service - Performance monitoring and cost tracking
+  analytics:
+    build:
+      context: .  # Build from project root
+      dockerfile: services/analytics/Dockerfile
+    container_name: epic8_analytics
+    ports:
+      - "8085:8085"   # Analytics API
+    environment:
+      - PYTHONPATH=/app:/app/src
+      - PROJECT_ROOT=/app
+      - ANALYTICS_LOG_LEVEL=INFO
+      - ANALYTICS_ENABLE_COST_TRACKING=true
+      - ANALYTICS_ENABLE_PERFORMANCE_TRACKING=true
+    volumes:
+      - analytics_logs:/app/logs
+      - analytics_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - epic8_network
+    labels:
+      - "com.epic8.service=analytics"
+
+  # Supporting Services
+
+  # Weaviate Vector Database for Epic 2 Advanced Retriever
+  weaviate:
+    image: semitechnologies/weaviate:1.23.7
+    container_name: epic8_weaviate
+    ports:
+      - "8180:8080"   # Changed to avoid conflict with API Gateway
+      - "50051:50051"
+    environment:
+      # Core Configuration
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'  # We use custom embeddings
+      ENABLE_MODULES: 'text2vec-openai,text2vec-cohere,text2vec-huggingface,ref2vec-centroid,generative-openai,qna-openai'
+      CLUSTER_HOSTNAME: 'node1'
+      
+      # Performance Optimization
+      GODEBUG: 'madvdontneed=1'
+      GOGC: '100'
+      
+      # Development/Testing Configuration
+      LOG_LEVEL: 'info'
+      LOG_FORMAT: 'text'
+      
+      # Memory and Performance Settings
+      LIMIT_RESOURCES: 'false'  # Disable for development
+      
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - epic8_network
+
+  # Ollama Service for LLM
+  ollama:
+    image: ollama/ollama:latest
+    container_name: epic8_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 120s
+    networks:
+      - epic8_network
+
+  # Redis for Cache Service
+  redis:
+    image: redis:7-alpine
+    container_name: epic8_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - epic8_network
+
+volumes:
+  # Service-specific volumes
+  query_analyzer_logs:
+    driver: local
+    labels:
+      - "com.epic8.volume=query-analyzer-logs"
+  query_analyzer_cache:
+    driver: local
+    labels:
+      - "com.epic8.volume=query-analyzer-cache"
+  generator_logs:
+    driver: local
+    labels:
+      - "com.epic8.volume=generator-logs"
+  generator_cache:
+    driver: local
+    labels:
+      - "com.epic8.volume=generator-cache"
+  retriever_logs:
+    driver: local
+    labels:
+      - "com.epic8.volume=retriever-logs"
+  retriever_cache:
+    driver: local
+    labels:
+      - "com.epic8.volume=retriever-cache"
+  cache_logs:
+    driver: local
+    labels:
+      - "com.epic8.volume=cache-logs"
+  analytics_logs:
+    driver: local
+    labels:
+      - "com.epic8.volume=analytics-logs"
+  analytics_data:
+    driver: local
+    labels:
+      - "com.epic8.volume=analytics-data"
+  
+  # Supporting service volumes
+  weaviate_data:
+    driver: local
+  ollama_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  epic8_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# Usage Examples:
+#
+# 1. Build and start all services:
+#    docker-compose up --build -d
+#
+# 2. Start core services only:
+#    docker-compose up -d api-gateway query-analyzer generator retriever cache
+#
+# 3. Start with analytics:
+#    docker-compose up -d
+#
+# 4. Stop all services:
+#    docker-compose down
+#
+# 5. Reset volumes (clean restart):
+#    docker-compose down -v
+#
+# 6. View logs for specific service:
+#    docker-compose logs -f query-analyzer
+#
+# 7. Check service health:
+#    docker-compose ps
+#
+# 8. Scale specific service:
+#    docker-compose up -d --scale generator=2
+#
+# Service Endpoints:
+# - API Gateway: http://localhost:8080
+# - Query Analyzer: http://localhost:8082
+# - Generator: http://localhost:8081  
+# - Retriever: http://localhost:8083
+# - Cache: http://localhost:8084
+# - Analytics: http://localhost:8085
+# - Weaviate: http://localhost:8180
+# - Ollama: http://localhost:11434
+# - Redis: localhost:6379

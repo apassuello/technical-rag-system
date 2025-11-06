@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="5" failures="0" skipped="0" tests="5" time="0.184" timestamp="2025-08-23T07:00:41.410145+02:00" hostname="Mac"><testcase classname="" name="api.test_analyze_endpoints" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services/query-analyzer/tests/api/test_analyze_endpoints.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/apa/miniforge3/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_analyze_endpoints.py:12: in &lt;module&gt;
+    from conftest import (
+E   ModuleNotFoundError: No module named 'conftest'</error></testcase><testcase classname="" name="integration.test_epic1_integration" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services/query-analyzer/tests/integration/test_epic1_integration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/apa/miniforge3/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_epic1_integration.py:14: in &lt;module&gt;
+    from conftest import (
+E   ModuleNotFoundError: No module named 'conftest'</error></testcase><testcase classname="" name="integration.test_service_integration" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services/query-analyzer/tests/integration/test_service_integration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/apa/miniforge3/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_service_integration.py:16: in &lt;module&gt;
+    from conftest import (
+E   ModuleNotFoundError: No module named 'conftest'</error></testcase><testcase classname="" name="performance.test_response_times" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services/query-analyzer/tests/performance/test_response_times.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/apa/miniforge3/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/performance/test_response_times.py:14: in &lt;module&gt;
+    from conftest import assert_processing_time
+E   ModuleNotFoundError: No module named 'conftest'</error></testcase><testcase classname="" name="unit.test_analyzer_service" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services/query-analyzer/tests/unit/test_analyzer_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/apa/miniforge3/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_analyzer_service.py:13: in &lt;module&gt;
+    from conftest import (
+E   ModuleNotFoundError: No module named 'conftest'</error></testcase></testsuite></testsuites>

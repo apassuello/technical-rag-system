@@ -1,0 +1,528 @@
+{{/*
+Epic 8 Platform - Advanced Ingress Configuration
+Swiss Engineering Standards: Enterprise-grade networking with multi-cloud support
+*/}}
+
+{{- if .Values.ingress.enabled }}
+
+{{/*
+Primary Production Ingress - API Gateway
+*/}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-api-gateway
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: ingress
+    epic8.platform/type: api-gateway
+    epic8.platform/tier: frontend
+    epic8.platform/ingress-class: {{ .Values.ingress.className | default "nginx" }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Enterprise API Gateway ingress with advanced routing"
+    epic8.platform/environment: {{ .Values.global.environment | quote }}
+    epic8.platform/cloud-provider: {{ .Values.global.cloudProvider | quote }}
+    epic8.platform/swiss-compliant: {{ .Values.ingress.swissCompliant | default "true" | quote }}
+
+    # Ingress Controller Configuration
+    kubernetes.io/ingress.class: {{ .Values.ingress.className | default "nginx" | quote }}
+    nginx.ingress.kubernetes.io/ssl-redirect: {{ .Values.ingress.ssl.redirect | default "true" | quote }}
+    nginx.ingress.kubernetes.io/force-ssl-redirect: {{ .Values.ingress.ssl.forceRedirect | default "true" | quote }}
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/enable-cors: {{ .Values.ingress.cors.enabled | default "true" | quote }}
+
+    {{- if .Values.ingress.ssl.enabled }}
+    # SSL/TLS Configuration
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.ssl.issuer | default "letsencrypt-prod" | quote }}
+    cert-manager.io/acme-challenge-type: {{ .Values.ingress.ssl.challengeType | default "http01" | quote }}
+    nginx.ingress.kubernetes.io/ssl-protocols: {{ .Values.ingress.ssl.protocols | default "TLSv1.2 TLSv1.3" | quote }}
+    nginx.ingress.kubernetes.io/ssl-ciphers: {{ .Values.ingress.ssl.ciphers | default "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384" | quote }}
+    nginx.ingress.kubernetes.io/ssl-prefer-server-ciphers: {{ .Values.ingress.ssl.preferServerCiphers | default "false" | quote }}
+    {{- end }}
+
+    {{- if .Values.ingress.rateLimiting.enabled }}
+    # Rate Limiting Configuration
+    nginx.ingress.kubernetes.io/rate-limit: {{ .Values.ingress.rateLimiting.requestsPerMinute | default "1000" | quote }}
+    nginx.ingress.kubernetes.io/rate-limit-window: {{ .Values.ingress.rateLimiting.window | default "1m" | quote }}
+    nginx.ingress.kubernetes.io/rate-limit-connections: {{ .Values.ingress.rateLimiting.connectionsPerIP | default "100" | quote }}
+    {{- end }}
+
+    {{- if .Values.ingress.cors.enabled }}
+    # CORS Configuration
+    nginx.ingress.kubernetes.io/cors-allow-origin: {{ .Values.ingress.cors.allowOrigin | default "https://epic8-platform.swiss,https://www.epic8-platform.swiss" | quote }}
+    nginx.ingress.kubernetes.io/cors-allow-methods: {{ .Values.ingress.cors.allowMethods | default "GET, POST, PUT, DELETE, OPTIONS, HEAD" | quote }}
+    nginx.ingress.kubernetes.io/cors-allow-headers: {{ .Values.ingress.cors.allowHeaders | default "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Epic8-Client-ID,X-Epic8-API-Key" | quote }}
+    nginx.ingress.kubernetes.io/cors-expose-headers: {{ .Values.ingress.cors.exposeHeaders | default "Content-Length,Content-Range,X-Epic8-Request-ID,X-Epic8-Response-Time" | quote }}
+    nginx.ingress.kubernetes.io/cors-allow-credentials: {{ .Values.ingress.cors.allowCredentials | default "true" | quote }}
+    nginx.ingress.kubernetes.io/cors-max-age: {{ .Values.ingress.cors.maxAge | default "86400" | quote }}
+    {{- end }}
+
+    # Performance Optimizations
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.ingress.performance.bodySize | default "50m" | quote }}
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: {{ .Values.ingress.performance.connectTimeout | default "10" | quote }}
+    nginx.ingress.kubernetes.io/proxy-send-timeout: {{ .Values.ingress.performance.sendTimeout | default "30" | quote }}
+    nginx.ingress.kubernetes.io/proxy-read-timeout: {{ .Values.ingress.performance.readTimeout | default "30" | quote }}
+    nginx.ingress.kubernetes.io/proxy-buffering: {{ .Values.ingress.performance.buffering | default "on" | quote }}
+
+    {{- if .Values.ingress.compression.enabled }}
+    # Compression
+    nginx.ingress.kubernetes.io/use-gzip: "true"
+    nginx.ingress.kubernetes.io/gzip-level: {{ .Values.ingress.compression.level | default "6" | quote }}
+    {{- end }}
+
+    {{- if .Values.ingress.healthCheck.enabled }}
+    # Health Checks
+    nginx.ingress.kubernetes.io/upstream-health-check: "true"
+    nginx.ingress.kubernetes.io/upstream-health-check-interval: {{ .Values.ingress.healthCheck.interval | default "30s" | quote }}
+    nginx.ingress.kubernetes.io/upstream-health-check-timeout: {{ .Values.ingress.healthCheck.timeout | default "5s" | quote }}
+    nginx.ingress.kubernetes.io/upstream-health-check-path: {{ .Values.ingress.healthCheck.path | default "/health" | quote }}
+    {{- end }}
+
+    {{- if .Values.monitoring.enabled }}
+    # Monitoring and Observability
+    nginx.ingress.kubernetes.io/enable-access-log: "true"
+    nginx.ingress.kubernetes.io/enable-opentracing: {{ .Values.monitoring.tracing.enabled | default "true" | quote }}
+    {{- end }}
+
+    # Security Headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: {{ .Values.ingress.security.headers.frameOptions | default "DENY" }}";
+      more_set_headers "X-Content-Type-Options: {{ .Values.ingress.security.headers.contentTypeOptions | default "nosniff" }}";
+      more_set_headers "X-XSS-Protection: {{ .Values.ingress.security.headers.xssProtection | default "1; mode=block" }}";
+      more_set_headers "Referrer-Policy: {{ .Values.ingress.security.headers.referrerPolicy | default "strict-origin-when-cross-origin" }}";
+      more_set_headers "Content-Security-Policy: {{ .Values.ingress.security.headers.contentSecurityPolicy | default "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';" }}";
+      more_set_headers "Permissions-Policy: {{ .Values.ingress.security.headers.permissionsPolicy | default "geolocation=(), microphone=(), camera=()" }}";
+      more_set_headers "Strict-Transport-Security: {{ .Values.ingress.security.headers.hsts | default "max-age=31536000; includeSubDomains; preload" }}";
+      more_set_headers "X-Epic8-Platform-Version: {{ .Values.global.platform.version }}";
+      more_set_headers "X-Epic8-Request-ID: $request_id";
+      more_set_headers "X-Epic8-Swiss-Routing: {{ .Values.ingress.swissCompliant | default "enabled" }}";
+
+    {{- if eq .Values.global.cloudProvider "aws" }}
+    # AWS-specific annotations
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "60"
+    {{- else if eq .Values.global.cloudProvider "gcp" }}
+    # GCP-specific annotations
+    cloud.google.com/backend-config: '{"ports": {"80":"epic8-backend-config"}}'
+    cloud.google.com/neg: '{"ingress": true}'
+    {{- else if eq .Values.global.cloudProvider "azure" }}
+    # Azure-specific annotations
+    appgw.ingress.kubernetes.io/backend-path-prefix: "/"
+    appgw.ingress.kubernetes.io/ssl-redirect: "true"
+    {{- end }}
+
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+
+  {{- if and .Values.ingress.ssl.enabled .Values.ingress.tls }}
+  tls:
+  {{- range .Values.ingress.tls }}
+  - hosts:
+    {{- range .hosts }}
+    - {{ . | quote }}
+    {{- end }}
+    secretName: {{ .secretName }}
+  {{- end }}
+  {{- end }}
+
+  rules:
+  {{- range .Values.ingress.hosts }}
+  - host: {{ .host | quote }}
+    http:
+      paths:
+      {{- if $.Values.ingress.healthCheck.enabled }}
+      # Health Check Endpoints (highest priority)
+      - path: {{ $.Values.ingress.healthCheck.path | default "/health" }}(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.port }}
+      {{- end }}
+
+      {{- if $.Values.ingress.api.versioning.enabled }}
+      # API v1 Endpoints
+      - path: /api/v1(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.port }}
+
+      # API v2 Endpoints (future versioning)
+      - path: /api/v2(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.port }}
+      {{- end }}
+
+      {{- if $.Values.websocket.enabled }}
+      # WebSocket Endpoints for Real-time Features
+      - path: /ws(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.port }}
+      {{- end }}
+
+      {{- if and $.Values.monitoring.enabled $.Values.ingress.exposeMetrics }}
+      # Metrics Endpoint (protected)
+      - path: /metrics(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.metricsPort }}
+      {{- end }}
+
+      {{- if $.Values.documentation.enabled }}
+      # API Documentation
+      - path: /docs(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.port }}
+      {{- end }}
+
+      {{- range .paths }}
+      # Custom paths from values
+      - path: {{ .path }}
+        pathType: {{ .pathType }}
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" .service "context" $) }}
+            port:
+              number: {{ .port }}
+      {{- end }}
+
+      # Default catch-all for API Gateway
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.port }}
+  {{- end }}
+
+{{/*
+Analytics/Admin Ingress (if enabled)
+*/}}
+{{- if .Values.analytics.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-analytics
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: ingress
+    epic8.platform/type: analytics
+    epic8.platform/tier: admin
+    epic8.platform/access-level: admin
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Analytics and admin interface ingress"
+    epic8.platform/environment: {{ .Values.global.environment | quote }}
+    epic8.platform/access-level: "admin"
+
+    # Ingress Controller Configuration
+    kubernetes.io/ingress.class: {{ .Values.ingress.className | default "nginx" | quote }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+
+    {{- if .Values.analytics.ingress.ssl.enabled }}
+    # SSL/TLS Configuration
+    cert-manager.io/cluster-issuer: {{ .Values.analytics.ingress.ssl.issuer | default "letsencrypt-prod" | quote }}
+    cert-manager.io/acme-challenge-type: {{ .Values.analytics.ingress.ssl.challengeType | default "http01" | quote }}
+    {{- end }}
+
+    {{- if .Values.analytics.ingress.security.ipWhitelist }}
+    # Enhanced Security for Admin Interface
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ join "," .Values.analytics.ingress.security.ipWhitelist | quote }}
+    {{- end }}
+
+    {{- if .Values.analytics.ingress.auth.enabled }}
+    # Authentication
+    nginx.ingress.kubernetes.io/auth-type: {{ .Values.analytics.ingress.auth.type | default "basic" | quote }}
+    nginx.ingress.kubernetes.io/auth-secret: {{ .Values.analytics.ingress.auth.secret | default "epic8-platform-analytics-auth" | quote }}
+    nginx.ingress.kubernetes.io/auth-realm: {{ .Values.analytics.ingress.auth.realm | default "Epic 8 Platform Analytics - Swiss Engineering Access" | quote }}
+    {{- end }}
+
+    # Rate Limiting - More restrictive for admin
+    nginx.ingress.kubernetes.io/rate-limit: {{ .Values.analytics.ingress.rateLimiting.requestsPerMinute | default "100" | quote }}
+    nginx.ingress.kubernetes.io/rate-limit-window: {{ .Values.analytics.ingress.rateLimiting.window | default "1m" | quote }}
+    nginx.ingress.kubernetes.io/rate-limit-connections: {{ .Values.analytics.ingress.rateLimiting.connectionsPerIP | default "10" | quote }}
+
+    # Security Headers for Admin Interface
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self';";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
+      more_set_headers "X-Epic8-Platform-Version: {{ .Values.global.platform.version }}";
+      more_set_headers "X-Epic8-Request-ID: $request_id";
+      more_set_headers "X-Epic8-Access-Level: admin";
+
+    # Performance Optimizations for Analytics
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.analytics.ingress.performance.bodySize | default "100m" | quote }}
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: {{ .Values.analytics.ingress.performance.connectTimeout | default "30" | quote }}
+    nginx.ingress.kubernetes.io/proxy-send-timeout: {{ .Values.analytics.ingress.performance.sendTimeout | default "120" | quote }}
+    nginx.ingress.kubernetes.io/proxy-read-timeout: {{ .Values.analytics.ingress.performance.readTimeout | default "120" | quote }}
+
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+
+  {{- if and .Values.analytics.ingress.ssl.enabled .Values.analytics.ingress.tls }}
+  tls:
+  {{- range .Values.analytics.ingress.tls }}
+  - hosts:
+    {{- range .hosts }}
+    - {{ . | quote }}
+    {{- end }}
+    secretName: {{ .secretName }}
+  {{- end }}
+  {{- end }}
+
+  rules:
+  {{- range .Values.analytics.ingress.hosts }}
+  - host: {{ .host | quote }}
+    http:
+      paths:
+      # Health Check
+      - path: /health(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" $) }}
+            port:
+              number: {{ $.Values.analytics.service.port }}
+
+      # Analytics Dashboard
+      - path: /dashboard(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" $) }}
+            port:
+              number: {{ $.Values.analytics.service.port }}
+
+      # API Endpoints
+      - path: /api(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" $) }}
+            port:
+              number: {{ $.Values.analytics.service.port }}
+
+      # Reports
+      - path: /reports(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" $) }}
+            port:
+              number: {{ $.Values.analytics.service.port }}
+
+      # Default catch-all
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" $) }}
+            port:
+              number: {{ $.Values.analytics.service.port }}
+  {{- end }}
+{{- end }}
+
+{{/*
+Staging/Development Debug Ingress (if not production)
+*/}}
+{{- if and (ne .Values.global.environment "production") .Values.staging.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-debug
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: ingress
+    epic8.platform/type: debug
+    epic8.platform/tier: staging
+    epic8.platform/environment: {{ .Values.global.environment }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Debug ingress for non-production environments"
+    epic8.platform/environment: {{ .Values.global.environment | quote }}
+
+    # Ingress Controller Configuration
+    kubernetes.io/ingress.class: {{ .Values.ingress.className | default "nginx" | quote }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+
+    {{- if .Values.staging.ingress.ssl.enabled }}
+    # SSL/TLS Configuration (staging certificates)
+    cert-manager.io/cluster-issuer: {{ .Values.staging.ingress.ssl.issuer | default "letsencrypt-staging" | quote }}
+    cert-manager.io/acme-challenge-type: {{ .Values.staging.ingress.ssl.challengeType | default "http01" | quote }}
+    {{- end }}
+
+    {{- if .Values.staging.ingress.auth.enabled }}
+    # Authentication for staging access
+    nginx.ingress.kubernetes.io/auth-type: {{ .Values.staging.ingress.auth.type | default "basic" | quote }}
+    nginx.ingress.kubernetes.io/auth-secret: {{ .Values.staging.ingress.auth.secret | default "epic8-platform-debug-auth" | quote }}
+    nginx.ingress.kubernetes.io/auth-realm: {{ .Values.staging.ingress.auth.realm | default "Epic 8 Debug Access" | quote }}
+    {{- end }}
+
+    # Rate Limiting - More lenient for testing
+    nginx.ingress.kubernetes.io/rate-limit: {{ .Values.staging.ingress.rateLimiting.requestsPerMinute | default "2000" | quote }}
+    nginx.ingress.kubernetes.io/rate-limit-window: {{ .Values.staging.ingress.rateLimiting.window | default "1m" | quote }}
+    nginx.ingress.kubernetes.io/rate-limit-connections: {{ .Values.staging.ingress.rateLimiting.connectionsPerIP | default "200" | quote }}
+
+    # CORS Configuration (more permissive for testing)
+    nginx.ingress.kubernetes.io/cors-allow-origin: {{ .Values.staging.ingress.cors.allowOrigin | default "*" | quote }}
+    nginx.ingress.kubernetes.io/cors-allow-methods: {{ .Values.staging.ingress.cors.allowMethods | default "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH" | quote }}
+    nginx.ingress.kubernetes.io/cors-allow-headers: {{ .Values.staging.ingress.cors.allowHeaders | default "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Epic8-Client-ID,X-Epic8-API-Key,X-Test-Header" | quote }}
+    nginx.ingress.kubernetes.io/cors-allow-credentials: {{ .Values.staging.ingress.cors.allowCredentials | default "true" | quote }}
+
+    # Performance Optimizations for staging
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.staging.ingress.performance.bodySize | default "100m" | quote }}
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: {{ .Values.staging.ingress.performance.connectTimeout | default "30" | quote }}
+    nginx.ingress.kubernetes.io/proxy-send-timeout: {{ .Values.staging.ingress.performance.sendTimeout | default "120" | quote }}
+    nginx.ingress.kubernetes.io/proxy-read-timeout: {{ .Values.staging.ingress.performance.readTimeout | default "120" | quote }}
+
+    # Staging-specific headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Epic8-Environment: {{ .Values.global.environment }}";
+      more_set_headers "X-Epic8-Platform-Version: {{ .Values.global.platform.version }}-{{ .Values.global.environment }}";
+      more_set_headers "X-Epic8-Request-ID: $request_id";
+      more_set_headers "X-Epic8-Debug-Mode: enabled";
+
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+
+  {{- if and .Values.staging.ingress.ssl.enabled .Values.staging.ingress.tls }}
+  tls:
+  {{- range .Values.staging.ingress.tls }}
+  - hosts:
+    {{- range .hosts }}
+    - {{ . | quote }}
+    {{- end }}
+    secretName: {{ .secretName }}
+  {{- end }}
+  {{- end }}
+
+  rules:
+  {{- range .Values.staging.ingress.hosts }}
+  - host: {{ .host | quote }}
+    http:
+      paths:
+      # Direct service access for debugging
+      - path: /debug/api-gateway(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.port }}
+
+      - path: /debug/query-analyzer(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "query-analyzer" "context" $) }}
+            port:
+              number: {{ $.Values.queryAnalyzer.service.port }}
+
+      - path: /debug/generator(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "generator" "context" $) }}
+            port:
+              number: {{ $.Values.generator.service.port }}
+
+      - path: /debug/retriever(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "retriever" "context" $) }}
+            port:
+              number: {{ $.Values.retriever.service.port }}
+
+      - path: /debug/cache(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "cache" "context" $) }}
+            port:
+              number: {{ $.Values.cache.service.port }}
+
+      - path: /debug/analytics(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" $) }}
+            port:
+              number: {{ $.Values.analytics.service.port }}
+
+      # Normal API paths
+      - path: /api(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.port }}
+
+      - path: /health(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.port }}
+
+      # Default catch-all
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" $) }}
+            port:
+              number: {{ $.Values.apiGateway.service.port }}
+  {{- end }}
+{{- end }}
+
+{{- end }}

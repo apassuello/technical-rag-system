@@ -1,0 +1,343 @@
+---
+# Epic 8 Prometheus Rules for Auto-scaling and Performance Monitoring
+# Swiss engineering precision with intelligent alerting
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: epic8-autoscaling-alerts
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: autoscaling-alerts
+    epic8.platform/tier: monitoring
+    prometheus: kube-prometheus
+    role: alert-rules
+    app.kubernetes.io/name: epic8-alerts
+    app.kubernetes.io/part-of: epic8-platform
+spec:
+  groups:
+  # HPA Performance and Scaling Alerts
+  - name: epic8.hpa.performance
+    interval: 30s
+    rules:
+    - alert: HPAScalingEventExcessive
+      expr: |
+        increase(kube_hpa_spec_target_metric[5m]) > 3 OR
+        increase(kube_hpa_spec_target_metric[5m]) < -2
+      for: 2m
+      labels:
+        severity: warning
+        component: hpa
+        epic8_team: platform
+      annotations:
+        summary: "HPA scaling events are excessive for {{ $labels.horizontalpodautoscaler }}"
+        description: "HPA {{ $labels.horizontalpodautoscaler }} in namespace {{ $labels.namespace }} has scaled {{ $value }} times in 5 minutes, indicating potential thrashing"
+        runbook_url: "https://docs.epic8.platform/runbooks/hpa-thrashing"
+
+    - alert: HPAMaxReplicasReached
+      expr: |
+        kube_hpa_status_current_replicas == kube_hpa_spec_max_replicas
+      for: 5m
+      labels:
+        severity: critical
+        component: hpa
+        epic8_team: platform
+      annotations:
+        summary: "HPA {{ $labels.horizontalpodautoscaler }} has reached maximum replicas"
+        description: "HPA {{ $labels.horizontalpodautoscaler }} in namespace {{ $labels.namespace }} has reached maximum replicas ({{ $value }}), may need capacity increase"
+        runbook_url: "https://docs.epic8.platform/runbooks/hpa-max-replicas"
+
+    - alert: HPAMetricUnavailable
+      expr: |
+        kube_hpa_status_condition{condition="ScalingActive", status="false"} == 1
+      for: 3m
+      labels:
+        severity: warning
+        component: hpa
+        epic8_team: platform
+      annotations:
+        summary: "HPA {{ $labels.horizontalpodautoscaler }} metrics unavailable"
+        description: "HPA {{ $labels.horizontalpodautoscaler }} cannot obtain metrics for scaling decisions"
+        runbook_url: "https://docs.epic8.platform/runbooks/hpa-metrics-unavailable"
+
+  # Service-specific Performance Alerts
+  - name: epic8.api-gateway.performance
+    interval: 15s
+    rules:
+    - alert: APIGatewayHighLatency
+      expr: |
+        histogram_quantile(0.95,
+          rate(epic8_api_gateway_request_duration_seconds_bucket[5m])
+        ) > 0.8
+      for: 2m
+      labels:
+        severity: warning
+        service: api-gateway
+        epic8_team: platform
+      annotations:
+        summary: "API Gateway experiencing high latency"
+        description: "API Gateway P95 latency is {{ $value }}s, approaching 500ms SLO threshold"
+        runbook_url: "https://docs.epic8.platform/runbooks/api-gateway-latency"
+
+    - alert: APIGatewayHighErrorRate
+      expr: |
+        (
+          rate(epic8_api_gateway_requests_total{status=~"5.."}[5m]) /
+          rate(epic8_api_gateway_requests_total[5m])
+        ) > 0.01
+      for: 1m
+      labels:
+        severity: critical
+        service: api-gateway
+        epic8_team: platform
+      annotations:
+        summary: "API Gateway experiencing high error rate"
+        description: "API Gateway error rate is {{ $value | humanizePercentage }}, above 1% threshold"
+        runbook_url: "https://docs.epic8.platform/runbooks/api-gateway-errors"
+
+  - name: epic8.generator.performance
+    interval: 30s
+    rules:
+    - alert: GeneratorQueueBuildup
+      expr: |
+        epic8_generator_queue_length > 50
+      for: 3m
+      labels:
+        severity: warning
+        service: generator
+        epic8_team: ml-platform
+      annotations:
+        summary: "Generator service experiencing queue buildup"
+        description: "Generator queue length is {{ $value }}, indicating potential capacity issues"
+        runbook_url: "https://docs.epic8.platform/runbooks/generator-queue"
+
+    - alert: GeneratorHighCost
+      expr: |
+        avg_over_time(epic8_generator_cost_per_query_usd[1h]) > 0.015
+      for: 10m
+      labels:
+        severity: warning
+        service: generator
+        epic8_team: ml-platform
+      annotations:
+        summary: "Generator cost per query exceeding target"
+        description: "Generator cost per query is ${{ $value }}, above $0.01 target"
+        runbook_url: "https://docs.epic8.platform/runbooks/generator-cost"
+
+    - alert: GeneratorModelSwitchingOverhead
+      expr: |
+        avg_over_time(epic8_generator_model_switching_overhead_ms[5m]) > 200
+      for: 5m
+      labels:
+        severity: warning
+        service: generator
+        epic8_team: ml-platform
+      annotations:
+        summary: "Generator model switching overhead high"
+        description: "Model switching overhead is {{ $value }}ms, above 100ms target"
+        runbook_url: "https://docs.epic8.platform/runbooks/generator-model-switching"
+
+  - name: epic8.query-analyzer.performance
+    interval: 20s
+    rules:
+    - alert: QueryAnalyzerAccuracyDrop
+      expr: |
+        avg_over_time(epic8_query_analyzer_accuracy[1h]) < 0.92
+      for: 5m
+      labels:
+        severity: critical
+        service: query-analyzer
+        epic8_team: ml-platform
+      annotations:
+        summary: "Query Analyzer accuracy dropped significantly"
+        description: "Query Analyzer accuracy is {{ $value | humanizePercentage }}, below 95% SLO"
+        runbook_url: "https://docs.epic8.platform/runbooks/query-analyzer-accuracy"
+
+    - alert: QueryAnalyzerHighLatency
+      expr: |
+        histogram_quantile(0.95,
+          rate(epic8_query_analyzer_analysis_duration_seconds_bucket[5m])
+        ) > 0.3
+      for: 2m
+      labels:
+        severity: warning
+        service: query-analyzer
+        epic8_team: ml-platform
+      annotations:
+        summary: "Query Analyzer experiencing high latency"
+        description: "Query Analyzer P95 latency is {{ $value }}s, approaching 200ms SLO"
+        runbook_url: "https://docs.epic8.platform/runbooks/query-analyzer-latency"
+
+  - name: epic8.retriever.performance
+    interval: 15s
+    rules:
+    - alert: RetrieverIndexHitRateLow
+      expr: |
+        epic8_retriever_vector_index_hit_ratio < 0.90
+      for: 5m
+      labels:
+        severity: warning
+        service: retriever
+        epic8_team: data-platform
+      annotations:
+        summary: "Retriever vector index hit rate low"
+        description: "Vector index hit rate is {{ $value | humanizePercentage }}, below 95% target"
+        runbook_url: "https://docs.epic8.platform/runbooks/retriever-hit-rate"
+
+    - alert: RetrieverHighLatency
+      expr: |
+        histogram_quantile(0.95,
+          rate(epic8_retriever_retrieval_duration_seconds_bucket[5m])
+        ) > 0.15
+      for: 1m
+      labels:
+        severity: warning
+        service: retriever
+        epic8_team: data-platform
+      annotations:
+        summary: "Retriever experiencing high latency"
+        description: "Retriever P95 latency is {{ $value }}s, approaching 100ms SLO"
+        runbook_url: "https://docs.epic8.platform/runbooks/retriever-latency"
+
+  - name: epic8.cache.performance
+    interval: 30s
+    rules:
+    - alert: CacheHitRateLow
+      expr: |
+        rate(epic8_cache_hits_total[5m]) /
+        rate(epic8_cache_requests_total[5m]) < 0.85
+      for: 5m
+      labels:
+        severity: warning
+        service: cache
+        epic8_team: data-platform
+      annotations:
+        summary: "Cache hit rate below target"
+        description: "Cache hit rate is {{ $value | humanizePercentage }}, below 90% SLO"
+        runbook_url: "https://docs.epic8.platform/runbooks/cache-hit-rate"
+
+    - alert: CacheEvictionRateHigh
+      expr: |
+        rate(epic8_cache_eviction_rate_per_minute[5m]) > 200
+      for: 3m
+      labels:
+        severity: warning
+        service: cache
+        epic8_team: data-platform
+      annotations:
+        summary: "Cache eviction rate unusually high"
+        description: "Cache eviction rate is {{ $value }} per minute, indicating memory pressure"
+        runbook_url: "https://docs.epic8.platform/runbooks/cache-evictions"
+
+  # Resource and Cost Optimization Alerts
+  - name: epic8.resource-optimization
+    interval: 60s
+    rules:
+    - alert: ClusterResourceUtilizationLow
+      expr: |
+        avg_over_time(epic8_cluster_cpu_utilization[1h]) < 0.60 OR
+        avg_over_time(epic8_cluster_memory_utilization[1h]) < 0.60
+      for: 30m
+      labels:
+        severity: info
+        component: resource-optimization
+        epic8_team: platform
+      annotations:
+        summary: "Cluster resource utilization below efficiency target"
+        description: "Cluster utilization is below 70% efficiency target: CPU {{ $value | humanizePercentage }}"
+        runbook_url: "https://docs.epic8.platform/runbooks/resource-optimization"
+
+    - alert: VPARecommendationSignificant
+      expr: |
+        abs(
+          (epic8_vpa_recommendation - kube_pod_container_resource_requests) /
+          kube_pod_container_resource_requests
+        ) > 0.3
+      for: 24h
+      labels:
+        severity: info
+        component: vpa
+        epic8_team: platform
+      annotations:
+        summary: "VPA recommends significant resource adjustment"
+        description: "VPA recommends {{ $value | humanizePercentage }} change in resources for {{ $labels.container }}"
+        runbook_url: "https://docs.epic8.platform/runbooks/vpa-recommendations"
+
+    - alert: NodePoolCostOptimizationOpportunity
+      expr: |
+        epic8_node_pool_spot_percentage < 0.5 AND
+        epic8_node_pool_utilization < 0.8
+      for: 2h
+      labels:
+        severity: info
+        component: cost-optimization
+        epic8_team: platform
+      annotations:
+        summary: "Node pool cost optimization opportunity"
+        description: "Node pool {{ $labels.node_pool }} has low spot instance usage and utilization"
+        runbook_url: "https://docs.epic8.platform/runbooks/cost-optimization"
+
+  # System-wide Availability Alerts
+  - name: epic8.system.availability
+    interval: 60s
+    rules:
+    - alert: SystemConcurrentUsersCapacity
+      expr: |
+        epic8_system_concurrent_users > 900
+      for: 5m
+      labels:
+        severity: warning
+        component: system
+        epic8_team: platform
+      annotations:
+        summary: "System approaching concurrent user capacity"
+        description: "System has {{ $value }} concurrent users, approaching 1000 user capacity"
+        runbook_url: "https://docs.epic8.platform/runbooks/system-capacity"
+
+    - alert: SystemEndToEndLatencyHigh
+      expr: |
+        histogram_quantile(0.95,
+          rate(epic8_system_end_to_end_duration_seconds_bucket[5m])
+        ) > 3.0
+      for: 2m
+      labels:
+        severity: critical
+        component: system
+        epic8_team: platform
+      annotations:
+        summary: "System end-to-end latency exceeding SLO"
+        description: "System P95 latency is {{ $value }}s, exceeding 2s SLO"
+        runbook_url: "https://docs.epic8.platform/runbooks/system-latency"
+
+  # Swiss Engineering Quality Alerts
+  - name: epic8.swiss-engineering
+    interval: 300s  # 5 minute intervals for quality metrics
+    rules:
+    - alert: EfficiencyTargetMissed
+      expr: |
+        (
+          avg_over_time(epic8_cluster_cpu_utilization[24h]) < 0.70 OR
+          avg_over_time(epic8_cluster_memory_utilization[24h]) < 0.70
+        ) AND
+        avg_over_time(epic8_system_end_to_end_duration_seconds[24h]) < 2.0
+      for: 1h
+      labels:
+        severity: info
+        component: swiss-engineering
+        epic8_team: platform
+      annotations:
+        summary: "Swiss engineering efficiency target missed"
+        description: "Resource efficiency below 70% target while maintaining performance SLOs"
+        runbook_url: "https://docs.epic8.platform/runbooks/swiss-engineering-efficiency"
+
+    - alert: PrecisionTargetMissed
+      expr: |
+        stddev_over_time(epic8_system_end_to_end_duration_seconds[1h]) > 0.5
+      for: 30m
+      labels:
+        severity: info
+        component: swiss-engineering
+        epic8_team: platform
+      annotations:
+        summary: "Swiss engineering precision target missed"
+        description: "System latency variance exceeds precision target (σ={{ $value }}s)"
+        runbook_url: "https://docs.epic8.platform/runbooks/swiss-engineering-precision"

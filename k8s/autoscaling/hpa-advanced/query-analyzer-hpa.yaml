@@ -1,0 +1,182 @@
+---
+# Query Analyzer Advanced HPA Configuration
+# Optimized for ML classification workloads with sub-200ms targets
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: query-analyzer-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: analysis
+    epic8.platform/tier: intelligence
+    epic8.platform/autoscaling: advanced
+    app.kubernetes.io/name: query-analyzer-hpa
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: autoscaling
+  annotations:
+    epic8.platform/description: "Advanced HPA for Query Analyzer with ML classification optimization"
+    epic8.platform/target-analysis-time: "200ms"
+    epic8.platform/accuracy-threshold: "0.95"
+    epic8.platform/feature-extraction-optimization: "enabled"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: query-analyzer
+
+  # Scaling Range: 2-6 replicas for ML classification workload
+  minReplicas: 2
+  maxReplicas: 6
+
+  # Multi-metric scaling for ML classification
+  metrics:
+  # Primary Metric: CPU utilization (65% target for ML inference)
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 65
+
+  # Secondary Metric: Memory utilization (70% target for model features)
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 70
+
+  # Custom Metric: Analysis queue length
+  - type: Pods
+    pods:
+      metric:
+        name: analysis_queue_length
+        selector:
+          matchLabels:
+            epic8.platform/service: query-analyzer
+      target:
+        type: AverageValue
+        averageValue: "15"  # Scale when > 15 queries queued per pod
+
+  # Custom Metric: Analysis time P95 (scale when > 200ms)
+  - type: Pods
+    pods:
+      metric:
+        name: analysis_time_p95
+        selector:
+          matchLabels:
+            epic8.platform/service: query-analyzer
+      target:
+        type: AverageValue
+        averageValue: "200m"  # 200ms in milliunits
+
+  # Custom Metric: Model accuracy (inverse scaling for quality)
+  - type: Pods
+    pods:
+      metric:
+        name: classification_accuracy
+        selector:
+          matchLabels:
+            epic8.platform/service: query-analyzer
+      target:
+        type: AverageValue
+        averageValue: "0.95"  # Scale up if accuracy drops below 95%
+
+  # Custom Metric: Feature extraction time
+  - type: Pods
+    pods:
+      metric:
+        name: feature_extraction_time_ms
+        selector:
+          matchLabels:
+            epic8.platform/service: query-analyzer
+      target:
+        type: AverageValue
+        averageValue: "50"  # Scale when feature extraction > 50ms
+
+  # ML classification optimized scaling behavior
+  behavior:
+    scaleUp:
+      # Rapid scale-up for analysis workloads
+      stabilizationWindowSeconds: 90  # Wait 1.5 minutes
+      selectPolicy: Max
+      policies:
+      # Quick response to analysis spikes
+      - type: Percent
+        value: 75  # Increase by 75% for immediate capacity
+        periodSeconds: 45
+      # Steady scaling for sustained analysis load
+      - type: Pods
+        value: 2  # Add 2 pods for analysis distribution
+        periodSeconds: 75
+
+    scaleDown:
+      # Moderate scale-down to maintain analysis quality
+      stabilizationWindowSeconds: 240  # Wait 4 minutes before scaling down
+      selectPolicy: Min
+      policies:
+      # Gradual scale-down to preserve analysis capacity
+      - type: Percent
+        value: 30  # Remove max 30% of replicas
+        periodSeconds: 180
+      # Conservative pod removal
+      - type: Pods
+        value: 1  # Remove 1 pod at a time
+        periodSeconds: 120
+
+---
+# ServiceMonitor for Query Analyzer metrics collection
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: query-analyzer-hpa-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: query-analyzer
+  endpoints:
+  - port: metrics
+    interval: 20s  # Frequent sampling for analysis metrics
+    path: /metrics
+    honorLabels: true
+    metricRelabelings:
+    # Analysis-specific metric relabeling
+    - sourceLabels: [__name__]
+      regex: 'analysis_requests_queued_total'
+      targetLabel: __name__
+      replacement: 'analysis_queue_length'
+    - sourceLabels: [__name__]
+      regex: 'analysis_duration_seconds'
+      targetLabel: __name__
+      replacement: 'analysis_time_p95'
+    - sourceLabels: [__name__]
+      regex: 'model_accuracy_score'
+      targetLabel: __name__
+      replacement: 'classification_accuracy'
+    - sourceLabels: [__name__]
+      regex: 'feature_extraction_duration_ms'
+      targetLabel: __name__
+      replacement: 'feature_extraction_time_ms'
+
+---
+# PodDisruptionBudget for analysis availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: query-analyzer-pdb-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: availability
+spec:
+  minAvailable: 1  # Always keep at least 1 pod for continuous analysis
+  selector:
+    matchLabels:
+      epic8.platform/service: query-analyzer
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  maxUnavailable: 1  # Allow 1 pod unavailable for rolling updates

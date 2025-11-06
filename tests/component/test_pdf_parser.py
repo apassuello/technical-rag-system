@@ -7,7 +7,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))
 
-from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
+from src.shared_utils.document_processing.pdf_parser import extract_text_with_metadata
 
 def test_extract_text_with_metadata():
     """Test PDF text extraction with RISC-V specification file."""

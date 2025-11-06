@@ -1,0 +1,143 @@
+{{/*
+Epic 8 Platform - Generator Deployment Template
+Multi-model LLM answer generation service with cost optimization
+*/}}
+
+{{- if .Values.generator.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "generator" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "generator" "tier" "backend" "component" "generator" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Generator - Multi-model LLM answer generation with cost optimization"
+spec:
+  replicas: {{ .Values.generator.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "generator" "context" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "epic8-platform.serviceLabels" (dict "service" "generator" "tier" "backend" "component" "generator" "context" .) | nindent 8 }}
+      annotations:
+        {{- include "epic8-platform.annotations" . | nindent 8 }}
+        {{- if include "epic8-platform.monitoring.enabled" . }}
+        {{- include "epic8-platform.prometheusAnnotations" (dict "port" "9090" "path" "/metrics") | nindent 8 }}
+        {{- end }}
+        {{- include "epic8-platform.serviceMeshAnnotations" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "epic8-platform.serviceName" (dict "service" "generator" "context" .) }}
+      securityContext:
+        {{- include "epic8-platform.podSecurityContext" . | nindent 8 }}
+      containers:
+      - name: generator
+        image: {{ include "epic8-platform.image" (dict "repository" .Values.generator.image.repository "tag" (.Values.generator.image.tag | default .Chart.AppVersion) "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.generator.service.targetPort }}
+          protocol: TCP
+        {{- if include "epic8-platform.monitoring.enabled" . }}
+        - name: metrics
+          containerPort: {{ .Values.generator.service.metricsPort }}
+          protocol: TCP
+        {{- end }}
+        env:
+        {{- include "epic8-platform.commonEnvVars" . | nindent 8 }}
+        {{- if .Values.generator.models.ollama.enabled }}
+        - name: OLLAMA_ENDPOINT
+          value: {{ .Values.generator.models.ollama.endpoint | quote }}
+        - name: OLLAMA_MODELS
+          value: {{ join "," .Values.generator.models.ollama.models | quote }}
+        {{- end }}
+        {{- if .Values.generator.models.openai.enabled }}
+        - name: OPENAI_API_KEY
+          valueFrom:
+            {{- include "epic8-platform.secretKeyRef" (dict "secret" .Values.generator.models.openai.api_key_secret "key" .Values.generator.models.openai.api_key_key) | nindent 12 }}
+        {{- end }}
+        {{- if .Values.generator.models.anthropic.enabled }}
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            {{- include "epic8-platform.secretKeyRef" (dict "secret" .Values.generator.models.anthropic.api_key_secret "key" .Values.generator.models.anthropic.api_key_key) | nindent 12 }}
+        {{- end }}
+        {{- if .Values.generator.models.mistral.enabled }}
+        - name: MISTRAL_API_KEY
+          valueFrom:
+            {{- include "epic8-platform.secretKeyRef" (dict "secret" .Values.generator.models.mistral.api_key_secret "key" .Values.generator.models.mistral.api_key_key) | nindent 12 }}
+        {{- end }}
+        - name: COST_TRACKING_ENABLED
+          value: {{ .Values.generator.cost.tracking.enabled | quote }}
+        - name: COST_PRECISION
+          value: {{ .Values.generator.cost.tracking.precision | quote }}
+        - name: COST_OPTIMIZATION_ENABLED
+          value: {{ .Values.generator.cost.optimization.enabled | quote }}
+        - name: TARGET_COST_PER_QUERY
+          value: {{ .Values.generator.cost.optimization.target_cost_per_query | quote }}
+        envFrom:
+        {{- if .Values.configMaps.common.create }}
+        - configMapRef:
+            name: {{ include "epic8-platform.fullname" . }}-common-config
+        {{- end }}
+        {{- if .Values.secrets.platform.create }}
+        - secretRef:
+            name: {{ include "epic8-platform.fullname" . }}-secrets
+        {{- end }}
+        resources:
+          {{- include "epic8-platform.resources" (dict "service" .Values.generator "global" .Values.global "context" .) | nindent 10 }}
+        securityContext:
+          {{- include "epic8-platform.containerSecurityContext" . | nindent 10 }}
+        livenessProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.generator.health.liveness.path "port" "http" "config" .Values.generator.health.liveness) | nindent 10 }}
+        readinessProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.generator.health.readiness.path "port" "http" "config" .Values.generator.health.readiness) | nindent 10 }}
+        startupProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.generator.health.startup.path "port" "http" "config" .Values.generator.health.startup) | nindent 10 }}
+        volumeMounts:
+        {{- include "epic8-platform.standardVolumeMounts" . | nindent 8 }}
+        {{- if .Values.generator.models.ollama.enabled }}
+        - name: models
+          mountPath: /app/models
+        {{- end }}
+      volumes:
+      {{- include "epic8-platform.standardVolumes" . | nindent 6 }}
+      {{- if .Values.generator.models.ollama.enabled }}
+      - name: models
+        emptyDir:
+          sizeLimit: 10Gi
+      {{- end }}
+      {{- if .Values.generator.affinity.podAntiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          {{- include "epic8-platform.podAntiAffinity" (dict "service" "generator" "weight" 100 "required" false) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.generator.topologySpreadConstraints.enabled }}
+      topologySpreadConstraints:
+      {{- include "epic8-platform.topologySpreadConstraints" (dict "service" "generator" "maxSkew" 1) | nindent 6 }}
+      {{- end }}
+
+{{- if .Values.generator.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "generator" "context" .) }}-pdb
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "generator" "tier" "backend" "component" "generator" "context" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.generator.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "generator" "context" .) | nindent 6 }}
+{{- end }}
+{{- end }}

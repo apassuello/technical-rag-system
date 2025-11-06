@@ -1,0 +1,361 @@
+{{/*
+Epic 8 Platform - Network Policies Template
+Zero-trust network security for Epic 8 microservices
+*/}}
+
+{{- if .Values.networkPolicies.enabled }}
+
+{{/*
+Default Deny All Policy - Foundation of zero-trust security
+*/}}
+{{- if .Values.networkPolicies.defaultDeny }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-default-deny-all
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: default-deny
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Default deny all traffic - zero-trust foundation"
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+{{- end }}
+
+{{/*
+DNS Resolution Policy - Allow DNS queries
+*/}}
+{{- if .Values.networkPolicies.allowDNS }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-allow-dns
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: dns-allow
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Allow DNS resolution for all pods"
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+{{- end }}
+
+{{/*
+Prometheus Monitoring Policy - Allow Prometheus scraping
+*/}}
+{{- if and (include "epic8-platform.monitoring.enabled" .) .Values.networkPolicies.allowPrometheus }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-allow-prometheus
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: monitoring-allow
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Allow Prometheus monitoring access to metrics endpoints"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: epic8-platform
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    - namespaceSelector:
+        matchLabels:
+          name: prometheus
+    - podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - protocol: TCP
+      port: 9090
+{{- end }}
+
+{{/*
+API Gateway Policies
+*/}}
+{{- if .Values.apiGateway.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}-ingress
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "api-gateway" "tier" "frontend" "component" "gateway" "context" .) | nindent 4 }}
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: service-ingress
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Allow external traffic to API Gateway"
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "api-gateway" "context" .) | nindent 6 }}
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow external traffic
+  - from: []
+    ports:
+    - protocol: TCP
+      port: {{ .Values.apiGateway.service.targetPort }}
+  # Allow ingress controller access
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+    ports:
+    - protocol: TCP
+      port: {{ .Values.apiGateway.service.targetPort }}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}-egress
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "api-gateway" "tier" "frontend" "component" "gateway" "context" .) | nindent 4 }}
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: service-egress
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Allow API Gateway to communicate with backend services"
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "api-gateway" "context" .) | nindent 6 }}
+  policyTypes:
+  - Egress
+  egress:
+  # Allow communication to backend services
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/tier: backend
+    ports:
+    - protocol: TCP
+      port: 8081  # Generator
+    - protocol: TCP
+      port: 8082  # Query Analyzer
+    - protocol: TCP
+      port: 8083  # Retriever
+    - protocol: TCP
+      port: 8084  # Cache
+    - protocol: TCP
+      port: 8085  # Analytics
+{{- end }}
+
+{{/*
+Backend Services Policy - Allow communication between backend services
+*/}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-backend-services
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: backend-communication
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Allow communication between backend services"
+spec:
+  podSelector:
+    matchLabels:
+      epic8.platform/tier: backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow from API Gateway
+  - from:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: api-gateway
+  # Allow from other backend services
+  - from:
+    - podSelector:
+        matchLabels:
+          epic8.platform/tier: backend
+    ports:
+    - protocol: TCP
+      port: 8081
+    - protocol: TCP
+      port: 8082
+    - protocol: TCP
+      port: 8083
+    - protocol: TCP
+      port: 8084
+    - protocol: TCP
+      port: 8085
+  egress:
+  # Allow to other backend services
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/tier: backend
+    ports:
+    - protocol: TCP
+      port: 8081
+    - protocol: TCP
+      port: 8082
+    - protocol: TCP
+      port: 8083
+    - protocol: TCP
+      port: 8084
+    - protocol: TCP
+      port: 8085
+
+{{/*
+Generator External API Access Policy
+*/}}
+{{- if and .Values.generator.enabled (or .Values.generator.models.openai.enabled .Values.generator.models.anthropic.enabled .Values.generator.models.mistral.enabled) }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "generator" "context" .) }}-external-apis
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "generator" "tier" "backend" "component" "generator" "context" .) | nindent 4 }}
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: external-api-access
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Allow Generator to access external LLM APIs"
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "generator" "context" .) | nindent 6 }}
+  policyTypes:
+  - Egress
+  egress:
+  # Allow HTTPS to external APIs
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+{{- end }}
+
+{{/*
+Cache Redis Access Policy
+*/}}
+{{- if and .Values.cache.enabled .Values.cache.redis.enabled .Values.cache.redis.external.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "cache" "context" .) }}-external-redis
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "cache" "tier" "backend" "component" "cache" "context" .) | nindent 4 }}
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: external-redis-access
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Allow Cache service to access external Redis"
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "cache" "context" .) | nindent 6 }}
+  policyTypes:
+  - Egress
+  egress:
+  # Allow Redis protocol
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 6379
+    - protocol: TCP
+      port: 6380  # Redis TLS
+{{- end }}
+
+{{/*
+Analytics PostgreSQL Access Policy
+*/}}
+{{- if and .Values.analytics.enabled .Values.analytics.postgresql.enabled .Values.analytics.postgresql.external.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}-external-postgres
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "analytics" "tier" "backend" "component" "analytics" "context" .) | nindent 4 }}
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: external-postgres-access
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Allow Analytics service to access external PostgreSQL"
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "analytics" "context" .) | nindent 6 }}
+  policyTypes:
+  - Egress
+  egress:
+  # Allow PostgreSQL protocol
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 5432
+{{- end }}
+
+{{/*
+Custom Network Policies from values
+*/}}
+{{- range .Values.networkPolicies.policies }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "epic8-platform.fullname" $ }}-{{ .name }}
+  namespace: {{ include "epic8-platform.namespace" $ }}
+  labels:
+    {{- include "epic8-platform.labels" $ | nindent 4 }}
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: custom
+  annotations:
+    {{- include "epic8-platform.annotations" $ | nindent 4 }}
+    epic8.platform/description: {{ .description | default "Custom network policy" | quote }}
+spec:
+  {{- toYaml .spec | nindent 2 }}
+{{- end }}
+
+{{- end }}

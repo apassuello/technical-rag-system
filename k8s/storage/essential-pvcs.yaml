@@ -1,0 +1,89 @@
+---
+# Essential PVCs needed for Epic 8 services to start
+# Optimized for Kind cluster quota constraints (7 PVCs remaining out of 10)
+
+# Generator service PVCs (3 PVCs)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-logs
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: logs
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator service logs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 1Gi  # Minimal size for logs
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-cache
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: cache
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator cache"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 2Gi  # Reduced size for Kind
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-models
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: models
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator models"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 3Gi  # Reduced size for Kind
+
+# Analytics service PVC (1 PVC)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: analytics-logs
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: storage
+    epic8.platform/storage-type: logs
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Analytics service logs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 1Gi  # Minimal size for logs

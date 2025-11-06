@@ -1,0 +1,179 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: epic8-api-gateway-binding
+  labels:
+    epic8.platform/service: api-gateway
+    epic8.platform/component: rbac
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Role binding for API Gateway service"
+subjects:
+- kind: ServiceAccount
+  name: epic8-api-gateway
+  namespace: "" # Will be set by the namespace where this is applied
+roleRef:
+  kind: Role
+  name: epic8-api-gateway-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: epic8-query-analyzer-binding
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: rbac
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Role binding for Query Analyzer service"
+subjects:
+- kind: ServiceAccount
+  name: epic8-query-analyzer
+  namespace: ""
+roleRef:
+  kind: Role
+  name: epic8-service-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: epic8-generator-binding
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: rbac
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Role binding for Generator service"
+subjects:
+- kind: ServiceAccount
+  name: epic8-generator
+  namespace: ""
+roleRef:
+  kind: Role
+  name: epic8-service-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: epic8-retriever-binding
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: rbac
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Role binding for Retriever service"
+subjects:
+- kind: ServiceAccount
+  name: epic8-retriever
+  namespace: ""
+roleRef:
+  kind: Role
+  name: epic8-service-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: epic8-cache-binding
+  labels:
+    epic8.platform/service: cache
+    epic8.platform/component: rbac
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Role binding for Cache service"
+subjects:
+- kind: ServiceAccount
+  name: epic8-cache
+  namespace: ""
+roleRef:
+  kind: Role
+  name: epic8-service-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: epic8-analytics-binding
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: rbac
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Role binding for Analytics service"
+subjects:
+- kind: ServiceAccount
+  name: epic8-analytics
+  namespace: ""
+roleRef:
+  kind: Role
+  name: epic8-analytics-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: epic8-monitoring-binding
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Role binding for monitoring stack"
+subjects:
+- kind: ServiceAccount
+  name: epic8-monitoring
+  namespace: ""
+roleRef:
+  kind: Role
+  name: epic8-monitoring-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: epic8-cluster-reader-binding
+  labels:
+    epic8.platform/component: rbac
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: rbac
+  annotations:
+    epic8.platform/description: "Cluster-level role binding for Epic 8 platform"
+subjects:
+# Analytics service needs cluster-level access for cost tracking
+- kind: ServiceAccount
+  name: epic8-analytics
+  namespace: epic8-prod
+- kind: ServiceAccount
+  name: epic8-analytics
+  namespace: epic8-staging
+- kind: ServiceAccount
+  name: epic8-analytics
+  namespace: epic8-dev
+
+# Monitoring service needs cluster-level access
+- kind: ServiceAccount
+  name: epic8-monitoring
+  namespace: epic8-prod
+- kind: ServiceAccount
+  name: epic8-monitoring
+  namespace: epic8-staging
+- kind: ServiceAccount
+  name: epic8-monitoring
+  namespace: epic8-dev
+
+roleRef:
+  kind: ClusterRole
+  name: epic8-cluster-reader
+  apiGroup: rbac.authorization.k8s.io

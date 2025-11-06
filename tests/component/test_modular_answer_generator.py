@@ -18,6 +18,16 @@ from src.core.component_factory import ComponentFactory
 from src.core.interfaces import Document, Answer
 
 
+def _check_ollama_available() -> bool:
+    """Check if Ollama is available for testing."""
+    try:
+        import requests
+        response = requests.get("http://localhost:11434/api/tags", timeout=2)
+        return response.status_code == 200
+    except:
+        return False
+
+
 class TestModularAnswerGenerator:
     """Test suite for modular answer generator."""
     
@@ -172,16 +182,6 @@ class TestModularAnswerGenerator:
         assert 'generator_adaptive_modular' in metrics
         assert metrics['generator_adaptive_modular']['creation_count'] == 1
         assert metrics['generator_adaptive_modular']['average_time'] > 0
-
-
-def _check_ollama_available() -> bool:
-    """Check if Ollama is available for testing."""
-    try:
-        import requests
-        response = requests.get("http://localhost:11434/api/tags", timeout=2)
-        return response.status_code == 200
-    except:
-        return False
 
 
 if __name__ == "__main__":

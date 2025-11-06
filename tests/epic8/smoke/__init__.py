@@ -1,0 +1,1 @@
+"""Epic 8 Smoke Tests - Quick health checks for microservices"""

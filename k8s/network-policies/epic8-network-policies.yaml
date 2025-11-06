@@ -1,0 +1,460 @@
+# Default Deny All Network Policy
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: epic8-default-deny-all
+  labels:
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: default-deny
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: network-security
+  annotations:
+    epic8.platform/description: "Default deny all ingress and egress traffic for Epic 8 namespace"
+spec:
+  podSelector: {}  # Apply to all pods in namespace
+  policyTypes:
+  - Ingress
+  - Egress
+
+# API Gateway Network Policy
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: epic8-api-gateway-policy
+  labels:
+    epic8.platform/service: api-gateway
+    epic8.platform/component: network-policy
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Network policy for API Gateway - allows external ingress and backend egress"
+spec:
+  podSelector:
+    matchLabels:
+      epic8.platform/service: api-gateway
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from anywhere (external traffic)
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Allow ingress from monitoring (Prometheus scraping)
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # Allow egress to all backend services
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/tier: backend
+    ports:
+    - protocol: TCP
+      port: 8081  # Generator
+    - protocol: TCP
+      port: 8082  # Query Analyzer
+    - protocol: TCP
+      port: 8083  # Retriever
+  # Allow egress to data tier services
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/tier: data
+    ports:
+    - protocol: TCP
+      port: 8084  # Cache
+    - protocol: TCP
+      port: 8085  # Analytics
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow HTTPS egress for external APIs
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+
+# Query Analyzer Network Policy
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: epic8-query-analyzer-policy
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: network-policy
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Network policy for Query Analyzer - allows API Gateway ingress"
+spec:
+  podSelector:
+    matchLabels:
+      epic8.platform/service: query-analyzer
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from API Gateway
+  - from:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8082
+  # Allow ingress from monitoring
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # Allow egress to Analytics for metrics
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: analytics
+    ports:
+    - protocol: TCP
+      port: 8085
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+
+# Generator Network Policy
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: epic8-generator-policy
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: network-policy
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Network policy for Generator - allows API Gateway ingress and LLM egress"
+spec:
+  podSelector:
+    matchLabels:
+      epic8.platform/service: generator
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from API Gateway
+  - from:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8081
+  # Allow ingress from monitoring
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # Allow egress to Analytics for cost tracking
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: analytics
+    ports:
+    - protocol: TCP
+      port: 8085
+  # Allow egress to Cache service
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: cache
+    ports:
+    - protocol: TCP
+      port: 8084
+  # Allow egress to external LLM APIs
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443  # HTTPS for OpenAI, Mistral, Anthropic APIs
+    - protocol: TCP
+      port: 11434  # Ollama
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+
+# Retriever Network Policy
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: epic8-retriever-policy
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: network-policy
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Network policy for Retriever - allows API Gateway ingress and vector DB egress"
+spec:
+  podSelector:
+    matchLabels:
+      epic8.platform/service: retriever
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from API Gateway
+  - from:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8083
+  # Allow ingress from monitoring
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # Allow egress to Analytics for metrics
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: analytics
+    ports:
+    - protocol: TCP
+      port: 8085
+  # Allow egress to Cache service
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: cache
+    ports:
+    - protocol: TCP
+      port: 8084
+  # Allow egress to Weaviate vector database
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 8080  # Weaviate
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+
+# Cache Service Network Policy
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: epic8-cache-policy
+  labels:
+    epic8.platform/service: cache
+    epic8.platform/component: network-policy
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Network policy for Cache - allows backend services ingress"
+spec:
+  podSelector:
+    matchLabels:
+      epic8.platform/service: cache
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from API Gateway
+  - from:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8084
+  # Allow ingress from all backend services
+  - from:
+    - podSelector:
+        matchLabels:
+          epic8.platform/tier: backend
+    ports:
+    - protocol: TCP
+      port: 8084
+  # Allow ingress from monitoring
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # Allow egress to Redis
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 6379  # Redis
+  # Allow egress to Analytics for metrics
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: analytics
+    ports:
+    - protocol: TCP
+      port: 8085
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+
+# Analytics Service Network Policy
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: epic8-analytics-policy
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: network-policy
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Network policy for Analytics - allows all services ingress for metrics collection"
+spec:
+  podSelector:
+    matchLabels:
+      epic8.platform/service: analytics
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from API Gateway
+  - from:
+    - podSelector:
+        matchLabels:
+          epic8.platform/service: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8085
+  # Allow ingress from all Epic 8 services for metrics reporting
+  - from:
+    - podSelector:
+        matchLabels:
+          epic8.platform/version: v1
+    ports:
+    - protocol: TCP
+      port: 8085
+  # Allow ingress from monitoring stack
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow egress to external analytics services (optional)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+
+# Monitoring Stack Network Policy
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: epic8-monitoring-policy
+  labels:
+    epic8.platform/component: monitoring
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Network policy for monitoring stack - allows scraping all services"
+spec:
+  podSelector:
+    matchLabels:
+      epic8.platform/component: monitoring
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from external monitoring access
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 3000  # Grafana
+    - protocol: TCP
+      port: 9090  # Prometheus
+  egress:
+  # Allow egress to scrape all Epic 8 services
+  - to:
+    - podSelector:
+        matchLabels:
+          epic8.platform/version: v1
+    ports:
+    - protocol: TCP
+      port: 9090  # Metrics endpoints
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+
+# Cross-namespace communication policy (for multi-environment setups)
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: epic8-cross-namespace-monitoring
+  labels:
+    epic8.platform/component: network-policy
+    epic8.platform/policy-type: cross-namespace
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Allow monitoring stack to access services across namespaces"
+spec:
+  podSelector:
+    matchLabels:
+      epic8.platform/version: v1
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow monitoring from other namespaces
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: epic8-monitoring
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 9090

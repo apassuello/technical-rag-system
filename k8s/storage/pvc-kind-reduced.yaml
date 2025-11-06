@@ -1,0 +1,153 @@
+---
+# Kind-compatible PVCs with reduced storage sizes for testing
+# These fit within Kind's storage constraints (10Gi max per PVC)
+
+# Missing PVCs that are needed for pods to start
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: query-analyzer-models
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: storage
+    epic8.platform/storage-type: models
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Query Analyzer ML models (reduced for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-fast
+  resources:
+    requests:
+      storage: 8Gi  # Reduced from 20Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-cache
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: cache
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator cache (reduced for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-fast
+  resources:
+    requests:
+      storage: 8Gi  # Reduced from 15Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-models
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: models
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator models (reduced for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-fast
+  resources:
+    requests:
+      storage: 10Gi  # Reduced from 50Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: retriever-cache
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: storage
+    epic8.platform/storage-type: cache
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Retriever cache (reduced for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-fast
+  resources:
+    requests:
+      storage: 8Gi  # Reduced from 20Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: retriever-vector-indices
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: storage
+    epic8.platform/storage-type: indices
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Retriever vector indices (reduced for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-fast
+  resources:
+    requests:
+      storage: 10Gi  # Reduced from 100Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: epic8-document-data
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-type: documents
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "Shared persistent storage for document data (reduced for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce  # local-path doesn't support ReadWriteMany
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 10Gi  # Reduced from 200Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: analytics-data
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: storage
+    epic8.platform/storage-type: data
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Analytics data and metrics (reduced for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-fast
+  resources:
+    requests:
+      storage: 8Gi  # Reduced from 50Gi

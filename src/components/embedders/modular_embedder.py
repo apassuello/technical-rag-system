@@ -622,16 +622,16 @@ class ModularEmbedder(EmbedderInterface, ConfigurableEmbedderComponent):
     def cleanup(self) -> None:
         """Clean up resources used by sub-components."""
         try:
-            # Clear cache
-            if hasattr(self.cache, 'clear'):
+            # Clear cache - check if attribute exists and is not None
+            if hasattr(self, 'cache') and self.cache is not None and hasattr(self.cache, 'clear'):
                 self.cache.clear()
             
-            # Clean up model cache if available
-            if hasattr(self.model, 'clear_model_cache'):
+            # Clean up model cache if available - check if attribute exists and is not None
+            if hasattr(self, 'model') and self.model is not None and hasattr(self.model, 'clear_model_cache'):
                 self.model.clear_model_cache()
             
-            # Reset batch processor stats if available
-            if hasattr(self.batch_processor, 'reset_performance_stats'):
+            # Reset batch processor stats if available - check if attribute exists and is not None
+            if hasattr(self, 'batch_processor') and self.batch_processor is not None and hasattr(self.batch_processor, 'reset_performance_stats'):
                 self.batch_processor.reset_performance_stats()
             
             logger.info("ModularEmbedder cleanup completed")

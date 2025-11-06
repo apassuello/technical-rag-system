@@ -34,12 +34,8 @@ class TestPlatformOrchestrator(unittest.TestCase):
                 "type": "sentence_transformer",
                 "config": {"model": "test-model"}
             },
-            "vector_store": {
-                "type": "faiss",
-                "config": {"dimension": 384}
-            },
             "retriever": {
-                "type": "hybrid",
+                "type": "unified",
                 "config": {"dense_weight": 0.7}
             },
             "answer_generator": {
@@ -63,15 +59,15 @@ class TestPlatformOrchestrator(unittest.TestCase):
         import shutil
         shutil.rmtree(self.temp_dir)
     
-    @patch('src.core.platform_orchestrator.ComponentRegistry')
-    def test_initialization(self, mock_registry):
+    @patch('src.core.platform_orchestrator.ComponentFactory')
+    def test_initialization(self, mock_factory):
         """Test orchestrator initialization."""
         # Mock component creation
-        mock_registry.create_processor.return_value = Mock()
-        mock_registry.create_embedder.return_value = Mock()
-        mock_registry.create_vector_store.return_value = Mock()
-        mock_registry.create_retriever.return_value = Mock()
-        mock_registry.create_generator.return_value = Mock()
+        mock_factory.create_processor.return_value = Mock()
+        mock_factory.create_embedder.return_value = Mock()
+        mock_factory.create_vector_store.return_value = Mock()
+        mock_factory.create_retriever.return_value = Mock()
+        mock_factory.create_generator.return_value = Mock()
         
         # Create orchestrator
         orchestrator = PlatformOrchestrator(self.config_path)
@@ -81,19 +77,17 @@ class TestPlatformOrchestrator(unittest.TestCase):
         self.assertEqual(orchestrator.config_path, self.config_path)
         
         # Verify all components were created
-        mock_registry.create_processor.assert_called_once()
-        mock_registry.create_embedder.assert_called_once()
-        mock_registry.create_vector_store.assert_called_once()
-        mock_registry.create_retriever.assert_called_once()
-        mock_registry.create_generator.assert_called_once()
+        mock_factory.create_processor.assert_called_once()
+        mock_factory.create_embedder.assert_called_once()
+        mock_factory.create_retriever.assert_called_once()
+        mock_factory.create_generator.assert_called_once()
     
-    @patch('src.core.platform_orchestrator.ComponentRegistry')
-    def test_process_document(self, mock_registry):
+    @patch('src.core.platform_orchestrator.ComponentFactory')
+    def test_process_document(self, mock_factory):
         """Test document processing workflow."""
         # Create mock components
         mock_processor = Mock()
         mock_embedder = Mock()
-        mock_vector_store = Mock()
         mock_retriever = Mock()
         
         # Set up mock returns
@@ -103,12 +97,11 @@ class TestPlatformOrchestrator(unittest.TestCase):
         mock_processor.process.return_value = test_docs
         mock_embedder.embed.return_value = [[0.1] * 384]
         
-        # Configure registry
-        mock_registry.create_processor.return_value = mock_processor
-        mock_registry.create_embedder.return_value = mock_embedder
-        mock_registry.create_vector_store.return_value = mock_vector_store
-        mock_registry.create_retriever.return_value = mock_retriever
-        mock_registry.create_generator.return_value = Mock()
+        # Configure factory - using unified retriever (no separate vector store)
+        mock_factory.create_processor.return_value = mock_processor
+        mock_factory.create_embedder.return_value = mock_embedder
+        mock_factory.create_retriever.return_value = mock_retriever
+        mock_factory.create_generator.return_value = Mock()
         
         # Create orchestrator and process document
         orchestrator = PlatformOrchestrator(self.config_path)
@@ -123,10 +116,10 @@ class TestPlatformOrchestrator(unittest.TestCase):
         self.assertEqual(result, 1)
         mock_processor.process.assert_called_once_with(test_doc_path)
         mock_embedder.embed.assert_called_once_with(["Test content"])
-        mock_vector_store.add.assert_called_once()
+        mock_retriever.index_documents.assert_called_once()
     
-    @patch('src.core.platform_orchestrator.ComponentRegistry')
-    def test_process_query(self, mock_registry):
+    @patch('src.core.platform_orchestrator.ComponentFactory')
+    def test_process_query(self, mock_factory):
         """Test query processing workflow."""
         # Create mock components
         mock_retriever = Mock()
@@ -150,12 +143,11 @@ class TestPlatformOrchestrator(unittest.TestCase):
         )
         mock_generator.generate.return_value = test_answer
         
-        # Configure registry
-        mock_registry.create_processor.return_value = Mock()
-        mock_registry.create_embedder.return_value = Mock()
-        mock_registry.create_vector_store.return_value = Mock()
-        mock_registry.create_retriever.return_value = mock_retriever
-        mock_registry.create_generator.return_value = mock_generator
+        # Configure factory
+        mock_factory.create_processor.return_value = Mock()
+        mock_factory.create_embedder.return_value = Mock()
+        mock_factory.create_retriever.return_value = mock_retriever
+        mock_factory.create_generator.return_value = mock_generator
         
         # Create orchestrator and process query
         orchestrator = PlatformOrchestrator(self.config_path)
@@ -167,19 +159,18 @@ class TestPlatformOrchestrator(unittest.TestCase):
         mock_retriever.retrieve.assert_called_once_with("Test query", 5)
         mock_generator.generate.assert_called_once()
     
-    @patch('src.core.platform_orchestrator.ComponentRegistry')
-    def test_get_system_health(self, mock_registry):
+    @patch('src.core.platform_orchestrator.ComponentFactory')
+    def test_get_system_health(self, mock_factory):
         """Test system health reporting."""
         # Set up mocks
         mock_processor = Mock()
-        mock_processor.__class__.__name__ = "HybridPDFProcessor"
+        mock_processor.__class__.__name__ = "ModularDocumentProcessor"
         mock_processor.__class__.__module__ = "components.processors"
         
-        mock_registry.create_processor.return_value = mock_processor
-        mock_registry.create_embedder.return_value = Mock()
-        mock_registry.create_vector_store.return_value = Mock()
-        mock_registry.create_retriever.return_value = Mock()
-        mock_registry.create_generator.return_value = Mock()
+        mock_factory.create_processor.return_value = mock_processor
+        mock_factory.create_embedder.return_value = Mock()
+        mock_factory.create_retriever.return_value = Mock()
+        mock_factory.create_generator.return_value = Mock()
         
         # Create orchestrator
         orchestrator = PlatformOrchestrator(self.config_path)
@@ -191,11 +182,11 @@ class TestPlatformOrchestrator(unittest.TestCase):
         self.assertIn("components", health)
         self.assertIn("document_processor", health["components"])
     
-    @patch('src.core.platform_orchestrator.ComponentRegistry')
-    def test_error_handling(self, mock_registry):
+    @patch('src.core.platform_orchestrator.ComponentFactory')
+    def test_error_handling(self, mock_factory):
         """Test error handling during initialization."""
         # Make component creation fail
-        mock_registry.create_processor.side_effect = Exception("Test error")
+        mock_factory.create_processor.side_effect = Exception("Test error")
         
         # Verify initialization fails gracefully
         with self.assertRaises(RuntimeError) as context:
@@ -208,18 +199,17 @@ class TestPlatformOrchestrator(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             PlatformOrchestrator(Path("/nonexistent/config.yaml"))
     
-    @patch('src.core.platform_orchestrator.ComponentRegistry')
-    def test_component_access(self, mock_registry):
+    @patch('src.core.platform_orchestrator.ComponentFactory')
+    def test_component_access(self, mock_factory):
         """Test getting individual components."""
         # Set up mocks
         mock_processor = Mock()
         mock_embedder = Mock()
         
-        mock_registry.create_processor.return_value = mock_processor
-        mock_registry.create_embedder.return_value = mock_embedder
-        mock_registry.create_vector_store.return_value = Mock()
-        mock_registry.create_retriever.return_value = Mock()
-        mock_registry.create_generator.return_value = Mock()
+        mock_factory.create_processor.return_value = mock_processor
+        mock_factory.create_embedder.return_value = mock_embedder
+        mock_factory.create_retriever.return_value = Mock()
+        mock_factory.create_generator.return_value = Mock()
         
         # Create orchestrator
         orchestrator = PlatformOrchestrator(self.config_path)
@@ -229,25 +219,23 @@ class TestPlatformOrchestrator(unittest.TestCase):
         self.assertEqual(orchestrator.get_component("embedder"), mock_embedder)
         self.assertIsNone(orchestrator.get_component("nonexistent"))
     
-    @patch('src.core.platform_orchestrator.ComponentRegistry')
-    def test_clear_index(self, mock_registry):
+    @patch('src.core.platform_orchestrator.ComponentFactory')
+    def test_clear_index(self, mock_factory):
         """Test clearing the index."""
         # Set up mocks
-        mock_vector_store = Mock()
         mock_retriever = Mock()
         
-        mock_registry.create_processor.return_value = Mock()
-        mock_registry.create_embedder.return_value = Mock()
-        mock_registry.create_vector_store.return_value = mock_vector_store
-        mock_registry.create_retriever.return_value = mock_retriever
-        mock_registry.create_generator.return_value = Mock()
+        mock_factory.create_processor.return_value = Mock()
+        mock_factory.create_embedder.return_value = Mock()
+        mock_factory.create_retriever.return_value = mock_retriever
+        mock_factory.create_generator.return_value = Mock()
         
         # Create orchestrator and clear index
         orchestrator = PlatformOrchestrator(self.config_path)
         orchestrator.clear_index()
         
-        # Verify clear was called
-        mock_vector_store.clear.assert_called_once()
+        # Verify clear was called on the retriever (unified architecture)
+        mock_retriever.clear.assert_called_once()
 
 
 if __name__ == '__main__':

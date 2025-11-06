@@ -1,0 +1,566 @@
+---
+# Istio Service Mesh Configuration for Epic 8 Platform
+# Swiss Engineering Standards: Security, Observability, Traffic Management
+# Enterprise-grade service mesh with mTLS and advanced routing
+
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: epic8-platform-istio
+  namespace: istio-system
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: istio
+    epic8.platform/tier: infrastructure
+spec:
+  # Istio configuration optimized for Epic 8 Platform
+  values:
+    global:
+      # Swiss engineering: Multi-cloud support
+      meshID: epic8-platform-mesh
+      network: epic8-network
+
+      # Enhanced security
+      jwtPolicy: third-party-jwt
+
+      # Observability
+      tracer:
+        lightstep: {}
+        zipkin: {}
+        jaeger:
+          memory:
+            max_traces: 50000
+        stackdriver: {}
+
+      # Performance optimization
+      proxy:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+        # Concurrency settings
+        concurrency: 2
+
+        # Access log format
+        accessLogFormat: |
+          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%"
+          %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT%
+          %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%"
+          "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+          epic8_platform="true" epic8_service="%REQ(X-EPIC8-SERVICE)%"
+          epic8_request_id="%REQ(X-EPIC8-REQUEST-ID)%"
+
+  components:
+    pilot:
+      k8s:
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        env:
+          # Enable enhanced debugging
+          - name: PILOT_ENABLE_WORKLOAD_ENTRY_AUTOREGISTRATION
+            value: "true"
+          - name: EXTERNAL_ISTIOD
+            value: "false"
+          - name: PILOT_ENABLE_CROSS_CLUSTER_WORKLOAD_ENTRY
+            value: "true"
+
+    ingressGateways:
+    - name: istio-ingressgateway
+      enabled: true
+      k8s:
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        service:
+          type: LoadBalancer
+          ports:
+          - port: 15021
+            targetPort: 15021
+            name: status-port
+            protocol: TCP
+          - port: 80
+            targetPort: 8080
+            name: http2
+            protocol: TCP
+          - port: 443
+            targetPort: 8443
+            name: https
+            protocol: TCP
+          # Additional ports for Epic 8 services
+          - port: 8080
+            targetPort: 8080
+            name: epic8-api-gateway
+            protocol: TCP
+          - port: 8081
+            targetPort: 8081
+            name: epic8-generator
+            protocol: TCP
+          - port: 8082
+            targetPort: 8082
+            name: epic8-query-analyzer
+            protocol: TCP
+          - port: 8083
+            targetPort: 8083
+            name: epic8-retriever
+            protocol: TCP
+          - port: 8084
+            targetPort: 8084
+            name: epic8-cache
+            protocol: TCP
+          - port: 8085
+            targetPort: 8085
+            name: epic8-analytics
+            protocol: TCP
+        hpaSpec:
+          minReplicas: 2
+          maxReplicas: 10
+          metrics:
+          - type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 70
+
+    egressGateways:
+    - name: istio-egressgateway
+      enabled: true
+      k8s:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+---
+# Istio Gateway Configuration
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: epic8-platform-gateway
+  namespace: istio-system
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: gateway
+    epic8.platform/tier: infrastructure
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  # HTTP (redirect to HTTPS)
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - api.epic8-platform.swiss
+    - www.epic8-platform.swiss
+    - epic8-platform.swiss
+    - analytics.epic8-platform.swiss
+    - monitoring.epic8-platform.swiss
+    - staging-api.epic8-platform.swiss
+    - staging.epic8-platform.swiss
+    tls:
+      httpsRedirect: true
+
+  # HTTPS
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: epic8-platform-tls
+    hosts:
+    - api.epic8-platform.swiss
+    - www.epic8-platform.swiss
+    - epic8-platform.swiss
+    - analytics.epic8-platform.swiss
+    - monitoring.epic8-platform.swiss
+
+  # HTTPS Staging
+  - port:
+      number: 443
+      name: https-staging
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: epic8-platform-staging-tls
+    hosts:
+    - staging-api.epic8-platform.swiss
+    - staging.epic8-platform.swiss
+
+  # mTLS for service-to-service communication
+  - port:
+      number: 8443
+      name: mtls
+      protocol: HTTPS
+    tls:
+      mode: MUTUAL
+      credentialName: epic8-platform-mtls
+    hosts:
+    - "*.epic8-platform.internal"
+
+---
+# Service Mesh Security Policy
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: epic8-platform-peer-auth
+  namespace: istio-system
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: security
+    epic8.platform/policy: mtls
+spec:
+  # Enforce mTLS for all workloads in the mesh
+  mtls:
+    mode: STRICT
+
+---
+# Namespace-specific mTLS for Epic 8 services
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: epic8-services-peer-auth
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: security
+    epic8.platform/policy: mtls
+spec:
+  # Enforce mTLS for Epic 8 services
+  mtls:
+    mode: STRICT
+
+---
+# Authorization Policy for Epic 8 Platform
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: epic8-platform-authz
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: security
+    epic8.platform/policy: authorization
+spec:
+  # Apply to all Epic 8 services
+  selector:
+    matchLabels:
+      epic8.platform/component: service
+
+  rules:
+  # Allow ingress gateway access
+  - from:
+    - source:
+        principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"]
+
+  # Allow inter-service communication
+  - from:
+    - source:
+        namespaces: ["epic8-dev", "epic8-staging", "epic8-prod"]
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE", "HEAD"]
+
+  # Allow monitoring access
+  - from:
+    - source:
+        namespaces: ["monitoring", "istio-system"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/metrics", "/health", "/ready"]
+
+---
+# Request Authentication for API Gateway
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: epic8-api-gateway-auth
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: security
+    epic8.platform/policy: authentication
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: api-gateway
+  jwtRules:
+  # Epic 8 Platform JWT authentication
+  - issuer: "https://auth.epic8-platform.swiss"
+    jwksUri: "https://auth.epic8-platform.swiss/.well-known/jwks.json"
+    audiences:
+    - "epic8-platform-api"
+    outputPayloadToHeader: "x-epic8-user-info"
+
+  # OAuth2 / OIDC integration (optional)
+  - issuer: "https://accounts.google.com"
+    jwksUri: "https://www.googleapis.com/oauth2/v3/certs"
+    audiences:
+    - "epic8-platform-client"
+
+---
+# Authorization Policy for API Gateway
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: epic8-api-gateway-authz
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: security
+    epic8.platform/policy: api-authorization
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: api-gateway
+
+  rules:
+  # Public endpoints (no authentication required)
+  - to:
+    - operation:
+        paths: ["/health", "/docs", "/api/v1/public/*"]
+        methods: ["GET", "OPTIONS", "HEAD"]
+
+  # Authenticated endpoints
+  - from:
+    - source:
+        requestPrincipals: ["*"]  # Any authenticated user
+    to:
+    - operation:
+        paths: ["/api/v1/*"]
+        methods: ["GET", "POST", "PUT", "DELETE"]
+
+  # Admin endpoints (requires specific claims)
+  - from:
+    - source:
+        requestPrincipals: ["*"]
+    to:
+    - operation:
+        paths: ["/admin/*", "/metrics"]
+        methods: ["GET", "POST", "PUT", "DELETE"]
+    when:
+    - key: request.auth.claims[role]
+      values: ["admin", "operator"]
+
+---
+# Service Entry for External Services
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: epic8-external-services
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: external-services
+spec:
+  hosts:
+  # OpenAI API
+  - api.openai.com
+  # Anthropic API
+  - api.anthropic.com
+  # Mistral AI API
+  - api.mistral.ai
+  # Other AI service providers
+  - api.cohere.ai
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+
+---
+# Destination Rule for External Services
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: epic8-external-services-dr
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: destination-rule
+spec:
+  host: "*.com"
+  trafficPolicy:
+    tls:
+      mode: SIMPLE  # Use TLS for external services
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 30s
+      http:
+        http1MaxPendingRequests: 50
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+
+---
+# Telemetry Configuration
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: epic8-platform-telemetry
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: telemetry
+spec:
+  metrics:
+  - providers:
+    - name: prometheus
+  - overrides:
+    - match:
+        metric: ALL_METRICS
+      tagOverrides:
+        epic8_platform_version:
+          value: "1.0.0"
+        epic8_environment:
+          value: "production"
+        epic8_swiss_compliant:
+          value: "true"
+
+  accessLogging:
+  - providers:
+    - name: otel
+
+  tracing:
+  - providers:
+    - name: jaeger
+
+---
+# Envoy Filter for Enhanced Logging
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: epic8-platform-logging
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: envoy-filter
+spec:
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: SIDECAR_INBOUND
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.wasm
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+          config:
+            name: epic8_request_logging
+            root_id: epic8_request_logging
+            vm_config:
+              vm_id: epic8_request_logging
+              runtime: envoy.wasm.runtime.v8
+              code:
+                local:
+                  inline_string: |
+                    class Epic8RequestLogger {
+                      constructor(rootContext) {
+                        this.rootContext = rootContext;
+                      }
+
+                      onRequestHeaders() {
+                        const headers = this.getRequestHeaders();
+                        const epic8RequestId = headers["x-epic8-request-id"] || this.generateRequestId();
+                        const epic8Service = headers["x-epic8-service"] || "unknown";
+
+                        // Add Epic 8 specific headers
+                        this.addRequestHeader("x-epic8-request-id", epic8RequestId);
+                        this.addRequestHeader("x-epic8-platform-version", "1.0.0");
+                        this.addRequestHeader("x-epic8-swiss-compliant", "true");
+
+                        // Log request start
+                        console.log(`[Epic8] Request started: ${epic8RequestId} for service: ${epic8Service}`);
+
+                        return FilterHeadersStatus.Continue;
+                      }
+
+                      onResponseHeaders() {
+                        const requestId = this.getRequestHeader("x-epic8-request-id");
+                        const responseTime = Date.now() - this.getRequestHeader("x-epic8-start-time");
+
+                        // Add response headers
+                        this.addResponseHeader("x-epic8-response-time", responseTime.toString());
+                        this.addResponseHeader("x-epic8-platform-version", "1.0.0");
+
+                        // Log response
+                        console.log(`[Epic8] Request completed: ${requestId} in ${responseTime}ms`);
+
+                        return FilterHeadersStatus.Continue;
+                      }
+
+                      generateRequestId() {
+                        return 'epic8_' + Math.random().toString(36).substr(2, 9);
+                      }
+                    }
+
+---
+# Workload Entry for External AI Services
+apiVersion: networking.istio.io/v1beta1
+kind: WorkloadEntry
+metadata:
+  name: openai-api
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: external-workload
+    epic8.platform/provider: openai
+spec:
+  address: api.openai.com
+  ports:
+    https: 443
+  labels:
+    app: openai-api
+    version: v1
+    epic8.platform/external: "true"
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: WorkloadEntry
+metadata:
+  name: anthropic-api
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: external-workload
+    epic8.platform/provider: anthropic
+spec:
+  address: api.anthropic.com
+  ports:
+    https: 443
+  labels:
+    app: anthropic-api
+    version: v1
+    epic8.platform/external: "true"

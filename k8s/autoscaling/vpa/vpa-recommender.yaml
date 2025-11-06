@@ -1,0 +1,137 @@
+---
+# VPA Recommender Configuration
+# Provides intelligent resource right-sizing recommendations for Epic 8 services
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: epic8-vpa-recommender
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: vpa-recommender
+    epic8.platform/tier: optimization
+    app.kubernetes.io/name: epic8-vpa-recommender
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: autoscaling
+  annotations:
+    epic8.platform/description: "VPA Recommender for Epic 8 resource optimization"
+    epic8.platform/optimization-target: "cost-efficiency"
+    epic8.platform/resource-utilization-target: "70%"
+spec:
+  # Resource policy for recommendation boundaries
+  resourcePolicy:
+    containerPolicies:
+    # API Gateway resource constraints
+    - containerName: api-gateway
+      mode: "Auto"  # Automatic recommendation and application
+      minAllowed:
+        cpu: 250m
+        memory: 512Mi
+      maxAllowed:
+        cpu: 2000m
+        memory: 4Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+
+    # Generator resource constraints (ML workload)
+    - containerName: generator
+      mode: "Auto"
+      minAllowed:
+        cpu: 500m
+        memory: 1Gi
+      maxAllowed:
+        cpu: 4000m
+        memory: 8Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+
+    # Query Analyzer resource constraints (ML classification)
+    - containerName: query-analyzer
+      mode: "Auto"
+      minAllowed:
+        cpu: 400m
+        memory: 768Mi
+      maxAllowed:
+        cpu: 3000m
+        memory: 6Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+
+    # Retriever resource constraints (vector search)
+    - containerName: retriever
+      mode: "Auto"
+      minAllowed:
+        cpu: 300m
+        memory: 512Mi
+      maxAllowed:
+        cpu: 2000m
+        memory: 4Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+
+    # Cache resource constraints (memory-intensive)
+    - containerName: cache
+      mode: "Auto"
+      minAllowed:
+        cpu: 200m
+        memory: 256Mi
+      maxAllowed:
+        cpu: 1000m
+        memory: 2Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+
+    # Analytics resource constraints (background processing)
+    - containerName: analytics
+      mode: "Auto"
+      minAllowed:
+        cpu: 200m
+        memory: 256Mi
+      maxAllowed:
+        cpu: 1000m
+        memory: 2Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+
+  # Update mode configuration
+  updatePolicy:
+    updateMode: "Auto"  # Automatically apply recommendations
+
+  # Target reference for all Epic 8 services
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: "*"  # Apply to all deployments in namespace
+
+---
+# VPA Configuration for cost optimization
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vpa-cost-optimization-config
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: vpa-config
+    epic8.platform/optimization: cost
+data:
+  # VPA optimization parameters
+  vpa.optimization.target_utilization: "70"
+  vpa.optimization.safety_margin: "10"
+  vpa.optimization.recommendation_interval: "24h"
+  vpa.optimization.history_length: "168h"  # 1 week
+
+  # Cost optimization settings
+  cost.optimization.enabled: "true"
+  cost.optimization.target_efficiency: "70"
+  cost.optimization.max_cost_increase: "15"
+  cost.optimization.min_cost_reduction: "5"
+
+  # Resource scaling limits
+  scaling.cpu.max_increase_percent: "50"
+  scaling.memory.max_increase_percent: "40"
+  scaling.cpu.min_decrease_percent: "20"
+  scaling.memory.min_decrease_percent: "15"
+
+  # Safety constraints
+  safety.min_replicas: "1"
+  safety.max_replicas: "10"
+  safety.stability_window: "300"  # 5 minutes
