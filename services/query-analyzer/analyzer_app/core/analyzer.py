@@ -191,7 +191,17 @@ class QueryAnalyzerService:
                 
                 # Initialize the Epic1QueryAnalyzer with configuration
                 logger.info("Starting Epic1QueryAnalyzer initialization")
-                self.analyzer = Epic1QueryAnalyzer(config=self.config)
+
+                # Extract analyzer-specific config for Epic1QueryAnalyzer
+                analyzer_config = self.config.get('analyzer', {})
+                if not analyzer_config:
+                    # Fallback to root config if analyzer key doesn't exist
+                    analyzer_config = self.config
+
+                logger.info("Creating Epic1QueryAnalyzer with extracted config",
+                           has_analyzer_key='analyzer' in self.config)
+
+                self.analyzer = Epic1QueryAnalyzer(config=analyzer_config)
                 
                 # Validate analyzer is working
                 await self._validate_analyzer_initialization()
@@ -400,16 +410,42 @@ class QueryAnalyzerService:
         phase_time = time.time() - phase_start
         ANALYSIS_DURATION.labels(complexity="unknown", phase="epic1_analysis").observe(phase_time)
         
-        # Extract data from Epic1 analysis structure
+        # Extract data from Epic1 analysis structure with robust fallbacks
         epic1_data = analysis_result.metadata.get('epic1_analysis', {})
-        
-        # Extract complexity level and other data
-        complexity = epic1_data.get('complexity_level', 'medium')  # Default fallback
-        confidence = epic1_data.get('complexity_confidence', 0.5)
-        routing_confidence = epic1_data.get('routing_confidence', 0.5)
-        
+
+        # Try multiple data extraction paths for robustness
+        if not epic1_data and hasattr(analysis_result, 'complexity'):
+            # Fallback: extract directly from result attributes
+            epic1_data = {
+                'complexity_level': getattr(analysis_result, 'complexity', 'medium'),
+                'complexity_confidence': getattr(analysis_result, 'confidence', 0.5),
+                'routing_confidence': 0.5
+            }
+
+        # Extract complexity level with multiple fallback paths
+        complexity = (epic1_data.get('complexity_level') or
+                     epic1_data.get('complexity') or
+                     getattr(analysis_result, 'complexity', 'medium'))
+
+        confidence = (epic1_data.get('complexity_confidence') or
+                     epic1_data.get('confidence') or
+                     getattr(analysis_result, 'confidence', 0.5))
+
+        routing_confidence = epic1_data.get('routing_confidence', confidence)  # Use complexity confidence as fallback
+
         # Build features from Epic1 feature summary - Epic 8 format
         feature_summary = epic1_data.get('feature_summary', {})
+
+        # Ensure feature_summary exists
+        if not feature_summary and hasattr(analysis_result, 'features'):
+            # Extract from result attributes if available
+            feature_summary = getattr(analysis_result, 'features', {})
+
+        # Log what we extracted for debugging
+        logger.debug("Feature extraction",
+                    has_epic1_data=bool(epic1_data),
+                    has_feature_summary=bool(feature_summary),
+                    complexity=complexity)
         features = {
             "length": feature_summary.get('word_count', len(query.split())),
             "vocabulary_complexity": feature_summary.get('technical_density', 0.0),
