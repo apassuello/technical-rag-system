@@ -22,8 +22,8 @@ project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 try:
-    from components.query_processors.analyzers.epic1_query_analyzer import Epic1QueryAnalyzer
-    from components.query_processors.base import QueryAnalysis
+    from src.components.query_processors.analyzers.epic1_query_analyzer import Epic1QueryAnalyzer
+    from src.components.query_processors.base import QueryAnalysis
     EPIC1_AVAILABLE = True
 except ImportError:
     EPIC1_AVAILABLE = False
