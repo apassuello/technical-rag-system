@@ -157,7 +157,7 @@ def mock_analytics_client():
 
 
 @pytest.fixture
-async def mock_gateway_service(
+def mock_gateway_service(
     test_settings,
     mock_query_analyzer_client,
     mock_generator_client,
@@ -195,7 +195,8 @@ async def mock_gateway_service(
 @pytest.fixture
 def client():
     """Test client for FastAPI app."""
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.fixture
@@ -507,7 +508,7 @@ def realistic_analytics_client():
 
 
 @pytest.fixture
-async def comprehensive_gateway_service(
+def comprehensive_gateway_service(
     epic8_test_settings,
     realistic_query_analyzer_client,
     realistic_generator_client,

@@ -43,7 +43,7 @@ class TestAPIEndpoints:
         
         assert data["status"] == "alive"
     
-    @patch('app.main.get_gateway_service')
+    @patch('gateway_app.main.get_gateway_service')
     def test_readiness_probe_healthy(self, mock_get_service, client):
         """Test Kubernetes readiness probe when healthy."""
         # Mock healthy gateway service
@@ -73,7 +73,7 @@ class TestAPIEndpoints:
         data = response.json()
         assert data["status"] == "ready"
     
-    @patch('app.main.get_gateway_service')
+    @patch('gateway_app.main.get_gateway_service')
     def test_unified_query_endpoint(self, mock_get_service, client, sample_query_request):
         """Test unified query endpoint."""
         # Mock gateway service
@@ -116,7 +116,7 @@ class TestAPIEndpoints:
         assert "cost" in data
         assert "metrics" in data
     
-    @patch('app.main.get_gateway_service')
+    @patch('gateway_app.main.get_gateway_service')
     def test_batch_query_endpoint(self, mock_get_service, client, sample_batch_request):
         """Test batch query endpoint."""
         # Mock gateway service
@@ -147,7 +147,7 @@ class TestAPIEndpoints:
         assert data["failed_queries"] == 0
         assert data["parallel_processing"] is True
     
-    @patch('app.main.get_gateway_service')
+    @patch('gateway_app.main.get_gateway_service')
     def test_status_endpoint(self, mock_get_service, client):
         """Test status endpoint."""
         # Mock gateway service
@@ -183,7 +183,7 @@ class TestAPIEndpoints:
         assert data["requests_processed"] == 100
         assert "circuit_breakers" in data
     
-    @patch('app.main.get_gateway_service')
+    @patch('gateway_app.main.get_gateway_service')
     def test_models_endpoint(self, mock_get_service, client):
         """Test available models endpoint."""
         # Mock gateway service
@@ -257,7 +257,7 @@ class TestAPIEndpoints:
         
         assert response.status_code == 422
     
-    @patch('app.main.get_gateway_service')
+    @patch('gateway_app.main.get_gateway_service')
     def test_service_error_handling(self, mock_get_service, client, sample_query_request):
         """Test error handling when services fail."""
         # Mock service failure
@@ -288,7 +288,7 @@ class TestAPIEndpoints:
         # Should be accessible (Prometheus metrics)
         assert response.status_code == 200
     
-    @patch('app.main.get_gateway_service')
+    @patch('gateway_app.main.get_gateway_service')
     def test_query_with_different_strategies(self, mock_get_service, client):
         """Test query processing with different strategies."""
         strategies = ["cost_optimized", "balanced", "quality_first", "performance"]

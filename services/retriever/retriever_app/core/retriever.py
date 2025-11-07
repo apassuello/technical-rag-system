@@ -122,7 +122,19 @@ class RetrieverService:
                         embedder_type=embedder_type,
                         **embedder_kwargs
                     )
-                
+
+                # Validate embedder was created successfully
+                if not self.embedder:
+                    raise RuntimeError("Failed to create embedder - got None")
+
+                # Test embedder with simple operation
+                try:
+                    test_embedding = self.embedder.embed(["test"])
+                    if not test_embedding or len(test_embedding) == 0:
+                        raise RuntimeError("Embedder created but embed() returned empty result")
+                except Exception as e:
+                    raise RuntimeError(f"Embedder validation failed: {str(e)}")
+
                 # Initialize the Epic 2 ModularUnifiedRetriever
                 retriever_config = self.config.get('retriever_config', {})
                 logger.info("Creating ModularUnifiedRetriever with config", config=retriever_config)
@@ -131,7 +143,17 @@ class RetrieverService:
                     config=retriever_config,
                     embedder=self.embedder
                 )
-                
+
+                # Validate retriever was created successfully
+                if not self.retriever:
+                    raise RuntimeError("Failed to create ModularUnifiedRetriever - got None")
+
+                # Validate retriever has required components
+                required_attrs = ['vector_index', 'sparse_retriever', 'fusion_strategy']
+                missing = [attr for attr in required_attrs if not hasattr(self.retriever, attr)]
+                if missing:
+                    logger.warning("Retriever missing some components, will initialize on first use", missing=missing)
+
                 self._initialized = True
                 
                 # Update health metrics for components
@@ -418,13 +440,19 @@ class RetrieverService:
             # Convert dictionaries to Document objects
             doc_objects = []
             for i, doc_data in enumerate(documents):
+                # Validate document has content
+                content = doc_data.get('content', '')
+                if not content or not content.strip():
+                    logger.warning("Skipping document with empty content", doc_id=doc_data.get('doc_id', f'doc_{i}'))
+                    continue
+
                 # Prepare metadata with Epic 8 fields mapped correctly
                 metadata = doc_data.get('metadata', {}).copy()
                 metadata['doc_id'] = doc_data.get('doc_id', f'doc_{i}')
                 metadata['source'] = doc_data.get('source', f'uploaded_doc_{i}')
-                
+
                 doc = Document(
-                    content=doc_data.get('content', ''),
+                    content=content,
                     metadata=metadata
                 )
                 
@@ -612,13 +640,19 @@ class RetrieverService:
             if not self.retriever or not self.embedder:
                 return False
             
-            # Check that components are properly initialized
-            if not hasattr(self.retriever, 'vector_index') or not self.retriever.vector_index:
+            # Check that components are properly initialized (allow empty index)
+            if hasattr(self.retriever, 'vector_index'):
+                # Vector index can be empty, just check it exists
+                logger.debug("Vector index present", has_documents=self.retriever.get_document_count() > 0)
+            else:
                 logger.warning("Health check failed - vector index not initialized")
                 return False
-            
-            if not hasattr(self.retriever, 'sparse_retriever') or not self.retriever.sparse_retriever:
-                logger.warning("Health check failed - sparse retriever not initialized") 
+
+            if hasattr(self.retriever, 'sparse_retriever'):
+                # Sparse retriever can be empty, just check it exists
+                logger.debug("Sparse retriever present")
+            else:
+                logger.warning("Health check failed - sparse retriever not initialized")
                 return False
             
             # Perform a simple test retrieval (mock - no actual LLM calls)

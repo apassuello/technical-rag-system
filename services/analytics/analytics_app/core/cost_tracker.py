@@ -27,9 +27,9 @@ if str(src_path) not in sys.path:
 
 try:
     # Import Epic 1 CostTracker directly
-    from components.generators.llm_adapters.cost_tracker import (
-        CostTracker, 
-        UsageRecord, 
+    from src.components.generators.llm_adapters.cost_tracker import (
+        CostTracker,
+        UsageRecord,
         CostSummary,
         get_cost_tracker,
         record_llm_usage
