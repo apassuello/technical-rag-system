@@ -6,32 +6,27 @@ answer generation capabilities to conform to the AnswerGenerator interface,
 enabling it to be used in the modular architecture.
 """
 
-import sys
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent.parent.parent
-sys.path.append(str(project_root))
-
 from src.core.interfaces import Document, Answer, AnswerGenerator
 
 # Import generation components
-from shared_utils.generation.hf_answer_generator import (
+from src.shared_utils.generation.hf_answer_generator import (
     HuggingFaceAnswerGenerator,
     GeneratedAnswer,
 )
 try:
-    from shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
-    from shared_utils.generation.inference_providers_generator import (
+    from src.shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
+    from src.shared_utils.generation.inference_providers_generator import (
         InferenceProvidersGenerator,
     )
-    from shared_utils.generation.prompt_templates import TechnicalPromptTemplates
-    from shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
-    from shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
+    from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates
+    from src.shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
+    from src.shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
 except ImportError as e:
     # Fallback for missing optional components
     logger.warning(f"Optional generation components not available: {e}")
@@ -74,7 +69,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         temperature: float = 0.3,
         max_tokens: int = 512,
         use_ollama: bool = False,
-        ollama_url: str = "http://localhost:11434",
+        ollama_url: str = None,
         use_inference_providers: bool = False,
         enable_adaptive_prompts: bool = True,
         enable_chain_of_thought: bool = False,
@@ -89,7 +84,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             temperature: Sampling temperature for generation (default: 0.3)
             max_tokens: Maximum tokens to generate (default: 512)
             use_ollama: Use local Ollama server (default: False)
-            ollama_url: URL for Ollama server (default: http://localhost:11434)
+            ollama_url: URL for Ollama server (default: from OLLAMA_URL env var or http://ollama:11434)
             use_inference_providers: Use inference API providers (default: False)
             enable_adaptive_prompts: Enable adaptive prompt optimization (default: True)
             enable_chain_of_thought: Enable chain-of-thought reasoning (default: False)
@@ -100,6 +95,10 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.use_ollama = use_ollama
+        # Use environment variable if ollama_url not provided
+        if ollama_url is None:
+            import os
+            ollama_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
         self.ollama_url = ollama_url
         self.use_inference_providers = use_inference_providers
         self.enable_adaptive_prompts = enable_adaptive_prompts

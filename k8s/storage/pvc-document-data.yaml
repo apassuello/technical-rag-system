@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: epic8-document-data
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-type: documents
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "Shared persistent storage for document data (minimal for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce  # local-path doesn't support ReadWriteMany
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 1Gi  # Minimal size to fit quota

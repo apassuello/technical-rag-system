@@ -1,0 +1,78 @@
+{{/*
+Epic 8 Platform - API Gateway Service Templates
+Internal and external service definitions for API Gateway
+*/}}
+
+{{- if .Values.apiGateway.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "api-gateway" "tier" "frontend" "component" "gateway" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "API Gateway Service - Main entry point for Epic 8 platform"
+    epic8.platform/load-balancer: "internal"
+    {{- if include "epic8-platform.monitoring.enabled" . }}
+    {{- include "epic8-platform.prometheusAnnotations" (dict "port" (.Values.apiGateway.service.port | toString) "path" "/metrics") | nindent 4 }}
+    {{- end }}
+    {{- with .Values.apiGateway.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.apiGateway.service.type }}
+  ports:
+  - name: http
+    port: {{ .Values.apiGateway.service.port }}
+    targetPort: {{ .Values.apiGateway.service.targetPort }}
+    protocol: TCP
+  {{- if include "epic8-platform.monitoring.enabled" . }}
+  - name: metrics
+    port: {{ .Values.apiGateway.service.metricsPort }}
+    targetPort: metrics
+    protocol: TCP
+  {{- end }}
+  selector:
+    {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "api-gateway" "context" .) | nindent 4 }}
+  sessionAffinity: None
+
+{{- if include "epic8-platform.external.enabled" .Values.apiGateway.service }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}-external
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "api-gateway" "tier" "frontend" "component" "gateway" "context" .) | nindent 4 }}
+    epic8.platform/load-balancer: external
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "API Gateway External Service - Public access point"
+    epic8.platform/load-balancer: "external"
+    {{- with .Values.apiGateway.service.external.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.apiGateway.service.external.type }}
+  ports:
+  {{- range $key, $port := .Values.apiGateway.service.external.ports }}
+  - name: {{ $key }}
+    port: {{ $port }}
+    targetPort: {{ $.Values.apiGateway.service.targetPort }}
+    protocol: TCP
+  {{- end }}
+  selector:
+    {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "api-gateway" "context" .) | nindent 4 }}
+  sessionAffinity: None
+  {{- if .Values.apiGateway.service.external.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+  {{- range .Values.apiGateway.service.external.loadBalancerSourceRanges }}
+  - {{ . }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}

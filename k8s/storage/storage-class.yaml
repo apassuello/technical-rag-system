@@ -1,0 +1,117 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: epic8-fast-ssd
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-tier: fast
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: storage
+  annotations:
+    epic8.platform/description: "High-performance SSD storage for Epic 8 services"
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: kubernetes.io/aws-ebs  # AWS EBS provisioner (adjust for other clouds)
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "125"
+  encrypted: "true"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: epic8-standard
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-tier: standard
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: storage
+  annotations:
+    epic8.platform/description: "Standard storage for Epic 8 logs and cache"
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: kubernetes.io/aws-ebs  # AWS EBS provisioner
+parameters:
+  type: gp3
+  iops: "1000"
+  throughput: "125"
+  encrypted: "true"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: epic8-archive
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-tier: archive
+    epic8.platform/version: v1
+    app.kubernetes.io/name: epic8-platform
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: storage
+  annotations:
+    epic8.platform/description: "Archive storage for Epic 8 long-term data retention"
+provisioner: kubernetes.io/aws-ebs  # AWS EBS provisioner
+parameters:
+  type: sc1  # Cold HDD for archival
+  encrypted: "true"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+
+---
+# Alternative Storage Classes for Multi-Cloud Deployment
+
+# Google Cloud Platform
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: epic8-gcp-ssd
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-tier: fast
+    epic8.platform/cloud-provider: gcp
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "GCP high-performance SSD storage"
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+  zones: us-central1-a,us-central1-b,us-central1-c
+  encrypted: "true"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+
+---
+# Azure
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: epic8-azure-ssd
+  labels:
+    epic8.platform/component: storage
+    epic8.platform/storage-tier: fast
+    epic8.platform/cloud-provider: azure
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Azure premium SSD storage"
+provisioner: kubernetes.io/azure-disk
+parameters:
+  storageaccounttype: Premium_LRS
+  kind: Managed
+  encrypted: "true"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Retain

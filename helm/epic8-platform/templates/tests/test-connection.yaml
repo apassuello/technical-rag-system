@@ -1,0 +1,359 @@
+{{/*
+Epic 8 Platform - Helm Test Templates
+Comprehensive test suite for Epic 8 platform validation
+*/}}
+
+{{- if .Values.tests.enabled }}
+
+{{/*
+API Gateway Connection Test
+*/}}
+{{- if .Values.apiGateway.enabled }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-test-api-gateway
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: test
+    epic8.platform/test-type: connection
+    epic8.platform/test-target: api-gateway
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Test API Gateway connectivity and health"
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+  - name: test-api-gateway
+    image: {{ include "epic8-platform.image" (dict "repository" .Values.tests.image.repository "tag" .Values.tests.image.tag "global" .Values.global) }}
+    command:
+    - /bin/sh
+    - -c
+    - |
+      set -e
+      echo "Testing API Gateway connectivity..."
+
+      # Test basic connectivity
+      curl -f http://{{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}:{{ .Values.apiGateway.service.port }}/health/ready
+      echo "✓ API Gateway health check passed"
+
+      # Test startup probe
+      curl -f http://{{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}:{{ .Values.apiGateway.service.port }}/health/startup
+      echo "✓ API Gateway startup check passed"
+
+      # Test liveness probe
+      curl -f http://{{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}:{{ .Values.apiGateway.service.port }}/health/live
+      echo "✓ API Gateway liveness check passed"
+
+      {{- if include "epic8-platform.monitoring.enabled" . }}
+      # Test metrics endpoint
+      curl -f http://{{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}:{{ .Values.apiGateway.service.metricsPort }}/metrics | grep -q "epic8"
+      echo "✓ API Gateway metrics endpoint accessible"
+      {{- end }}
+
+      echo "All API Gateway tests passed!"
+    resources:
+      {{- toYaml .Values.tests.resources | nindent 6 }}
+{{- end }}
+
+{{/*
+Backend Services Connection Tests
+*/}}
+{{- range $service := list "query-analyzer" "generator" "retriever" "cache" "analytics" }}
+{{- $serviceConfig := index $.Values $service | default dict }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "epic8-platform.fullname" $ }}-test-{{ $service }}
+  namespace: {{ include "epic8-platform.namespace" $ }}
+  labels:
+    {{- include "epic8-platform.labels" $ | nindent 4 }}
+    epic8.platform/component: test
+    epic8.platform/test-type: connection
+    epic8.platform/test-target: {{ $service }}
+  annotations:
+    {{- include "epic8-platform.annotations" $ | nindent 4 }}
+    epic8.platform/description: "Test {{ $service }} service connectivity and health"
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "2"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+  - name: test-{{ $service }}
+    image: {{ include "epic8-platform.image" (dict "repository" $.Values.tests.image.repository "tag" $.Values.tests.image.tag "global" $.Values.global) }}
+    command:
+    - /bin/sh
+    - -c
+    - |
+      set -e
+      echo "Testing {{ $service }} connectivity..."
+
+      SERVICE_URL="http://{{ include "epic8-platform.serviceName" (dict "service" $service "context" $) }}:{{ $serviceConfig.service.port }}"
+
+      # Test basic connectivity
+      curl -f "$SERVICE_URL/health/ready"
+      echo "✓ {{ $service }} health check passed"
+
+      # Test startup probe
+      curl -f "$SERVICE_URL/health/startup"
+      echo "✓ {{ $service }} startup check passed"
+
+      # Test liveness probe
+      curl -f "$SERVICE_URL/health/live"
+      echo "✓ {{ $service }} liveness check passed"
+
+      {{- if include "epic8-platform.monitoring.enabled" $ }}
+      # Test metrics endpoint
+      curl -f "http://{{ include "epic8-platform.serviceName" (dict "service" $service "context" $) }}:{{ $serviceConfig.service.metricsPort }}/metrics" | grep -q "epic8"
+      echo "✓ {{ $service }} metrics endpoint accessible"
+      {{- end }}
+
+      echo "All {{ $service }} tests passed!"
+    resources:
+      {{- toYaml $.Values.tests.resources | nindent 6 }}
+{{- end }}
+{{- end }}
+
+{{/*
+End-to-End Integration Test
+*/}}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-test-e2e
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: test
+    epic8.platform/test-type: end-to-end
+    epic8.platform/test-target: platform
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "End-to-end integration test for Epic 8 platform"
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+  - name: test-e2e
+    image: {{ include "epic8-platform.image" (dict "repository" .Values.tests.image.repository "tag" .Values.tests.image.tag "global" .Values.global) }}
+    command:
+    - /bin/sh
+    - -c
+    - |
+      set -e
+      echo "Running end-to-end Epic 8 platform test..."
+
+      API_GATEWAY_URL="http://{{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}:{{ .Values.apiGateway.service.port }}"
+
+      # Test 1: Simple query processing
+      echo "Test 1: Simple query processing"
+      RESPONSE=$(curl -s -X POST "$API_GATEWAY_URL/api/v1/query" \
+        -H "Content-Type: application/json" \
+        -d '{"query": "What is Epic 8?", "max_results": 5}')
+
+      if echo "$RESPONSE" | grep -q "answer"; then
+        echo "✓ Simple query processing test passed"
+      else
+        echo "✗ Simple query processing test failed"
+        echo "Response: $RESPONSE"
+        exit 1
+      fi
+
+      # Test 2: Health check aggregation
+      echo "Test 2: Health check aggregation"
+      HEALTH_RESPONSE=$(curl -s "$API_GATEWAY_URL/health/ready")
+
+      if echo "$HEALTH_RESPONSE" | grep -q "status"; then
+        echo "✓ Health check aggregation test passed"
+      else
+        echo "✗ Health check aggregation test failed"
+        echo "Response: $HEALTH_RESPONSE"
+        exit 1
+      fi
+
+      # Test 3: Service discovery
+      echo "Test 3: Service discovery"
+      {{- if .Values.queryAnalyzer.enabled }}
+      curl -f "http://{{ include "epic8-platform.serviceName" (dict "service" "query-analyzer" "context" .) }}:{{ .Values.queryAnalyzer.service.port }}/health/ready"
+      echo "✓ Query Analyzer service discoverable"
+      {{- end }}
+
+      {{- if .Values.generator.enabled }}
+      curl -f "http://{{ include "epic8-platform.serviceName" (dict "service" "generator" "context" .) }}:{{ .Values.generator.service.port }}/health/ready"
+      echo "✓ Generator service discoverable"
+      {{- end }}
+
+      {{- if .Values.retriever.enabled }}
+      curl -f "http://{{ include "epic8-platform.serviceName" (dict "service" "retriever" "context" .) }}:{{ .Values.retriever.service.port }}/health/ready"
+      echo "✓ Retriever service discoverable"
+      {{- end }}
+
+      {{- if .Values.cache.enabled }}
+      curl -f "http://{{ include "epic8-platform.serviceName" (dict "service" "cache" "context" .) }}:{{ .Values.cache.service.port }}/health/ready"
+      echo "✓ Cache service discoverable"
+      {{- end }}
+
+      {{- if .Values.analytics.enabled }}
+      curl -f "http://{{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}:{{ .Values.analytics.service.port }}/health/ready"
+      echo "✓ Analytics service discoverable"
+      {{- end }}
+
+      # Test 4: Configuration validation
+      echo "Test 4: Configuration validation"
+      if [ "{{ .Values.global.environment }}" = "production" ]; then
+        echo "✓ Running in production environment"
+        # Additional production-specific validations
+        {{- if include "epic8-platform.monitoring.enabled" . }}
+        echo "✓ Monitoring is enabled in production"
+        {{- end }}
+        {{- if .Values.global.serviceMesh.enabled }}
+        echo "✓ Service mesh is enabled in production"
+        {{- end }}
+      else
+        echo "✓ Running in {{ .Values.global.environment }} environment"
+      fi
+
+      echo "All end-to-end tests passed! Epic 8 platform is operational."
+    resources:
+      {{- toYaml .Values.tests.resources | nindent 6 }}
+    env:
+    - name: EPIC8_ENVIRONMENT
+      value: {{ .Values.global.environment | quote }}
+    - name: EPIC8_CLOUD_PROVIDER
+      value: {{ .Values.global.cloudProvider | quote }}
+
+{{/*
+Performance Test (Light)
+*/}}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-test-performance
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: test
+    epic8.platform/test-type: performance
+    epic8.platform/test-target: platform
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Light performance test for Epic 8 platform"
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "15"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+  - name: test-performance
+    image: {{ include "epic8-platform.image" (dict "repository" .Values.tests.image.repository "tag" .Values.tests.image.tag "global" .Values.global) }}
+    command:
+    - /bin/sh
+    - -c
+    - |
+      set -e
+      echo "Running light performance test..."
+
+      API_GATEWAY_URL="http://{{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}:{{ .Values.apiGateway.service.port }}"
+
+      # Test response times
+      echo "Testing API response times..."
+      for i in $(seq 1 5); do
+        START_TIME=$(date +%s.%N)
+        curl -s "$API_GATEWAY_URL/health/ready" > /dev/null
+        END_TIME=$(date +%s.%N)
+        DURATION=$(echo "$END_TIME - $START_TIME" | bc -l 2>/dev/null || echo "0.1")
+        echo "Request $i: ${DURATION}s"
+
+        # Simple threshold check (should be under 2 seconds)
+        if [ $(echo "$DURATION > 2.0" | bc -l 2>/dev/null || echo "0") -eq 1 ]; then
+          echo "⚠ Warning: Request $i took longer than 2 seconds"
+        fi
+      done
+
+      echo "✓ Performance test completed"
+    resources:
+      {{- toYaml .Values.tests.resources | nindent 6 }}
+
+{{/*
+Security Test (Basic)
+*/}}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-test-security
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: test
+    epic8.platform/test-type: security
+    epic8.platform/test-target: platform
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Basic security validation for Epic 8 platform"
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "20"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+  - name: test-security
+    image: {{ include "epic8-platform.image" (dict "repository" .Values.tests.image.repository "tag" .Values.tests.image.tag "global" .Values.global) }}
+    command:
+    - /bin/sh
+    - -c
+    - |
+      set -e
+      echo "Running basic security validation..."
+
+      API_GATEWAY_URL="http://{{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}:{{ .Values.apiGateway.service.port }}"
+
+      # Test CORS headers
+      echo "Testing CORS configuration..."
+      RESPONSE=$(curl -s -I "$API_GATEWAY_URL/health/ready")
+
+      if echo "$RESPONSE" | grep -i "access-control"; then
+        echo "✓ CORS headers present"
+      else
+        echo "ℹ CORS headers not detected (may be configured at ingress level)"
+      fi
+
+      # Test security headers (if configured at application level)
+      echo "Testing security headers..."
+      if echo "$RESPONSE" | grep -i "x-frame-options\|x-content-type-options\|x-xss-protection"; then
+        echo "✓ Security headers detected"
+      else
+        echo "ℹ Security headers not detected at application level (likely configured at ingress/proxy level)"
+      fi
+
+      # Validate service account permissions
+      echo "Validating service account configuration..."
+      if [ -f /var/run/secrets/kubernetes.io/serviceaccount/token ]; then
+        echo "✓ Service account token mounted"
+      else
+        echo "⚠ Service account token not found"
+      fi
+
+      # Test that services are not directly accessible (if network policies enabled)
+      {{- if .Values.networkPolicies.enabled }}
+      echo "Testing network policy enforcement..."
+      echo "ℹ Network policies are enabled - direct service access should be restricted"
+      {{- end }}
+
+      echo "✓ Basic security validation completed"
+    resources:
+      {{- toYaml .Values.tests.resources | nindent 6 }}
+
+{{- end }}

@@ -1,49 +1,67 @@
 # Scripts Directory
 
-This directory contains organized scripts for development, testing, and analysis.
+This directory contains various utility scripts organized by purpose for the Epic 8 Cloud-Native RAG Platform.
 
-## Structure
+## Directory Structure
+
+### analysis/
+Analysis and diagnostic scripts:
+- `dependency_impact_analyzer.py` - Analyzes dependency changes and their impact
+- `analyze_corpus_features.py` - Corpus feature analysis
+- `threshold_analysis.py` - Threshold optimization analysis
+
+### deployment/
+Deployment and build scripts for Epic 8 services:
+- `build-services.sh` - Builds all Epic 8 Docker services
+- `docker-setup.sh` - Sets up Docker environment
+- `validate-docker-setup.sh` - Validates Docker configuration
+- `validate-epic8-build.sh` - Validates Epic 8 service builds
+- `run_tests.sh` - Runs comprehensive test suite
+- `test-build-context.sh` - Tests Docker build context
+
+### epic8/
+Epic 8 specific performance and monitoring scripts:
+- `epic8_comprehensive_performance_profiler.py` - Comprehensive performance profiling
+- `epic8_performance_profiler.py` - Basic performance profiling
+- `redis_lifecycle_performance_analysis.py` - Redis performance analysis
+
+### profiling/
+General performance profiling utilities:
+- `performance_baseline_profiler.py` - Creates performance baselines
+
+### testing/
+Testing utilities and test runners:
+- `run_epic8_tests_isolated.py` - Runs Epic 8 tests in isolation
+- `test_runner.py` - Main test runner utility
+
+#### testing/namespace/
+Namespace collision fixes and tests:
+- `final_namespace_test.py` - Final namespace validation
+- `fix_namespace_collisions.py` - Fixes namespace collisions
+- `fix_test_namespace_collisions.py` - Fixes test namespace issues
+- `test_namespace_fix.py` - Tests namespace fixes
+
+### Legacy Structure (Preserved)
+The following existing directories contain specialized scripts:
 
 ### `/demos/`
 Production-ready demonstration scripts:
-- `demo_basic_rag.py` - Basic RAG system demonstration
+- `demo_basic_rag.py` - Basic RAG system demonstration  
 - `demo_enhanced_rag_comparison.py` - Enhancement comparison demo
 - `demo_hybrid_search.py` - Hybrid search capabilities demo
 
-### `/analysis/`
-Quality analysis and inspection tools:
-- `comprehensive_chunk_analysis.py` - Complete chunk quality analysis
-- `manual_quality_assessment.py` - Manual quality verification
-- `detailed_chunk_inspection.py` - Individual chunk inspection
-- `examine_formatting_artifacts.py` - Artifact detection and analysis
-
-### `/testing/`
-Development and validation testing scripts:
-- `comprehensive_validation_test.py` - Full system validation
-- `critical_retrieval_quality_test.py` - Retrieval quality assessment
-- `multi_document_rag_test.py` - Multi-document processing tests
-- `retrieval_quality_test.py` - Retrieval performance tests
-- `test_all_documents_coverage.py` - Document coverage testing
-- `test_fragment_fix.py` - Fragment elimination testing
-- `test_improvements.py` - Improvement verification
-- `test_page_coverage_fix.py` - Page coverage testing
-
 ## Usage
 
-### Running Demos
+Most scripts can be run directly from their directories. For deployment scripts, run from the project root:
+
 ```bash
-cd project-1-technical-rag
+# Epic 8 deployment
+./scripts/deployment/build-services.sh
+python scripts/epic8/epic8_performance_profiler.py
+python scripts/testing/run_epic8_tests_isolated.py
+
+# Legacy demos
 python scripts/demos/demo_basic_rag.py
-```
-
-### Analysis Tools
-```bash
-python scripts/analysis/comprehensive_chunk_analysis.py
-```
-
-### Testing Scripts
-```bash
-python scripts/testing/comprehensive_validation_test.py
 ```
 
 ## Note

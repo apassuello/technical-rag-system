@@ -1,0 +1,50 @@
+# Testing requirements for Query Analyzer Service
+
+# Core testing framework
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-timeout>=2.1.0
+pytest-xdist>=3.0.0
+
+# HTTP testing
+httpx>=0.24.0
+requests>=2.28.0
+
+# Performance and load testing
+psutil>=5.9.0
+
+# Async testing utilities
+asyncio-test>=0.1.0
+
+# Test data generation
+faker>=18.0.0
+
+# Time utilities for testing
+freezegun>=1.2.0
+
+# Service mocking
+responses>=0.23.0
+
+# Database testing (if needed)
+pytest-postgresql>=4.0.0
+
+# Structured logging testing
+structlog>=22.0.0
+
+# Prometheus metrics testing  
+prometheus-client>=0.16.0
+
+# YAML configuration testing
+PyYAML>=6.0
+
+# Pydantic model testing
+pydantic>=1.10.0
+
+# FastAPI testing dependencies
+fastapi>=0.95.0
+uvicorn>=0.20.0
+
+# Import the main service dependencies
+-r ../requirements.txt

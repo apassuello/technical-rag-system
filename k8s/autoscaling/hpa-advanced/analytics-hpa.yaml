@@ -1,0 +1,182 @@
+---
+# Analytics Service Advanced HPA Configuration
+# Optimized for background processing and data analytics workloads
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: analytics-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: analytics
+    epic8.platform/tier: processing
+    epic8.platform/autoscaling: advanced
+    app.kubernetes.io/name: analytics-hpa
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: autoscaling
+  annotations:
+    epic8.platform/description: "Advanced HPA for Analytics with background processing optimization"
+    epic8.platform/target-processing-lag: "1h"
+    epic8.platform/data-integrity-target: "99.9%"
+    epic8.platform/cost-optimization: "enabled"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: analytics
+
+  # Scaling Range: 1-2 replicas for background processing
+  minReplicas: 1
+  maxReplicas: 2
+
+  # Multi-metric scaling for analytics workloads
+  metrics:
+  # Primary Metric: CPU utilization (80% target for data processing)
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+  # Secondary Metric: Memory utilization (75% target for data buffering)
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 75
+
+  # Custom Metric: Analytics queue length
+  - type: Pods
+    pods:
+      metric:
+        name: analytics_queue_length
+        selector:
+          matchLabels:
+            epic8.platform/service: analytics
+      target:
+        type: AverageValue
+        averageValue: "1000"  # Scale when > 1000 analytics tasks queued per pod
+
+  # Custom Metric: Processing lag in minutes
+  - type: Pods
+    pods:
+      metric:
+        name: analytics_processing_lag_minutes
+        selector:
+          matchLabels:
+            epic8.platform/service: analytics
+      target:
+        type: AverageValue
+        averageValue: "60"  # Scale when processing lag > 1 hour
+
+  # Custom Metric: Cost tracking accuracy
+  - type: Pods
+    pods:
+      metric:
+        name: cost_tracking_accuracy
+        selector:
+          matchLabels:
+            epic8.platform/service: analytics
+      target:
+        type: AverageValue
+        averageValue: "0.999"  # Scale up if accuracy drops below 99.9%
+
+  # Custom Metric: Data integrity check failures
+  - type: Pods
+    pods:
+      metric:
+        name: data_integrity_failure_rate
+        selector:
+          matchLabels:
+            epic8.platform/service: analytics
+      target:
+        type: AverageValue
+        averageValue: "0.001"  # Scale up if failure rate > 0.1%
+
+  # Analytics-optimized scaling behavior
+  behavior:
+    scaleUp:
+      # Conservative scale-up for background processing
+      stabilizationWindowSeconds: 300  # Wait 5 minutes for analytics stability
+      selectPolicy: Max
+      policies:
+      # Single pod addition for analytics processing
+      - type: Pods
+        value: 1  # Add 1 pod for additional processing capacity
+        periodSeconds: 300
+      # Percentage-based scaling for high load
+      - type: Percent
+        value: 100  # Double capacity if needed
+        periodSeconds: 600
+
+    scaleDown:
+      # Very conservative scale-down for data consistency
+      stabilizationWindowSeconds: 900  # Wait 15 minutes before scaling down
+      selectPolicy: Min
+      policies:
+      # Single pod removal for analytics
+      - type: Pods
+        value: 1  # Remove 1 pod at a time
+        periodSeconds: 600
+      # Percentage-based scale-down
+      - type: Percent
+        value: 50  # Remove max 50% of replicas
+        periodSeconds: 900
+
+---
+# ServiceMonitor for Analytics metrics collection
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: analytics-hpa-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: analytics
+  endpoints:
+  - port: metrics
+    interval: 60s  # Longer interval for analytics metrics
+    path: /metrics
+    honorLabels: true
+    metricRelabelings:
+    # Analytics-specific metric relabeling
+    - sourceLabels: [__name__]
+      regex: 'analytics_tasks_queued_total'
+      targetLabel: __name__
+      replacement: 'analytics_queue_length'
+    - sourceLabels: [__name__]
+      regex: 'analytics_processing_lag_seconds'
+      targetLabel: __name__
+      replacement: 'analytics_processing_lag_minutes'
+    - sourceLabels: [__name__]
+      regex: 'cost_tracking_accuracy_ratio'
+      targetLabel: __name__
+      replacement: 'cost_tracking_accuracy'
+    - sourceLabels: [__name__]
+      regex: 'data_integrity_failures_rate'
+      targetLabel: __name__
+      replacement: 'data_integrity_failure_rate'
+
+---
+# PodDisruptionBudget for analytics availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: analytics-pdb-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: availability
+spec:
+  minAvailable: 1  # Always keep at least 1 pod for continuous analytics
+  selector:
+    matchLabels:
+      epic8.platform/service: analytics
+  unhealthyPodEvictionPolicy: IfHealthyBudget  # Protect during data processing
+  maxUnavailable: 1  # Allow only 1 pod unavailable at a time

@@ -1,0 +1,37 @@
+{{/*
+Epic 8 Platform - Retriever Service Template
+High-performance vector search and document retrieval service
+*/}}
+
+{{- if .Values.retriever.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "retriever" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "retriever" "tier" "backend" "component" "retriever" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Retriever Service - High-performance vector search and document retrieval"
+    {{- if include "epic8-platform.monitoring.enabled" . }}
+    {{- include "epic8-platform.prometheusAnnotations" (dict "port" (.Values.retriever.service.port | toString) "path" "/metrics") | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.retriever.service.type }}
+  ports:
+  - name: http
+    port: {{ .Values.retriever.service.port }}
+    targetPort: {{ .Values.retriever.service.targetPort }}
+    protocol: TCP
+  {{- if include "epic8-platform.monitoring.enabled" . }}
+  - name: metrics
+    port: {{ .Values.retriever.service.metricsPort }}
+    targetPort: metrics
+    protocol: TCP
+  {{- end }}
+  selector:
+    {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "retriever" "context" .) | nindent 4 }}
+  sessionAffinity: None
+{{- end }}

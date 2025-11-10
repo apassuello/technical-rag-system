@@ -1,0 +1,570 @@
+---
+# Epic 8 Chaos Engineering Experiments
+# Swiss engineering approach to resilience testing and auto-scaling validation
+# Using Chaos Mesh for Kubernetes-native chaos engineering
+
+# Experiment 1: Pod Failure Resilience
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: epic8-pod-failure-test
+  namespace: epic8-prod
+  labels:
+    epic8.platform/experiment: pod-failure
+    epic8.platform/component: chaos-engineering
+    epic8.platform/tier: resilience
+spec:
+  action: pod-kill
+  mode: fixed
+  value: "1"
+  duration: "300s" # 5 minutes
+  selector:
+    namespaces:
+      - epic8-prod
+    labelSelectors:
+      epic8.platform/service: api-gateway
+  scheduler:
+    cron: "@every 30m"
+
+---
+# Experiment 2: Network Partition Testing
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: epic8-network-partition-test
+  namespace: epic8-prod
+  labels:
+    epic8.platform/experiment: network-partition
+    epic8.platform/component: chaos-engineering
+spec:
+  action: partition
+  mode: fixed
+  value: "1"
+  duration: "180s" # 3 minutes
+  direction: both
+  selector:
+    namespaces:
+      - epic8-prod
+    labelSelectors:
+      epic8.platform/service: generator
+  target:
+    mode: fixed
+    value: "1"
+    selector:
+      namespaces:
+        - epic8-prod
+      labelSelectors:
+        epic8.platform/service: retriever
+
+---
+# Experiment 3: CPU Stress Testing for Auto-scaling Validation
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: epic8-cpu-stress-hpa-validation
+  namespace: epic8-prod
+  labels:
+    epic8.platform/experiment: cpu-stress
+    epic8.platform/component: chaos-engineering
+    epic8.platform/validation: hpa-scaling
+spec:
+  mode: fixed
+  value: "1"
+  duration: "600s" # 10 minutes
+  stressors:
+    cpu:
+      workers: 2
+      load: 80  # 80% CPU load to trigger HPA scaling
+  selector:
+    namespaces:
+      - epic8-prod
+    labelSelectors:
+      epic8.platform/service: query-analyzer
+
+---
+# Experiment 4: Memory Pressure Testing
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: epic8-memory-pressure-test
+  namespace: epic8-prod
+  labels:
+    epic8.platform/experiment: memory-pressure
+    epic8.platform/component: chaos-engineering
+    epic8.platform/validation: vpa-recommendations
+spec:
+  mode: fixed
+  value: "1"
+  duration: "450s" # 7.5 minutes
+  stressors:
+    memory:
+      workers: 1
+      size: "1GB"  # Allocate 1GB to trigger memory pressure
+  selector:
+    namespaces:
+      - epic8-prod
+    labelSelectors:
+      epic8.platform/service: cache
+
+---
+# Experiment 5: Disk I/O Stress (Vector Index Performance)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: epic8-disk-io-stress-test
+  namespace: epic8-prod
+  labels:
+    epic8.platform/experiment: disk-io-stress
+    epic8.platform/component: chaos-engineering
+    epic8.platform/validation: storage-performance
+spec:
+  mode: fixed
+  value: "1"
+  duration: "300s" # 5 minutes
+  stressors:
+    io:
+      workers: 2
+      size: "100MB"
+      iotime: "60s"
+  selector:
+    namespaces:
+      - epic8-prod
+    labelSelectors:
+      epic8.platform/service: retriever
+
+---
+# Experiment 6: Network Latency Injection
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: epic8-network-latency-test
+  namespace: epic8-prod
+  labels:
+    epic8.platform/experiment: network-latency
+    epic8.platform/component: chaos-engineering
+    epic8.platform/validation: slo-compliance
+spec:
+  action: delay
+  mode: all
+  duration: "240s" # 4 minutes
+  delay:
+    latency: "100ms"   # Add 100ms latency
+    correlation: "100" # 100% correlation
+    jitter: "10ms"     # ±10ms jitter
+  direction: to
+  selector:
+    namespaces:
+      - epic8-prod
+    labelSelectors:
+      epic8.platform/tier: data
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - epic8-prod
+      labelSelectors:
+        epic8.platform/tier: compute
+
+---
+# Experiment 7: Bandwidth Limitation
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: epic8-bandwidth-limitation-test
+  namespace: epic8-prod
+  labels:
+    epic8.platform/experiment: bandwidth-limitation
+    epic8.platform/component: chaos-engineering
+spec:
+  action: bandwidth
+  mode: fixed
+  value: "1"
+  duration: "360s" # 6 minutes
+  bandwidth:
+    rate: "10mbps"    # Limit to 10 Mbps
+    limit: 20971520   # 20MB buffer
+    buffer: 10000     # 10KB buffer
+  direction: both
+  selector:
+    namespaces:
+      - epic8-prod
+    labelSelectors:
+      epic8.platform/service: analytics
+
+---
+# Experiment 8: Container Kill (Restart Resilience)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: epic8-container-kill-test
+  namespace: epic8-prod
+  labels:
+    epic8.platform/experiment: container-kill
+    epic8.platform/component: chaos-engineering
+    epic8.platform/validation: restart-resilience
+spec:
+  action: container-kill
+  mode: fixed-percent
+  value: "50"  # Kill 50% of containers
+  duration: "120s" # 2 minutes
+  containerNames:
+    - generator
+  selector:
+    namespaces:
+      - epic8-prod
+    labelSelectors:
+      epic8.platform/service: generator
+
+---
+# Experiment 9: DNS Chaos (Service Discovery Failure)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: epic8-dns-chaos-test
+  namespace: epic8-prod
+  labels:
+    epic8.platform/experiment: dns-chaos
+    epic8.platform/component: chaos-engineering
+    epic8.platform/validation: service-discovery
+spec:
+  action: error
+  mode: all
+  duration: "180s" # 3 minutes
+  patterns:
+    - "retriever.epic8-prod.svc.cluster.local"
+    - "cache.epic8-prod.svc.cluster.local"
+  selector:
+    namespaces:
+      - epic8-prod
+    labelSelectors:
+      epic8.platform/service: api-gateway
+
+---
+# Experiment 10: Time Chaos (Clock Skew)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: TimeChaos
+metadata:
+  name: epic8-time-chaos-test
+  namespace: epic8-prod
+  labels:
+    epic8.platform/experiment: time-chaos
+    epic8.platform/component: chaos-engineering
+    epic8.platform/validation: time-synchronization
+spec:
+  mode: fixed
+  value: "1"
+  duration: "240s" # 4 minutes
+  timeOffset: "30s" # 30 second clock skew
+  clockIds:
+    - CLOCK_REALTIME
+  selector:
+    namespaces:
+      - epic8-prod
+    labelSelectors:
+      epic8.platform/service: analytics
+
+---
+# Chaos Engineering Workflow - Comprehensive Resilience Testing
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: epic8-comprehensive-chaos-workflow
+  namespace: epic8-prod
+  labels:
+    epic8.platform/workflow: comprehensive-chaos
+    epic8.platform/component: chaos-engineering
+    epic8.platform/validation: system-resilience
+spec:
+  entry: start-chaos-testing
+  templates:
+  - name: start-chaos-testing
+    templateType: Serial
+    deadline: "45m"
+    children:
+      - baseline-establishment
+      - pod-failure-series
+      - network-chaos-series
+      - resource-stress-series
+      - recovery-validation
+
+  - name: baseline-establishment
+    templateType: Task
+    deadline: "5m"
+    task:
+      container:
+        name: baseline-metrics
+        image: curlimages/curl:latest
+        command: ["sh", "-c"]
+        args:
+          - |
+            echo "🔍 Establishing baseline metrics..."
+            # Collect baseline metrics from Prometheus
+            curl -s "http://prometheus:9090/api/v1/query?query=epic8_system_end_to_end_duration_seconds"
+            echo "✅ Baseline established"
+
+  - name: pod-failure-series
+    templateType: Parallel
+    deadline: "10m"
+    children:
+      - api-gateway-pod-failure
+      - generator-pod-failure
+      - retriever-pod-failure
+
+  - name: api-gateway-pod-failure
+    templateType: Task
+    deadline: "5m"
+    task:
+      container:
+        name: pod-chaos
+        image: chaos-mesh/chaos-mesh:v2.5.0
+        command: ["chaos-controller"]
+        args: ["apply", "-f", "/chaos/api-gateway-pod-chaos.yaml"]
+
+  - name: generator-pod-failure
+    templateType: Task
+    deadline: "5m"
+    task:
+      container:
+        name: pod-chaos
+        image: chaos-mesh/chaos-mesh:v2.5.0
+        command: ["chaos-controller"]
+        args: ["apply", "-f", "/chaos/generator-pod-chaos.yaml"]
+
+  - name: retriever-pod-failure
+    templateType: Task
+    deadline: "5m"
+    task:
+      container:
+        name: pod-chaos
+        image: chaos-mesh/chaos-mesh:v2.5.0
+        command: ["chaos-controller"]
+        args: ["apply", "-f", "/chaos/retriever-pod-chaos.yaml"]
+
+  - name: network-chaos-series
+    templateType: Serial
+    deadline: "15m"
+    children:
+      - network-partition-test
+      - network-latency-test
+      - bandwidth-limitation-test
+
+  - name: network-partition-test
+    templateType: Task
+    deadline: "5m"
+    task:
+      container:
+        name: network-chaos
+        image: chaos-mesh/chaos-mesh:v2.5.0
+        command: ["chaos-controller"]
+        args: ["apply", "-f", "/chaos/network-partition.yaml"]
+
+  - name: network-latency-test
+    templateType: Task
+    deadline: "5m"
+    task:
+      container:
+        name: network-chaos
+        image: chaos-mesh/chaos-mesh:v2.5.0
+        command: ["chaos-controller"]
+        args: ["apply", "-f", "/chaos/network-latency.yaml"]
+
+  - name: bandwidth-limitation-test
+    templateType: Task
+    deadline: "5m"
+    task:
+      container:
+        name: network-chaos
+        image: chaos-mesh/chaos-mesh:v2.5.0
+        command: ["chaos-controller"]
+        args: ["apply", "-f", "/chaos/bandwidth-limitation.yaml"]
+
+  - name: resource-stress-series
+    templateType: Parallel
+    deadline: "12m"
+    children:
+      - cpu-stress-test
+      - memory-stress-test
+      - io-stress-test
+
+  - name: cpu-stress-test
+    templateType: Task
+    deadline: "10m"
+    task:
+      container:
+        name: stress-chaos
+        image: chaos-mesh/chaos-mesh:v2.5.0
+        command: ["chaos-controller"]
+        args: ["apply", "-f", "/chaos/cpu-stress.yaml"]
+
+  - name: memory-stress-test
+    templateType: Task
+    deadline: "8m"
+    task:
+      container:
+        name: stress-chaos
+        image: chaos-mesh/chaos-mesh:v2.5.0
+        command: ["chaos-controller"]
+        args: ["apply", "-f", "/chaos/memory-stress.yaml"]
+
+  - name: io-stress-test
+    templateType: Task
+    deadline: "6m"
+    task:
+      container:
+        name: stress-chaos
+        image: chaos-mesh/chaos-mesh:v2.5.0
+        command: ["chaos-controller"]
+        args: ["apply", "-f", "/chaos/io-stress.yaml"]
+
+  - name: recovery-validation
+    templateType: Task
+    deadline: "8m"
+    task:
+      container:
+        name: recovery-validator
+        image: curlimages/curl:latest
+        command: ["sh", "-c"]
+        args:
+          - |
+            echo "🔍 Validating system recovery..."
+
+            # Wait for system stabilization
+            sleep 60
+
+            # Validate all services are healthy
+            echo "Checking API Gateway..."
+            curl -f http://api-gateway:8080/health || exit 1
+
+            echo "Checking Generator..."
+            curl -f http://generator:8081/health || exit 1
+
+            echo "Checking Query Analyzer..."
+            curl -f http://query-analyzer:8082/health || exit 1
+
+            echo "Checking Retriever..."
+            curl -f http://retriever:8083/health || exit 1
+
+            echo "Checking Cache..."
+            curl -f http://cache:8084/health || exit 1
+
+            echo "Checking Analytics..."
+            curl -f http://analytics:8085/health || exit 1
+
+            # Validate auto-scaling metrics
+            echo "Validating HPA metrics..."
+            kubectl get hpa -n epic8-prod
+
+            echo "Validating VPA recommendations..."
+            kubectl get vpa -n epic8-prod
+
+            echo "✅ System recovery validated"
+
+---
+# Chaos Engineering Monitoring Dashboard
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-chaos-monitoring-config
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: chaos-monitoring
+    grafana_dashboard: "true"
+data:
+  chaos-engineering-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Epic 8 - Chaos Engineering",
+        "tags": ["epic8", "chaos", "resilience"],
+        "timezone": "Europe/Zurich",
+        "panels": [
+          {
+            "title": "Active Chaos Experiments",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "count(chaos_mesh_experiments_total{namespace=\"epic8-prod\"})",
+                "legendFormat": "Active Experiments"
+              }
+            ]
+          },
+          {
+            "title": "System Recovery Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "epic8_chaos_recovery_time_seconds",
+                "legendFormat": "{{ experiment }}"
+              }
+            ]
+          },
+          {
+            "title": "SLO Compliance During Chaos",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "epic8_slo_compliance_percentage",
+                "legendFormat": "{{ service }} SLO"
+              }
+            ]
+          },
+          {
+            "title": "HPA Scaling Events During Chaos",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "increase(kube_hpa_spec_target_metric[5m])",
+                "legendFormat": "{{ horizontalpodautoscaler }}"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+---
+# Chaos Engineering Test Schedule
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: epic8-chaos-schedule
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: chaos-schedule
+    epic8.platform/automation: resilience
+spec:
+  schedule: "0 2 * * 1,3,5"  # Run Mon, Wed, Fri at 2 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: epic8-chaos-engineer
+          containers:
+          - name: chaos-scheduler
+            image: chaos-mesh/chaos-mesh:v2.5.0
+            command: ["sh", "-c"]
+            args:
+              - |
+                echo "🌪️ Starting scheduled chaos engineering session"
+                echo "🇨🇭 Swiss engineering approach: Controlled, measured, precise"
+
+                # Apply chaos experiments in sequence
+                kubectl apply -f /chaos-configs/
+
+                # Monitor for 30 minutes
+                sleep 1800
+
+                # Clean up experiments
+                kubectl delete -f /chaos-configs/
+
+                echo "✅ Chaos engineering session complete"
+            volumeMounts:
+            - name: chaos-configs
+              mountPath: /chaos-configs
+          volumes:
+          - name: chaos-configs
+            configMap:
+              name: epic8-chaos-experiments
+          restartPolicy: OnFailure

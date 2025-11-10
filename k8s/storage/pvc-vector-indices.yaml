@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: retriever-vector-indices
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: storage
+    epic8.platform/storage-type: indices
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Retriever vector indices (minimal for Kind)"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 1Gi  # Minimum allowed size

@@ -1,0 +1,71 @@
+{{/*
+Epic 8 Platform - Service-Specific Configuration Template
+Individual service configurations
+*/}}
+
+{{- if .Values.configMaps.serviceSpecific.create }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "epic8-platform.fullname" . }}-service-configs
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.labels" . | nindent 4 }}
+    epic8.platform/component: config
+    epic8.platform/config-type: service-specific
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Service-specific configurations for Epic 8 platform"
+data:
+  {{- with .Values.configMaps.serviceSpecific.data }}
+  {{- range $key, $value := . }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+
+  # API Gateway Configuration
+  {{- if .Values.apiGateway.enabled }}
+  API_GATEWAY_REPLICAS: {{ .Values.apiGateway.replicaCount | quote }}
+  API_GATEWAY_RESOURCES: {{ .Values.apiGateway.resources | quote }}
+  {{- end }}
+
+  # Query Analyzer Configuration
+  {{- if .Values.queryAnalyzer.enabled }}
+  QUERY_ANALYZER_MODEL_ACCURACY_THRESHOLD: {{ .Values.queryAnalyzer.model.complexity_classifier.accuracy_threshold | quote }}
+  QUERY_ANALYZER_MAX_FEATURES: {{ .Values.queryAnalyzer.model.feature_extractor.max_features | quote }}
+  {{- end }}
+
+  # Generator Configuration
+  {{- if .Values.generator.enabled }}
+  GENERATOR_OLLAMA_ENABLED: {{ .Values.generator.models.ollama.enabled | quote }}
+  GENERATOR_OPENAI_ENABLED: {{ .Values.generator.models.openai.enabled | quote }}
+  GENERATOR_ANTHROPIC_ENABLED: {{ .Values.generator.models.anthropic.enabled | quote }}
+  GENERATOR_COST_TRACKING_ENABLED: {{ .Values.generator.cost.tracking.enabled | quote }}
+  GENERATOR_COST_PRECISION: {{ .Values.generator.cost.tracking.precision | quote }}
+  {{- end }}
+
+  # Retriever Configuration
+  {{- if .Values.retriever.enabled }}
+  RETRIEVER_VECTOR_DIMENSION: {{ .Values.retriever.vectorIndex.faiss.dimension | quote }}
+  RETRIEVER_INDEX_TYPE: {{ .Values.retriever.vectorIndex.faiss.index_type | quote }}
+  RETRIEVER_BM25_K1: {{ .Values.retriever.bm25.k1 | quote }}
+  RETRIEVER_BM25_B: {{ .Values.retriever.bm25.b | quote }}
+  {{- end }}
+
+  # Cache Configuration
+  {{- if .Values.cache.enabled }}
+  CACHE_REDIS_ENABLED: {{ .Values.cache.redis.enabled | quote }}
+  CACHE_TTL: {{ .Values.cache.cache.ttl | quote }}
+  CACHE_MAX_SIZE: {{ .Values.cache.cache.maxSize | quote }}
+  CACHE_HIT_RATE_TARGET: {{ .Values.cache.cache.hitRateTarget | quote }}
+  {{- end }}
+
+  # Analytics Configuration
+  {{- if .Values.analytics.enabled }}
+  ANALYTICS_POSTGRESQL_ENABLED: {{ .Values.analytics.postgresql.enabled | quote }}
+  ANALYTICS_COST_OPTIMIZATION: {{ .Values.analytics.features.cost_optimization | quote }}
+  ANALYTICS_AB_TESTING: {{ .Values.analytics.features.ab_testing | quote }}
+  ANALYTICS_REAL_TIME_METRICS: {{ .Values.analytics.features.real_time_metrics | quote }}
+  {{- end }}
+{{- end }}

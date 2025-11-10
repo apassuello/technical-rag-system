@@ -1,0 +1,148 @@
+{{/*
+Epic 8 Platform - Horizontal Pod Autoscaler Templates
+Enterprise auto-scaling configuration for Epic 8 services
+*/}}
+
+{{/*
+API Gateway HPA
+*/}}
+{{- if and .Values.apiGateway.enabled (include "epic8-platform.autoscaling.enabled" .Values.apiGateway) }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}-hpa
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "api-gateway" "tier" "frontend" "component" "gateway" "context" .) | nindent 4 }}
+    epic8.platform/component: autoscaling
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Horizontal Pod Autoscaler for API Gateway service"
+spec:
+  {{- include "epic8-platform.hpaSpec" (dict "service" .Values.apiGateway "serviceName" "api-gateway" "context" .) | nindent 2 }}
+{{- end }}
+
+{{/*
+Query Analyzer HPA
+*/}}
+{{- if and .Values.queryAnalyzer.enabled (include "epic8-platform.autoscaling.enabled" .Values.queryAnalyzer) }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "query-analyzer" "context" .) }}-hpa
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "query-analyzer" "tier" "backend" "component" "analyzer" "context" .) | nindent 4 }}
+    epic8.platform/component: autoscaling
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Horizontal Pod Autoscaler for Query Analyzer service"
+spec:
+  {{- include "epic8-platform.hpaSpec" (dict "service" .Values.queryAnalyzer "serviceName" "query-analyzer" "context" .) | nindent 2 }}
+{{- end }}
+
+{{/*
+Generator HPA
+*/}}
+{{- if and .Values.generator.enabled (include "epic8-platform.autoscaling.enabled" .Values.generator) }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "generator" "context" .) }}-hpa
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "generator" "tier" "backend" "component" "generator" "context" .) | nindent 4 }}
+    epic8.platform/component: autoscaling
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Horizontal Pod Autoscaler for Generator service"
+spec:
+  {{- include "epic8-platform.hpaSpec" (dict "service" .Values.generator "serviceName" "generator" "context" .) | nindent 2 }}
+{{- end }}
+
+{{/*
+Retriever HPA
+*/}}
+{{- if and .Values.retriever.enabled (include "epic8-platform.autoscaling.enabled" .Values.retriever) }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "retriever" "context" .) }}-hpa
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "retriever" "tier" "backend" "component" "retriever" "context" .) | nindent 4 }}
+    epic8.platform/component: autoscaling
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Horizontal Pod Autoscaler for Retriever service"
+spec:
+  {{- include "epic8-platform.hpaSpec" (dict "service" .Values.retriever "serviceName" "retriever" "context" .) | nindent 2 }}
+{{- end }}
+
+{{/*
+Cache HPA
+*/}}
+{{- if and .Values.cache.enabled (include "epic8-platform.autoscaling.enabled" .Values.cache) }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "cache" "context" .) }}-hpa
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "cache" "tier" "backend" "component" "cache" "context" .) | nindent 4 }}
+    epic8.platform/component: autoscaling
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Horizontal Pod Autoscaler for Cache service"
+spec:
+  {{- include "epic8-platform.hpaSpec" (dict "service" .Values.cache "serviceName" "cache" "context" .) | nindent 2 }}
+{{- end }}
+
+{{/*
+Analytics HPA
+*/}}
+{{- if and .Values.analytics.enabled (include "epic8-platform.autoscaling.enabled" .Values.analytics) }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "analytics" "context" .) }}-hpa
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "analytics" "tier" "backend" "component" "analytics" "context" .) | nindent 4 }}
+    epic8.platform/component: autoscaling
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Horizontal Pod Autoscaler for Analytics service"
+spec:
+  {{- include "epic8-platform.hpaSpec" (dict "service" .Values.analytics "serviceName" "analytics" "context" .) | nindent 2 }}
+{{- end }}
+
+{{/*
+Swiss Engineering Auto-scaling Notes:
+
+1. **Resource-Based Scaling**: Uses both CPU and memory metrics for balanced scaling decisions
+2. **Behavior Configuration**: Advanced scaling behavior prevents thrashing and ensures stability
+3. **Predictive Scaling**: Supports custom metrics for workload-specific scaling patterns
+4. **Cost Optimization**: Minimum replicas ensure baseline performance while maximum limits control costs
+5. **Performance SLA**: Scaling thresholds (70% CPU, 80% memory) maintain service quality
+6. **Multi-Metric Scaling**: Considers multiple resource types for comprehensive auto-scaling
+
+Production Recommendations:
+- Monitor scaling events and adjust thresholds based on actual workload patterns
+- Use VPA (Vertical Pod Autoscaler) alongside HPA for complete resource optimization
+- Implement custom metrics (e.g., queue length, response time) for application-specific scaling
+- Set up alerting for scaling events and resource exhaustion scenarios
+- Regular review of min/max replica settings based on cost and performance requirements
+
+Enterprise Features Available:
+- Predictive Auto-scaling: Based on ML models of traffic patterns
+- Multi-dimensional Scaling: CPU, memory, custom metrics, external metrics
+- Scaling Policies: Fine-grained control over scale-up/scale-down behavior
+- Cross-service Dependencies: Consider dependencies when scaling related services
+*/}}

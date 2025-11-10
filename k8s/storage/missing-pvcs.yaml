@@ -1,0 +1,111 @@
+---
+# Missing PVCs that need to be created for Epic 8 services to start properly
+# Based on existing patterns and optimized for Kind cluster constraints
+
+# Generator service PVCs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-logs
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: logs
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator service logs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 2Gi  # Minimal size for logs
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-cache
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: cache
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator cache"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-fast
+  resources:
+    requests:
+      storage: 4Gi  # Reduced size for Kind
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generator-models
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: storage
+    epic8.platform/storage-type: models
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Generator models"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-fast
+  resources:
+    requests:
+      storage: 6Gi  # Reduced size for Kind
+
+# Query Analyzer service PVCs (these will replace the pending ones)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: query-analyzer-logs
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: storage
+    epic8.platform/storage-type: logs
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Query Analyzer service logs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 2Gi  # Minimal size for logs
+
+# Analytics service PVCs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: analytics-logs
+  namespace: epic8-dev
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: storage
+    epic8.platform/storage-type: logs
+    epic8.platform/version: v1
+  annotations:
+    epic8.platform/description: "Persistent storage for Analytics service logs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: epic8-kind-standard
+  resources:
+    requests:
+      storage: 2Gi  # Minimal size for logs

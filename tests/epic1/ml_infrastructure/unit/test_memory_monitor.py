@@ -12,10 +12,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 import pytest
 
-# Add src and fixtures to path for imports
-sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
-sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Imports handled by conftest.py
 
 from fixtures.base_test import MLInfrastructureTestBase, MemoryTestMixin, PerformanceTestMixin
 from fixtures.mock_memory import MockMemorySystem, create_memory_test_scenarios

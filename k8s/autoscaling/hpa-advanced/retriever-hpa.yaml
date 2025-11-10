@@ -1,0 +1,182 @@
+---
+# Retriever Service Advanced HPA Configuration
+# Optimized for vector search and retrieval workloads with sub-100ms targets
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: retriever-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: retrieval
+    epic8.platform/tier: data
+    epic8.platform/autoscaling: advanced
+    app.kubernetes.io/name: retriever-hpa
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: autoscaling
+  annotations:
+    epic8.platform/description: "Advanced HPA for Retriever with vector search optimization"
+    epic8.platform/target-retrieval-time: "100ms"
+    epic8.platform/vector-index-optimization: "enabled"
+    epic8.platform/bm25-hybrid-mode: "enabled"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: retriever
+
+  # Scaling Range: 2-8 replicas for vector search distribution
+  minReplicas: 2
+  maxReplicas: 8
+
+  # Multi-metric scaling for vector retrieval workloads
+  metrics:
+  # Primary Metric: CPU utilization (75% target for vector computations)
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 75
+
+  # Secondary Metric: Memory utilization (85% target for vector indices)
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 85
+
+  # Custom Metric: Retrieval queue length
+  - type: Pods
+    pods:
+      metric:
+        name: retrieval_queue_length
+        selector:
+          matchLabels:
+            epic8.platform/service: retriever
+      target:
+        type: AverageValue
+        averageValue: "20"  # Scale when > 20 retrieval requests queued per pod
+
+  # Custom Metric: Retrieval time P95 (scale when > 100ms)
+  - type: Pods
+    pods:
+      metric:
+        name: retrieval_time_p95
+        selector:
+          matchLabels:
+            epic8.platform/service: retriever
+      target:
+        type: AverageValue
+        averageValue: "100m"  # 100ms in milliunits
+
+  # Custom Metric: Vector index hit ratio
+  - type: Pods
+    pods:
+      metric:
+        name: vector_index_hit_ratio
+        selector:
+          matchLabels:
+            epic8.platform/service: retriever
+      target:
+        type: AverageValue
+        averageValue: "0.85"  # Scale up if hit ratio drops below 85%
+
+  # Custom Metric: BM25 retrieval efficiency
+  - type: Pods
+    pods:
+      metric:
+        name: bm25_retrieval_time_ms
+        selector:
+          matchLabels:
+            epic8.platform/service: retriever
+      target:
+        type: AverageValue
+        averageValue: "30"  # Scale when BM25 retrieval > 30ms
+
+  # Vector search optimized scaling behavior
+  behavior:
+    scaleUp:
+      # Quick scale-up for retrieval spikes
+      stabilizationWindowSeconds: 75  # Wait 1.25 minutes
+      selectPolicy: Max
+      policies:
+      # Rapid response to retrieval load
+      - type: Percent
+        value: 80  # Increase by 80% for immediate capacity
+        periodSeconds: 45
+      # Sustained scaling for vector workloads
+      - type: Pods
+        value: 2  # Add 2 pods for index distribution
+        periodSeconds: 60
+
+    scaleDown:
+      # Conservative scale-down to maintain retrieval performance
+      stabilizationWindowSeconds: 300  # Wait 5 minutes before scaling down
+      selectPolicy: Min
+      policies:
+      # Gradual scale-down to preserve vector indices
+      - type: Percent
+        value: 25  # Remove max 25% of replicas
+        periodSeconds: 180
+      # Single pod removal for precision
+      - type: Pods
+        value: 1  # Remove 1 pod at a time
+        periodSeconds: 150
+
+---
+# ServiceMonitor for Retriever metrics collection
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: retriever-hpa-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: retriever
+  endpoints:
+  - port: metrics
+    interval: 15s  # Frequent sampling for retrieval metrics
+    path: /metrics
+    honorLabels: true
+    metricRelabelings:
+    # Retrieval-specific metric relabeling
+    - sourceLabels: [__name__]
+      regex: 'retrieval_requests_queued_total'
+      targetLabel: __name__
+      replacement: 'retrieval_queue_length'
+    - sourceLabels: [__name__]
+      regex: 'retrieval_duration_seconds'
+      targetLabel: __name__
+      replacement: 'retrieval_time_p95'
+    - sourceLabels: [__name__]
+      regex: 'vector_index_hit_rate'
+      targetLabel: __name__
+      replacement: 'vector_index_hit_ratio'
+    - sourceLabels: [__name__]
+      regex: 'bm25_retrieval_duration_ms'
+      targetLabel: __name__
+      replacement: 'bm25_retrieval_time_ms'
+
+---
+# PodDisruptionBudget for retrieval availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: retriever-pdb-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: availability
+spec:
+  minAvailable: 1  # Always keep at least 1 pod for continuous retrieval
+  selector:
+    matchLabels:
+      epic8.platform/service: retriever
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  maxUnavailable: 2  # Allow up to 2 pods unavailable during updates

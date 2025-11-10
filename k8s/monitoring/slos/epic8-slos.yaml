@@ -1,0 +1,416 @@
+---
+# Epic 8 Service Level Objectives (SLOs) Framework
+# Swiss engineering precision with quantitative performance targets
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-slo-definitions
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: slo-framework
+    epic8.platform/tier: monitoring
+    app.kubernetes.io/name: epic8-slos
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "Service Level Objectives for Epic 8 platform"
+    epic8.platform/swiss-engineering: "precision-reliability"
+    epic8.platform/business-value: "customer-satisfaction"
+data:
+  # API Gateway SLOs
+  api-gateway-slos.yaml: |
+    service: api-gateway
+    slos:
+      availability:
+        objective: 99.9
+        measurement_window: 30d
+        error_budget: 0.1
+        description: "API Gateway must be available 99.9% of the time"
+
+      latency:
+        p95_objective: 500  # milliseconds
+        p99_objective: 1000
+        measurement_window: 7d
+        description: "95% of requests must complete within 500ms"
+
+      throughput:
+        min_rps: 100
+        max_rps: 1000
+        target_rps: 500
+        description: "Handle 500 RPS average, burst to 1000 RPS"
+
+      error_rate:
+        objective: 99.5  # Success rate
+        measurement_window: 24h
+        description: "99.5% of requests must succeed"
+
+  # Generator Service SLOs (ML-optimized)
+  generator-slos.yaml: |
+    service: generator
+    slos:
+      availability:
+        objective: 99.5
+        measurement_window: 30d
+        error_budget: 0.5
+        description: "Generator must be available 99.5% of the time"
+
+      generation_latency:
+        p95_objective: 1500  # milliseconds
+        p99_objective: 3000
+        measurement_window: 7d
+        description: "95% of generations must complete within 1.5s"
+
+      model_switching_overhead:
+        max_overhead_ms: 100
+        measurement_window: 1h
+        description: "Model switching overhead must be <100ms"
+
+      cost_efficiency:
+        max_cost_per_query: 0.01  # USD
+        measurement_window: 24h
+        description: "Average cost per query must be <$0.01"
+
+      quality:
+        min_relevance_score: 0.8
+        measurement_window: 24h
+        description: "Generated responses must maintain >80% relevance"
+
+  # Query Analyzer SLOs (ML Classification)
+  query-analyzer-slos.yaml: |
+    service: query-analyzer
+    slos:
+      availability:
+        objective: 99.8
+        measurement_window: 30d
+        error_budget: 0.2
+        description: "Query Analyzer must be available 99.8% of the time"
+
+      analysis_latency:
+        p95_objective: 200  # milliseconds
+        p99_objective: 500
+        measurement_window: 7d
+        description: "95% of analyses must complete within 200ms"
+
+      classification_accuracy:
+        min_accuracy: 0.95
+        measurement_window: 24h
+        description: "Classification accuracy must be >95%"
+
+      feature_extraction_time:
+        max_time_ms: 50
+        measurement_window: 1h
+        description: "Feature extraction must complete within 50ms"
+
+  # Retriever Service SLOs (Vector Search)
+  retriever-slos.yaml: |
+    service: retriever
+    slos:
+      availability:
+        objective: 99.9
+        measurement_window: 30d
+        error_budget: 0.1
+        description: "Retriever must be available 99.9% of the time"
+
+      retrieval_latency:
+        p95_objective: 100  # milliseconds
+        p99_objective: 250
+        measurement_window: 7d
+        description: "95% of retrievals must complete within 100ms"
+
+      search_quality:
+        min_precision_at_10: 0.85
+        measurement_window: 24h
+        description: "Search precision@10 must be >85%"
+
+      index_hit_rate:
+        min_hit_rate: 0.95
+        measurement_window: 1h
+        description: "Vector index hit rate must be >95%"
+
+  # Cache Service SLOs
+  cache-slos.yaml: |
+    service: cache
+    slos:
+      availability:
+        objective: 99.9
+        measurement_window: 30d
+        error_budget: 0.1
+        description: "Cache must be available 99.9% of the time"
+
+      access_latency:
+        p95_objective: 10  # milliseconds
+        p99_objective: 25
+        measurement_window: 7d
+        description: "95% of cache accesses must complete within 10ms"
+
+      hit_rate:
+        min_hit_rate: 0.90
+        measurement_window: 24h
+        description: "Cache hit rate must be >90%"
+
+      memory_efficiency:
+        max_memory_utilization: 0.85
+        measurement_window: 1h
+        description: "Memory utilization must be <85%"
+
+  # Analytics Service SLOs
+  analytics-slos.yaml: |
+    service: analytics
+    slos:
+      availability:
+        objective: 99.5
+        measurement_window: 30d
+        error_budget: 0.5
+        description: "Analytics must be available 99.5% of the time"
+
+      processing_lag:
+        max_lag_minutes: 60
+        measurement_window: 24h
+        description: "Processing lag must be <1 hour"
+
+      data_integrity:
+        min_integrity: 0.999
+        measurement_window: 24h
+        description: "Data integrity must be >99.9%"
+
+      cost_tracking_accuracy:
+        min_accuracy: 0.999
+        measurement_window: 24h
+        description: "Cost tracking accuracy must be >99.9%"
+
+  # System-wide SLOs
+  system-slos.yaml: |
+    service: epic8-platform
+    slos:
+      end_to_end_latency:
+        p95_objective: 2000  # milliseconds
+        p99_objective: 5000
+        measurement_window: 7d
+        description: "95% of end-to-end queries must complete within 2s"
+
+      system_availability:
+        objective: 99.9
+        measurement_window: 30d
+        error_budget: 0.1
+        description: "Overall system availability must be 99.9%"
+
+      concurrent_users:
+        min_supported: 1000
+        measurement_window: 1h
+        description: "System must support 1000+ concurrent users"
+
+      resource_efficiency:
+        min_cpu_utilization: 0.70
+        min_memory_utilization: 0.70
+        measurement_window: 24h
+        description: "Resource utilization must be >70% for efficiency"
+
+---
+# SLO Monitoring PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: epic8-slo-monitoring
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: slo-monitoring
+    epic8.platform/tier: monitoring
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  # API Gateway SLO Rules
+  - name: api-gateway.slo
+    interval: 30s
+    rules:
+    - alert: APIGatewayAvailabilitySLOViolation
+      expr: |
+        (
+          rate(epic8_api_gateway_requests_total{status!~"5.."}[5m]) /
+          rate(epic8_api_gateway_requests_total[5m])
+        ) < 0.999
+      for: 2m
+      labels:
+        severity: critical
+        service: api-gateway
+        slo: availability
+      annotations:
+        summary: "API Gateway availability SLO violation"
+        description: "API Gateway availability is {{ $value | humanizePercentage }}, below 99.9% SLO"
+
+    - alert: APIGatewayLatencySLOViolation
+      expr: |
+        histogram_quantile(0.95,
+          rate(epic8_api_gateway_request_duration_seconds_bucket[5m])
+        ) > 0.5
+      for: 1m
+      labels:
+        severity: warning
+        service: api-gateway
+        slo: latency
+      annotations:
+        summary: "API Gateway latency SLO violation"
+        description: "API Gateway P95 latency is {{ $value }}s, above 500ms SLO"
+
+  # Generator SLO Rules
+  - name: generator.slo
+    interval: 30s
+    rules:
+    - alert: GeneratorLatencySLOViolation
+      expr: |
+        histogram_quantile(0.95,
+          rate(epic8_generator_generation_duration_seconds_bucket[5m])
+        ) > 1.5
+      for: 2m
+      labels:
+        severity: warning
+        service: generator
+        slo: generation-latency
+      annotations:
+        summary: "Generator latency SLO violation"
+        description: "Generator P95 latency is {{ $value }}s, above 1.5s SLO"
+
+    - alert: GeneratorCostSLOViolation
+      expr: |
+        avg_over_time(epic8_generator_cost_per_query_usd[1h]) > 0.01
+      for: 5m
+      labels:
+        severity: warning
+        service: generator
+        slo: cost-efficiency
+      annotations:
+        summary: "Generator cost SLO violation"
+        description: "Generator cost per query is ${{ $value }}, above $0.01 SLO"
+
+  # Query Analyzer SLO Rules
+  - name: query-analyzer.slo
+    interval: 30s
+    rules:
+    - alert: QueryAnalyzerAccuracySLOViolation
+      expr: |
+        avg_over_time(epic8_query_analyzer_accuracy[24h]) < 0.95
+      for: 10m
+      labels:
+        severity: critical
+        service: query-analyzer
+        slo: accuracy
+      annotations:
+        summary: "Query Analyzer accuracy SLO violation"
+        description: "Query Analyzer accuracy is {{ $value | humanizePercentage }}, below 95% SLO"
+
+  # Retriever SLO Rules
+  - name: retriever.slo
+    interval: 30s
+    rules:
+    - alert: RetrieverLatencySLOViolation
+      expr: |
+        histogram_quantile(0.95,
+          rate(epic8_retriever_retrieval_duration_seconds_bucket[5m])
+        ) > 0.1
+      for: 1m
+      labels:
+        severity: warning
+        service: retriever
+        slo: retrieval-latency
+      annotations:
+        summary: "Retriever latency SLO violation"
+        description: "Retriever P95 latency is {{ $value }}s, above 100ms SLO"
+
+  # Cache SLO Rules
+  - name: cache.slo
+    interval: 30s
+    rules:
+    - alert: CacheHitRateSLOViolation
+      expr: |
+        rate(epic8_cache_hits_total[5m]) /
+        rate(epic8_cache_requests_total[5m]) < 0.90
+      for: 5m
+      labels:
+        severity: warning
+        service: cache
+        slo: hit-rate
+      annotations:
+        summary: "Cache hit rate SLO violation"
+        description: "Cache hit rate is {{ $value | humanizePercentage }}, below 90% SLO"
+
+  # System-wide SLO Rules
+  - name: system.slo
+    interval: 60s
+    rules:
+    - alert: SystemLatencySLOViolation
+      expr: |
+        histogram_quantile(0.95,
+          rate(epic8_system_end_to_end_duration_seconds_bucket[5m])
+        ) > 2.0
+      for: 2m
+      labels:
+        severity: critical
+        service: epic8-platform
+        slo: end-to-end-latency
+      annotations:
+        summary: "System end-to-end latency SLO violation"
+        description: "System P95 latency is {{ $value }}s, above 2s SLO"
+
+    - alert: SystemResourceEfficiencySLOViolation
+      expr: |
+        avg_over_time(epic8_cluster_cpu_utilization[1h]) < 0.70 OR
+        avg_over_time(epic8_cluster_memory_utilization[1h]) < 0.70
+      for: 30m
+      labels:
+        severity: warning
+        service: epic8-platform
+        slo: resource-efficiency
+      annotations:
+        summary: "System resource efficiency SLO violation"
+        description: "System resource utilization below 70% efficiency target"
+
+---
+# SLO Dashboard Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-slo-dashboards
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: slo-dashboards
+    grafana_dashboard: "true"
+data:
+  epic8-slo-overview.json: |
+    {
+      "dashboard": {
+        "title": "Epic 8 - SLO Overview",
+        "tags": ["epic8", "slo", "monitoring"],
+        "timezone": "Europe/Zurich",
+        "panels": [
+          {
+            "title": "SLO Compliance Overview",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "avg(epic8_slo_compliance_percentage)",
+                "legendFormat": "Overall SLO Compliance"
+              }
+            ]
+          },
+          {
+            "title": "Error Budget Burn Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "epic8_error_budget_burn_rate",
+                "legendFormat": "{{ service }}"
+              }
+            ]
+          },
+          {
+            "title": "Service Availability (30d)",
+            "type": "heatmap",
+            "targets": [
+              {
+                "expr": "epic8_service_availability_30d",
+                "legendFormat": "{{ service }}"
+              }
+            ]
+          }
+        ]
+      }
+    }

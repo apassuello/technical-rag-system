@@ -1,0 +1,129 @@
+{{/*
+Epic 8 Platform - Cache Deployment Template
+Redis-based caching service for performance optimization
+*/}}
+
+{{- if .Values.cache.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "cache" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "cache" "tier" "backend" "component" "cache" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "Cache - Redis-based caching service for performance optimization"
+spec:
+  replicas: {{ .Values.cache.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "cache" "context" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "epic8-platform.serviceLabels" (dict "service" "cache" "tier" "backend" "component" "cache" "context" .) | nindent 8 }}
+      annotations:
+        {{- include "epic8-platform.annotations" . | nindent 8 }}
+        {{- if include "epic8-platform.monitoring.enabled" . }}
+        {{- include "epic8-platform.prometheusAnnotations" (dict "port" "9090" "path" "/metrics") | nindent 8 }}
+        {{- end }}
+        {{- include "epic8-platform.serviceMeshAnnotations" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "epic8-platform.serviceName" (dict "service" "cache" "context" .) }}
+      securityContext:
+        {{- include "epic8-platform.podSecurityContext" . | nindent 8 }}
+      containers:
+      - name: cache
+        image: {{ include "epic8-platform.image" (dict "repository" .Values.cache.image.repository "tag" (.Values.cache.image.tag | default .Chart.AppVersion) "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.cache.service.targetPort }}
+          protocol: TCP
+        {{- if include "epic8-platform.monitoring.enabled" . }}
+        - name: metrics
+          containerPort: {{ .Values.cache.service.metricsPort }}
+          protocol: TCP
+        {{- end }}
+        env:
+        {{- include "epic8-platform.commonEnvVars" . | nindent 8 }}
+        {{- if .Values.cache.redis.enabled }}
+        {{- if .Values.cache.redis.external.enabled }}
+        - name: REDIS_HOST
+          value: {{ .Values.cache.redis.external.host | quote }}
+        - name: REDIS_PORT
+          value: {{ .Values.cache.redis.external.port | quote }}
+        {{- if .Values.cache.redis.external.password_secret }}
+        - name: REDIS_PASSWORD
+          valueFrom:
+            {{- include "epic8-platform.secretKeyRef" (dict "secret" .Values.cache.redis.external.password_secret "key" .Values.cache.redis.external.password_key) | nindent 12 }}
+        {{- end }}
+        {{- else }}
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+        {{- end }}
+        {{- end }}
+        - name: CACHE_TTL
+          value: {{ .Values.cache.cache.ttl | quote }}
+        - name: CACHE_MAX_SIZE
+          value: {{ .Values.cache.cache.maxSize | quote }}
+        - name: CACHE_HIT_RATE_TARGET
+          value: {{ .Values.cache.cache.hitRateTarget | quote }}
+        envFrom:
+        {{- if .Values.configMaps.common.create }}
+        - configMapRef:
+            name: {{ include "epic8-platform.fullname" . }}-common-config
+        {{- end }}
+        {{- if .Values.secrets.platform.create }}
+        - secretRef:
+            name: {{ include "epic8-platform.fullname" . }}-secrets
+        {{- end }}
+        resources:
+          {{- include "epic8-platform.resources" (dict "service" .Values.cache "global" .Values.global "context" .) | nindent 10 }}
+        securityContext:
+          {{- include "epic8-platform.containerSecurityContext" . | nindent 10 }}
+        livenessProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.cache.health.liveness.path "port" "http" "config" .Values.cache.health.liveness) | nindent 10 }}
+        readinessProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.cache.health.readiness.path "port" "http" "config" .Values.cache.health.readiness) | nindent 10 }}
+        startupProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.cache.health.startup.path "port" "http" "config" .Values.cache.health.startup) | nindent 10 }}
+        volumeMounts:
+        {{- include "epic8-platform.standardVolumeMounts" . | nindent 8 }}
+      volumes:
+      {{- include "epic8-platform.standardVolumes" . | nindent 6 }}
+      {{- if .Values.cache.affinity.podAntiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          {{- include "epic8-platform.podAntiAffinity" (dict "service" "cache" "weight" 100 "required" false) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.cache.topologySpreadConstraints.enabled }}
+      topologySpreadConstraints:
+      {{- include "epic8-platform.topologySpreadConstraints" (dict "service" "cache" "maxSkew" 1) | nindent 6 }}
+      {{- end }}
+
+{{- if .Values.cache.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "cache" "context" .) }}-pdb
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "cache" "tier" "backend" "component" "cache" "context" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.cache.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "cache" "context" .) | nindent 6 }}
+{{- end }}
+{{- end }}

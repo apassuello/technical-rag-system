@@ -38,7 +38,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))
 
-from shared_utils.embeddings.generator import generate_embeddings
+from src.shared_utils.embeddings.generator import generate_embeddings
 
 
 def test_generate_embeddings_basic():

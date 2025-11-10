@@ -13,9 +13,7 @@ from unittest.mock import Mock, patch
 import pytest
 import numpy as np
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Imports handled by conftest.py
 
 from fixtures.base_test import MLInfrastructureTestBase
 from fixtures.test_data import ViewFrameworkTestData

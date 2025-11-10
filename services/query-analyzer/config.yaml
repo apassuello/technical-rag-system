@@ -1,0 +1,87 @@
+# Epic 8 Query Analyzer Service Configuration
+service_name: "query-analyzer"
+service_version: "1.0.0"
+
+# Server Configuration
+host: "0.0.0.0"
+port: 8082
+workers: 1
+
+# gRPC Configuration (for Phase 1.3)
+grpc_port: 50051
+grpc_max_workers: 10
+
+# Logging Configuration
+log_level: "INFO"
+log_format: "json"
+
+# Metrics Configuration
+enable_metrics: true
+metrics_path: "/metrics"
+
+# Epic 8 Enhanced Performance Configuration
+request_timeout: 30  # Overall request timeout
+max_concurrent_requests: 100  # Kubernetes can scale horizontally
+
+# Epic 8 Performance Targets
+performance_targets:
+  response_time_target_ms: 5000  # 5s target per Epic 8 spec (realistic)
+  response_time_warning_ms: 2000  # 2s preferred threshold
+  accuracy_target: 0.85  # 85% classification accuracy (FR-8.1.2)
+  cost_error_target: 0.05  # <5% cost estimation error (FR-8.1.4)
+  memory_limit_gb: 2.0  # <2GB memory usage per instance
+
+# Epic 8 Enhanced Health Check Configuration
+health_check_interval: 30
+health_check_timeout: 2  # Health checks should complete in 2s
+
+# Epic 8 Circuit Breaker Configuration
+circuit_breaker:
+  failure_threshold: 5  # Open circuit after 5 failures
+  timeout_seconds: 60  # Stay open for 60 seconds
+  enabled: true
+
+# Epic 8 Fallback Configuration
+fallback:
+  enabled: true
+  threshold_ms: 3000  # Use fallback after 3s timeout
+
+# Analyzer Configuration - Maps to Epic1QueryAnalyzer config
+analyzer:
+  # Feature Extractor Configuration
+  feature_extractor:
+    enable_caching: true
+    cache_size: 1000
+    extract_linguistic: true
+    extract_structural: true
+    extract_semantic: true
+    
+  # Complexity Classifier Configuration
+  complexity_classifier:
+    thresholds:
+      simple: 0.3
+      medium: 0.6
+      complex: 0.9
+    weights:
+      length: 0.2
+      vocabulary: 0.3
+      syntax: 0.2
+      semantic: 0.3
+      
+  # Model Recommender Configuration
+  model_recommender:
+    strategy: "balanced"  # cost_optimized | balanced | quality_first
+    model_mappings:
+      simple:
+        - "ollama/llama3.2:3b"
+      medium:
+        - "openai/gpt-3.5-turbo"
+        - "ollama/llama3.2:3b"
+      complex:
+        - "openai/gpt-4"
+        - "mistral/mistral-large"
+    cost_weights:
+      "ollama/llama3.2:3b": 0.0
+      "openai/gpt-3.5-turbo": 0.002
+      "openai/gpt-4": 0.06
+      "mistral/mistral-large": 0.008

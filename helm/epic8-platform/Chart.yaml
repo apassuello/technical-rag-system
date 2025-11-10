@@ -1,0 +1,122 @@
+apiVersion: v2
+name: epic8-platform
+description: |
+  Epic 8 Cloud-Native Multi-Model RAG Platform
+
+  Enterprise-grade microservices architecture for intelligent document retrieval
+  and answer generation with multi-model routing, cost optimization, and Swiss
+  engineering quality standards.
+
+  Features:
+  - 6 microservices: API Gateway, Query Analyzer, Generator, Retriever, Cache, Analytics
+  - Multi-cloud deployment (AWS EKS, GCP GKE, Azure AKS)
+  - Intelligent cost optimization with multi-model routing
+  - Enterprise security with mTLS, RBAC, and network policies
+  - Comprehensive observability with Prometheus, Grafana, Jaeger
+  - Auto-scaling with HPA/VPA and topology spreading
+  - High availability with 99.9% uptime SLA capability
+
+# Chart Metadata
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+# Maintainer Information
+maintainers:
+  - name: Arthur Passuello
+    email: arthur.passuello@example.com
+    url: https://github.com/epic8-platform
+
+# Keywords for discoverability
+keywords:
+  - rag
+  - ai
+  - ml
+  - microservices
+  - kubernetes
+  - cloud-native
+  - multi-model
+  - enterprise
+  - swiss-engineering
+
+# Repository and documentation
+home: https://github.com/epic8-platform/helm-charts
+sources:
+  - https://github.com/epic8-platform/epic8-rag-platform
+  - https://github.com/epic8-platform/helm-charts
+
+# Annotations for additional metadata
+annotations:
+  category: AI/ML
+  licenses: Apache-2.0
+  epic8.platform/architecture: microservices
+  epic8.platform/tier: enterprise
+  epic8.platform/compliance: swiss-engineering
+  epic8.platform/sla: 99.9-uptime
+  epic8.platform/scaling: auto-scaling
+  epic8.platform/security: enterprise-grade
+
+  # Cloud provider compatibility
+  epic8.platform/cloud.aws: "true"
+  epic8.platform/cloud.gcp: "true"
+  epic8.platform/cloud.azure: "true"
+  epic8.platform/cloud.on-premises: "true"
+
+  # Service mesh compatibility
+  epic8.platform/service-mesh.istio: "true"
+  epic8.platform/service-mesh.linkerd: "true"
+  epic8.platform/service-mesh.consul-connect: "true"
+
+  # Observability stack compatibility
+  epic8.platform/observability.prometheus: "true"
+  epic8.platform/observability.grafana: "true"
+  epic8.platform/observability.jaeger: "true"
+  epic8.platform/observability.fluentd: "true"
+
+# Dependencies (optional subcharts)
+dependencies:
+  - name: epic8-monitoring
+    version: "^1.0.0"
+    repository: "file://./charts/epic8-monitoring"
+    condition: monitoring.enabled
+    tags:
+      - monitoring
+      - observability
+    optional: true
+
+  - name: epic8-security
+    version: "^1.0.0"
+    repository: "file://./charts/epic8-security"
+    condition: security.advanced.enabled
+    tags:
+      - security
+      - rbac
+      - policies
+    optional: true
+
+  - name: redis
+    version: "^17.0.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: cache.redis.external.enabled
+    tags:
+      - cache
+      - redis
+      - external
+    optional: true
+
+  - name: postgresql
+    version: "^12.0.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: analytics.postgresql.external.enabled
+    tags:
+      - database
+      - postgresql
+      - analytics
+      - external
+    optional: true
+
+# Minimum Kubernetes version
+kubeVersion: ">=1.24.0-0"
+
+# Deprecated field for legacy compatibility
+deprecated: false

@@ -15,10 +15,9 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 import os
 
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Add src to path - updated for scripts/ location
+project_root = Path(__file__).parents[2]  # scripts/evaluation/ is 2 levels from root
+sys.path.insert(0, str(project_root / 'src'))
 
 # RAGAS imports
 from ragas import evaluate

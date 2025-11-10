@@ -1,0 +1,338 @@
+---
+# Let's Encrypt Cluster Issuers - Production and Staging
+# Epic 8 Cloud-Native Multi-Model RAG Platform
+# Swiss Engineering Standards: Automated SSL/TLS Certificate Management
+
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    epic8.platform/component: certificate-management
+    epic8.platform/type: letsencrypt
+    epic8.platform/tier: production
+    epic8.platform/issuer-type: production
+spec:
+  acme:
+    # Production Let's Encrypt server
+    server: https://acme-v02.api.letsencrypt.org/directory
+
+    # Email address used for ACME registration
+    email: admin@epic8-platform.swiss  # Update with actual email
+
+    # Name of a secret used to store the ACME account private key
+    privateKeySecretRef:
+      name: letsencrypt-prod-private-key
+
+    # Enable the HTTP-01 challenge provider
+    solvers:
+    # HTTP-01 solver using NGINX Ingress
+    - http01:
+        ingress:
+          class: nginx
+          podTemplate:
+            metadata:
+              labels:
+                epic8.platform/component: acme-solver
+                epic8.platform/type: http01
+            spec:
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 2000
+                runAsGroup: 3000
+                fsGroup: 2000
+                seccompProfile:
+                  type: RuntimeDefault
+              containers:
+              - name: acme-solver
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                  readOnlyRootFilesystem: true
+                  runAsNonRoot: true
+                resources:
+                  requests:
+                    cpu: 10m
+                    memory: 64Mi
+                    ephemeral-storage: 100Mi
+                  limits:
+                    cpu: 100m
+                    memory: 128Mi
+                    ephemeral-storage: 500Mi
+      selector: {}
+
+    # DNS-01 solver for wildcard certificates (commented out, enable if needed)
+    # - dns01:
+    #     # AWS Route53 (for AWS deployments)
+    #     route53:
+    #       region: eu-central-1  # Swiss/EU region preference
+    #       accessKeyID: # Set via secret
+    #       secretAccessKeySecretRef:
+    #         name: route53-credentials
+    #         key: secret-access-key
+    #   selector:
+    #     dnsNames:
+    #     - "*.epic8-platform.swiss"
+    #     - "epic8-platform.swiss"
+
+    # - dns01:
+    #     # Google Cloud DNS (for GCP deployments)
+    #     cloudDNS:
+    #       project: epic8-platform-swiss
+    #       serviceAccountSecretRef:
+    #         name: clouddns-dns01-solver-svc-acct
+    #         key: key.json
+    #   selector:
+    #     dnsNames:
+    #     - "*.epic8-platform.swiss"
+    #     - "epic8-platform.swiss"
+
+    # - dns01:
+    #     # Azure DNS (for Azure deployments)
+    #     azureDNS:
+    #       clientID: # Set via secret
+    #       clientSecretSecretRef:
+    #         name: azuredns-config
+    #         key: client-secret
+    #       subscriptionID: # Set via secret
+    #       tenantID: # Set via secret
+    #       resourceGroupName: epic8-platform-rg
+    #       hostedZoneName: epic8-platform.swiss
+    #   selector:
+    #     dnsNames:
+    #     - "*.epic8-platform.swiss"
+    #     - "epic8-platform.swiss"
+
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  labels:
+    epic8.platform/component: certificate-management
+    epic8.platform/type: letsencrypt
+    epic8.platform/tier: staging
+    epic8.platform/issuer-type: staging
+spec:
+  acme:
+    # Staging Let's Encrypt server (for testing)
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+
+    # Email address used for ACME registration
+    email: admin@epic8-platform.swiss  # Update with actual email
+
+    # Name of a secret used to store the ACME account private key
+    privateKeySecretRef:
+      name: letsencrypt-staging-private-key
+
+    # Enable the HTTP-01 challenge provider
+    solvers:
+    # HTTP-01 solver using NGINX Ingress
+    - http01:
+        ingress:
+          class: nginx
+          podTemplate:
+            metadata:
+              labels:
+                epic8.platform/component: acme-solver
+                epic8.platform/type: http01
+                epic8.platform/environment: staging
+            spec:
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 2000
+                runAsGroup: 3000
+                fsGroup: 2000
+                seccompProfile:
+                  type: RuntimeDefault
+              containers:
+              - name: acme-solver
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                  readOnlyRootFilesystem: true
+                  runAsNonRoot: true
+                resources:
+                  requests:
+                    cpu: 10m
+                    memory: 64Mi
+                    ephemeral-storage: 100Mi
+                  limits:
+                    cpu: 100m
+                    memory: 128Mi
+                    ephemeral-storage: 500Mi
+      selector: {}
+
+---
+# Self-Signed Issuer for Development/Internal Use
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+  labels:
+    epic8.platform/component: certificate-management
+    epic8.platform/type: selfsigned
+    epic8.platform/tier: development
+    epic8.platform/issuer-type: selfsigned
+spec:
+  selfSigned: {}
+
+---
+# Epic 8 Platform Root CA Issuer (for enterprise deployment)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: epic8-platform-ca-issuer
+  labels:
+    epic8.platform/component: certificate-management
+    epic8.platform/type: ca
+    epic8.platform/tier: enterprise
+    epic8.platform/issuer-type: internal-ca
+spec:
+  ca:
+    secretName: epic8-platform-ca-key-pair
+
+---
+# Epic 8 Platform Root CA Certificate (self-signed)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: epic8-platform-ca-cert
+  namespace: cert-manager
+  labels:
+    epic8.platform/component: certificate-management
+    epic8.platform/type: ca
+    epic8.platform/tier: enterprise
+    epic8.platform/cert-type: root-ca
+spec:
+  isCA: true
+  commonName: Epic 8 Platform Root CA
+  subject:
+    organizationalUnits:
+    - "Epic 8 Platform"
+    organizations:
+    - "Epic 8 Swiss Engineering"
+    countries:
+    - "CH"  # Switzerland
+    localities:
+    - "Zurich"
+    provinces:
+    - "Zurich"
+  secretName: epic8-platform-ca-key-pair
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  duration: 87600h  # 10 years
+  renewBefore: 8760h  # Renew 1 year before expiry
+
+---
+# Certificate for Epic 8 Platform API Gateway (production)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: epic8-platform-tls
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: certificate-management
+    epic8.platform/type: tls
+    epic8.platform/tier: production
+    epic8.platform/cert-type: api-gateway
+spec:
+  secretName: epic8-platform-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+    group: cert-manager.io
+  commonName: api.epic8-platform.swiss
+  dnsNames:
+  - api.epic8-platform.swiss
+  - www.epic8-platform.swiss
+  - epic8-platform.swiss
+  - analytics.epic8-platform.swiss
+  - monitoring.epic8-platform.swiss
+  # Regional Swiss endpoints
+  - api-ch.epic8-platform.swiss
+  - api-zurich.epic8-platform.swiss
+  duration: 2160h  # 90 days
+  renewBefore: 720h  # Renew 30 days before expiry
+
+---
+# Certificate for Epic 8 Platform API Gateway (staging)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: epic8-platform-staging-tls
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: certificate-management
+    epic8.platform/type: tls
+    epic8.platform/tier: staging
+    epic8.platform/cert-type: api-gateway
+spec:
+  secretName: epic8-platform-staging-tls
+  issuerRef:
+    name: letsencrypt-staging
+    kind: ClusterIssuer
+    group: cert-manager.io
+  commonName: staging-api.epic8-platform.swiss
+  dnsNames:
+  - staging-api.epic8-platform.swiss
+  - staging.epic8-platform.swiss
+  - staging-analytics.epic8-platform.swiss
+  - staging-monitoring.epic8-platform.swiss
+  duration: 2160h  # 90 days
+  renewBefore: 720h  # Renew 30 days before expiry
+
+---
+# Wildcard Certificate for Development (internal CA)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: epic8-platform-wildcard-dev
+  namespace: nginx-ingress
+  labels:
+    epic8.platform/component: certificate-management
+    epic8.platform/type: tls
+    epic8.platform/tier: development
+    epic8.platform/cert-type: wildcard
+spec:
+  secretName: epic8-platform-wildcard-dev
+  issuerRef:
+    name: epic8-platform-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  commonName: "*.dev.epic8-platform.swiss"
+  dnsNames:
+  - "*.dev.epic8-platform.swiss"
+  - "dev.epic8-platform.swiss"
+  - "*.local.epic8-platform.swiss"
+  - "local.epic8-platform.swiss"
+  duration: 8760h  # 1 year
+  renewBefore: 2160h  # Renew 90 days before expiry
+
+---
+# Certificate Monitoring - ServiceMonitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cert-manager-metrics
+  namespace: cert-manager
+  labels:
+    epic8.platform/component: certificate-management
+    epic8.platform/type: monitoring
+    epic8.platform/monitoring-target: cert-manager
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cert-manager
+      app.kubernetes.io/component: controller
+  endpoints:
+  - port: tcp-prometheus-servicemonitor
+    interval: 60s
+    path: /metrics
+    scheme: http

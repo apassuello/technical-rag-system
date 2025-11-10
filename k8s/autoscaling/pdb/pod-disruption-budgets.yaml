@@ -1,0 +1,279 @@
+---
+# Comprehensive Pod Disruption Budgets for Epic 8 Services
+# Ensures high availability during scaling and maintenance operations
+
+# API Gateway PDB - Frontend availability critical
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: api-gateway
+    epic8.platform/component: availability
+    epic8.platform/tier: frontend
+    app.kubernetes.io/name: api-gateway-pdb
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "PDB for API Gateway ensuring frontend availability"
+    epic8.platform/availability-target: "99.9%"
+    epic8.platform/business-impact: "critical"
+spec:
+  minAvailable: 1  # Always keep at least 1 pod available
+  maxUnavailable: 1  # Never make more than 1 pod unavailable
+  selector:
+    matchLabels:
+      epic8.platform/service: api-gateway
+  unhealthyPodEvictionPolicy: AlwaysAllow
+
+---
+# Generator PDB - ML workload protection
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: generator-pdb
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: availability
+    epic8.platform/tier: compute
+    app.kubernetes.io/name: generator-pdb
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "PDB for Generator protecting ML model availability"
+    epic8.platform/availability-target: "99.5%"
+    epic8.platform/business-impact: "high"
+    epic8.platform/workload-type: "ml-inference"
+spec:
+  minAvailable: 2  # Always keep at least 2 pods for model diversity
+  maxUnavailable: 2  # Allow up to 2 pods unavailable for rolling updates
+  selector:
+    matchLabels:
+      epic8.platform/service: generator
+  unhealthyPodEvictionPolicy: IfHealthyBudget  # Protect during model loading
+
+---
+# Query Analyzer PDB - ML classification protection
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: query-analyzer-pdb
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: query-analyzer
+    epic8.platform/component: availability
+    epic8.platform/tier: intelligence
+    app.kubernetes.io/name: query-analyzer-pdb
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "PDB for Query Analyzer ensuring analysis availability"
+    epic8.platform/availability-target: "99.8%"
+    epic8.platform/business-impact: "high"
+    epic8.platform/workload-type: "ml-classification"
+spec:
+  minAvailable: 1  # Always keep at least 1 pod for continuous analysis
+  maxUnavailable: 1  # Allow 1 pod unavailable for updates
+  selector:
+    matchLabels:
+      epic8.platform/service: query-analyzer
+  unhealthyPodEvictionPolicy: AlwaysAllow
+
+---
+# Retriever PDB - Vector search availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: retriever-pdb
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: retriever
+    epic8.platform/component: availability
+    epic8.platform/tier: data
+    app.kubernetes.io/name: retriever-pdb
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "PDB for Retriever ensuring vector search availability"
+    epic8.platform/availability-target: "99.9%"
+    epic8.platform/business-impact: "critical"
+    epic8.platform/workload-type: "vector-search"
+spec:
+  minAvailable: 1  # Always keep at least 1 pod for continuous retrieval
+  maxUnavailable: 2  # Allow up to 2 pods unavailable during index updates
+  selector:
+    matchLabels:
+      epic8.platform/service: retriever
+  unhealthyPodEvictionPolicy: AlwaysAllow
+
+---
+# Cache PDB - Data persistence protection
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cache-pdb
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: cache
+    epic8.platform/component: availability
+    epic8.platform/tier: data
+    app.kubernetes.io/name: cache-pdb
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "PDB for Cache ensuring data availability and hit rates"
+    epic8.platform/availability-target: "99.9%"
+    epic8.platform/business-impact: "high"
+    epic8.platform/workload-type: "caching"
+spec:
+  minAvailable: 1  # Always keep at least 1 pod for cache availability
+  maxUnavailable: 1  # Allow only 1 pod unavailable to preserve cache data
+  selector:
+    matchLabels:
+      epic8.platform/service: cache
+  unhealthyPodEvictionPolicy: IfHealthyBudget  # Protect cache data integrity
+
+---
+# Analytics PDB - Background processing protection
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: analytics-pdb
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: analytics
+    epic8.platform/component: availability
+    epic8.platform/tier: processing
+    app.kubernetes.io/name: analytics-pdb
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "PDB for Analytics ensuring data processing continuity"
+    epic8.platform/availability-target: "99.5%"
+    epic8.platform/business-impact: "medium"
+    epic8.platform/workload-type: "background-processing"
+spec:
+  minAvailable: 1  # Always keep at least 1 pod for continuous analytics
+  maxUnavailable: 1  # Allow only 1 pod unavailable during updates
+  selector:
+    matchLabels:
+      epic8.platform/service: analytics
+  unhealthyPodEvictionPolicy: IfHealthyBudget  # Protect during data processing
+
+---
+# Global PDB for critical system components
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: epic8-system-critical-pdb
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: system-critical
+    epic8.platform/tier: infrastructure
+    app.kubernetes.io/name: epic8-system-pdb
+    app.kubernetes.io/part-of: epic8-platform
+  annotations:
+    epic8.platform/description: "Global PDB for Epic 8 system-critical components"
+    epic8.platform/availability-target: "100%"
+    epic8.platform/business-impact: "critical"
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      epic8.platform/criticality: system-critical
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+
+---
+# PDB Configuration for different environments
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epic8-pdb-config
+  namespace: epic8-prod
+  labels:
+    epic8.platform/component: pdb-config
+    epic8.platform/tier: configuration
+data:
+  # Production PDB settings
+  production.yaml: |
+    api-gateway:
+      minAvailable: 1
+      maxUnavailable: 1
+      availability_target: 99.9
+      business_impact: critical
+
+    generator:
+      minAvailable: 2
+      maxUnavailable: 2
+      availability_target: 99.5
+      business_impact: high
+
+    query-analyzer:
+      minAvailable: 1
+      maxUnavailable: 1
+      availability_target: 99.8
+      business_impact: high
+
+    retriever:
+      minAvailable: 1
+      maxUnavailable: 2
+      availability_target: 99.9
+      business_impact: critical
+
+    cache:
+      minAvailable: 1
+      maxUnavailable: 1
+      availability_target: 99.9
+      business_impact: high
+
+    analytics:
+      minAvailable: 1
+      maxUnavailable: 1
+      availability_target: 99.5
+      business_impact: medium
+
+  # Staging PDB settings (more lenient)
+  staging.yaml: |
+    api-gateway:
+      minAvailable: 1
+      maxUnavailable: 2
+      availability_target: 99.0
+      business_impact: medium
+
+    generator:
+      minAvailable: 1
+      maxUnavailable: 2
+      availability_target: 98.0
+      business_impact: medium
+
+    query-analyzer:
+      minAvailable: 1
+      maxUnavailable: 1
+      availability_target: 98.0
+      business_impact: medium
+
+    retriever:
+      minAvailable: 1
+      maxUnavailable: 2
+      availability_target: 99.0
+      business_impact: medium
+
+    cache:
+      minAvailable: 0
+      maxUnavailable: 2
+      availability_target: 95.0
+      business_impact: low
+
+    analytics:
+      minAvailable: 0
+      maxUnavailable: 1
+      availability_target: 95.0
+      business_impact: low
+
+  # Development PDB settings (most lenient)
+  development.yaml: |
+    # PDBs disabled in development for faster iteration
+    enabled: false
+
+    # If enabled, very lenient settings
+    default:
+      minAvailable: 0
+      maxUnavailable: 100%
+      availability_target: 90.0
+      business_impact: low

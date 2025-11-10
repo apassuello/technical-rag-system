@@ -12,9 +12,7 @@ from unittest.mock import Mock, patch, MagicMock
 from abc import ABC, abstractmethod
 import pytest
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Imports handled by conftest.py
 
 from fixtures.base_test import MLInfrastructureTestBase, PerformanceTestMixin
 from fixtures.mock_models import MockTransformerModel, MockModelFactory

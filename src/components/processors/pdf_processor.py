@@ -6,20 +6,12 @@ to conform to the DocumentProcessor interface, enabling it to be used
 in the modular architecture while preserving all existing functionality.
 """
 
-import sys
 from pathlib import Path
 from typing import List, Dict, Any
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent.parent.parent
-sys.path.append(str(project_root))
-
 from src.core.interfaces import Document, DocumentProcessor
-
-# Import from correct shared_utils location
-sys.path.append(str(project_root / "hf_deployment" / "src"))
-from shared_utils.document_processing.hybrid_parser import HybridParser
-from shared_utils.document_processing.pdf_parser import extract_text_with_metadata
+from src.shared_utils.document_processing.hybrid_parser import HybridParser
+from src.shared_utils.document_processing.pdf_parser import extract_text_with_metadata
 
 
 class HybridPDFProcessor(DocumentProcessor):

@@ -15,6 +15,7 @@ Architecture Notes:
 
 import time
 import logging
+import os
 from typing import List, Dict, Any, Optional, Iterator
 from pathlib import Path
 import sys
@@ -117,8 +118,8 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
             'llm_client': {
                 'type': 'ollama',
                 'config': {
-                    'model_name': 'llama3.2',
-                    'base_url': 'http://localhost:11434',
+                    'model_name': 'llama3.2:3b',
+                    'base_url': os.getenv('OLLAMA_URL', 'http://localhost:11434'),
                     'timeout': 120
                 }
             },

@@ -56,8 +56,8 @@ class ComponentFactory:
     _PROCESSORS: Dict[str, str] = {
         "hybrid_pdf": "src.components.processors.document_processor.ModularDocumentProcessor",
         "modular": "src.components.processors.document_processor.ModularDocumentProcessor",
-        "pdf_processor": "src.components.processors.pdf_processor.HybridPDFProcessor",  # Legacy processor
-        "legacy_pdf": "src.components.processors.pdf_processor.HybridPDFProcessor",  # Alias for legacy
+        "pdf_processor": "src.components.processors.document_processor.ModularDocumentProcessor",  # Fixed: redirect to working implementation
+        "legacy_pdf": "src.components.processors.document_processor.ModularDocumentProcessor",  # Fixed: redirect to working implementation
     }
     
     _EMBEDDERS: Dict[str, str] = {
@@ -74,7 +74,7 @@ class ComponentFactory:
     _RETRIEVERS: Dict[str, str] = {
         # Legacy Phase 1 architecture moved to archive
         # "hybrid": "src.components.retrievers.hybrid_retriever.HybridRetriever",
-        "unified": "src.components.retrievers.unified_retriever.UnifiedRetriever",
+        "unified": "src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever",  # Fixed: redirect to working implementation
         "modular_unified": "src.components.retrievers.modular_unified_retriever.ModularUnifiedRetriever",
         # Note: enhanced_modular_unified removed - Epic 2 features now handled via advanced config transformation
     }
@@ -441,12 +441,21 @@ class ComponentFactory:
         embedder_class = cls._get_component_class(embedder_module_path)
         
         try:
+            # Handle different configuration formats
+            processed_kwargs = kwargs.copy()
+            
+            # If nested config format is used, flatten it for SentenceTransformerEmbedder
+            if 'config' in kwargs and embedder_type in ['sentence_transformer', 'sentence_transformers']:
+                config = kwargs.pop('config')
+                processed_kwargs.update(config)
+                processed_kwargs.pop('config', None)  # Remove the nested config
+            
             # Use caching for embedders (expensive to create)
             return cls._create_with_tracking(
                 embedder_class, 
                 f"embedder_{embedder_type}", 
                 use_cache=True,  # Enable caching for embedders
-                **kwargs
+                **processed_kwargs
             )
         except Exception as e:
             raise TypeError(
@@ -519,7 +528,7 @@ class ComponentFactory:
             logger.debug(f"Creating {retriever_type} retriever with args: {kwargs}")
             
             # Special handling for retrievers that need embedder + config pattern
-            if retriever_type in ["modular_unified"]:
+            if retriever_type in ["modular_unified", "unified"]:
                 # Extract embedder and config from kwargs
                 embedder = kwargs.pop("embedder", None)
                 if embedder is None:
@@ -828,6 +837,20 @@ class ComponentFactory:
             ) from e
     
     @classmethod
+    def create_answer_generator(cls, generator_type: str = "adaptive", **kwargs) -> AnswerGenerator:
+        """
+        Alias for create_generator() for backward compatibility.
+        
+        Args:
+            generator_type: Type of generator (default: "adaptive")
+            **kwargs: Arguments to pass to the generator constructor
+            
+        Returns:
+            Instantiated AnswerGenerator
+        """
+        return cls.create_generator(generator_type, **kwargs)
+    
+    @classmethod
     def create_query_analyzer(cls, analyzer_type: str, **kwargs):
         """
         Create a query analyzer instance.
@@ -923,6 +946,11 @@ class ComponentFactory:
                     assembler_type=kwargs.pop('assembler_type', 'standard'),
                     assembler_config=kwargs.pop('assembler_config', {})
                 )
+                
+                # Remove legacy parameters that don't belong to ModularQueryProcessor
+                legacy_params = ['default_k', 'min_confidence', 'enable_performance_monitoring']
+                for param in legacy_params:
+                    kwargs.pop(param, None)
                 
                 # Create processor with correct arguments
                 return cls._create_with_tracking(

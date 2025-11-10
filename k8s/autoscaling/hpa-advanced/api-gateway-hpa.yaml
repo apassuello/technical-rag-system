@@ -1,0 +1,166 @@
+---
+# API Gateway Advanced HPA Configuration
+# Handles 1000+ concurrent connections with intelligent scaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-gateway-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: api-gateway
+    epic8.platform/component: gateway
+    epic8.platform/tier: frontend
+    epic8.platform/autoscaling: advanced
+    app.kubernetes.io/name: api-gateway-hpa
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: autoscaling
+  annotations:
+    epic8.platform/description: "Advanced HPA for API Gateway with multi-metric scaling"
+    epic8.platform/target-rps: "500"
+    epic8.platform/max-concurrent-connections: "1000"
+    epic8.platform/cost-optimization: "enabled"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-gateway
+
+  # Scaling Range: 2-5 replicas for high availability
+  minReplicas: 2
+  maxReplicas: 5
+
+  # Multi-metric scaling configuration
+  metrics:
+  # Primary Metric: CPU utilization (70% target for optimal performance)
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+
+  # Secondary Metric: Memory utilization (80% target)
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+  # Custom Metric: HTTP requests per second
+  - type: Pods
+    pods:
+      metric:
+        name: http_requests_per_second
+        selector:
+          matchLabels:
+            epic8.platform/service: api-gateway
+      target:
+        type: AverageValue
+        averageValue: "50"  # Scale when > 50 RPS per pod
+
+  # Custom Metric: Response time P95 (scale when > 500ms)
+  - type: Pods
+    pods:
+      metric:
+        name: http_request_duration_p95
+        selector:
+          matchLabels:
+            epic8.platform/service: api-gateway
+      target:
+        type: AverageValue
+        averageValue: "500m"  # 500ms in milliunits
+
+  # Custom Metric: Active connections
+  - type: Pods
+    pods:
+      metric:
+        name: active_connections
+        selector:
+          matchLabels:
+            epic8.platform/service: api-gateway
+      target:
+        type: AverageValue
+        averageValue: "200"  # Scale when > 200 active connections per pod
+
+  # Intelligent scaling behavior
+  behavior:
+    scaleUp:
+      # Fast scale-up for traffic spikes
+      stabilizationWindowSeconds: 60  # Wait 1 minute before scaling up again
+      selectPolicy: Max  # Choose the policy that scales up the most
+      policies:
+      # Rapid response to traffic spikes
+      - type: Percent
+        value: 100  # Double the replicas if needed
+        periodSeconds: 30
+      # Conservative approach for sustained load
+      - type: Pods
+        value: 2  # Add 2 pods max per period
+        periodSeconds: 60
+
+    scaleDown:
+      # Conservative scale-down to prevent thrashing
+      stabilizationWindowSeconds: 300  # Wait 5 minutes before scaling down
+      selectPolicy: Min  # Choose the most conservative policy
+      policies:
+      # Gradual scale-down during business hours (9 AM - 6 PM UTC)
+      - type: Percent
+        value: 25  # Remove max 25% of replicas
+        periodSeconds: 180
+      # More aggressive scale-down during off-hours
+      - type: Pods
+        value: 1  # Remove 1 pod at a time
+        periodSeconds: 120
+
+---
+# ServiceMonitor for API Gateway metrics collection
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-gateway-hpa-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: api-gateway
+    epic8.platform/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: api-gateway
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics
+    honorLabels: true
+    metricRelabelings:
+    # Relabel metrics for HPA consumption
+    - sourceLabels: [__name__]
+      regex: 'http_requests_total'
+      targetLabel: __name__
+      replacement: 'http_requests_per_second'
+    - sourceLabels: [__name__]
+      regex: 'http_request_duration_seconds'
+      targetLabel: __name__
+      replacement: 'http_request_duration_p95'
+    - sourceLabels: [__name__]
+      regex: 'active_connections_total'
+      targetLabel: __name__
+      replacement: 'active_connections'
+
+---
+# PodDisruptionBudget to ensure availability during scaling
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: api-gateway
+    epic8.platform/component: availability
+spec:
+  minAvailable: 50%  # Always keep at least 50% of pods available
+  selector:
+    matchLabels:
+      epic8.platform/service: api-gateway
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  maxUnavailable: 1  # Never make more than 1 pod unavailable at once

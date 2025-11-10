@@ -13,9 +13,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 import pytest
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parents[4] / 'src'))
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Imports handled by conftest.py
 
 from fixtures.base_test import MLInfrastructureTestBase, MemoryTestMixin, ConcurrencyTestMixin, PerformanceTestMixin
 from fixtures.mock_models import MockModelFactory, MockModelLoader, create_mock_model_factory_functions

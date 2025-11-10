@@ -1,0 +1,146 @@
+{{/*
+Epic 8 Platform - API Gateway Deployment Template
+Enterprise-grade API Gateway with Swiss engineering standards
+*/}}
+
+{{- if .Values.apiGateway.enabled }}
+{{- include "epic8-platform.validate" . }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "api-gateway" "tier" "frontend" "component" "gateway" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+    epic8.platform/description: "API Gateway - Entry point for all Epic 8 requests"
+    epic8.platform/documentation: "https://github.com/epic8/docs/services/api-gateway"
+    {{- with .Values.apiGateway.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.apiGateway.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "api-gateway" "context" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "epic8-platform.serviceLabels" (dict "service" "api-gateway" "tier" "frontend" "component" "gateway" "context" .) | nindent 8 }}
+      annotations:
+        {{- include "epic8-platform.annotations" . | nindent 8 }}
+        {{- if include "epic8-platform.monitoring.enabled" . }}
+        {{- include "epic8-platform.prometheusAnnotations" (dict "port" "9090" "path" "/metrics") | nindent 8 }}
+        {{- end }}
+        {{- include "epic8-platform.serviceMeshAnnotations" . | nindent 8 }}
+        {{- with .Values.apiGateway.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}
+      securityContext:
+        {{- include "epic8-platform.podSecurityContext" . | nindent 8 }}
+      {{- with .Values.global.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: api-gateway
+        image: {{ include "epic8-platform.image" (dict "repository" .Values.apiGateway.image.repository "tag" (.Values.apiGateway.image.tag | default .Chart.AppVersion) "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.apiGateway.service.targetPort }}
+          protocol: TCP
+        {{- if include "epic8-platform.monitoring.enabled" . }}
+        - name: metrics
+          containerPort: {{ .Values.apiGateway.service.metricsPort }}
+          protocol: TCP
+        {{- end }}
+        env:
+        {{- include "epic8-platform.commonEnvVars" . | nindent 8 }}
+        {{- include "epic8-platform.serviceDiscoveryEnvVars" . | nindent 8 }}
+        {{- range .Values.apiGateway.env }}
+        - name: {{ .name }}
+          {{- if .value }}
+          value: {{ .value | quote }}
+          {{- else if .valueFrom }}
+          valueFrom:
+            {{- toYaml .valueFrom | nindent 12 }}
+          {{- end }}
+        {{- end }}
+        {{- with .Values.apiGateway.envFrom }}
+        envFrom:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.configMaps.common.create }}
+        - configMapRef:
+            name: {{ include "epic8-platform.fullname" . }}-common-config
+        {{- end }}
+        {{- if .Values.secrets.platform.create }}
+        - secretRef:
+            name: {{ include "epic8-platform.fullname" . }}-secrets
+        {{- end }}
+        resources:
+          {{- include "epic8-platform.resources" (dict "service" .Values.apiGateway "global" .Values.global "context" .) | nindent 10 }}
+        securityContext:
+          {{- include "epic8-platform.containerSecurityContext" . | nindent 10 }}
+        livenessProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.apiGateway.health.liveness.path "port" "http" "config" .Values.apiGateway.health.liveness) | nindent 10 }}
+        readinessProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.apiGateway.health.readiness.path "port" "http" "config" .Values.apiGateway.health.readiness) | nindent 10 }}
+        startupProbe:
+          {{- include "epic8-platform.httpProbe" (dict "path" .Values.apiGateway.health.startup.path "port" "http" "config" .Values.apiGateway.health.startup) | nindent 10 }}
+        volumeMounts:
+        {{- include "epic8-platform.standardVolumeMounts" . | nindent 8 }}
+        {{- with .Values.apiGateway.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      volumes:
+      {{- include "epic8-platform.standardVolumes" . | nindent 6 }}
+      {{- with .Values.apiGateway.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- if .Values.apiGateway.affinity.podAntiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          {{- include "epic8-platform.podAntiAffinity" (dict "service" "api-gateway" "weight" .Values.apiGateway.affinity.podAntiAffinity.weight "required" (.Values.apiGateway.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution | default false)) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.apiGateway.topologySpreadConstraints.enabled }}
+      topologySpreadConstraints:
+      {{- include "epic8-platform.topologySpreadConstraints" (dict "service" "api-gateway" "maxSkew" .Values.apiGateway.topologySpreadConstraints.maxSkew) | nindent 6 }}
+      {{- end }}
+      {{- with .Values.apiGateway.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apiGateway.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+{{- if .Values.apiGateway.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "epic8-platform.serviceName" (dict "service" "api-gateway" "context" .) }}-pdb
+  namespace: {{ include "epic8-platform.namespace" . }}
+  labels:
+    {{- include "epic8-platform.serviceLabels" (dict "service" "api-gateway" "tier" "frontend" "component" "gateway" "context" .) | nindent 4 }}
+  annotations:
+    {{- include "epic8-platform.annotations" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.apiGateway.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "epic8-platform.serviceSelectorLabels" (dict "service" "api-gateway" "context" .) | nindent 6 }}
+{{- end }}
+{{- end }}

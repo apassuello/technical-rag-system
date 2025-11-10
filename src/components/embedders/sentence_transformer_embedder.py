@@ -6,16 +6,11 @@ functionality to conform to the Embedder interface, enabling it to be used
 in the modular architecture while preserving all existing functionality.
 """
 
-import sys
 from pathlib import Path
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent.parent.parent
-sys.path.append(str(project_root))
-
 from src.core.interfaces import Embedder, HealthStatus
-from shared_utils.embeddings.generator import generate_embeddings
+from src.shared_utils.embeddings.generator import generate_embeddings
 
 if TYPE_CHECKING:
     from src.core.platform_orchestrator import PlatformOrchestrator

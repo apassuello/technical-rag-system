@@ -1,0 +1,182 @@
+---
+# Generator Service Advanced HPA Configuration
+# Optimized for ML workloads with intelligent model routing
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: generator-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: generation
+    epic8.platform/tier: compute
+    epic8.platform/autoscaling: advanced
+    app.kubernetes.io/name: generator-hpa
+    app.kubernetes.io/part-of: epic8-platform
+    app.kubernetes.io/component: autoscaling
+  annotations:
+    epic8.platform/description: "Advanced HPA for Generator with ML-optimized scaling"
+    epic8.platform/target-generation-time: "1.5s"
+    epic8.platform/cost-per-query-target: "0.01"
+    epic8.platform/model-switching-enabled: "true"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: generator
+
+  # Scaling Range: 3-10 replicas for ML workload optimization
+  minReplicas: 3
+  maxReplicas: 10
+
+  # Multi-metric scaling for ML workloads
+  metrics:
+  # Primary Metric: CPU utilization (60% target due to model inference)
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60
+
+  # Secondary Metric: Memory utilization (75% target for model loading)
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 75
+
+  # Custom Metric: Generation requests in queue
+  - type: Pods
+    pods:
+      metric:
+        name: generation_queue_length
+        selector:
+          matchLabels:
+            epic8.platform/service: generator
+      target:
+        type: AverageValue
+        averageValue: "10"  # Scale when > 10 requests queued per pod
+
+  # Custom Metric: Average generation time (scale when > 1.5s)
+  - type: Pods
+    pods:
+      metric:
+        name: generation_time_p95
+        selector:
+          matchLabels:
+            epic8.platform/service: generator
+      target:
+        type: AverageValue
+        averageValue: "1500m"  # 1.5s in milliunits
+
+  # Custom Metric: Model switching overhead
+  - type: Pods
+    pods:
+      metric:
+        name: model_switching_overhead_ms
+        selector:
+          matchLabels:
+            epic8.platform/service: generator
+      target:
+        type: AverageValue
+        averageValue: "100"  # Scale when model switching > 100ms
+
+  # Custom Metric: Cost efficiency (inverse scaling)
+  - type: Pods
+    pods:
+      metric:
+        name: cost_per_query_cents
+        selector:
+          matchLabels:
+            epic8.platform/service: generator
+      target:
+        type: AverageValue
+        averageValue: "1"  # Scale up when cost > $0.01 per query
+
+  # ML-optimized scaling behavior
+  behavior:
+    scaleUp:
+      # Moderate scale-up for model warmup time
+      stabilizationWindowSeconds: 120  # Wait 2 minutes (model warmup)
+      selectPolicy: Max
+      policies:
+      # Burst scaling for sudden load
+      - type: Percent
+        value: 50  # Increase by 50% for immediate needs
+        periodSeconds: 60
+      # Conservative scaling for sustained load
+      - type: Pods
+        value: 2  # Add 2 pods for model distribution
+        periodSeconds: 90
+
+    scaleDown:
+      # Conservative scale-down due to expensive model loading
+      stabilizationWindowSeconds: 600  # Wait 10 minutes before scaling down
+      selectPolicy: Min  # Most conservative approach
+      policies:
+      # Very gradual scale-down to keep warm models
+      - type: Percent
+        value: 20  # Remove max 20% of replicas
+        periodSeconds: 300
+      # Single pod removal for fine-tuning
+      - type: Pods
+        value: 1  # Remove 1 pod at a time
+        periodSeconds: 240
+
+---
+# ServiceMonitor for Generator metrics collection
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: generator-hpa-metrics
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      epic8.platform/service: generator
+  endpoints:
+  - port: metrics
+    interval: 30s  # Longer interval for ML metrics
+    path: /metrics
+    honorLabels: true
+    metricRelabelings:
+    # ML-specific metric relabeling
+    - sourceLabels: [__name__]
+      regex: 'generation_requests_queued_total'
+      targetLabel: __name__
+      replacement: 'generation_queue_length'
+    - sourceLabels: [__name__]
+      regex: 'generation_duration_seconds'
+      targetLabel: __name__
+      replacement: 'generation_time_p95'
+    - sourceLabels: [__name__]
+      regex: 'model_switch_duration_ms'
+      targetLabel: __name__
+      replacement: 'model_switching_overhead_ms'
+    - sourceLabels: [__name__]
+      regex: 'cost_tracking_per_query_cents'
+      targetLabel: __name__
+      replacement: 'cost_per_query_cents'
+
+---
+# PodDisruptionBudget optimized for ML workloads
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: generator-pdb-hpa
+  namespace: epic8-prod
+  labels:
+    epic8.platform/service: generator
+    epic8.platform/component: availability
+spec:
+  minAvailable: 2  # Always keep at least 2 pods for model diversity
+  selector:
+    matchLabels:
+      epic8.platform/service: generator
+  unhealthyPodEvictionPolicy: IfHealthyBudget  # Protect during model loading
+  maxUnavailable: 2  # Allow up to 2 pods unavailable for rolling updates

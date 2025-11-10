@@ -1,0 +1,87 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: epic8-staging
+  labels:
+    epic8.platform/environment: staging
+    epic8.platform/project: technical-rag
+    epic8.platform/version: v1
+    kubernetes.io/managed-by: epic8-platform
+  annotations:
+    epic8.platform/description: "Epic 8 Staging Environment - Pre-Production Testing"
+    epic8.platform/created-by: "kubernetes-architect"
+    epic8.platform/documentation: "https://github.com/epic8/docs/environments/staging"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: epic8-staging-quota
+  namespace: epic8-staging
+  labels:
+    epic8.platform/environment: staging
+    epic8.platform/component: resource-quota
+spec:
+  hard:
+    # Compute Resources (Production-like sizing)
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+
+    # Storage Resources
+    requests.storage: 100Gi
+    persistentvolumeclaims: "20"
+
+    # Object Counts
+    pods: "100"
+    services: "30"
+    secrets: "30"
+    configmaps: "30"
+    replicationcontrollers: "20"
+    count/deployments.apps: "20"
+    count/statefulsets.apps: "10"
+
+    # Network Resources
+    count/ingresses.networking.k8s.io: "10"
+    services.loadbalancers: "5"
+    services.nodeports: "0"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: epic8-staging-limits
+  namespace: epic8-staging
+  labels:
+    epic8.platform/environment: staging
+    epic8.platform/component: limit-range
+spec:
+  limits:
+  # Pod limits
+  - type: Pod
+    max:
+      cpu: "4"
+      memory: 8Gi
+    min:
+      cpu: 100m
+      memory: 128Mi
+  # Container limits
+  - type: Container
+    default:
+      cpu: 500m
+      memory: 512Mi
+    defaultRequest:
+      cpu: 200m
+      memory: 256Mi
+    max:
+      cpu: "2"
+      memory: 4Gi
+    min:
+      cpu: 100m
+      memory: 128Mi
+  # PVC limits
+  - type: PersistentVolumeClaim
+    max:
+      storage: 20Gi
+    min:
+      storage: 1Gi

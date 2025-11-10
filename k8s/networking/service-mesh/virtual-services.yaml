@@ -1,0 +1,657 @@
+---
+# Epic 8 Platform - Virtual Services Configuration
+# Swiss Engineering Standards: Intelligent Traffic Management
+# Advanced routing, canary deployments, and fault injection
+
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: epic8-platform-api-gateway
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: virtual-service
+    epic8.platform/service: api-gateway
+    epic8.platform/tier: frontend
+spec:
+  hosts:
+  - api.epic8-platform.swiss
+  - www.epic8-platform.swiss
+  - epic8-platform.swiss
+  gateways:
+  - istio-system/epic8-platform-gateway
+  - mesh  # Allow internal mesh traffic
+
+  http:
+  # Health check routing (highest priority)
+  - match:
+    - uri:
+        prefix: /health
+    route:
+    - destination:
+        host: api-gateway.epic8-dev.svc.cluster.local
+        port:
+          number: 8080
+    timeout: 5s
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+
+  # API Documentation
+  - match:
+    - uri:
+        prefix: /docs
+    route:
+    - destination:
+        host: api-gateway.epic8-dev.svc.cluster.local
+        port:
+          number: 8080
+    timeout: 30s
+
+  # WebSocket connections for real-time features
+  - match:
+    - uri:
+        prefix: /ws
+    - headers:
+        upgrade:
+          exact: websocket
+    route:
+    - destination:
+        host: api-gateway.epic8-dev.svc.cluster.local
+        port:
+          number: 8080
+    timeout: 0s  # No timeout for WebSocket connections
+
+  # API v1 Endpoints with intelligent routing
+  - match:
+    - uri:
+        prefix: /api/v1/query
+    route:
+    - destination:
+        host: api-gateway.epic8-dev.svc.cluster.local
+        port:
+          number: 8080
+      weight: 90  # 90% to stable version
+    - destination:
+        host: api-gateway.epic8-dev.svc.cluster.local
+        port:
+          number: 8080
+        subset: canary
+      weight: 10  # 10% to canary version
+    fault:
+      # Fault injection for testing (disabled in production)
+      delay:
+        percentage:
+          value: 0.1  # 0.1% of requests
+        fixedDelay: 5s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 30s
+
+  # API v2 Endpoints (future versioning)
+  - match:
+    - uri:
+        prefix: /api/v2
+    route:
+    - destination:
+        host: api-gateway.epic8-dev.svc.cluster.local
+        port:
+          number: 8080
+        subset: v2
+    retries:
+      attempts: 3
+      perTryTimeout: 15s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 45s
+
+  # Metrics endpoint (protected)
+  - match:
+    - uri:
+        prefix: /metrics
+    - headers:
+        authorization:
+          prefix: "Bearer"
+    route:
+    - destination:
+        host: api-gateway.epic8-dev.svc.cluster.local
+        port:
+          number: 9090
+    timeout: 10s
+
+  # Swiss-specific routing (geo-aware)
+  - match:
+    - uri:
+        prefix: /api/v1
+    - headers:
+        x-epic8-geo-preference:
+          exact: "swiss"
+    route:
+    - destination:
+        host: api-gateway.epic8-dev.svc.cluster.local
+        port:
+          number: 8080
+        subset: swiss-preferred
+    timeout: 30s
+
+  # Default routing
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: api-gateway.epic8-dev.svc.cluster.local
+        port:
+          number: 8080
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 30s
+
+---
+# Virtual Service for Analytics Service
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: epic8-platform-analytics
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: virtual-service
+    epic8.platform/service: analytics
+    epic8.platform/tier: admin
+spec:
+  hosts:
+  - analytics.epic8-platform.swiss
+  gateways:
+  - istio-system/epic8-platform-gateway
+  - mesh
+
+  http:
+  # Health check
+  - match:
+    - uri:
+        prefix: /health
+    route:
+    - destination:
+        host: analytics.epic8-dev.svc.cluster.local
+        port:
+          number: 8085
+    timeout: 5s
+
+  # Dashboard (main interface)
+  - match:
+    - uri:
+        prefix: /dashboard
+    route:
+    - destination:
+        host: analytics.epic8-dev.svc.cluster.local
+        port:
+          number: 8085
+    timeout: 60s  # Longer timeout for dashboard loading
+
+  # API endpoints
+  - match:
+    - uri:
+        prefix: /api
+    route:
+    - destination:
+        host: analytics.epic8-dev.svc.cluster.local
+        port:
+          number: 8085
+    retries:
+      attempts: 3
+      perTryTimeout: 20s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 60s
+
+  # Reports (potentially long-running)
+  - match:
+    - uri:
+        prefix: /reports
+    route:
+    - destination:
+        host: analytics.epic8-dev.svc.cluster.local
+        port:
+          number: 8085
+    timeout: 300s  # 5 minutes for report generation
+
+  # Cost analysis
+  - match:
+    - uri:
+        prefix: /cost
+    route:
+    - destination:
+        host: analytics.epic8-dev.svc.cluster.local
+        port:
+          number: 8085
+    timeout: 120s
+
+  # A/B testing experiments
+  - match:
+    - uri:
+        prefix: /experiments
+    route:
+    - destination:
+        host: analytics.epic8-dev.svc.cluster.local
+        port:
+          number: 8085
+    timeout: 30s
+
+  # Default routing
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: analytics.epic8-dev.svc.cluster.local
+        port:
+          number: 8085
+    retries:
+      attempts: 3
+      perTryTimeout: 15s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 60s
+
+---
+# Virtual Service for Monitoring (Prometheus/Grafana)
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: epic8-platform-monitoring
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: virtual-service
+    epic8.platform/service: monitoring
+    epic8.platform/tier: infrastructure
+spec:
+  hosts:
+  - monitoring.epic8-platform.swiss
+  gateways:
+  - istio-system/epic8-platform-gateway
+
+  http:
+  # Prometheus
+  - match:
+    - uri:
+        prefix: /prometheus
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: prometheus.monitoring.svc.cluster.local
+        port:
+          number: 9090
+    timeout: 60s
+
+  # Grafana
+  - match:
+    - uri:
+        prefix: /grafana
+    route:
+    - destination:
+        host: grafana.monitoring.svc.cluster.local
+        port:
+          number: 3000
+    timeout: 30s
+
+  # AlertManager
+  - match:
+    - uri:
+        prefix: /alertmanager
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: alertmanager.monitoring.svc.cluster.local
+        port:
+          number: 9093
+    timeout: 30s
+
+  # Jaeger (distributed tracing)
+  - match:
+    - uri:
+        prefix: /jaeger
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: jaeger-query.istio-system.svc.cluster.local
+        port:
+          number: 16686
+    timeout: 30s
+
+  # Default to Grafana
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: grafana.monitoring.svc.cluster.local
+        port:
+          number: 3000
+    timeout: 30s
+
+---
+# Virtual Service for Staging Environment
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: epic8-platform-staging
+  namespace: epic8-staging
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: virtual-service
+    epic8.platform/service: api-gateway
+    epic8.platform/tier: staging
+spec:
+  hosts:
+  - staging-api.epic8-platform.swiss
+  - staging.epic8-platform.swiss
+  gateways:
+  - istio-system/epic8-platform-gateway
+  - mesh
+
+  http:
+  # Debug endpoints for staging
+  - match:
+    - uri:
+        prefix: /debug/api-gateway
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: api-gateway.epic8-staging.svc.cluster.local
+        port:
+          number: 8080
+    timeout: 30s
+
+  - match:
+    - uri:
+        prefix: /debug/query-analyzer
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: query-analyzer.epic8-staging.svc.cluster.local
+        port:
+          number: 8082
+    timeout: 30s
+
+  - match:
+    - uri:
+        prefix: /debug/generator
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: generator.epic8-staging.svc.cluster.local
+        port:
+          number: 8081
+    timeout: 60s  # Longer timeout for model inference
+
+  - match:
+    - uri:
+        prefix: /debug/retriever
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: retriever.epic8-staging.svc.cluster.local
+        port:
+          number: 8083
+    timeout: 30s
+
+  - match:
+    - uri:
+        prefix: /debug/cache
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: cache.epic8-staging.svc.cluster.local
+        port:
+          number: 8084
+    timeout: 15s
+
+  - match:
+    - uri:
+        prefix: /debug/analytics
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: analytics.epic8-staging.svc.cluster.local
+        port:
+          number: 8085
+    timeout: 30s
+
+  # Health checks
+  - match:
+    - uri:
+        prefix: /health
+    route:
+    - destination:
+        host: api-gateway.epic8-staging.svc.cluster.local
+        port:
+          number: 8080
+    timeout: 5s
+
+  # API endpoints
+  - match:
+    - uri:
+        prefix: /api
+    route:
+    - destination:
+        host: api-gateway.epic8-staging.svc.cluster.local
+        port:
+          number: 8080
+    fault:
+      # Enhanced fault injection for staging testing
+      delay:
+        percentage:
+          value: 1.0  # 1% of requests
+        fixedDelay: 3s
+      abort:
+        percentage:
+          value: 0.5  # 0.5% of requests
+        httpStatus: 503
+    retries:
+      attempts: 3
+      perTryTimeout: 15s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 60s
+
+  # Default routing
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: api-gateway.epic8-staging.svc.cluster.local
+        port:
+          number: 8080
+    timeout: 30s
+
+---
+# Virtual Service for Internal Service Communication
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: epic8-internal-services
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: virtual-service
+    epic8.platform/tier: internal
+spec:
+  hosts:
+  - query-analyzer.epic8-dev.svc.cluster.local
+  - generator.epic8-dev.svc.cluster.local
+  - retriever.epic8-dev.svc.cluster.local
+  - cache.epic8-dev.svc.cluster.local
+  - analytics.epic8-dev.svc.cluster.local
+  gateways:
+  - mesh  # Internal mesh traffic only
+
+  http:
+  # Optimized routing for internal services
+  - match:
+    - headers:
+        x-epic8-service:
+          exact: "query-analyzer"
+    route:
+    - destination:
+        host: query-analyzer.epic8-dev.svc.cluster.local
+        port:
+          number: 8082
+    retries:
+      attempts: 2
+      perTryTimeout: 5s
+      retryOn: 5xx,reset,connect-failure
+    timeout: 10s
+
+  - match:
+    - headers:
+        x-epic8-service:
+          exact: "generator"
+    route:
+    - destination:
+        host: generator.epic8-dev.svc.cluster.local
+        port:
+          number: 8081
+    retries:
+      attempts: 2
+      perTryTimeout: 30s  # Longer for AI model inference
+      retryOn: 5xx,reset,connect-failure
+    timeout: 60s
+
+  - match:
+    - headers:
+        x-epic8-service:
+          exact: "retriever"
+    route:
+    - destination:
+        host: retriever.epic8-dev.svc.cluster.local
+        port:
+          number: 8083
+    retries:
+      attempts: 3
+      perTryTimeout: 5s
+      retryOn: 5xx,reset,connect-failure
+    timeout: 15s
+
+  - match:
+    - headers:
+        x-epic8-service:
+          exact: "cache"
+    route:
+    - destination:
+        host: cache.epic8-dev.svc.cluster.local
+        port:
+          number: 8084
+    retries:
+      attempts: 2
+      perTryTimeout: 2s
+      retryOn: 5xx,reset,connect-failure
+    timeout: 5s
+
+  - match:
+    - headers:
+        x-epic8-service:
+          exact: "analytics"
+    route:
+    - destination:
+        host: analytics.epic8-dev.svc.cluster.local
+        port:
+          number: 8085
+    retries:
+      attempts: 2
+      perTryTimeout: 10s
+      retryOn: 5xx,reset,connect-failure
+    timeout: 30s
+
+---
+# Virtual Service for External AI Services
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: epic8-external-ai-services
+  namespace: epic8-dev
+  labels:
+    epic8.platform/component: service-mesh
+    epic8.platform/type: virtual-service
+    epic8.platform/tier: external
+spec:
+  hosts:
+  - api.openai.com
+  - api.anthropic.com
+  - api.mistral.ai
+  - api.cohere.ai
+  gateways:
+  - mesh
+
+  http:
+  # OpenAI API routing
+  - match:
+    - authority:
+        exact: api.openai.com
+    route:
+    - destination:
+        host: api.openai.com
+        port:
+          number: 443
+    retries:
+      attempts: 3
+      perTryTimeout: 60s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 120s
+
+  # Anthropic API routing
+  - match:
+    - authority:
+        exact: api.anthropic.com
+    route:
+    - destination:
+        host: api.anthropic.com
+        port:
+          number: 443
+    retries:
+      attempts: 3
+      perTryTimeout: 60s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 120s
+
+  # Mistral AI API routing
+  - match:
+    - authority:
+        exact: api.mistral.ai
+    route:
+    - destination:
+        host: api.mistral.ai
+        port:
+          number: 443
+    retries:
+      attempts: 3
+      perTryTimeout: 45s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 90s
+
+  # Cohere API routing
+  - match:
+    - authority:
+        exact: api.cohere.ai
+    route:
+    - destination:
+        host: api.cohere.ai
+        port:
+          number: 443
+    retries:
+      attempts: 3
+      perTryTimeout: 45s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 90s
