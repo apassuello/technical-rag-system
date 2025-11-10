@@ -282,9 +282,9 @@ wc -l services/*/*_app/main.py
 
 ### For Demo Preparation
 ```
-EPIC8_DEMO_PREPARATION_REPORT.md    ← Comprehensive report
-EPIC8_DEMO_QUICK_START.md           ← Quick start guide
-demos/README.md                      ← Demo execution guide
+preparation-report.md    ← Comprehensive report
+README.md                ← Quick start guide
+../README.md             ← Demo execution guide
 ```
 
 ### For Technical Details
@@ -376,5 +376,5 @@ terraform/modules/         ← Multi-cloud IaC
 **Assessment**: Complete
 **Recommendation**: Approved for demonstration
 
-*For detailed preparation steps, see `EPIC8_DEMO_PREPARATION_REPORT.md`*
-*For quick start instructions, see `EPIC8_DEMO_QUICK_START.md`*
+*For detailed preparation steps, see `preparation-report.md`*
+*For quick start instructions, see `README.md`*

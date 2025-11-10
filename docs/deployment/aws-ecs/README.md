@@ -272,14 +272,14 @@ curl -X POST http://$ALB_DNS/api/v1/query \
 
 ### Main Documents
 
-1. **AWS_ECS_DEPLOYMENT_PLAN.md** (18KB)
+1. **deployment-plan.md** (18KB)
    - Complete step-by-step deployment guide
    - Infrastructure setup instructions
    - Service configuration details
    - Troubleshooting guide
    - **When to use**: Detailed implementation reference
 
-2. **AWS_ECS_DEPLOYMENT_SUMMARY.md** (this file, 12KB)
+2. **README.md** (this file, 12KB)
    - Executive overview
    - Quick start guide
    - Cost analysis
@@ -537,7 +537,7 @@ aws ecs delete-service --cluster epic8-ecs-cluster --service analytics --force
 - GPT-OSS: https://huggingface.co/openai/gpt-oss-20b
 
 **Troubleshooting**:
-- See AWS_ECS_DEPLOYMENT_PLAN.md section "Troubleshooting"
+- See deployment-plan.md section "Troubleshooting"
 - Check CloudWatch logs: `./deploy.sh logs`
 - Review deployment events: `aws ecs describe-services`
 
@@ -611,7 +611,7 @@ export OLLAMA_URL="your-ngrok-url"
 
 ---
 
-**Questions?** Review the comprehensive [AWS_ECS_DEPLOYMENT_PLAN.md](./AWS_ECS_DEPLOYMENT_PLAN.md) for detailed implementation guidance.
+**Questions?** Review the comprehensive [deployment-plan.md](./deployment-plan.md) for detailed implementation guidance.
 
 **Next Step**: [Quick Start Guide](#-quick-start-guide) above.
 

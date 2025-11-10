@@ -310,8 +310,8 @@ services/     Microservices code (6 services)
 docs/epics/                   Epic 8 specifications
 docs/completion-reports/      Progress and completion
 k8s/README.md                Deployment guide
-demos/README.md              Demo guide
-EPIC8_DEMO_PREPARATION_REPORT.md  This comprehensive report
+../README.md                 Demo guide
+preparation-report.md        This comprehensive report
 ```
 
 ---
@@ -352,4 +352,4 @@ After completing demo, verify:
 
 **Recommendation**: Start with **Capability Showcase** for quickest demo, then progress to **Interactive Demo** for detailed exploration.
 
-*For comprehensive demo preparation details, see `EPIC8_DEMO_PREPARATION_REPORT.md`*
+*For comprehensive demo preparation details, see `preparation-report.md`*

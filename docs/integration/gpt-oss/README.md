@@ -334,7 +334,7 @@ TOTAL (Optimized):     ~$1,650/month
 
 ## 📚 Documentation Delivered
 
-### GPT_OSS_INTEGRATION_PLAN.md (66KB)
+### integration-plan.md (66KB)
 
 **Contents**:
 1. Executive Summary
@@ -384,7 +384,7 @@ TOTAL (Optimized):     ~$1,650/month
 ### Immediate (Today)
 
 **For GPT-OSS**:
-1. [ ] Review `GPT_OSS_INTEGRATION_PLAN.md`
+1. [ ] Review `integration-plan.md`
 2. [ ] Verify GPU availability (80GB for 120B, 16GB for 20B)
 3. [ ] Get HuggingFace token from https://huggingface.co/settings/tokens
 4. [ ] Install dependencies: `pip install huggingface-hub transformers`
@@ -476,8 +476,8 @@ TOTAL (Optimized):     ~$1,650/month
 ## 📞 Support & Resources
 
 ### Documentation
-- **GPT-OSS Plan**: `/project-1-technical-rag/GPT_OSS_INTEGRATION_PLAN.md`
-- **AWS Plan**: `/project-1-technical-rag/AWS_DEPLOYMENT_PLAN.md`
+- **GPT-OSS Plan**: `integration-plan.md`
+- **AWS Plan**: `../../deployment/aws-eks/deployment-plan.md`
 - **Epic 8 Spec**: `/project-1-technical-rag/docs/epics/epic8-specification.md`
 
 ### External Resources
