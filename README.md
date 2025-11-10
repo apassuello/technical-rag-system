@@ -76,6 +76,43 @@ project-1-technical-rag/
 └── requirements.txt          # Python dependencies
 ```
 
+## 📚 Documentation
+
+Comprehensive guides organized by topic:
+
+### **🚀 [Deployment Guides](./docs/deployment/)**
+Production deployment options with complete automation:
+- **[AWS ECS Fargate](./docs/deployment/aws-ecs/)** (RECOMMENDED) - $3.20/day, 31 days on $100 budget
+  - [Quick Start](./docs/deployment/aws-ecs/README.md) - 30-minute setup
+  - [Detailed Plan](./docs/deployment/aws-ecs/deployment-plan.md) - 11 Mermaid diagrams
+- **[AWS EKS](./docs/deployment/aws-eks/)** - Production Kubernetes with full features
+- **[Local Docker](./docs/deployment/)** - FREE development environment
+
+### **🤖 [Integration Guides](./docs/integration/)**
+External model and service integrations:
+- **[GPT-OSS Integration](./docs/integration/gpt-oss/)** - OpenAI's open-source models
+  - 3 integration approaches (HuggingFace, Native, Ollama)
+  - Cost analysis and optimization strategies
+
+### **🎭 [Demo Guides](./docs/demos/)**
+Complete demonstration preparation:
+- **[Epic 8 Demo](./docs/demos/epic8/)** - Full platform demo
+  - 5 demo modes (Full Stack, ECS, Docker, Architecture, Code)
+  - [15-minute quick demo](./docs/demos/epic8/README.md) script
+
+### **🏗️ [Architecture Documentation](./docs/architecture/)**
+System design and technical specifications:
+- Component architecture and design patterns
+- Epic specifications (Epic 1, Epic 2, Epic 8)
+- Performance analysis and validation reports
+
+### **📊 Quick Links**
+- **Deploy to AWS Now**: [`cd deployment/ecs && ./deploy.sh setup`](./deployment/ecs/)
+- **Check Deployment Costs**: [`./deployment/ecs/check-costs.sh`](./deployment/ecs/check-costs.sh)
+- **Run Local Demo**: [`docker-compose up`](./docker-compose.yml)
+
+---
+
 ## 📋 Prerequisites
 
 ### Required Dependencies
