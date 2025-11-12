@@ -21,7 +21,7 @@ from datetime import datetime
 import argparse
 
 # Add project to path
-project_root = Path(__file__).parents[2]
+project_root = Path(__file__).parent.parent.parents[2]
 sys.path.insert(0, str(project_root))
 
 

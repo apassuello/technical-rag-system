@@ -17,16 +17,18 @@ import argparse
 import logging
 from pathlib import Path
 
-# Add project root to Python path
+# Add project root and epic2_validation to Python path
 project_root = Path(__file__).parent.parent.parent
+epic2_validation_dir = Path(__file__).parent
 sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(epic2_validation_dir))
 
 # Import Epic 2 test modules
-from test_epic2_configuration_validation_new import Epic2ConfigurationValidator
-from test_epic2_subcomponent_integration_new import (
+from tests.epic2_validation.test_epic2_configuration_validation_new import Epic2ConfigurationValidator
+from tests.epic2_validation.test_epic2_subcomponent_integration_new import (
     Epic2SubComponentIntegrationValidator,
 )
-from epic2_test_utilities import Epic2TestEnvironment
+from tests.epic2_validation.epic2_test_utilities import Epic2TestEnvironment
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")

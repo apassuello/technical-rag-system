@@ -83,6 +83,7 @@ class ComponentFactory:
         "adaptive": "src.components.generators.epic1_answer_generator.Epic1AnswerGenerator",  # Epic 1 Multi-Model Generator
         "adaptive_generator": "src.components.generators.epic1_answer_generator.Epic1AnswerGenerator",  # Alias for compatibility
         "adaptive_modular": "src.components.generators.answer_generator.AnswerGenerator",  # New modular implementation
+        "answer_generator": "src.components.generators.answer_generator.AnswerGenerator",  # Alias for intuitive naming
         "epic1": "src.components.generators.epic1_answer_generator.Epic1AnswerGenerator",  # Epic 1 Multi-Model Generator
         "epic1_multi_model": "src.components.generators.epic1_answer_generator.Epic1AnswerGenerator",  # Alias for Epic 1
     }

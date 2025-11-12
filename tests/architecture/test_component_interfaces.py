@@ -21,7 +21,7 @@ from typing import Dict, Any, List, Type
 from unittest.mock import patch
 
 # Add project root to Python path
-project_root = Path(__file__).parent.parent.parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 from src.core.component_factory import ComponentFactory
@@ -272,26 +272,20 @@ class TestDependencyInjection:
     
     def test_components_accept_configuration(self):
         """Test components can be configured via dependency injection."""
-        # Test configuration injection through factory
-        with patch('src.core.component_factory.ComponentFactory._load_config') as mock_config:
-            mock_config.return_value = type('Config', (), {
-                'processor': type('ProcessorConfig', (), {'modular': {'chunk_size': 512}})(),
-                'embedder': type('EmbedderConfig', (), {'modular': {'model_name': 'test-model'}})(),
-                'retriever': type('RetrieverConfig', (), {'modular_unified': {'k': 10}})(),
-                'generator': type('GeneratorConfig', (), {'answer_generator': {'max_tokens': 150}})()
-            })()
-            
-            # Test each component accepts configuration
-            components = [
-                ComponentFactory.create_processor("hybrid_pdf"),
-                ComponentFactory.create_embedder("sentence_transformer"),
-                ComponentFactory.create_retriever("unified"),
-                ComponentFactory.create_generator("answer_generator")
-            ]
-            
-            for component in components:
-                assert component is not None, "Component creation failed with custom config"
-                print(f"✅ Configuration injection: {component.__class__.__name__}")
+        # Test configuration injection through factory by passing kwargs directly
+        # ComponentFactory doesn't have _load_config - it accepts **kwargs directly
+
+        # Test each component accepts configuration via kwargs
+        components = [
+            ComponentFactory.create_processor("hybrid_pdf", chunk_size=512),
+            ComponentFactory.create_embedder("sentence_transformer", model_name='test-model'),
+            ComponentFactory.create_retriever("unified", k=10),
+            ComponentFactory.create_generator("answer_generator", max_tokens=150)
+        ]
+
+        for component in components:
+            assert component is not None, "Component creation failed with custom config"
+            print(f"✅ Configuration injection: {component.__class__.__name__}")
     
     def test_component_dependencies_resolved(self):
         """Test components have their dependencies properly resolved.""" 

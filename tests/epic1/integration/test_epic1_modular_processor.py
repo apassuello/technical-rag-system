@@ -13,7 +13,7 @@ import time
 from typing import List, Dict, Any
 
 # Add project to path
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.components.query_processors import ModularQueryProcessor

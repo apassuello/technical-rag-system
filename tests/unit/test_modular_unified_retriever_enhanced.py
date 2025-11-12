@@ -219,7 +219,7 @@ class TestModularUnifiedRetrieverRetrievalPipeline:
             Document(content="Memory management systems", metadata={"id": "doc2"}),
             Document(content="Network protocol implementations", metadata={"id": "doc3"})
         ]
-        self.retriever.add_documents(self.test_documents)
+        self.retriever.index_documents(self.test_documents)
         
     def test_complete_retrieval_pipeline_success(self):
         """Test successful execution of complete retrieval pipeline."""
@@ -386,7 +386,7 @@ class TestModularUnifiedRetrieverDocumentManagement:
         with patch.object(self.retriever.vector_index, 'add_documents') as mock_vector_add:
             with patch.object(self.retriever.sparse_retriever, 'add_documents') as mock_sparse_add:
                 
-                self.retriever.add_document(document)
+                self.retriever.index_documents([document])
                 
                 # Verify document was added to both indices
                 mock_vector_add.assert_called_once()
@@ -404,7 +404,7 @@ class TestModularUnifiedRetrieverDocumentManagement:
         with patch.object(self.retriever.vector_index, 'add_documents') as mock_vector_add:
             with patch.object(self.retriever.sparse_retriever, 'add_documents') as mock_sparse_add:
                 
-                self.retriever.add_documents(self.test_documents)
+                self.retriever.index_documents(self.test_documents)
                 
                 # Verify batch addition
                 mock_vector_add.assert_called_once()
@@ -423,7 +423,7 @@ class TestModularUnifiedRetrieverDocumentManagement:
         self.mock_embedder.embed.side_effect = Exception("Embedder error")
         
         with pytest.raises(Exception, match="Embedder error"):
-            self.retriever.add_document(self.test_documents[0])
+            self.retriever.index_documents([self.test_documents[0]])
             
     def test_duplicate_document_handling(self):
         """Test handling of duplicate documents."""
@@ -433,8 +433,8 @@ class TestModularUnifiedRetrieverDocumentManagement:
         with patch.object(self.retriever.vector_index, 'add_documents') as mock_vector_add:
             with patch.object(self.retriever.sparse_retriever, 'add_documents') as mock_sparse_add:
                 
-                self.retriever.add_document(document)
-                self.retriever.add_document(document)
+                self.retriever.index_documents([document])
+                self.retriever.index_documents([document])
                 
                 # Both additions should be processed
                 assert mock_vector_add.call_count == 2
@@ -457,7 +457,7 @@ class TestModularUnifiedRetrieverDocumentManagement:
             with patch.object(self.retriever.sparse_retriever, 'add_documents') as mock_sparse_add:
                 
                 start_time = time.time()
-                self.retriever.add_documents(large_document_set)
+                self.retriever.index_documents(large_document_set)
                 elapsed_time = time.time() - start_time
                 
                 # Should complete reasonably quickly (< 5 seconds for mocked operations)
@@ -526,7 +526,7 @@ class TestModularUnifiedRetrieverHealthAndMonitoring:
         test_documents = [
             Document(content="Test document", metadata={"id": "test"})
         ]
-        self.retriever.add_documents(test_documents)
+        self.retriever.index_documents(test_documents)
         
         # Execute some retrievals to populate statistics
         self.retriever.retrieval_stats = {
@@ -632,7 +632,7 @@ class TestModularUnifiedRetrieverErrorHandling:
         self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3])]
         
         test_doc = Document(content="Test document", metadata={"id": "test"})
-        self.retriever.add_document(test_doc)
+        self.retriever.index_documents([test_doc])
         
         # Now make embedder fail during retrieval
         self.mock_embedder.embed.side_effect = Exception("Embedder connection failed")
@@ -646,7 +646,7 @@ class TestModularUnifiedRetrieverErrorHandling:
         
         # Add documents
         test_doc = Document(content="Test document", metadata={"id": "test"})
-        self.retriever.add_document(test_doc)
+        self.retriever.index_documents([test_doc])
         
         # Mock vector index to fail during search
         with patch.object(self.retriever.vector_index, 'search') as mock_search:
@@ -661,7 +661,7 @@ class TestModularUnifiedRetrieverErrorHandling:
         
         # Add documents
         test_doc = Document(content="Test document", metadata={"id": "test"})
-        self.retriever.add_document(test_doc)
+        self.retriever.index_documents([test_doc])
         
         # Mock successful vector search but failing sparse search
         with patch.object(self.retriever.vector_index, 'search') as mock_vector_search:
@@ -679,7 +679,7 @@ class TestModularUnifiedRetrieverErrorHandling:
         
         # Add documents
         test_doc = Document(content="Test document", metadata={"id": "test"})
-        self.retriever.add_document(test_doc)
+        self.retriever.index_documents([test_doc])
         
         # Mock successful searches but failing fusion
         with patch.object(self.retriever.vector_index, 'search') as mock_vector:
@@ -699,7 +699,7 @@ class TestModularUnifiedRetrieverErrorHandling:
         
         # Add documents
         test_doc = Document(content="Test document", metadata={"id": "test"})
-        self.retriever.add_document(test_doc)
+        self.retriever.index_documents([test_doc])
         
         # Mock successful pipeline until reranker fails
         with patch.object(self.retriever.vector_index, 'search') as mock_vector:
@@ -734,7 +734,7 @@ class TestModularUnifiedRetrieverErrorHandling:
             Document(content=f"Document {i}", metadata={"id": f"doc{i}"})
             for i in range(10)
         ]
-        self.retriever.add_documents(test_docs)
+        self.retriever.index_documents(test_docs)
         
         # Mock sub-components for concurrent testing
         with patch.object(self.retriever, '_execute_retrieval_pipeline') as mock_pipeline:
@@ -804,7 +804,7 @@ class TestModularUnifiedRetrieverPerformanceOptimization:
             with patch.object(self.retriever.sparse_retriever, 'add_documents') as mock_sparse_add:
                 
                 start_time = time.time()
-                self.retriever.add_documents(large_corpus)
+                self.retriever.index_documents(large_corpus)
                 elapsed_time = time.time() - start_time
                 
                 # Should handle large corpus efficiently
@@ -822,7 +822,7 @@ class TestModularUnifiedRetrieverPerformanceOptimization:
             Document(content=f"Document {i}", metadata={"id": f"doc{i}"})
             for i in range(5)
         ]
-        self.retriever.add_documents(test_docs)
+        self.retriever.index_documents(test_docs)
         
         # Mock retrieval pipeline for performance testing
         with patch.object(self.retriever, '_execute_retrieval_pipeline') as mock_pipeline:
@@ -856,7 +856,7 @@ class TestModularUnifiedRetrieverPerformanceOptimization:
             Document(content=f"Document {i}", metadata={"id": f"doc{i}"})
             for i in range(3)
         ]
-        memory_retriever.add_documents(test_docs)
+        memory_retriever.index_documents(test_docs)
         
         # Test retrieval with limited candidates
         with patch.object(memory_retriever.vector_index, 'search') as mock_vector:
@@ -883,7 +883,7 @@ class TestModularUnifiedRetrieverPerformanceOptimization:
         
         self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3])]
         test_doc = Document(content="Test document", metadata={"id": "test"})
-        self.retriever.add_document(test_doc)
+        self.retriever.index_documents([test_doc])
         
         # Mock sub-components
         with patch.object(self.retriever.vector_index, 'search') as mock_vector:

@@ -1,15 +1,21 @@
 """
 Comprehensive Test Suite for TaskComplexityView - Phase 2 Strategic Component Testing.
 
-This test suite provides complete coverage for TaskComplexityView following the proven 
+This test suite provides complete coverage for TaskComplexityView following the proven
 methodology from Phase 1 (ComputationalComplexityView achieved 85.7% coverage).
 
 Target: TaskComplexityView - 301 statements, 20.6% → 85%+ coverage
 Architecture: HybridView with DeBERTa-v3 ML + task pattern analysis
 Business Value: Epic1 intelligent routing task complexity analysis
+
+Note: This is an integration test requiring ML dependencies (torch, transformers).
+Should be in tests/integration/ml_infrastructure/ but kept here with proper markers.
 """
 
 import pytest
+
+# Mark entire module as integration test requiring ML
+pytestmark = [pytest.mark.integration, pytest.mark.requires_ml, pytest.mark.slow]
 import numpy as np
 import torch
 from unittest.mock import Mock, patch, MagicMock

@@ -1108,7 +1108,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
     def _create_error_result(self, query: str, error: str, start_time: float) -> 'AnalysisResult':
         """Create error result for failed analysis."""
         from .ml_views.view_result import AnalysisResult, ComplexityLevel
-        
+
         return AnalysisResult(
             query=query,
             view_results={},
@@ -1125,6 +1125,20 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 'model_recommendation': "ollama:llama3.2:3b"
             }
         )
+
+    def shutdown(self) -> None:
+        """
+        Shutdown the analyzer and clean up ML resources.
+
+        This method delegates to ModelManager.shutdown() to properly clean up
+        all ML models, caches, and monitoring resources.
+        """
+        if hasattr(self, 'model_manager') and self.model_manager is not None:
+            logger.info("Shutting down Epic1MLAnalyzer...")
+            self.model_manager.shutdown()
+            logger.info("Epic1MLAnalyzer shutdown complete")
+        else:
+            logger.debug("Epic1MLAnalyzer shutdown called but no ModelManager to clean up")
 
 
 class NeuralFusionModel(nn.Module):

@@ -32,29 +32,24 @@ class TestBM25ScoringQuality:
         # Create test documents with known content
         self.test_documents = [
             Document(
-                id="doc1",
                 content="RISC-V is an open instruction set architecture",
-                metadata={"source": "test"}
+                metadata={"id": "doc1", "source": "test"}
             ),
             Document(
-                id="doc2", 
                 content="RISC-V RISC-V processor implements the RISC-V instruction set",
-                metadata={"source": "test"}
+                metadata={"id": "doc2", "source": "test"}
             ),
             Document(
-                id="doc3",
                 content="The weather in Paris is beautiful today",
-                metadata={"source": "test"}
+                metadata={"id": "doc3", "source": "test"}
             ),
             Document(
-                id="doc4",
                 content="Computer architecture includes instruction set design",
-                metadata={"source": "test"}
+                metadata={"id": "doc4", "source": "test"}
             ),
             Document(
-                id="doc5",
                 content="RISC-V provides a modular instruction set architecture with optional extensions for vector processing",
-                metadata={"source": "test"}
+                metadata={"id": "doc5", "source": "test"}
             )
         ]
         
@@ -152,15 +147,13 @@ class TestBM25ScoringQuality:
         """Verify document length normalization works correctly."""
         # Create two docs with same term frequency ratio but different lengths
         short_doc = Document(
-            id="short",
             content="RISC-V architecture",
-            metadata={"source": "test"}
+            metadata={"id": "short", "source": "test"}
         )
-        
+
         long_doc = Document(
-            id="long",
             content="RISC-V architecture is an open instruction set architecture " * 3,
-            metadata={"source": "test"}
+            metadata={"id": "long", "source": "test"}
         )
         
         # Create new BM25 instance with these docs
@@ -238,7 +231,7 @@ class TestBM25ScoringQuality:
     def test_empty_document_handling(self):
         """Test BM25 behavior with empty documents."""
         docs_with_empty = self.test_documents + [
-            Document(id="empty", content="", metadata={"source": "test"})
+            Document(content="", metadata={"id": "empty", "source": "test"})
         ]
         
         bm25_empty = BM25Retriever({"k1": 1.2, "b": 0.75})
@@ -254,9 +247,9 @@ class TestBM25ScoringQuality:
     def test_special_character_handling(self):
         """Test BM25 with special characters and punctuation."""
         special_docs = [
-            Document(id="s1", content="C++ programming language", metadata={}),
-            Document(id="s2", content="RISC-V++ extended version", metadata={}),
-            Document(id="s3", content="What is RISC-V?", metadata={})
+            Document(content="C++ programming language", metadata={"id": "s1"}),
+            Document(content="RISC-V++ extended version", metadata={"id": "s2"}),
+            Document(content="What is RISC-V?", metadata={"id": "s3"})
         ]
         
         bm25_special = BM25Retriever({"k1": 1.2, "b": 0.75})
@@ -277,12 +270,11 @@ class TestBM25EdgeCases:
         """Test BM25 with extremely long documents."""
         # Create a very long document
         long_content = " ".join(["RISC-V architecture"] * 1000)
-        long_doc = Document(id="long", content=long_content, metadata={})
+        long_doc = Document(content=long_content, metadata={"id": "long"})
         
         short_doc = Document(
-            id="short", 
-            content="RISC-V architecture design", 
-            metadata={}
+            content="RISC-V architecture design",
+            metadata={"id": "short"}
         )
         
         bm25 = BM25Retriever({"k1": 1.2, "b": 0.75})
@@ -298,9 +290,8 @@ class TestBM25EdgeCases:
     def test_single_document_corpus(self):
         """Test BM25 with only one document."""
         single_doc = Document(
-            id="single",
             content="RISC-V processor architecture",
-            metadata={}
+            metadata={"id": "single"}
         )
         
         bm25 = BM25Retriever({"k1": 1.2, "b": 0.75})
@@ -314,7 +305,7 @@ class TestBM25EdgeCases:
     def test_all_documents_identical(self):
         """Test BM25 when all documents are identical."""
         identical_docs = [
-            Document(id=f"doc{i}", content="RISC-V architecture", metadata={})
+            Document(content="RISC-V architecture", metadata={"id": f"doc{i}"})
             for i in range(5)
         ]
         
@@ -334,9 +325,9 @@ def test_bm25_quality_assertions():
     implemented BM25 algorithm.
     """
     docs = [
-        Document(id="1", content="The quick brown fox jumps over the lazy dog", metadata={}),
-        Document(id="2", content="The lazy dog sleeps under the tree", metadata={}),
-        Document(id="3", content="Machine learning algorithms process data", metadata={})
+        Document(content="The quick brown fox jumps over the lazy dog", metadata={"id": "1"}),
+        Document(content="The lazy dog sleeps under the tree", metadata={"id": "2"}),
+        Document(content="Machine learning algorithms process data", metadata={"id": "3"})
     ]
     
     bm25 = BM25Retriever({"k1": 1.2, "b": 0.75})

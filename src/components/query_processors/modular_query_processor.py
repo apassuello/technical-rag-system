@@ -358,7 +358,23 @@ class ModularQueryProcessor(QueryProcessor):
         self.platform: Optional['PlatformOrchestrator'] = None
         
         logger.info(f"Initialized ModularQueryProcessor with {self._get_component_summary()}")
-    
+
+    # Public property accessors for sub-components (for testing and inspection)
+    @property
+    def query_analyzer(self) -> 'QueryAnalyzer':
+        """Access the query analyzer sub-component."""
+        return self._analyzer
+
+    @property
+    def context_selector(self) -> 'ContextSelector':
+        """Access the context selector sub-component."""
+        return self._selector
+
+    @property
+    def response_assembler(self) -> 'ResponseAssembler':
+        """Access the response assembler sub-component."""
+        return self._assembler
+
     def process(self, query: str, options: Optional[QueryOptions] = None) -> Answer:
         """
         Process a query end-to-end and return a complete answer.

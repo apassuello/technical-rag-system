@@ -82,7 +82,8 @@ class APIGatewaySettings(BaseSettings):
     model_config = ConfigDict(
         env_file=".env",
         env_prefix="GATEWAY_",
-        case_sensitive=False
+        case_sensitive=False,
+        extra='ignore'  # Ignore extra env vars not defined in model
     )
     
     @field_validator('log_level')

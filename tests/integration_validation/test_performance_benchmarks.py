@@ -22,7 +22,7 @@ import threading
 import statistics
 
 import sys
-project_root = Path(__file__).parents[2]
+project_root = Path(__file__).parent.parent.parents[2]
 sys.path.insert(0, str(project_root))
 
 from tests.runner.config import TestConfig, TestSuiteConfig

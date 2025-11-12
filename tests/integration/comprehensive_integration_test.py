@@ -25,7 +25,7 @@ from typing import Dict, List, Any, Optional, Tuple
 logging.basicConfig(level=logging.INFO, format='[%(name)s] %(levelname)s: %(message)s')
 
 # Add project root to path
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.core.platform_orchestrator import PlatformOrchestrator
@@ -50,7 +50,7 @@ class ComprehensiveIntegrationTest:
     def __init__(self, config_path: str = "config/default.yaml"):
         """Initialize comprehensive integration test."""
         # Ensure config path is relative to project root
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent.parent.parent
         if not Path(config_path).is_absolute():
             self.config_path = str(project_root / config_path)
         else:

@@ -20,8 +20,14 @@ from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Document, Answer
 
 
+@pytest.mark.integration  # Uses real components, not pure unit test
+@pytest.mark.component     # Tests component interactions
 class TestPlatformOrchestratorPhase2:
-    """Test suite for Platform Orchestrator Phase 2 features."""
+    """Test suite for Platform Orchestrator Phase 2 features.
+
+    Note: This is an integration test that creates real components via ComponentFactory.
+    Should be in tests/integration/ but kept here for now with proper markers.
+    """
     
     @pytest.fixture
     def legacy_config(self):

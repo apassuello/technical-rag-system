@@ -16,9 +16,15 @@ Test Categories:
 - Configuration tests for different weighting scenarios
 - Performance tests for analysis speed requirements
 - Error handling tests for robust failure scenarios
+
+Note: This is an integration test requiring ML dependencies (torch, sentence-transformers).
+Should be in tests/integration/ml_infrastructure/ but kept here with proper markers.
 """
 
 import pytest
+
+# Mark entire module as integration test requiring ML
+pytestmark = [pytest.mark.integration, pytest.mark.requires_ml, pytest.mark.slow]
 import numpy as np
 import torch
 from unittest.mock import Mock, patch, MagicMock, AsyncMock

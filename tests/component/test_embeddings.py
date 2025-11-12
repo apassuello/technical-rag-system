@@ -25,16 +25,22 @@ Technical Specifications:
 Author: Arthur Passuello
 Date: June 2025
 Project: RAG Portfolio - Technical Documentation System
+
+Note: This is an integration/performance test requiring ML dependencies (torch, sentence-transformers).
+Should be in tests/integration/embeddings/ or tests/performance/ but kept here with proper markers.
 """
 
 import pytest
+
+# Mark entire module as integration test requiring ML
+pytestmark = [pytest.mark.integration, pytest.mark.requires_ml, pytest.mark.slow, pytest.mark.performance]
 import numpy as np
 import time
 import sys
 from pathlib import Path
 
 # Add project paths
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 sys.path.append(str(project_root.parent))
 

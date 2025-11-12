@@ -7,7 +7,7 @@ intelligent model routing.
 
 COVERAGE TARGET: 90% (currently 9.5% -> 90%)
 KEY FEATURES TESTED:
-- Query Complexity Classification (simple/medium/complex)  
+- Query Complexity Classification (simple/medium/complex)
 - Multi-View Analysis (Technical, Linguistic, Task, Semantic, Computational)
 - Feature Extraction and ML Model Integration
 - Trained Model Management and Inference
@@ -15,11 +15,17 @@ KEY FEATURES TESTED:
 - Integration with AdaptiveRouter for intelligent routing
 - Fallback Logic and Error Handling
 
-Epic1MLAnalyzer is the core ML intelligence that enables Epic 1's sophisticated 
+Epic1MLAnalyzer is the core ML intelligence that enables Epic 1's sophisticated
 query analysis and optimal model routing decisions.
+
+Note: This is an integration test requiring ML dependencies (torch, transformers, numpy).
+Should be in tests/integration/ml_infrastructure/ but kept here with proper markers.
 """
 
 import pytest
+
+# Mark entire module as integration test requiring ML
+pytestmark = [pytest.mark.integration, pytest.mark.requires_ml]
 import unittest.mock as mock
 import time
 import numpy as np

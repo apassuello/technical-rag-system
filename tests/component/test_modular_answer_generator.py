@@ -4,10 +4,16 @@ Integration tests for the Modular Answer Generator.
 This module tests the new modular AnswerGenerator implementation,
 ensuring it works correctly with ComponentFactory and maintains
 backward compatibility.
+
+Note: This is an integration test requiring Ollama service.
+Should be in tests/integration/generation/ but kept here with proper markers.
 """
 
 import logging
 import pytest
+
+# Mark entire module as integration test requiring Ollama
+pytestmark = [pytest.mark.integration, pytest.mark.requires_ollama]
 from typing import List
 
 # Configure logging to see ComponentFactory logs

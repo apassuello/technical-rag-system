@@ -162,36 +162,28 @@ class TestConfigurationHandling:
     
     def test_custom_configuration_override(self):
         """Test components respect custom configuration parameters."""
-        # Custom configuration for embedder
-        custom_config = {
-            'model_name': 'sentence-transformers/all-MiniLM-L6-v2',
-            'batch_size': 64,
-            'cache_size': 1000
-        }
-        
-        with patch('src.core.component_factory.ComponentFactory._load_config') as mock_load:
-            mock_load.return_value = MagicMock()
-            mock_load.return_value.embedder = MagicMock()
-            mock_load.return_value.embedder.modular = custom_config
-            
-            embedder = ComponentFactory.create_embedder("sentence_transformer")
-            assert embedder is not None
-            print("✅ Custom configuration handling validated")
-    
+        # ComponentFactory doesn't have _load_config - it accepts **kwargs directly
+        # Test custom configuration by passing kwargs
+        embedder = ComponentFactory.create_embedder(
+            "sentence_transformer",
+            model_name='sentence-transformers/all-MiniLM-L6-v2',
+            batch_size=64,
+            cache_size=1000
+        )
+        assert embedder is not None
+        print("✅ Custom configuration handling validated")
+
     def test_configuration_error_handling(self):
-        """Test graceful handling of configuration errors."""
-        with patch('src.core.component_factory.ComponentFactory._load_config') as mock_load:
-            mock_load.side_effect = Exception("Configuration loading failed")
-            
-            # Should still create component with fallback configuration
-            try:
-                processor = ComponentFactory.create_processor("modular")
-                # If it doesn't raise, that's acceptable (fallback behavior)
-                print("✅ Configuration error handled gracefully")
-            except Exception as e:
-                # If it raises, should be informative
-                assert "Configuration loading failed" in str(e)
-                print("✅ Configuration error properly propagated")
+        """Test graceful handling of invalid component type."""
+        # ComponentFactory doesn't have _load_config method
+        # Test actual error case: invalid component type
+        try:
+            processor = ComponentFactory.create_processor("invalid_type")
+            assert False, "Should have raised ValueError for invalid type"
+        except ValueError as e:
+            # Should raise ValueError for invalid component type
+            assert "invalid_type" in str(e).lower() or "not supported" in str(e).lower()
+            print("✅ Invalid component type error handled gracefully")
 
 
 class TestFactoryErrorHandling:

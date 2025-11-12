@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 # Add project root to path
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.components.processors.document_processor import create_pdf_processor

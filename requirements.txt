@@ -27,6 +27,8 @@ scikit-learn>=1.3.0
 # Utilities
 python-dotenv>=1.0.0
 typing-extensions>=4.4.0
+pydantic>=2.0.0,<3.0.0  # Data validation and settings management
+pyyaml>=6.0.0  # YAML configuration parsing
 
 # Epic 2 Graph Processing (Lightweight)
 networkx>=3.0,<4.0.0
@@ -47,6 +49,15 @@ mistral-common>=1.0.0  # Mistral token counting
 
 # Epic 8 Cloud-Native Dependencies
 redis>=5.0.1  # Redis Python client with async support for cache service
+
+# Testing & Quality Assurance
+pytest>=7.4.0,<8.0.0  # Testing framework
+pytest-cov>=4.1.0  # Coverage reporting
+pytest-xdist>=3.3.0  # Parallel test execution
+pytest-asyncio>=0.21.0  # Async test support
+
+# RAG Evaluation
+ragas>=0.1.0  # RAG evaluation framework with quality metrics
 
 # Optional dependencies for local development only
 # accelerate>=0.20.0  # Uncomment for local GPU acceleration

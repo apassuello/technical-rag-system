@@ -3,14 +3,21 @@
 Comprehensive test suite for Dense Retrieval, Fusion Strategies, and Rerankers.
 
 This module provides complete test coverage for the fusion and reranking components
-including RRF fusion, weighted fusion, neural rerankers, semantic rerankers, 
+including RRF fusion, weighted fusion, neural rerankers, semantic rerankers,
 and their integration patterns.
 
 Target Coverage: 85% (~680 test lines for ~800 component lines)
 Priority: HIGH (Retrieval fusion and reranking systems)
+
+Note: This file contains integration tests testing full reranker workflows.
+Some tests require ML dependencies (neural/semantic rerankers).
+Should be in tests/integration/ but kept here with proper markers.
 """
 
 import pytest
+
+# Mark entire module as integration tests
+pytestmark = [pytest.mark.integration]
 import numpy as np
 from unittest.mock import Mock, patch, MagicMock
 from typing import List, Dict, Any, Tuple, Optional
@@ -278,6 +285,7 @@ class TestWeightedFusionComprehensive:
         assert custom_config["weights"]["sparse"] == 0.4
 
 
+@pytest.mark.requires_ml  # Requires cross-encoder models (transformers, torch)
 class TestNeuralRerankerComprehensive:
     """Comprehensive test suite for Neural Reranker."""
     
@@ -607,6 +615,7 @@ class TestNeuralRerankerComprehensive:
             assert reranker.stats["fallback_activations"] == 1
 
 
+@pytest.mark.requires_ml  # May require sentence-transformers for embeddings
 class TestSemanticRerankerComprehensive:
     """Comprehensive test suite for Semantic Reranker."""
     

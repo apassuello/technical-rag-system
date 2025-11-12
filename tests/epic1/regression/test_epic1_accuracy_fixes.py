@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 # Add project to path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.components.query_processors.analyzers.utils import TechnicalTermManager, SyntacticParser

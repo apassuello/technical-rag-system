@@ -415,20 +415,17 @@ class TestModularEmbedderConfiguration:
         embedder_default = ComponentFactory.create_embedder("sentence_transformer")
         assert embedder_default is not None
         print("✅ Default configuration embedder created")
-        
-        # Test if different configurations are supported
-        with patch('src.core.component_factory.ComponentFactory._load_config') as mock_config:
-            mock_config.return_value = MagicMock()
-            mock_config.return_value.embedder = MagicMock()
-            mock_config.return_value.embedder.modular = {
-                'model_name': 'sentence-transformers/all-MiniLM-L6-v2',
-                'batch_size': 32,
-                'cache_size': 1000
-            }
-            
-            embedder_custom = ComponentFactory.create_embedder("sentence_transformer")
-            assert embedder_custom is not None
-            print("✅ Custom configuration embedder created")
+
+        # Test if different configurations are supported via kwargs
+        # ComponentFactory doesn't have _load_config - it accepts **kwargs directly
+        embedder_custom = ComponentFactory.create_embedder(
+            "sentence_transformer",
+            model_name='sentence-transformers/all-MiniLM-L6-v2',
+            batch_size=32,
+            cache_size=1000
+        )
+        assert embedder_custom is not None
+        print("✅ Custom configuration embedder created")
     
     def test_configuration_parameter_effects(self):
         """Test that configuration parameters affect embedder behavior."""
