@@ -220,14 +220,18 @@ class ComprehensiveValidator:
                 result["health_status"] = "healthy"
                 try:
                     result["details"] = response.json()
-                except:
+                except (ValueError, json.JSONDecodeError) as e:
+                    # Response is not valid JSON
+                    logger.debug(f"Health check response is not JSON: {e}")
                     result["details"] = {"raw_response": response.text}
             else:
                 result["health_status"] = "unhealthy"
                 result["error"] = f"HTTP {response.status_code}"
                 try:
                     result["details"] = response.json()
-                except:
+                except (ValueError, json.JSONDecodeError) as e:
+                    # Error response is not valid JSON
+                    logger.debug(f"Error response is not JSON: {e}")
                     result["details"] = {"raw_response": response.text}
                     
         except requests.exceptions.ConnectionError:

@@ -980,7 +980,8 @@ class TestRetrieverServiceErrorHandling:
                     for i in range(3):  # Try a few times
                         try:
                             await service.retrieve_documents(f"failing query {i}")
-                        except:
+                        except Exception:
+                            # Count expected failures
                             failure_count += 1
                     
                     # Error count should be tracked

@@ -235,8 +235,9 @@ class Epic1IntegrationTester:
             if trained_models_available:
                 try:
                     model_details = adapter._get_trained_model_details()
-                except:
-                    model_details = {"details": "Could not retrieve model details"}
+                except (AttributeError, Exception) as e:
+                    # Method might not exist or might fail
+                    model_details = {"details": f"Could not retrieve model details: {e}"}
             
             result = {
                 "passed": True,  # This test always passes - it's informational

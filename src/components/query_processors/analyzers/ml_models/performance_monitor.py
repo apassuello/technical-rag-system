@@ -131,8 +131,8 @@ class QualityStats:
 
 class AlertManager:
     """Manages performance alerts and notifications."""
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         self.alert_handlers: Dict[str, List[Callable]] = defaultdict(list)
         self.alert_history: deque = deque(maxlen=1000)
         

@@ -195,7 +195,8 @@ class DiagnosticTestBase:
                     try:
                         f.seek(0)
                         config = yaml.safe_load(f)
-                    except:
+                    except yaml.YAMLError:
+                        # Not valid YAML, try JSON
                         f.seek(0)
                         config = json.load(f)
             

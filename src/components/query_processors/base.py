@@ -339,21 +339,21 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
 # Performance tracking utilities
 class QueryProcessorMetrics:
     """Utility class for tracking query processor performance metrics."""
-    
-    def __init__(self):
-        self.total_queries = 0
-        self.successful_queries = 0
-        self.failed_queries = 0
-        self.average_latency = 0.0
-        self.phase_latencies = {
+
+    def __init__(self) -> None:
+        self.total_queries: int = 0
+        self.successful_queries: int = 0
+        self.failed_queries: int = 0
+        self.average_latency: float = 0.0
+        self.phase_latencies: Dict[str, float] = {
             'analysis': 0.0,
-            'retrieval': 0.0, 
+            'retrieval': 0.0,
             'selection': 0.0,
             'generation': 0.0,
             'assembly': 0.0
         }
-    
-    def record_query(self, success: bool, latency: float, phase_times: Dict[str, float]):
+
+    def record_query(self, success: bool, latency: float, phase_times: Dict[str, float]) -> None:
         """Record metrics for a completed query."""
         self.total_queries += 1
         if success:

@@ -150,7 +150,8 @@ class PyTestAdapter(TestAdapter):
         """Get pytest version."""
         try:
             return pytest.__version__
-        except:
+        except AttributeError:
+            # pytest module might not have __version__ attribute in some versions
             return "unknown"
     
     def _parse_pytest_output(self, exit_code: int, stdout: str, stderr: str, 

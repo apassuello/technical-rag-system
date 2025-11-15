@@ -505,7 +505,9 @@ class ConfigurationForensics(DiagnosticTestBase):
                         internals["attributes"][attr] = str(value)[:200]  # Truncate long values
                     else:
                         internals["methods"].append(attr)
-                except:
+                except (AttributeError, TypeError, Exception) as e:
+                    # Attribute might not be accessible or might raise an error
+                    logger.debug(f"Could not access attribute {attr}: {e}")
                     internals["attributes"][attr] = "unable_to_access"
         
         # Check how configuration is accessed
@@ -576,7 +578,9 @@ class ConfigurationForensics(DiagnosticTestBase):
                 retriever_type = type(orchestrator.retriever).__name__
                 indicators["component_analysis"]["retriever_type"] = retriever_type
                 indicators["component_analysis"]["is_unified_retriever"] = "Unified" in retriever_type
-        except:
+        except (AttributeError, TypeError) as e:
+            # Orchestrator might not have retriever or accessing it might fail
+            logger.debug(f"Could not access orchestrator components: {e}")
             indicators["component_analysis"]["error"] = "Unable to access orchestrator components"
         
         return indicators

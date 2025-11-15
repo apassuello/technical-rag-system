@@ -266,11 +266,11 @@ class MemoryMonitor:
             for model_name, memory_mb in self._model_memory_map.items():
                 logger.info(f"  {model_name}: {memory_mb:.1f}MB")
     
-    def __enter__(self):
+    def __enter__(self) -> 'MemoryMonitor':
         """Context manager entry."""
         self.start_monitoring()
         return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
         self.stop_monitoring()

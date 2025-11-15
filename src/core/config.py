@@ -28,7 +28,7 @@ class ComponentConfig(BaseModel):
     
     @field_validator('type')
     @classmethod
-    def validate_type(cls, v):
+    def validate_type(cls, v: str) -> str:
         """Ensure type is not empty."""
         if not v or not v.strip():
             raise ValueError("Component type cannot be empty")
@@ -54,7 +54,7 @@ class PipelineConfig(BaseModel):
     model_config = ConfigDict(extra='allow')  # Allow additional fields for Epic1 and future extensions
     
     @model_validator(mode='after')
-    def validate_component_types(self):
+    def validate_component_types(self) -> 'PipelineConfig':
         """Validate component types using ComponentFactory."""
         # Import here to avoid circular imports
         try:
@@ -102,7 +102,7 @@ class PipelineConfig(BaseModel):
         return self
     
     @model_validator(mode='after')
-    def validate_architecture_consistency(self):
+    def validate_architecture_consistency(self) -> 'PipelineConfig':
         """Validate architecture consistency (legacy vs unified)."""
         
         retriever_type = self.retriever.type
@@ -256,9 +256,10 @@ class ConfigManager:
                 try:
                     import json
                     current[final_key] = json.loads(value)
-                except:
+                except (json.JSONDecodeError, ValueError, TypeError) as e:
                     # If not JSON, treat as string
                     # Convert 'true'/'false' to boolean
+                    logger.debug(f"Value '{value}' is not valid JSON, treating as string: {e}")
                     if value.lower() == 'true':
                         current[final_key] = True
                     elif value.lower() == 'false':
@@ -280,21 +281,21 @@ class ConfigManager:
             Configuration with environment variables substituted
         """
         import re
-        
-        def substitute_recursive(obj):
+
+        def substitute_recursive(obj: Any) -> Any:
             if isinstance(obj, dict):
                 return {k: substitute_recursive(v) for k, v in obj.items()}
             elif isinstance(obj, list):
                 return [substitute_recursive(item) for item in obj]
             elif isinstance(obj, str):
                 # Replace ${VAR} with environment variable
-                def replace_var(match):
+                def replace_var(match: re.Match[str]) -> str:
                     var_name = match.group(1)
                     return os.environ.get(var_name, match.group(0))
                 return re.sub(r'\$\{([^}]+)\}', replace_var, obj)
             else:
                 return obj
-        
+
         return substitute_recursive(config)
     
     def _get_default_config(self) -> PipelineConfig:

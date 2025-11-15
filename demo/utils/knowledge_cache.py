@@ -225,10 +225,11 @@ class KnowledgeCache:
     def is_valid(self) -> bool:
         """Check if cache has valid data"""
         try:
-            return (self.documents_file.exists() and 
-                   self.embeddings_file.exists() and 
+            return (self.documents_file.exists() and
+                   self.embeddings_file.exists() and
                    self.metadata.get("chunk_count", 0) > 0)
-        except:
+        except (OSError, AttributeError) as e:
+            logger.debug(f"Cache validation failed: {e}")
             return False
     
     def save_knowledge_base(self, documents: List[Any], embeddings: np.ndarray, 
@@ -300,7 +301,8 @@ class KnowledgeCache:
                 if file_path.exists():
                     total_size += file_path.stat().st_size
             return total_size / (1024 * 1024)
-        except:
+        except OSError as e:
+            logger.debug(f"Failed to calculate cache size: {e}")
             return 0.0
     
     def clear_cache(self):

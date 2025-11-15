@@ -846,7 +846,8 @@ class Epic2SystemManager:
                 pdf_files = list(self.corpus_path.rglob("*.pdf"))
                 logger.warning(f"Falling back to file counting: {len(pdf_files)} files found")
                 return len(pdf_files)
-            except:
+            except OSError as file_error:
+                logger.error(f"Failed to count PDF files: {file_error}")
                 return 0
     
     def _warmup_system(self):

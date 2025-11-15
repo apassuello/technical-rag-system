@@ -464,12 +464,12 @@ class OptimizationEngine:
 
 if __name__ == "__main__":
     # Test optimization engine with mock evaluation function
-    def mock_evaluation(params):
+    def mock_evaluation(params: Dict[str, Any]) -> float:
         """Mock evaluation function for testing."""
         # Simulate optimization of quadratic function
         x = params.get("param_x", 0)
         y = params.get("param_y", 0)
-        
+
         # Optimal at x=5, y=3
         score = 100 - (x - 5)**2 - (y - 3)**2
         return max(0, score)  # Ensure non-negative

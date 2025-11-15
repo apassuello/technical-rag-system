@@ -544,7 +544,8 @@ class RISCVDocCollector:
                 score += 1.0
             elif year >= 2018:
                 score += 0.5
-        except:
+        except AttributeError:
+            # Paper might not have published date or it might be None
             pass
 
         return score

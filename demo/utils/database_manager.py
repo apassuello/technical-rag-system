@@ -123,8 +123,9 @@ class DatabaseManager:
                     db_path = Path(self.database_url.replace("sqlite:///", ""))
                     if db_path.exists():
                         stats['database_size_mb'] = db_path.stat().st_size / (1024 * 1024)
-                except:
-                    pass
+                except (OSError, ValueError, AttributeError) as e:
+                    # File might not exist, path could be malformed, or stat might fail
+                    logger.debug(f"Could not get database file size: {e}")
             
             return stats
     
@@ -136,7 +137,9 @@ class DatabaseManager:
                     Document.processing_status == 'completed'
                 ).count()
                 return count > 0
-        except:
+        except Exception as e:
+            # Could be connection error, table doesn't exist, or query failure
+            logger.debug(f"Failed to check if database is populated: {e}")
             return False
     
     def is_cache_valid(self, pdf_files: List[Path], processor_config: Dict[str, Any], 

@@ -1044,7 +1044,8 @@ class TestEpic1MLAnalyzerComprehensiveCoverage:
                 result = analyzer._analyze_query(query)
                 # Manually update for testing since _analyze_query doesn't track
                 analyzer._analysis_count += 1
-            except:
+            except Exception as e:
+                # Query analysis might fail
                 analyzer._error_count += 1
             
         # Check internal performance tracking - should have increased

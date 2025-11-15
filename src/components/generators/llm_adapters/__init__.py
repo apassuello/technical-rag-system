@@ -43,16 +43,18 @@ ADAPTER_REGISTRY = {
     'mistral': MistralAdapter,
 }
 
-def get_adapter_class(provider: str):
+from typing import Type
+
+def get_adapter_class(provider: str) -> Type[BaseLLMAdapter]:
     """
     Get adapter class by provider name.
-    
+
     Args:
         provider: Provider name (e.g., 'ollama', 'openai')
-        
+
     Returns:
         Adapter class
-        
+
     Raises:
         ValueError: If provider not found
     """

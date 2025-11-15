@@ -379,8 +379,9 @@ class CalibrationManager:
                 # Clean up temporary config
                 try:
                     config_path.unlink()
-                except:
-                    pass
+                except OSError as e:
+                    # File might not exist or permission denied - this is acceptable during cleanup
+                    logger.debug(f"Could not delete temporary config {config_path}: {e}")
 
                 return final_score
 

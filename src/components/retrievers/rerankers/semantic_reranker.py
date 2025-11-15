@@ -307,7 +307,8 @@ class SemanticReranker(Reranker):
                 info["model_type"] = type(self.model.model).__name__
             if hasattr(self.model, 'tokenizer'):
                 info["tokenizer_type"] = type(self.model.tokenizer).__name__
-        except:
-            pass
+        except (AttributeError, TypeError) as e:
+            # Model might not have expected attributes or types might not be accessible
+            logger.debug(f"Could not get model-specific info: {e}")
         
         return info

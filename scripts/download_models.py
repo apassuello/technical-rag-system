@@ -176,7 +176,9 @@ class ModelDownloader:
                 import spacy
                 spacy.load(model_name)
                 return True
-            except:
+            except (ModuleNotFoundError, OSError, IOError) as e:
+                # Model not found or failed to load
+                logger.debug(f"spaCy model {model_name} not available: {e}")
                 return False
 
         elif model_type == "ollama":
@@ -189,7 +191,9 @@ class ModelDownloader:
                     timeout=10
                 )
                 return model_name in result.stdout
-            except:
+            except (subprocess.SubprocessError, TimeoutError, FileNotFoundError) as e:
+                # Ollama not installed or command failed
+                logger.debug(f"Failed to check Ollama model {model_name}: {e}")
                 return False
 
         return False

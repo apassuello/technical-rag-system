@@ -334,8 +334,9 @@ class TestAPIGatewayQueryAnalyzerIntegration:
         for i in range(cb.failure_threshold):
             try:
                 await gateway._analyze_query(request)
-            except:
-                pass  # Expected failures
+            except Exception:
+                # Expected failures to trigger circuit breaker
+                pass
         
         # Circuit breaker should now be open
         if cb.failure_count >= cb.failure_threshold:

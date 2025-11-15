@@ -178,7 +178,8 @@ def create_optimized_batch_processor(pdf_files: List[Path], batch_size: int = 16
         pdf_files_with_size = [(f, f.stat().st_size) for f in pdf_files if f.exists()]
         pdf_files_with_size.sort(key=lambda x: x[1], reverse=True)  # Largest first
         sorted_files = [f for f, _ in pdf_files_with_size]
-    except:
+    except OSError as e:
+        logger.warning(f"Failed to sort files by size, using original order: {e}")
         sorted_files = pdf_files
     
     # Create batches

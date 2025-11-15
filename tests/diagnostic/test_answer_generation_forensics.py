@@ -471,7 +471,9 @@ class AnswerGenerationForensics(DiagnosticTestBase):
         if hasattr(generator, 'get_generator_info'):
             try:
                 config["configuration"] = generator.get_generator_info()
-            except:
+            except (AttributeError, TypeError, Exception) as e:
+                # Method might not be callable or might raise an error
+                logger.debug(f"Could not get generator info: {e}")
                 config["configuration"] = "unable_to_access"
         
         return config
@@ -895,7 +897,9 @@ class AnswerGenerationForensics(DiagnosticTestBase):
                     confidence = answer.confidence
                     confidence_values.append(confidence)
                     detection["test_results"][query] = confidence
-                except:
+                except Exception as e:
+                    # Query processing might fail for various reasons
+                    logger.debug(f"Query processing failed for '{query}': {e}")
                     continue
             
             # Check for hardcoded values
@@ -946,7 +950,9 @@ class AnswerGenerationForensics(DiagnosticTestBase):
                 try:
                     answer = orchestrator.process_query(query)
                     confidences.append(answer.confidence)
-                except:
+                except Exception as e:
+                    # Query might fail for various reasons
+                    logger.debug(f"Query processing failed: {e}")
                     continue
             
             if confidences:

@@ -100,7 +100,8 @@ except ImportError:
             # Use Epic1-specific memory usage if available, otherwise use current stats
             try:
                 current_usage = self.get_epic1_memory_usage()
-            except:
+            except (AttributeError, Exception):
+                # Epic1-specific method might not exist or might fail
                 current_stats = self.get_current_stats()
                 current_usage = current_stats.used_mb
             

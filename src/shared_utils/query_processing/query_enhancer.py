@@ -26,7 +26,7 @@ class QueryEnhancer:
     Performance: <10ms query enhancement, improves retrieval relevance by >10%
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize QueryEnhancer with technical domain knowledge."""
         
         # Technical vocabulary dictionary organized by domain

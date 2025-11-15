@@ -24,16 +24,18 @@ PARSER_REGISTRY = {
     # 'citation': CitationParser,
 }
 
-def get_parser_class(parser_type: str):
+from typing import Type
+
+def get_parser_class(parser_type: str) -> Type[MarkdownParser]:
     """
     Get response parser class by type.
-    
+
     Args:
         parser_type: Parser type name
-        
+
     Returns:
         Parser class
-        
+
     Raises:
         ValueError: If parser type not found
     """

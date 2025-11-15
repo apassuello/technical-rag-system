@@ -550,12 +550,12 @@ class AdaptiveRouter:
         
         return stats
     
-    def configure_fallback_chain(self, fallback_chain):
+    def configure_fallback_chain(self, fallback_chain: List[Any]) -> None:
         """Configure fallback chain for test compatibility."""
         self.fallback_chain = fallback_chain
         logger.info(f"Configured fallback chain with {len(fallback_chain)} options")
-    
-    def _attempt_model_request(self, model_option, query, context=None):
+
+    def _attempt_model_request(self, model_option: Any, query: str, context: Optional[Any] = None) -> Optional[Any]:
         """
         Attempt model request with comprehensive error handling and circuit breaker pattern.
         

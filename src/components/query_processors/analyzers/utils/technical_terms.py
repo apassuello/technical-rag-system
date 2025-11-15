@@ -22,11 +22,11 @@ logger = logging.getLogger(__name__)
 
 class TrieNode:
     """Node in a trie data structure for efficient term lookup."""
-    
-    def __init__(self):
-        self.children = {}
-        self.is_end = False
-        self.term_info = None  # Can store additional metadata
+
+    def __init__(self) -> None:
+        self.children: Dict[str, 'TrieNode'] = {}
+        self.is_end: bool = False
+        self.term_info: Optional[Dict] = None  # Can store additional metadata
 
 
 class TechnicalTermManager:

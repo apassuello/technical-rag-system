@@ -29,7 +29,7 @@ class Parameter:
     impacts: List[str] = None
     description: Optional[str] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.impacts is None:
             self.impacts = []
 
@@ -42,12 +42,12 @@ class ParameterRegistry:
     specification for systematic parameter optimization.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize parameter registry."""
         self.parameters: Dict[str, Parameter] = {}
         self._initialize_default_parameters()
 
-    def _initialize_default_parameters(self):
+    def _initialize_default_parameters(self) -> None:
         """Initialize default parameter definitions from spec."""
         # BM25 parameters - critical for document ranking
         self.register_parameter(

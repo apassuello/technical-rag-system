@@ -29,9 +29,10 @@ except ImportError:
             for _ in range(warmup):
                 try:
                     operation()
-                except:
+                except Exception:
+                    # Operation might fail during warmup
                     pass
-            
+
             # Benchmark
             times = []
             successes = 0
@@ -40,7 +41,8 @@ except ImportError:
                 try:
                     operation()
                     successes += 1
-                except:
+                except Exception:
+                    # Operation might fail during benchmark
                     pass
                 times.append((time.time() - start) * 1000)  # Convert to ms
             

@@ -144,7 +144,8 @@ class InferenceProvidersGenerator:
                             self.model_name = model
                             self.using_chat_completion = True
                             return
-                        except:
+                        except Exception as e:
+                            print(f"⚠️ Model {model} failed: {e}", file=sys.stderr, flush=True)
                             continue
             
             # If chat completion fails, test classic text generation
@@ -160,7 +161,8 @@ class InferenceProvidersGenerator:
                     self.model_name = model
                     self.using_chat_completion = False
                     return
-                except:
+                except Exception as e:
+                    print(f"⚠️ Classic model {model} failed: {e}", file=sys.stderr, flush=True)
                     continue
             
             raise Exception("No working models found in Inference Providers API")
@@ -244,8 +246,8 @@ class InferenceProvidersGenerator:
                     )
                     if hasattr(response, 'choices') and response.choices:
                         return response.choices[0].message.content
-                except:
-                    pass
+                except Exception as fallback_error:
+                    print(f"⚠️ Fallback model also failed: {fallback_error}", file=sys.stderr, flush=True)
             
             raise Exception(f"Chat completion failed: {e}")
     

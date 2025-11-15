@@ -28,14 +28,14 @@ class VocabularyIndex:
     - Lookup: O(1) set operations
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize empty vocabulary index."""
         self.vocabulary: Set[str] = set()
         self.term_frequencies: Dict[str, int] = defaultdict(int)
         self.technical_terms: Set[str] = set()
         self.document_frequencies: Dict[str, int] = defaultdict(int)
-        self.total_documents = 0
-        self.total_terms = 0
+        self.total_documents: int = 0
+        self.total_terms: int = 0
         
         # Regex for term extraction
         self._term_pattern = re.compile(r'\b[a-zA-Z][a-zA-Z0-9\-_]*\b')

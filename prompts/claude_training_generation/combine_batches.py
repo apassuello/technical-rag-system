@@ -72,15 +72,17 @@ def find_training_files(directory: Path) -> List[Path]:
         try:
             with open(json_file, 'r') as f:
                 data = json.load(f)
-            
+
             # Handle wrapped format
             if isinstance(data, dict) and "samples" in data:
                 data = data["samples"]
-            
+
             if is_training_dataset(data):
                 valid_files.append(json_file)
-        except:
-            continue  # Skip invalid files silently
+        except (json.JSONDecodeError, OSError, KeyError) as e:
+            # Skip invalid JSON files, unreadable files, or malformed data silently
+            print(f"Warning: Skipping invalid file {json_file}: {e}", file=sys.stderr)
+            continue
     
     return valid_files
 

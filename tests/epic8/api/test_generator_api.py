@@ -422,7 +422,8 @@ class TestGeneratorAPIBatchGeneration:
                 try:
                     error_data = response.json()
                     print(f"Error details: {error_data}")
-                except:
+                except (ValueError, json.JSONDecodeError):
+                    # Response might not be JSON
                     pass
                 # Don't hard fail - might be early implementation
             

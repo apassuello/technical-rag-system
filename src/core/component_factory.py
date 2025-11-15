@@ -852,17 +852,17 @@ class ComponentFactory:
         return cls.create_generator(generator_type, **kwargs)
     
     @classmethod
-    def create_query_analyzer(cls, analyzer_type: str, **kwargs):
+    def create_query_analyzer(cls, analyzer_type: str, **kwargs) -> Any:
         """
         Create a query analyzer instance.
-        
+
         Args:
             analyzer_type: Type of analyzer ("nlp", "rule_based", "epic1", "epic1_ml")
             **kwargs: Arguments to pass to the analyzer constructor
-            
+
         Returns:
             Instantiated QueryAnalyzer
-            
+
         Raises:
             ValueError: If analyzer type is not supported
             TypeError: If constructor arguments are invalid

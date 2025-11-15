@@ -719,8 +719,9 @@ class TestServiceResilience:
                     await service.cache_response(f"fail_test_{i}", {"data": f"fail {i}"})
                     await service.get_cached_response(f"fail_test_{i}")
                     failure_count += 2
-                except:
-                    pass  # Failures are expected
+                except Exception:
+                    # Failures are expected to trigger circuit breaker
+                    pass
             
             # Circuit breaker should now be open
             assert service._is_circuit_breaker_open(), "Circuit breaker should be open after failures"

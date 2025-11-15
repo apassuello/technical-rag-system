@@ -193,7 +193,8 @@ class OllamaAnswerGenerator(AnswerGenerator if AnswerGenerator != object else ob
                             print(f"✅ Successfully pulled fallback {fallback}")
                             self.model_name = fallback
                             return
-                    except:
+                    except (requests.RequestException, TimeoutError) as e:
+                        print(f"⚠️ Fallback {fallback} failed: {e}")
                         continue
                 raise Exception(f"Failed to pull {model_name} or any fallback models")
         except Exception as e:

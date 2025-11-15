@@ -41,7 +41,7 @@ class MetricsCollector(BaseMetricsCollector):
     metrics collector while leveraging the new shared metrics infrastructure.
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize metrics collector with calibration-specific configuration."""
         session_metadata_obj = SessionMetadata()
         storage = InMemoryMetricsStorage(max_query_metrics=10000)

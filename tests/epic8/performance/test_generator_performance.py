@@ -490,8 +490,9 @@ class TestGeneratorConcurrentPerformance:
                     pytest.fail("Service unhealthy after concurrent API load - HARD FAIL")
                 else:
                     print("✅ Service remained healthy after concurrent API load")
-            except:
-                print("WARNING: Could not verify service health after concurrent load")
+            except (requests.RequestException, TimeoutError) as e:
+                # Health check might fail due to network or timeout
+                print(f"WARNING: Could not verify service health after concurrent load: {e}")
                 
         except requests.exceptions.ConnectionError:
             pytest.skip("Generator service not running for API performance test")
@@ -1004,8 +1005,9 @@ class TestGeneratorPerformanceIntegration:
                         print("WARNING: Service unhealthy after stability test")
                     else:
                         print("✅ Service remained healthy after stability test")
-                except:
-                    print("WARNING: Could not verify service health after stability test")
+                except (requests.RequestException, TimeoutError) as e:
+                    # Health check might fail due to network or timeout
+                    print(f"WARNING: Could not verify service health after stability test: {e}")
             else:
                 pytest.skip("No requests completed during stability test")
                 

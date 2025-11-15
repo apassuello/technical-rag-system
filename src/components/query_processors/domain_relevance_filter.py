@@ -55,9 +55,9 @@ class DomainRelevanceScorer:
     as a reusable component for the production filter.
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         # High relevance indicators - clearly RISC-V specific
-        self.high_relevance_keywords = [
+        self.high_relevance_keywords: List[str] = [
             'risc-v', 'riscv', 'risc v', 'risc_v',
             'rv32', 'rv64', 'rv128',
             'vector extension', 'rvv', 'risc-v vector',
