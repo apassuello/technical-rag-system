@@ -1,0 +1,18 @@
+# Cache and temporary files
+cache/
+*.tmp
+*.temp
+*.cache
+
+# Processing artifacts
+processed/*.log
+*.processing
+
+# Large intermediate files
+*.pickle
+*.pkl
+*.joblib
+
+# System files
+.DS_Store
+Thumbs.db

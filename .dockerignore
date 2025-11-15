@@ -1,0 +1,170 @@
+# Docker ignore file for RAG Portfolio System
+# Excludes unnecessary files from Docker build context to reduce image size
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# ML Model caches (IMPORTANT - prevents large model files from being copied)
+# Models should be downloaded at runtime or mounted as volumes
+*.cache/
+.cache/
+models/
+*.model
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# HuggingFace cache (can be multiple GB)
+.huggingface/
+huggingface/
+transformers_cache/
+sentence_transformers/
+
+# spaCy models (download at runtime)
+*.spacy/
+**/site-packages/en_core_*
+**/site-packages/xx_*
+
+# Ollama models (very large, managed separately)
+.ollama/
+ollama/
+
+# Data directories (should be mounted as volumes)
+data/documents/
+data/processed/
+data/cache/
+*.parquet
+*.feather
+*.arrow
+
+# Logs (generated at runtime)
+logs/
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+*.cover
+.hypothesis/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (not needed in runtime)
+docs/
+*.md
+!README.md  # Keep README for reference
+
+# Development files
+.env
+.env.*
+!.env.template
+*.local
+
+# CI/CD
+.github/
+.gitlab/
+.circleci/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Jupyter notebooks (dev only)
+*.ipynb
+.ipynb_checkpoints/
+
+# Large datasets
+*.csv
+*.json
+*.jsonl
+!config/*.json
+!config/*.yaml
+!config/*.yml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Service-specific exclusions
+services/**/logs/
+services/**/cache/
+services/**/data/
+
+# Test data (unless explicitly needed)
+test_data/
+tests/fixtures/large_*
+
+# Docker compose files (not needed in image)
+docker-compose*.yml
+Dockerfile*
+!Dockerfile  # Keep the main Dockerfile
+
+# Scripts (most not needed at runtime)
+scripts/download_models.py
+scripts/verify_models.py
+scripts/benchmark_*.py
+scripts/train_*.py
+
+# Keep essential scripts
+!scripts/entrypoint.sh
+!scripts/healthcheck.sh
+
+# Historical/archived files
+archive/
+old/
+deprecated/
+backup/
+
+# Coverage and profiling
+.coverage.*
+*.prof
+*.pstats
+
+# Security
+*.pem
+*.key
+*.crt
+secrets/
+credentials/
+
+# Monitoring data (generated at runtime)
+metrics/
+prometheus/
+grafana/
+
+# Volume mount points (empty directories for Docker volumes)
+volumes/
+mounts/

@@ -48,9 +48,11 @@ services:
       - PYTHONPATH=/app:/app/src
       - PROJECT_ROOT=/app
       - QUERY_ANALYZER_CONFIG_FILE=/app/config.yaml
+      - HF_HOME=/app/models/huggingface  # HuggingFace cache
     volumes:
       - query_analyzer_logs:/app/logs
       - query_analyzer_cache:/app/cache
+      - huggingface_models:/app/models/huggingface  # ML models cache
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/health/live"]
       interval: 30s
@@ -107,10 +109,12 @@ services:
       - PYTHONPATH=/app:/app/src
       - PROJECT_ROOT=/app
       - WEAVIATE_URL=http://weaviate:8080
+      - HF_HOME=/app/models/huggingface  # HuggingFace cache
     volumes:
       - retriever_logs:/app/logs
       - retriever_cache:/app/cache
       - ./data:/app/data:ro  # Document data (read-only)
+      - huggingface_models:/app/models/huggingface  # ML models cache
     depends_on:
       - weaviate
     healthcheck:
@@ -299,7 +303,14 @@ volumes:
     driver: local
     labels:
       - "com.epic8.volume=analytics-data"
-  
+
+  # ML Model volumes
+  huggingface_models:
+    driver: local
+    labels:
+      - "com.epic8.volume=huggingface-models"
+      - "com.epic8.purpose=ml-model-cache"
+
   # Supporting service volumes
   weaviate_data:
     driver: local
