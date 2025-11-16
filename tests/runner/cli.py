@@ -557,36 +557,34 @@ Examples:
             format_type = args.format
             
             if format_type in ['term', 'term-missing']:
-                # Terminal report
-                show_missing = '--show-missing' if format_type == 'term-missing' else ''
-                cmd = f"coverage report {show_missing}"
-                subprocess.run(cmd, shell=True, check=True)
-                
+                # Terminal report (secure: no shell injection)
+                cmd = ['coverage', 'report']
+                if format_type == 'term-missing':
+                    cmd.append('--show-missing')
+                subprocess.run(cmd, check=True)
+
             elif format_type == 'html':
-                # HTML report
+                # HTML report (secure: no shell injection)
                 output_dir = args.output_dir
-                cmd = f"coverage html -d {output_dir}"
-                subprocess.run(cmd, shell=True, check=True)
+                subprocess.run(['coverage', 'html', '-d', output_dir], check=True)
                 print(f"📊 HTML coverage report generated: {output_dir}/index.html")
-                
+
             elif format_type == 'xml':
-                # XML report
-                cmd = "coverage xml"
-                subprocess.run(cmd, shell=True, check=True)
+                # XML report (secure: no shell injection)
+                subprocess.run(['coverage', 'xml'], check=True)
                 print("📊 XML coverage report generated: coverage.xml")
-                
+
             elif format_type == 'json':
-                # JSON report
-                cmd = "coverage json"
-                subprocess.run(cmd, shell=True, check=True)
+                # JSON report (secure: no shell injection)
+                subprocess.run(['coverage', 'json'], check=True)
                 print("📊 JSON coverage report generated: coverage.json")
-                
+
             elif format_type == 'all':
-                # Generate all report types
-                subprocess.run("coverage report --show-missing", shell=True, check=True)
-                subprocess.run(f"coverage html -d {args.output_dir}", shell=True, check=True)
-                subprocess.run("coverage xml", shell=True, check=True)
-                subprocess.run("coverage json", shell=True, check=True)
+                # Generate all report types (secure: no shell injection)
+                subprocess.run(['coverage', 'report', '--show-missing'], check=True)
+                subprocess.run(['coverage', 'html', '-d', args.output_dir], check=True)
+                subprocess.run(['coverage', 'xml'], check=True)
+                subprocess.run(['coverage', 'json'], check=True)
                 print(f"📊 All coverage reports generated:")
                 print(f"  - Terminal: displayed above")
                 print(f"  - HTML: {args.output_dir}/index.html")

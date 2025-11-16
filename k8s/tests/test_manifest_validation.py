@@ -554,14 +554,23 @@ def run_kubeval_validation(manifest_dir: Path) -> List[ValidationResult]:
         return results
 
     try:
-        # Run kubeval on all YAML files
-        cmd = ["kubeval", str(manifest_dir / "*.yaml")]
+        # Run kubeval on all YAML files (secure: no shell injection)
+        yaml_files = list(manifest_dir.glob("*.yaml"))
+        if not yaml_files:
+            results.append(ValidationResult(
+                passed=False,
+                message="No YAML files found in manifest directory",
+                severity="error",
+                details={"manifest_dir": str(manifest_dir)}
+            ))
+            return results
+
+        cmd = ["kubeval"] + [str(f) for f in yaml_files]
 
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            shell=True,
             timeout=60
         )
 

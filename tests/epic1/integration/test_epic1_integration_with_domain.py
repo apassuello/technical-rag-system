@@ -13,7 +13,7 @@ import time
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Union
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -46,24 +46,31 @@ class TestEpic1IntegrationWithDomain:
             ]
         }
     
-    def run_subprocess_test(self, cmd: str, description: str, timeout: int = 30) -> Tuple[bool, str, str]:
+    def run_subprocess_test(self, cmd: Union[str, List[str]], description: str, timeout: int = 30) -> Tuple[bool, str, str]:
         """
-        Run a subprocess command and capture output.
-        
+        Run a subprocess command and capture output (secure: no shell injection).
+
         Args:
-            cmd: Command to run
+            cmd: Command to run (list preferred for security, string supported for compatibility)
             description: Description for logging
             timeout: Timeout in seconds
-            
+
         Returns: (success, stdout, stderr)
         """
         logger.info(f"🔧 {description}")
         logger.info(f"Command: {cmd}")
-        
+
+        # Convert string commands to list for security (prevents shell injection)
+        if isinstance(cmd, str):
+            logger.warning("String command detected - consider using list format for better security")
+            # Split on whitespace for basic conversion (caller should use list instead)
+            cmd_list = cmd.split()
+        else:
+            cmd_list = cmd
+
         try:
             result = subprocess.run(
-                cmd,
-                shell=True,
+                cmd_list,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
