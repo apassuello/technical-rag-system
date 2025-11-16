@@ -195,7 +195,7 @@ class IndexBuilder:
         try:
             # Process based on file type
             if file_path.suffix == '.pdf':
-                documents = self.processor.process_pdf(str(file_path))
+                documents = self.processor.process(file_path)
             elif file_path.suffix in ['.txt', '.md']:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     text = f.read()
@@ -238,7 +238,7 @@ class IndexBuilder:
             texts = [doc.content for doc in documents]
 
             # Generate embeddings
-            embeddings = self.embedder.embed_documents(texts)
+            embeddings = self.embedder.embed(texts)
 
             # Attach embeddings to documents
             for doc, embedding in zip(documents, embeddings):
