@@ -282,8 +282,8 @@ Be direct, confident, and accurate. If the context answers the question, provide
                 question_part = "What is the main information?"
             
             # Debug output
-            print(f"🔍 Squad2 Question: {question_part[:100]}...")
-            print(f"🔍 Squad2 Context: {context_part[:200]}...")
+            logger.debug(f"🔍 Squad2 Question: {question_part[:100]}...")
+            logger.debug(f"🔍 Squad2 Context: {context_part[:200]}...")
             
             payload = {
                 "inputs": {
@@ -345,13 +345,13 @@ Be direct, confident, and accurate. If the context answers the question, provide
             result = response.json()
             
             # Handle different response formats based on model type
-            print(f"🔍 API Response type: {type(result)}")
-            print(f"🔍 API Response preview: {str(result)[:300]}...")
+            logger.debug(f"🔍 API Response type: {type(result)}")
+            logger.debug(f"🔍 API Response preview: {str(result)[:300]}...")
             
             if isinstance(result, dict) and "answer" in result:
                 # RoBERTa Squad2 format: {"answer": "...", "score": ..., "start": ..., "end": ...}
                 answer = result["answer"].strip()
-                print(f"🔍 Squad2 extracted answer: {answer}")
+                logger.debug(f"🔍 Squad2 extracted answer: {answer}")
                 return answer
             elif isinstance(result, list) and len(result) > 0:
                 # Check for DistilBART format (returns dict with summary_text)
