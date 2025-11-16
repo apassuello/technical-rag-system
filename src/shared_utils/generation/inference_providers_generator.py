@@ -19,16 +19,17 @@ import re
 from .hf_answer_generator import Citation, GeneratedAnswer
 from .prompt_templates import TechnicalPromptTemplates
 
+# Set up logging
+logger = logging.getLogger(__name__)
+
 # Check if huggingface_hub is new enough for InferenceClient chat completion
 try:
     from huggingface_hub import InferenceClient
     from huggingface_hub import __version__ as hf_hub_version
-    print(f"🔍 Using huggingface_hub version: {hf_hub_version}", file=sys.stderr, flush=True)
+    logger.info(f"🔍 Using huggingface_hub version: {hf_hub_version}")
 except ImportError:
-    print("❌ huggingface_hub not found or outdated. Please install: pip install -U huggingface-hub", file=sys.stderr, flush=True)
+    logger.error("❌ huggingface_hub not found or outdated. Please install: pip install -U huggingface-hub")
     raise
-
-logger = logging.getLogger(__name__)
 
 
 class InferenceProvidersGenerator:
@@ -85,11 +86,11 @@ class InferenceProvidersGenerator:
         )
         
         if not self.api_token:
-            print("⚠️ No HF API token found. Inference Providers requires authentication.", file=sys.stderr, flush=True)
-            print("Set HF_TOKEN, HUGGINGFACE_API_TOKEN, or HF_API_TOKEN environment variable.", file=sys.stderr, flush=True)
+            logger.warning("⚠️ No HF API token found. Inference Providers requires authentication.")
+            logger.warning("Set HF_TOKEN, HUGGINGFACE_API_TOKEN, or HF_API_TOKEN environment variable.")
             raise ValueError("HuggingFace API token required for Inference Providers")
-        
-        print(f"✅ Found HF token (starts with: {self.api_token[:8]}...)", file=sys.stderr, flush=True)
+
+        logger.info(f"✅ Found HF token (starts with: {self.api_token[:8]}...)")
         
         # Initialize client with token
         self.client = InferenceClient(token=self.api_token)
@@ -100,15 +101,15 @@ class InferenceProvidersGenerator:
         # Select model
         self.model_name = model_name or self.CHAT_MODELS[0]
         self.using_chat_completion = True
-        
-        print(f"🚀 Initialized Inference Providers with model: {self.model_name}", file=sys.stderr, flush=True)
-        
+
+        logger.info(f"🚀 Initialized Inference Providers with model: {self.model_name}")
+
         # Test the connection
         self._test_connection()
-    
+
     def _test_connection(self):
         """Test if the API is accessible and model is available."""
-        print(f"🔧 Testing Inference Providers API connection...", file=sys.stderr, flush=True)
+        logger.info("🔧 Testing Inference Providers API connection...")
         
         try:
             # Try a simple test query
@@ -124,32 +125,32 @@ class InferenceProvidersGenerator:
                     max_tokens=10,
                     temperature=0.1
                 )
-                print(f"✅ Chat completion API working with {self.model_name}", file=sys.stderr, flush=True)
+                logger.info(f"✅ Chat completion API working with {self.model_name}")
                 self.using_chat_completion = True
                 return
             except Exception as e:
-                print(f"⚠️ Chat completion failed for {self.model_name}: {e}", file=sys.stderr, flush=True)
-                
+                logger.warning(f"⚠️ Chat completion failed for {self.model_name}: {e}")
+
                 # Try other chat models
                 for model in self.CHAT_MODELS:
                     if model != self.model_name:
                         try:
-                            print(f"🔄 Trying {model}...", file=sys.stderr, flush=True)
+                            logger.info(f"🔄 Trying {model}...")
                             response = self.client.chat_completion(
                                 messages=test_messages,
                                 model=model,
                                 max_tokens=10
                             )
-                            print(f"✅ Found working model: {model}", file=sys.stderr, flush=True)
+                            logger.info(f"✅ Found working model: {model}")
                             self.model_name = model
                             self.using_chat_completion = True
                             return
                         except Exception as e:
-                            print(f"⚠️ Model {model} failed: {e}", file=sys.stderr, flush=True)
+                            logger.warning(f"⚠️ Model {model} failed: {e}")
                             continue
             
             # If chat completion fails, test classic text generation
-            print("🔄 Falling back to classic text generation API...", file=sys.stderr, flush=True)
+            logger.info("🔄 Falling back to classic text generation API...")
             for model in self.CLASSIC_FALLBACK_MODELS:
                 try:
                     response = self.client.text_generation(
@@ -157,18 +158,18 @@ class InferenceProvidersGenerator:
                         prompt="Hello",
                         max_new_tokens=10
                     )
-                    print(f"✅ Classic API working with fallback model: {model}", file=sys.stderr, flush=True)
+                    logger.info(f"✅ Classic API working with fallback model: {model}")
                     self.model_name = model
                     self.using_chat_completion = False
                     return
                 except Exception as e:
-                    print(f"⚠️ Classic model {model} failed: {e}", file=sys.stderr, flush=True)
+                    logger.warning(f"⚠️ Classic model {model} failed: {e}")
                     continue
-            
+
             raise Exception("No working models found in Inference Providers API")
-            
+
         except Exception as e:
-            print(f"❌ Inference Providers API test failed: {e}", file=sys.stderr, flush=True)
+            logger.error(f"❌ Inference Providers API test failed: {e}")
             raise
     
     def _format_context(self, chunks: List[Dict[str, Any]]) -> str:
@@ -211,8 +212,8 @@ class InferenceProvidersGenerator:
     def _call_chat_completion(self, messages: List[Dict[str, str]]) -> str:
         """Call the chat completion API."""
         try:
-            print(f"🤖 Calling Inference Providers chat completion with {self.model_name}...", file=sys.stderr, flush=True)
-            
+            logger.info(f"🤖 Calling Inference Providers chat completion with {self.model_name}...")
+
             # Use chat completion with proper error handling
             response = self.client.chat_completion(
                 messages=messages,
@@ -221,22 +222,22 @@ class InferenceProvidersGenerator:
                 max_tokens=self.max_tokens,
                 stream=False
             )
-            
+
             # Extract content from response
             if hasattr(response, 'choices') and response.choices:
                 content = response.choices[0].message.content
-                print(f"✅ Got response: {len(content)} characters", file=sys.stderr, flush=True)
+                logger.info(f"✅ Got response: {len(content)} characters")
                 return content
             else:
-                print(f"⚠️ Unexpected response format: {response}", file=sys.stderr, flush=True)
+                logger.warning(f"⚠️ Unexpected response format: {response}")
                 return str(response)
-                
+
         except Exception as e:
-            print(f"❌ Chat completion error: {e}", file=sys.stderr, flush=True)
-            
+            logger.error(f"❌ Chat completion error: {e}")
+
             # Try with a fallback model
             if self.model_name != "microsoft/DialoGPT-medium":
-                print("🔄 Trying fallback model: microsoft/DialoGPT-medium", file=sys.stderr, flush=True)
+                logger.info("🔄 Trying fallback model: microsoft/DialoGPT-medium")
                 try:
                     response = self.client.chat_completion(
                         messages=messages,
@@ -247,14 +248,14 @@ class InferenceProvidersGenerator:
                     if hasattr(response, 'choices') and response.choices:
                         return response.choices[0].message.content
                 except Exception as fallback_error:
-                    print(f"⚠️ Fallback model also failed: {fallback_error}", file=sys.stderr, flush=True)
-            
+                    logger.warning(f"⚠️ Fallback model also failed: {fallback_error}")
+
             raise Exception(f"Chat completion failed: {e}")
     
     def _call_classic_api(self, query: str, context: str) -> str:
         """Fallback to classic text generation API."""
-        print(f"🔄 Using classic text generation with {self.model_name}...", file=sys.stderr, flush=True)
-        
+        logger.info(f"🔄 Using classic text generation with {self.model_name}...")
+
         # Format prompt for classic API
         if "squad" in self.model_name.lower():
             # Q&A format for squad models
@@ -265,7 +266,7 @@ class InferenceProvidersGenerator:
         else:
             # Generic format
             prompt = f"Based on the following context, answer the question.\n\nContext:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-        
+
         try:
             response = self.client.text_generation(
                 model=self.model_name,
@@ -275,7 +276,7 @@ class InferenceProvidersGenerator:
             )
             return response
         except Exception as e:
-            print(f"❌ Classic API error: {e}", file=sys.stderr, flush=True)
+            logger.error(f"❌ Classic API error: {e}")
             return f"Error generating response: {str(e)}"
     
     def _extract_citations(self, answer: str, chunks: List[Dict[str, Any]]) -> Tuple[str, List[Citation]]:
@@ -296,7 +297,7 @@ class InferenceProvidersGenerator:
         if not cited_chunks and chunks and len(answer.strip()) > 50:
             num_fallback = min(3, len(chunks))
             cited_chunks = set(range(num_fallback))
-            print(f"🔧 Creating {num_fallback} fallback citations", file=sys.stderr, flush=True)
+            logger.debug(f"🔧 Creating {num_fallback} fallback citations")
         
         # Create Citation objects
         chunk_to_source = {}
@@ -420,8 +421,8 @@ class InferenceProvidersGenerator:
             
         except Exception as e:
             logger.error(f"Error generating answer: {e}")
-            print(f"❌ Generation failed: {e}", file=sys.stderr, flush=True)
-            
+            logger.error(f"❌ Generation failed: {e}")
+
             # Return error response
             return GeneratedAnswer(
                 answer="I apologize, but I encountered an error while generating the answer. Please try again.",
@@ -489,8 +490,8 @@ class InferenceProvidersGenerator:
             
         except Exception as e:
             logger.error(f"Error generating answer with custom prompt: {e}")
-            print(f"❌ Custom prompt generation failed: {e}", file=sys.stderr, flush=True)
-            
+            logger.error(f"❌ Custom prompt generation failed: {e}")
+
             # Return error response
             return GeneratedAnswer(
                 answer="I apologize, but I encountered an error while generating the answer. Please try again.",

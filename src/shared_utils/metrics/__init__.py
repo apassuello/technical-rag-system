@@ -27,7 +27,7 @@ Example usage:
     collector.collect_performance_metrics(metrics, total_time, memory_mb, cpu_percent)
     
     # Get summary and export
-    print(collector.get_metrics_summary())
+    logger.info(collector.get_metrics_summary())
     collector.export_metrics(Path("metrics.json"))
 """
 
@@ -51,7 +51,10 @@ from .data_models import (
 
 # Import concrete implementations
 from .calibration_collector import MetricsCollector, QueryMetrics
+import logging
 
+
+logger = logging.getLogger(__name__)
 # Define public API
 __all__ = [
     # Base classes

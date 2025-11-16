@@ -25,7 +25,10 @@ from dataclasses import dataclass
 
 from .toc_guided_parser import TOCGuidedParser, TOCEntry
 from .pdfplumber_parser import PDFPlumberParser
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 class HybridParser:
     """
@@ -122,12 +125,12 @@ class HybridParser:
         Returns:
             List of high-quality chunks with preserved structure
         """
-        print("🔗 Starting Hybrid TOC + PDFPlumber parsing...")
+        logger.info("🔗 Starting Hybrid TOC + PDFPlumber parsing...")
         
         # Step 1: Use TOC to identify structure
-        print("📋 Step 1: Extracting TOC structure...")
+        logger.info("📋 Step 1: Extracting TOC structure...")
         toc_entries = self.toc_parser.parse_toc(pdf_data['pages'])
-        print(f"   Found {len(toc_entries)} TOC entries")
+        logger.info(f"   Found {len(toc_entries)} TOC entries")
         
         # Check if TOC is reliable (multiple entries or quality single entry)
         toc_is_reliable = (
@@ -137,13 +140,13 @@ class HybridParser:
         
         if not toc_entries or not toc_is_reliable:
             if not toc_entries:
-                print("   ⚠️ No TOC found, using full page coverage parsing")
+                logger.warning("   ⚠️ No TOC found, using full page coverage parsing")
             else:
-                print(f"   ⚠️ TOC quality poor (title: '{toc_entries[0].title}'), using full page coverage")
+                logger.warning(f"   ⚠️ TOC quality poor (title: '{toc_entries[0].title}'), using full page coverage")
             return self.plumber_parser.parse_document(pdf_path, pdf_data)
         
         # Step 2: Use PDFPlumber for precise extraction
-        print("🔬 Step 2: PDFPlumber extraction of TOC sections...")
+        logger.info("🔬 Step 2: PDFPlumber extraction of TOC sections...")
         chunks = []
         chunk_id = 0
         
@@ -168,7 +171,7 @@ class HybridParser:
                         chunks.extend(section_chunks)
                         chunk_id += len(section_chunks)
         
-        print(f"   Created {len(chunks)} high-quality chunks")
+        logger.info(f"   Created {len(chunks)} high-quality chunks")
         return chunks
     
     def _extract_section_with_plumber(self, pdf, toc_entry: TOCEntry, 
@@ -479,4 +482,4 @@ def parse_pdf_with_hybrid_approach(pdf_path: Path, pdf_data: Dict[str, Any],
 # Example usage
 if __name__ == "__main__":
     print("Hybrid TOC + PDFPlumber Parser")
-    print("Combines TOC navigation with PDFPlumber precision and aggressive trash filtering")
+    logger.info("Combines TOC navigation with PDFPlumber precision and aggressive trash filtering")

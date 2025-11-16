@@ -489,4 +489,4 @@ if __name__ == "__main__":
         max_evaluations=50
     )
     
-    print(engine.get_optimization_summary())
+    logger.info(engine.get_optimization_summary())

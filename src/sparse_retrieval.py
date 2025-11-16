@@ -7,7 +7,10 @@ from typing import List, Dict, Tuple, Optional
 from rank_bm25 import BM25Okapi
 import re
 import time
+import logging
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 class BM25SparseRetriever:
@@ -124,8 +127,8 @@ class BM25SparseRetriever:
         elapsed = time.time() - start_time
         tokens_per_sec = sum(len(tokens) for tokens in self.tokenized_corpus) / elapsed
         
-        print(f"Indexed {len(chunks)} chunks ({len(valid_corpus)} valid) in {elapsed:.3f}s")
-        print(f"Processing rate: {tokens_per_sec:.1f} tokens/second")
+        logger.info(f"Indexed {len(chunks)} chunks ({len(valid_corpus)} valid) in {elapsed:.3f}s")
+        logger.info(f"Processing rate: {tokens_per_sec:.1f} tokens/second")
 
     def search(self, query: str, top_k: int = 10) -> List[Tuple[int, float]]:
         """

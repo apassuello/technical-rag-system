@@ -675,9 +675,9 @@ def main():
     generator = ClaudeDatasetGenerator(config)
     datapoints, report = generator.generate_dataset()
     
-    print(f"Generated {len(datapoints)} training samples")
-    print(f"Dataset ready for training: {report['ready_for_training']}")
-    print(f"Overall health score: {report['dataset_summary']['quality_metrics']['overall_health_score']:.3f}")
+    logger.info(f"Generated {len(datapoints)} training samples")
+    logger.info(f"Dataset ready for training: {report['ready_for_training']}")
+    logger.info(f"Overall health score: {report['dataset_summary']['quality_metrics']['overall_health_score']:.3f}")
 
 
 if __name__ == "__main__":

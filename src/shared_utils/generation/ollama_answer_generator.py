@@ -11,10 +11,13 @@ import requests
 import json
 import re
 import sys
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 # Import shared components
 from .hf_answer_generator import Citation, GeneratedAnswer
@@ -76,71 +79,43 @@ class OllamaAnswerGenerator(AnswerGenerator if AnswerGenerator != object else ob
         max_retries = 12  # Wait up to 60 seconds for Ollama to start
         retry_delay = 5
 
-        print(
-            f"🔧 Testing connection to {self.base_url}/api/tags...",
-            file=sys.stderr,
-            flush=True,
-        )
+        logger.info(f"🔧 Testing connection to {self.base_url}/api/tags...")
 
         for attempt in range(max_retries):
             try:
                 response = requests.get(f"{self.base_url}/api/tags", timeout=8)
                 if response.status_code == 200:
-                    print(
-                        f"✅ Connected to Ollama at {self.base_url}",
-                        file=sys.stderr,
-                        flush=True,
-                    )
+                    logger.info(f"✅ Connected to Ollama at {self.base_url}")
 
                     # Check if our model is available
                     models = response.json().get("models", [])
                     model_names = [m["name"] for m in models]
 
                     if self.model_name in model_names:
-                        print(
-                            f"✅ Model {self.model_name} is available",
-                            file=sys.stderr,
-                            flush=True,
-                        )
+                        logger.info(f"✅ Model {self.model_name} is available")
                         return  # Success!
                     else:
-                        print(
-                            f"⚠️ Model {self.model_name} not found. Available: {model_names}",
-                            file=sys.stderr,
-                            flush=True,
-                        )
+                        logger.warning(f"⚠️ Model {self.model_name} not found. Available: {model_names}")
                         if models:  # If any models are available, use the first one
                             fallback_model = model_names[0]
-                            print(
-                                f"🔄 Using fallback model: {fallback_model}",
-                                file=sys.stderr,
-                                flush=True,
-                            )
+                            logger.info(f"🔄 Using fallback model: {fallback_model}")
                             self.model_name = fallback_model
                             return
                         else:
-                            print(
-                                f"📥 No models found, will try to pull {self.model_name}",
-                                file=sys.stderr,
-                                flush=True,
-                            )
+                            logger.info(f"📥 No models found, will try to pull {self.model_name}")
                             # Try to pull the model
                             self._pull_model(self.model_name)
                             return
                 else:
-                    print(f"⚠️ Ollama server returned status {response.status_code}")
+                    logger.warning(f"⚠️ Ollama server returned status {response.status_code}")
                     if attempt < max_retries - 1:
-                        print(
-                            f"🔄 Retry {attempt + 1}/{max_retries} in {retry_delay} seconds..."
-                        )
+                        logger.info(f"🔄 Retry {attempt + 1}/{max_retries} in {retry_delay} seconds...")
                         time.sleep(retry_delay)
                         continue
 
             except requests.exceptions.ConnectionError:
                 if attempt < max_retries - 1:
-                    print(
-                        f"⏳ Ollama not ready yet, retry {attempt + 1}/{max_retries} in {retry_delay} seconds..."
-                    )
+                    logger.info(f"⏳ Ollama not ready yet, retry {attempt + 1}/{max_retries} in {retry_delay} seconds...")
                     time.sleep(retry_delay)
                     continue
                 else:
@@ -149,14 +124,14 @@ class OllamaAnswerGenerator(AnswerGenerator if AnswerGenerator != object else ob
                     )
             except requests.exceptions.Timeout:
                 if attempt < max_retries - 1:
-                    print(f"⏳ Ollama timeout, retry {attempt + 1}/{max_retries}...")
+                    logger.info(f"⏳ Ollama timeout, retry {attempt + 1}/{max_retries}...")
                     time.sleep(retry_delay)
                     continue
                 else:
                     raise Exception("Ollama server timeout after multiple retries.")
             except Exception as e:
                 if attempt < max_retries - 1:
-                    print(f"⚠️ Ollama error: {e}, retry {attempt + 1}/{max_retries}...")
+                    logger.warning(f"⚠️ Ollama error: {e}, retry {attempt + 1}/{max_retries}...")
                     time.sleep(retry_delay)
                     continue
                 else:
@@ -169,36 +144,36 @@ class OllamaAnswerGenerator(AnswerGenerator if AnswerGenerator != object else ob
     def _pull_model(self, model_name: str):
         """Pull a model if it's not available."""
         try:
-            print(f"📥 Pulling model {model_name}...")
+            logger.info(f"📥 Pulling model {model_name}...")
             pull_response = requests.post(
                 f"{self.base_url}/api/pull",
                 json={"name": model_name},
                 timeout=300,  # 5 minutes for model download
             )
             if pull_response.status_code == 200:
-                print(f"✅ Successfully pulled {model_name}")
+                logger.info(f"✅ Successfully pulled {model_name}")
             else:
-                print(f"⚠️ Failed to pull {model_name}: {pull_response.status_code}")
+                logger.warning(f"⚠️ Failed to pull {model_name}: {pull_response.status_code}")
                 # Try smaller models as fallback
                 fallback_models = ["llama3.2:1b", "llama2:latest", "mistral:latest"]
                 for fallback in fallback_models:
                     try:
-                        print(f"🔄 Trying fallback model: {fallback}")
+                        logger.info(f"🔄 Trying fallback model: {fallback}")
                         fallback_response = requests.post(
                             f"{self.base_url}/api/pull",
                             json={"name": fallback},
                             timeout=300,
                         )
                         if fallback_response.status_code == 200:
-                            print(f"✅ Successfully pulled fallback {fallback}")
+                            logger.info(f"✅ Successfully pulled fallback {fallback}")
                             self.model_name = fallback
                             return
                     except (requests.RequestException, TimeoutError) as e:
-                        print(f"⚠️ Fallback {fallback} failed: {e}")
+                        logger.warning(f"⚠️ Fallback {fallback} failed: {e}")
                         continue
                 raise Exception(f"Failed to pull {model_name} or any fallback models")
         except Exception as e:
-            print(f"❌ Model pull failed: {e}")
+            logger.error(f"❌ Model pull failed: {e}")
             raise
 
     def _format_context(self, chunks: List[Dict[str, Any]]) -> str:
@@ -362,10 +337,10 @@ Answer:"""
             return result.get("response", "").strip()
 
         except requests.exceptions.RequestException as e:
-            print(f"❌ Ollama API error: {e}")
+            logger.error(f"❌ Ollama API error: {e}")
             return f"Error communicating with Ollama: {str(e)}"
         except Exception as e:
-            print(f"❌ Unexpected error: {e}")
+            logger.error(f"❌ Unexpected error: {e}")
             return f"Unexpected error: {str(e)}"
 
     def _extract_citations(
@@ -390,11 +365,7 @@ Answer:"""
             # Use the top chunks that were provided as likely sources
             num_fallback_citations = min(3, len(chunks))  # Use top 3 chunks max
             cited_chunks = set(range(num_fallback_citations))
-            print(
-                f"🔧 Fallback: Creating {num_fallback_citations} citations for answer without explicit [chunk_X] references",
-                file=sys.stderr,
-                flush=True,
-            )
+            logger.debug(f"🔧 Fallback: Creating {num_fallback_citations} citations for answer without explicit [chunk_X] references")
 
         # Create Citation objects
         chunk_to_source = {}
@@ -641,9 +612,7 @@ Answer:"""
         prompt = self._create_prompt(query, context, chunks)
 
         # Generate answer
-        print(
-            f"🤖 Calling Ollama with {self.model_name}...", file=sys.stderr, flush=True
-        )
+        logger.info(f"🤖 Calling Ollama with {self.model_name}...")
         answer_with_citations = self._call_ollama(prompt)
 
         generation_time = (datetime.now() - start_time).total_seconds()
@@ -718,7 +687,7 @@ MANDATORY: Use [chunk_1], [chunk_2] etc. for all factual statements.
 Answer:"""
         
         # Generate answer
-        print(f"🤖 Calling Ollama with custom prompt using {self.model_name}...", file=sys.stderr, flush=True)
+        logger.info(f"🤖 Calling Ollama with custom prompt using {self.model_name}...")
         answer_with_citations = self._call_ollama(prompt)
         
         generation_time = (datetime.now() - start_time).total_seconds()

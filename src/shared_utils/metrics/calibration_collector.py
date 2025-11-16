@@ -464,4 +464,4 @@ if __name__ == "__main__":
     collector.collect_validation_results(metrics, expected, actual)
     collector.collect_performance_metrics(metrics, 1.45, 256.0, 45.2)
     
-    print(collector.get_metrics_summary())
+    logger.info(collector.get_metrics_summary())

@@ -437,7 +437,7 @@ Be direct, confident, and accurate. If the context answers the question, provide
             # Use the top chunks that were provided as likely sources
             num_fallback_citations = min(3, len(chunks))  # Use top 3 chunks max
             cited_chunks = set(range(num_fallback_citations))
-            print(f"🔧 HF Fallback: Creating {num_fallback_citations} citations for answer without explicit [chunk_X] references", file=sys.stderr, flush=True)
+            logger.debug(f"🔧 HF Fallback: Creating {num_fallback_citations} citations for answer without explicit [chunk_X] references")
         
         # Create Citation objects for each cited chunk
         chunk_to_source = {}

@@ -19,7 +19,10 @@ from src.components.retrievers.fusion.weighted_fusion import WeightedFusion
 from src.components.retrievers.fusion.score_aware_fusion import ScoreAwareFusion
 from src.shared_utils.embeddings.generator import generate_embeddings
 import faiss
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 class HybridRetriever:
     """
@@ -109,13 +112,13 @@ class HybridRetriever:
         if not chunks:
             raise ValueError("Cannot index empty chunk list")
             
-        print(f"Indexing {len(chunks)} chunks for hybrid retrieval...")
+        logger.info(f"Indexing {len(chunks)} chunks for hybrid retrieval...")
         
         # Store chunks for retrieval
         self.chunks = chunks
         
         # Index for sparse retrieval
-        print("Building BM25 sparse index...")
+        logger.info("Building BM25 sparse index...")
         # Import Document interface
         from src.core.interfaces import Document
         
@@ -137,7 +140,7 @@ class HybridRetriever:
         self.sparse_retriever.index_documents(documents)
         
         # Index for dense retrieval
-        print("Building dense semantic index...")
+        logger.info("Building dense semantic index...")
         texts = [chunk['text'] for chunk in chunks]
         
         # Generate embeddings
@@ -155,7 +158,7 @@ class HybridRetriever:
         faiss.normalize_L2(self.embeddings)
         self.dense_index.add(self.embeddings)
         
-        print(f"Hybrid indexing complete: {len(chunks)} chunks ready for search")
+        logger.info(f"Hybrid indexing complete: {len(chunks)} chunks ready for search")
         
     def search(
         self, 

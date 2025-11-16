@@ -238,7 +238,7 @@ class ModularDocumentProcessor(DocumentProcessorInterface, ConfigurableComponent
                 raise
             
             # Log error and return empty list for graceful degradation
-            print(f"Error processing {file_path}: {str(e)}")
+            logger.error(f"Error processing {file_path}: {str(e)}")
             return []
     
     def supported_formats(self) -> List[str]:

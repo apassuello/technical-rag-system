@@ -782,14 +782,14 @@ if __name__ == "__main__":
     # Test calibration manager
     manager = CalibrationManager()
 
-    print("Calibration Manager Test")
-    print("=" * 40)
+    logger.info("Calibration Manager Test")
+    logger.info("=" * 40)
 
     # Show parameter registry
-    print(manager.parameter_registry.get_parameter_summary())
+    logger.info(manager.parameter_registry.get_parameter_summary())
 
     # Test basic functionality
-    print(f"\nTest queries loaded: {len(manager.test_queries)}")
+    logger.info(f"\nTest queries loaded: {len(manager.test_queries)}")
 
     if manager.test_queries:
-        print("Sample query:", manager.test_queries[0]["query"])
+        logger.info("Sample query:", manager.test_queries[0]["query"])

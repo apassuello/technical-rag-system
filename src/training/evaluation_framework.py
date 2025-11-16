@@ -650,14 +650,14 @@ def main():
     evaluator = ViewEvaluator('technical')
     metrics = evaluator.evaluate(predictions)
     
-    print(f"Accuracy: {metrics.accuracy:.3f}")
-    print(f"Macro F1: {metrics.macro_f1:.3f}")
-    print(f"R²: {metrics.r2:.3f}")
+    logger.info(f"Accuracy: {metrics.accuracy:.3f}")
+    logger.info(f"Macro F1: {metrics.macro_f1:.3f}")
+    logger.info(f"R²: {metrics.r2:.3f}")
     
     # Generate report
     report = evaluator.generate_report(metrics, predictions)
-    print(f"\nStrengths: {report['analysis']['strengths']}")
-    print(f"Weaknesses: {report['analysis']['weaknesses']}")
+    logger.info(f"\nStrengths: {report['analysis']['strengths']}")
+    logger.info(f"Weaknesses: {report['analysis']['weaknesses']}")
 
 
 if __name__ == "__main__":

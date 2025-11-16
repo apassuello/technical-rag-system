@@ -451,16 +451,16 @@ def main():
     
     # Get statistics
     stats = loader.get_statistics()
-    print("\nDataset Statistics:")
-    print(f"Total examples: {stats['total_examples']}")
-    print(f"Complexity distribution: {stats['complexity_distribution']}")
-    print(f"Domain distribution: {stats['domain_distribution']}")
+    logger.info("\nDataset Statistics:")
+    logger.info(f"Total examples: {stats['total_examples']}")
+    logger.info(f"Complexity distribution: {stats['complexity_distribution']}")
+    logger.info(f"Domain distribution: {stats['domain_distribution']}")
     
     for view_name, view_stats in stats['view_statistics'].items():
-        print(f"\n{view_name} view:")
-        print(f"  Mean score: {view_stats['mean']:.3f}")
-        print(f"  Std dev: {view_stats['std']:.3f}")
-        print(f"  Range: [{view_stats['min']:.3f}, {view_stats['max']:.3f}]")
+        logger.info(f"\n{view_name} view:")
+        logger.info(f"  Mean score: {view_stats['mean']:.3f}")
+        logger.info(f"  Std dev: {view_stats['std']:.3f}")
+        logger.info(f"  Range: [{view_stats['min']:.3f}, {view_stats['max']:.3f}]")
 
 
 if __name__ == "__main__":

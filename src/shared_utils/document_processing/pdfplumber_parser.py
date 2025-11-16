@@ -9,9 +9,12 @@ Author: Arthur Passuello
 """
 
 import re
+import logging
 import pdfplumber
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
+
+logger = logging.getLogger(__name__)
 
 
 class PDFPlumberParser:
@@ -322,7 +325,7 @@ class PDFPlumberParser:
         chunks = []
         chunk_id = 0
         
-        print(f"📄 Processing {len(pymupdf_pages)} pages with PDFPlumber quality extraction...")
+        logger.info(f"📄 Processing {len(pymupdf_pages)} pages with PDFPlumber quality extraction...")
         
         with pdfplumber.open(str(pdf_path)) as pdf:
             for pymupdf_page in pymupdf_pages:
@@ -347,9 +350,9 @@ class PDFPlumberParser:
                             chunk_id += len(page_chunks)
                             
                             if len(chunks) % 50 == 0:  # Progress indicator
-                                print(f"   Processed {page_num} pages, created {len(chunks)} chunks")
+                                logger.debug(f"   Processed {page_num} pages, created {len(chunks)} chunks")
         
-        print(f"✅ Full coverage: {len(chunks)} chunks from {len(pymupdf_pages)} pages")
+        logger.info(f"✅ Full coverage: {len(chunks)} chunks from {len(pymupdf_pages)} pages")
         return chunks
     
     def _create_page_chunks(self, page_text: str, page_num: int, start_chunk_id: int) -> List[Dict]:
@@ -446,7 +449,7 @@ def parse_pdf_with_pdfplumber(pdf_path: Path, **kwargs) -> List[Dict]:
     """Main entry point for PDFPlumber parsing."""
     parser = PDFPlumberParser(**kwargs)
     chunks = parser.extract_with_structure(pdf_path)
-    
-    print(f"PDFPlumber extracted {len(chunks)} chunks")
-    
+
+    logger.info(f"PDFPlumber extracted {len(chunks)} chunks")
+
     return chunks

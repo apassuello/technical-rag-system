@@ -86,39 +86,39 @@ class InitializationProfiler:
     
     def print_report(self):
         """Print a detailed profiling report"""
-        print("\n" + "="*80)
-        print("INITIALIZATION PERFORMANCE REPORT")
-        print("="*80)
-        print(f"Total Time: {self.total_duration:.2f}s (target: 5.0s)")
+        logger.info("\n" + "="*80)
+        logger.info("INITIALIZATION PERFORMANCE REPORT")
+        logger.info("="*80)
+        logger.info(f"Total Time: {self.total_duration:.2f}s (target: 5.0s)")
         
         if self.total_duration <= 5.0:
-            print("✅ Target achieved!")
+            logger.info("✅ Target achieved!")
         else:
-            print(f"❌ Need to optimize by {self.total_duration - 5.0:.2f}s")
+            logger.error(f"❌ Need to optimize by {self.total_duration - 5.0:.2f}s")
         
-        print("\nStep Breakdown:")
-        print("-" * 80)
-        print(f"{'Step':<35} {'Time':<10} {'%':<8} {'Details'}")
-        print("-" * 80)
+        logger.info("\nStep Breakdown:")
+        logger.info("-" * 80)
+        logger.info(f"{'Step':<35} {'Time':<10} {'%':<8} {'Details'}")
+        logger.info("-" * 80)
         
         for step in sorted(self.steps, key=lambda s: s.duration, reverse=True):
             percentage = (step.duration / self.total_duration) * 100 if self.total_duration > 0 else 0
             details = ", ".join(f"{k}={v}" for k, v in step.metadata.items())
-            print(f"{step.name:<35} {step.duration:.2f}s{'':<4} {percentage:.1f}%{'':<3} {details}")
+            logger.info(f"{step.name:<35} {step.duration:.2f}s{'':<4} {percentage:.1f}%{'':<3} {details}")
         
-        print("-" * 80)
-        print(f"{'TOTAL':<35} {self.total_duration:.2f}s{'':<4} {'100.0%':<8}")
-        print("="*80)
+        logger.info("-" * 80)
+        logger.info(f"{'TOTAL':<35} {self.total_duration:.2f}s{'':<4} {'100.0%':<8}")
+        logger.info("="*80)
         
         # Optimization recommendations
-        print("\nOPTIMIZATION RECOMMENDATIONS:")
-        print("-" * 80)
+        logger.info("\nOPTIMIZATION RECOMMENDATIONS:")
+        logger.info("-" * 80)
         
         slowest_steps = sorted(self.steps, key=lambda s: s.duration, reverse=True)[:3]
         for i, step in enumerate(slowest_steps, 1):
-            print(f"{i}. Optimize '{step.name}' ({step.duration:.2f}s)")
+            logger.info(f"{i}. Optimize '{step.name}' ({step.duration:.2f}s)")
         
-        print("\n")
+        logger.info("\n")
 
 
 # Global profiler instance

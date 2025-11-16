@@ -474,45 +474,45 @@ class Epic1TrainingOrchestrator:
     
     def _print_training_summary(self, report: Dict[str, Any]) -> None:
         """Print training summary to console."""
-        print("\n" + "="*80)
-        print("EPIC 1 TRAINING PIPELINE - FINAL RESULTS")
-        print("="*80)
+        logger.info("\n" + "="*80)
+        logger.info("EPIC 1 TRAINING PIPELINE - FINAL RESULTS")
+        logger.info("="*80)
         
         # Dataset info
         stats = report['training_summary']['dataset_stats']
-        print(f"Dataset: {stats['total_examples']} samples")
-        print(f"Complexity Distribution: {stats['complexity_distribution']}")
+        logger.info(f"Dataset: {stats['total_examples']} samples")
+        logger.info(f"Complexity Distribution: {stats['complexity_distribution']}")
         
         # Training results
-        print(f"\nModels Trained: {len(report['individual_training_results'])}")
+        logger.info(f"\nModels Trained: {len(report['individual_training_results'])}")
         for view_name, results in report['individual_training_results'].items():
             val_acc = results.get('final_val_accuracy', 0)
-            print(f"  - {view_name}: {val_acc:.3f} validation accuracy")
+            logger.info(f"  - {view_name}: {val_acc:.3f} validation accuracy")
         
         # Ensemble results
         ensemble_acc = report['evaluation_results']['ensemble_performance']['accuracy']
         target_acc = report['training_summary']['configuration']['evaluation']['target_accuracy']
         
-        print(f"\nEnsemble Performance:")
-        print(f"  - Accuracy: {ensemble_acc:.3f}")
-        print(f"  - Target: {target_acc:.3f}")
-        print(f"  - Meets Target: {'✅ YES' if ensemble_acc >= target_acc else '❌ NO'}")
+        logger.info(f"\nEnsemble Performance:")
+        logger.info(f"  - Accuracy: {ensemble_acc:.3f}")
+        logger.info(f"  - Target: {target_acc:.3f}")
+        logger.error(f"  - Meets Target: {'✅ YES' if ensemble_acc >= target_acc else '❌ NO'}")
         
         # Overall assessment
         assessment = report['overall_assessment']
-        print(f"  - Grade: {assessment['performance_grade']}")
+        logger.info(f"  - Grade: {assessment['performance_grade']}")
         
         if assessment['key_achievements']:
-            print(f"\nKey Achievements:")
+            logger.info(f"\nKey Achievements:")
             for achievement in assessment['key_achievements']:
-                print(f"  ✅ {achievement}")
+                logger.info(f"  ✅ {achievement}")
         
         if assessment['areas_for_improvement']:
-            print(f"\nAreas for Improvement:")
+            logger.info(f"\nAreas for Improvement:")
             for area in assessment['areas_for_improvement']:
-                print(f"  🔧 {area}")
+                logger.debug(f"  🔧 {area}")
         
-        print("\n" + "="*80)
+        logger.info("\n" + "="*80)
 
 
 def main():
@@ -537,8 +537,8 @@ def main():
     import asyncio
     results = asyncio.run(run_training())
     
-    print(f"\nTraining completed!")
-    print(f"Final ensemble accuracy: {results['evaluation_results']['ensemble_performance']['accuracy']:.3f}")
+    logger.info(f"\nTraining completed!")
+    logger.info(f"Final ensemble accuracy: {results['evaluation_results']['ensemble_performance']['accuracy']:.3f}")
 
 
 if __name__ == "__main__":

@@ -30,7 +30,10 @@ sys.path.append(str(project_root))
 
 from src.core.interfaces import Document
 from .base import ProcessingPipeline, DocumentParser, TextChunker, ContentCleaner, ValidationResult, ConfigurableComponent
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 class DocumentProcessingPipeline(ProcessingPipeline, ConfigurableComponent):
     """
@@ -567,7 +570,7 @@ class DocumentProcessingPipeline(ProcessingPipeline, ConfigurableComponent):
             message: Debug message
         """
         if self.config['enable_debug_logging']:
-            print(f"[PIPELINE DEBUG] {message}")
+            logger.debug(f"[PIPELINE DEBUG] {message}")
     
     def _log_error(self, message: str) -> None:
         """
@@ -576,4 +579,4 @@ class DocumentProcessingPipeline(ProcessingPipeline, ConfigurableComponent):
         Args:
             message: Error message
         """
-        print(f"[PIPELINE ERROR] {message}")
+        logger.error(f"[PIPELINE ERROR] {message}")

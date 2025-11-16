@@ -11,7 +11,10 @@ Author: Arthur Passuello
 import re
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class TOCEntry:
@@ -45,7 +48,7 @@ class TOCGuidedParser:
                 toc_pages.append((i, page))
         
         if not toc_pages:
-            print("No TOC found, using fallback structure detection")
+            logger.info("No TOC found, using fallback structure detection")
             return self._detect_structure_without_toc(pages)
         
         # Parse TOC entries
@@ -183,7 +186,7 @@ class TOCGuidedParser:
         
         # If still no entries found, create page-based entries for full coverage
         if not entries:
-            print("No structure patterns found, creating page-based sections for full coverage")
+            logger.info("No structure patterns found, creating page-based sections for full coverage")
             # Create sections every 10 pages to ensure full document coverage
             for i in range(0, len(pages), 10):
                 start_page = i + 1
@@ -296,16 +299,16 @@ def parse_pdf_with_toc_guidance(pdf_data: Dict, **kwargs) -> List[Dict]:
     pages = pdf_data.get('pages', [])
     toc_entries = parser.parse_toc(pages)
     
-    print(f"Found {len(toc_entries)} TOC entries")
+    logger.info(f"Found {len(toc_entries)} TOC entries")
     
     if not toc_entries:
-        print("No TOC entries found, falling back to basic chunking")
+        logger.info("No TOC entries found, falling back to basic chunking")
         from .chunker import chunk_technical_text
         return chunk_technical_text(pdf_data.get('text', ''))
     
     # Create chunks based on TOC
     chunks = parser.create_chunks_from_toc(pdf_data, toc_entries)
     
-    print(f"Created {len(chunks)} chunks from TOC structure")
+    logger.info(f"Created {len(chunks)} chunks from TOC structure")
     
     return chunks

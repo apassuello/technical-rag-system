@@ -540,9 +540,9 @@ def main():
     # Setup model (num_features would come from data loader)
     trainer.setup_model(num_features=5)
     
-    print(f"Created trainer for {trainer.view_name} view")
-    print(f"Model: {trainer.model_name}")
-    print(f"Device: {trainer.device}")
+    logger.info(f"Created trainer for {trainer.view_name} view")
+    logger.info(f"Model: {trainer.model_name}")
+    logger.info(f"Device: {trainer.device}")
 
 
 if __name__ == "__main__":

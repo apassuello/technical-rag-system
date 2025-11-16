@@ -533,8 +533,8 @@ class ParameterRegistry:
 if __name__ == "__main__":
     # Test the parameter registry
     registry = ParameterRegistry()
-    print(registry.get_parameter_summary())
+    logger.info(registry.get_parameter_summary())
 
     # Test search space generation
     search_space = registry.get_search_space(["bm25_k1", "bm25_b", "rrf_k"])
-    print(f"\nSearch space example: {search_space}")
+    logger.info(f"\nSearch space example: {search_space}")

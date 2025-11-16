@@ -314,22 +314,22 @@ class RetrievalQualityEvaluator:
     def print_evaluation_report(self, results: RetrievalEvaluationResults) -> None:
         """Print a comprehensive evaluation report."""
         
-        print(f"\n{'='*80}")
-        print(f"RETRIEVAL QUALITY EVALUATION REPORT")
-        print(f"Configuration: {results.config_name}")
-        print(f"{'='*80}")
+        logger.info(f"\n{'='*80}")
+        logger.info(f"RETRIEVAL QUALITY EVALUATION REPORT")
+        logger.info(f"Configuration: {results.config_name}")
+        logger.info(f"{'='*80}")
         
-        print(f"\n📊 OVERALL METRICS (Average across {results.total_queries} queries)")
-        print("-" * 60)
-        print(f"Context Precision:    {results.avg_context_precision:.3f}")
-        print(f"Context Recall:       {results.avg_context_recall:.3f}")
-        print(f"Mean Reciprocal Rank: {results.avg_mrr:.3f}")
-        print(f"NDCG@5:              {results.avg_ndcg_at_5:.3f}")
-        print(f"Avg Response Time:    {results.avg_response_time:.3f}s")
+        logger.info(f"\n📊 OVERALL METRICS (Average across {results.total_queries} queries)")
+        logger.info("-" * 60)
+        logger.info(f"Context Precision:    {results.avg_context_precision:.3f}")
+        logger.info(f"Context Recall:       {results.avg_context_recall:.3f}")
+        logger.info(f"Mean Reciprocal Rank: {results.avg_mrr:.3f}")
+        logger.info(f"NDCG@5:              {results.avg_ndcg_at_5:.3f}")
+        logger.info(f"Avg Response Time:    {results.avg_response_time:.3f}s")
         
         # Performance assessment
-        print(f"\n🎯 PERFORMANCE ASSESSMENT")
-        print("-" * 60)
+        logger.info(f"\n🎯 PERFORMANCE ASSESSMENT")
+        logger.info("-" * 60)
         
         # Context Precision assessment
         if results.avg_context_precision >= 0.8:
@@ -340,7 +340,7 @@ class RetrievalQualityEvaluator:
             precision_status = "FAIR ⚠️"
         else:
             precision_status = "POOR ❌"
-        print(f"Context Precision: {precision_status}")
+        logger.info(f"Context Precision: {precision_status}")
         
         # Context Recall assessment  
         if results.avg_context_recall >= 0.8:
@@ -351,7 +351,7 @@ class RetrievalQualityEvaluator:
             recall_status = "FAIR ⚠️"
         else:
             recall_status = "POOR ❌"
-        print(f"Context Recall:    {recall_status}")
+        logger.info(f"Context Recall:    {recall_status}")
         
         # MRR assessment
         if results.avg_mrr >= 0.7:
@@ -362,16 +362,16 @@ class RetrievalQualityEvaluator:
             mrr_status = "FAIR ⚠️"
         else:
             mrr_status = "POOR ❌"
-        print(f"Ranking Quality:   {mrr_status}")
+        logger.info(f"Ranking Quality:   {mrr_status}")
         
-        print(f"\n📈 DETAILED QUERY RESULTS")
-        print("-" * 60)
+        logger.info(f"\n📈 DETAILED QUERY RESULTS")
+        logger.info("-" * 60)
         for result in results.query_results[:5]:  # Show first 5 queries
-            print(f"Query: {result.query[:50]}...")
-            print(f"  Precision: {result.context_precision:.3f}, Recall: {result.context_recall:.3f}, MRR: {result.mrr:.3f}")
+            logger.info(f"Query: {result.query[:50]}...")
+            logger.info(f"  Precision: {result.context_precision:.3f}, Recall: {result.context_recall:.3f}, MRR: {result.mrr:.3f}")
         
         if len(results.query_results) > 5:
-            print(f"... and {len(results.query_results) - 5} more queries")
+            logger.info(f"... and {len(results.query_results) - 5} more queries")
 
 
 if __name__ == "__main__":
