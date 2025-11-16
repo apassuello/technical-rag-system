@@ -51,7 +51,7 @@ sys.path.insert(0, str(project_root))
 
 from src.core.component_factory import ComponentFactory
 from src.core.interfaces import Document
-from src.config_loader import load_config
+from src.core.config import load_config
 
 # Configure logging
 logging.basicConfig(
