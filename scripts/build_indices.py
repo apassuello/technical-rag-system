@@ -269,11 +269,14 @@ class IndexBuilder:
         logger.info(f"Building FAISS index ({len(documents)} documents)...")
 
         # Load or create metadata
+        embedder_config = self.config.embedder.model_dump()
+        model_name = embedder_config['config']['model']['config']['model_name']
+
         metadata = self.load_metadata() if not rebuild else {
             "created_at": datetime.now().isoformat(),
             "updated_at": None,
             "document_count": 0,
-            "embedding_model": self.config.embedder.config.model.config.model_name,
+            "embedding_model": model_name,
             "embedding_dim": len(documents[0].embedding) if documents else None,
             "file_hashes": {},
             "index_type": "faiss"
@@ -282,7 +285,9 @@ class IndexBuilder:
         # Create FAISS index using the retriever's index component
         from src.components.retrievers.indices.faiss_index import FAISSIndex
 
-        index_config = self.config.retriever.config.vector_index.config.model_dump()
+        # Access config as dict (following pattern from lines 95-98)
+        retriever_config = self.config.retriever.model_dump()
+        index_config = retriever_config['config']['vector_index']['config']
         faiss_index = FAISSIndex(index_config)
 
         # Initialize index with embedding dimension
