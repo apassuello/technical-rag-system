@@ -120,10 +120,14 @@ class RAGEngine:
         try:
             embedder_config = self.config.get('embedder', {})
 
-            # Use ComponentFactory to create embedder
-            self.embedder = self.factory.create_component(
-                component_type='embedder',
-                config=embedder_config
+            # Extract embedder type and configuration
+            embedder_type = embedder_config.get('type', 'modular')
+            embedder_params = embedder_config.get('config', {})
+
+            # Use ComponentFactory to create embedder with correct API
+            self.embedder = self.factory.create_embedder(
+                embedder_type,
+                **embedder_params
             )
 
             logger.info("Embedder initialized successfully")
@@ -163,12 +167,11 @@ class RAGEngine:
             for strategy_name, strategy_config in strategies.items():
                 try:
                     # Create retriever with this strategy config
-                    retriever = self.factory.create_component(
-                        component_type='retriever',
-                        config={
-                            'type': 'modular_unified',
-                            **strategy_config
-                        }
+                    # ModularUnifiedRetriever requires embedder + config
+                    retriever = self.factory.create_retriever(
+                        'modular_unified',
+                        embedder=self.embedder,
+                        **strategy_config
                     )
 
                     # Index documents if available
