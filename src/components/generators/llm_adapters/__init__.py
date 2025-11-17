@@ -7,7 +7,9 @@ between the unified interface and provider-specific formats.
 Available adapters:
 - OllamaAdapter: For local Ollama models
 - OpenAIAdapter: For OpenAI API (GPT models)
+- AnthropicAdapter: For Anthropic Claude API (with tools support)
 - HuggingFaceAdapter: For HuggingFace models and Inference API
+- MistralAdapter: For Mistral AI API
 """
 
 from .base_adapter import (
@@ -21,6 +23,7 @@ from .huggingface_adapter import HuggingFaceAdapter
 from .mock_adapter import MockLLMAdapter
 from .openai_adapter import OpenAIAdapter
 from .mistral_adapter import MistralAdapter
+from .anthropic_adapter import AnthropicAdapter
 
 __all__ = [
     'BaseLLMAdapter',
@@ -29,6 +32,7 @@ __all__ = [
     'MockLLMAdapter',
     'OpenAIAdapter',
     'MistralAdapter',
+    'AnthropicAdapter',
     'RateLimitError',
     'AuthenticationError',
     'ModelNotFoundError'
@@ -41,6 +45,7 @@ ADAPTER_REGISTRY = {
     'mock': MockLLMAdapter,
     'openai': OpenAIAdapter,
     'mistral': MistralAdapter,
+    'anthropic': AnthropicAdapter,
 }
 
 from typing import Type

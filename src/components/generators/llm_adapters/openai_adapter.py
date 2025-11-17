@@ -21,8 +21,9 @@ import os
 import time
 import json
 import logging
-from typing import Dict, Any, Optional, Iterator, List
+from typing import Dict, Any, Optional, Iterator, List, Union
 from decimal import Decimal
+import copy
 
 try:
     import openai
@@ -628,11 +629,11 @@ class OpenAIAdapter(BaseLLMAdapter):
     def estimate_cost(self, prompt: str, max_output_tokens: int = 500) -> Dict[str, Any]:
         """
         Estimate cost for a prompt before making the API call.
-        
+
         Args:
             prompt: Input prompt text
             max_output_tokens: Estimated output token count
-            
+
         Returns:
             Cost estimation breakdown
         """
@@ -642,15 +643,15 @@ class OpenAIAdapter(BaseLLMAdapter):
         else:
             # Fallback: rough estimation (4 chars per token average)
             input_tokens = len(prompt) // 4
-        
+
         # Get pricing
         pricing = self.MODEL_PRICING.get(self.model_name, self.MODEL_PRICING['gpt-3.5-turbo'])
-        
+
         # Calculate estimated costs
         input_cost = (Decimal(str(input_tokens)) / Decimal('1000')) * pricing['input']
         output_cost = (Decimal(str(max_output_tokens)) / Decimal('1000')) * pricing['output']
         total_cost = input_cost + output_cost
-        
+
         return {
             'estimated_input_tokens': input_tokens,
             'estimated_output_tokens': max_output_tokens,
@@ -660,6 +661,546 @@ class OpenAIAdapter(BaseLLMAdapter):
             'estimated_total_cost_usd': float(total_cost.quantize(Decimal('0.000001'))),
             'model': self.model_name
         }
+
+    def generate_with_functions(
+        self,
+        prompt: str,
+        tools: List[Dict[str, Any]],
+        params: Optional[GenerationParams] = None,
+        max_iterations: int = 10,
+        tool_choice: str = "auto"
+    ) -> Dict[str, Any]:
+        """
+        Generate response with function calling support.
+
+        Handles multi-turn conversations where the LLM can call functions
+        iteratively to solve complex problems. Supports parallel function calls.
+
+        Args:
+            prompt: The initial user prompt
+            tools: List of tool schemas in OpenAI format
+                Example:
+                    [
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "calculator",
+                                "description": "Evaluate math expressions",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "expression": {
+                                            "type": "string",
+                                            "description": "Math expression"
+                                        }
+                                    },
+                                    "required": ["expression"]
+                                }
+                            }
+                        }
+                    ]
+            params: Generation parameters (optional)
+            max_iterations: Maximum number of function calling iterations (default: 10)
+            tool_choice: Tool selection mode - "auto", "none", or {"type": "function", "function": {"name": "tool_name"}}
+
+        Returns:
+            Dictionary with:
+                - final_response: Final text response from LLM
+                - iterations: Number of function calling iterations
+                - function_calls: List of all function calls made
+                - total_tokens: Total tokens used across all iterations
+                - total_cost_usd: Total cost in USD
+                - cost_breakdown: Detailed cost breakdown per iteration
+                - messages: Complete conversation history
+
+        Raises:
+            LLMError: If function calling fails
+            ValueError: If tools list is empty or invalid
+
+        Example:
+            >>> adapter = OpenAIAdapter()
+            >>> tools = registry.get_openai_schemas()
+            >>> result = adapter.generate_with_functions(
+            ...     prompt="What is 25 * 47?",
+            ...     tools=tools,
+            ...     params=GenerationParams(temperature=0.0)
+            ... )
+            >>> print(result['final_response'])
+            >>> print(f"Iterations: {result['iterations']}")
+            >>> print(f"Total cost: ${result['total_cost_usd']:.6f}")
+        """
+        if not tools:
+            raise ValueError("Tools list cannot be empty for function calling")
+
+        if params is None:
+            params = GenerationParams()
+
+        # Initialize conversation with user message
+        messages = [{"role": "user", "content": prompt}]
+
+        # Track metrics across all iterations
+        all_function_calls = []
+        iteration_costs = []
+        total_tokens = 0
+        total_cost = Decimal('0.0')
+
+        # Multi-turn function calling loop
+        for iteration in range(max_iterations):
+            logger.debug(f"Function calling iteration {iteration + 1}/{max_iterations}")
+
+            try:
+                # Make API request with tools
+                response = self._make_function_request(
+                    messages=messages,
+                    tools=tools,
+                    params=params,
+                    tool_choice=tool_choice
+                )
+
+                # Track usage and cost for this iteration
+                usage = response.get('usage', {})
+                cost_breakdown = response.get('cost_breakdown', {})
+
+                iteration_tokens = usage.get('total_tokens', 0)
+                iteration_cost = Decimal(str(cost_breakdown.get('total_cost_usd', 0.0)))
+
+                total_tokens += iteration_tokens
+                total_cost += iteration_cost
+                iteration_costs.append(cost_breakdown)
+
+                # Extract response
+                if not response.get('choices'):
+                    raise LLMError("No choices in OpenAI function calling response")
+
+                choice = response['choices'][0]
+                message = choice.get('message', {})
+                finish_reason = choice.get('finish_reason')
+
+                # Add assistant message to conversation
+                assistant_message = {
+                    "role": "assistant",
+                    "content": message.get('content')
+                }
+
+                # Check if there are tool calls
+                tool_calls = message.get('tool_calls')
+
+                if tool_calls:
+                    # Add tool_calls to assistant message
+                    assistant_message['tool_calls'] = tool_calls
+                    messages.append(assistant_message)
+
+                    # Process each tool call (supports parallel calls)
+                    for tool_call in tool_calls:
+                        tool_call_id = tool_call.id
+                        function_name = tool_call.function.name
+
+                        try:
+                            function_args = json.loads(tool_call.function.arguments)
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Failed to parse function arguments: {e}")
+                            function_args = {}
+
+                        # Record function call
+                        function_call_record = {
+                            'id': tool_call_id,
+                            'name': function_name,
+                            'arguments': function_args,
+                            'iteration': iteration + 1
+                        }
+                        all_function_calls.append(function_call_record)
+
+                        logger.debug(
+                            f"Function call {tool_call_id}: {function_name}({function_args})"
+                        )
+
+                    # Note: Actual function execution happens externally
+                    # This method only handles the LLM conversation flow
+                    # The caller must provide function results via the returned data
+
+                    # If we have tool calls but this is our last iteration, break
+                    if iteration >= max_iterations - 1:
+                        logger.warning(
+                            f"Reached max iterations ({max_iterations}) with pending tool calls"
+                        )
+                        break
+
+                    # For this implementation, we return early and let the caller
+                    # handle function execution and continuation
+                    # This is the pattern that works best with the tool registry
+                    return {
+                        'status': 'requires_function_execution',
+                        'pending_tool_calls': tool_calls,
+                        'messages': messages,
+                        'iterations': iteration + 1,
+                        'function_calls': all_function_calls,
+                        'total_tokens': total_tokens,
+                        'total_cost_usd': float(total_cost),
+                        'cost_breakdown': iteration_costs,
+                        'finish_reason': finish_reason
+                    }
+
+                elif finish_reason == 'stop':
+                    # Normal completion - we have a final answer
+                    messages.append(assistant_message)
+
+                    final_response = message.get('content', '')
+
+                    return {
+                        'status': 'completed',
+                        'final_response': final_response,
+                        'iterations': iteration + 1,
+                        'function_calls': all_function_calls,
+                        'total_tokens': total_tokens,
+                        'total_cost_usd': float(total_cost),
+                        'cost_breakdown': iteration_costs,
+                        'messages': messages,
+                        'finish_reason': finish_reason
+                    }
+
+                else:
+                    # Unexpected finish reason
+                    messages.append(assistant_message)
+                    logger.warning(f"Unexpected finish_reason: {finish_reason}")
+
+                    return {
+                        'status': 'incomplete',
+                        'final_response': message.get('content', ''),
+                        'iterations': iteration + 1,
+                        'function_calls': all_function_calls,
+                        'total_tokens': total_tokens,
+                        'total_cost_usd': float(total_cost),
+                        'cost_breakdown': iteration_costs,
+                        'messages': messages,
+                        'finish_reason': finish_reason
+                    }
+
+            except Exception as e:
+                logger.error(f"Error in function calling iteration {iteration + 1}: {e}")
+
+                return {
+                    'status': 'error',
+                    'error': str(e),
+                    'iterations': iteration + 1,
+                    'function_calls': all_function_calls,
+                    'total_tokens': total_tokens,
+                    'total_cost_usd': float(total_cost),
+                    'cost_breakdown': iteration_costs,
+                    'messages': messages
+                }
+
+        # Reached max iterations without completion
+        return {
+            'status': 'max_iterations_reached',
+            'iterations': max_iterations,
+            'function_calls': all_function_calls,
+            'total_tokens': total_tokens,
+            'total_cost_usd': float(total_cost),
+            'cost_breakdown': iteration_costs,
+            'messages': messages
+        }
+
+    def continue_with_function_results(
+        self,
+        messages: List[Dict[str, Any]],
+        function_results: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        params: Optional[GenerationParams] = None,
+        max_iterations: int = 10
+    ) -> Dict[str, Any]:
+        """
+        Continue function calling conversation with function results.
+
+        This method continues a conversation after function execution,
+        allowing for multi-turn function calling.
+
+        Args:
+            messages: Conversation history (must include tool_calls)
+            function_results: List of function execution results
+                Example:
+                    [
+                        {
+                            "tool_call_id": "call_abc123",
+                            "content": "25 * 47 = 1175"
+                        }
+                    ]
+            tools: List of tool schemas
+            params: Generation parameters (optional)
+            max_iterations: Maximum additional iterations
+
+        Returns:
+            Same format as generate_with_functions()
+
+        Example:
+            >>> # Initial call
+            >>> result = adapter.generate_with_functions(prompt, tools)
+            >>> if result['status'] == 'requires_function_execution':
+            ...     # Execute functions
+            ...     function_results = execute_functions(result['pending_tool_calls'])
+            ...     # Continue conversation
+            ...     final = adapter.continue_with_function_results(
+            ...         messages=result['messages'],
+            ...         function_results=function_results,
+            ...         tools=tools
+            ...     )
+        """
+        if not function_results:
+            raise ValueError("function_results cannot be empty")
+
+        if params is None:
+            params = GenerationParams()
+
+        # Make a copy of messages to avoid mutation
+        messages = copy.deepcopy(messages)
+
+        # Add function results to conversation
+        for func_result in function_results:
+            tool_message = {
+                "role": "tool",
+                "tool_call_id": func_result['tool_call_id'],
+                "content": str(func_result.get('content', ''))
+            }
+            messages.append(tool_message)
+
+        # Track metrics
+        all_function_calls = []
+        iteration_costs = []
+        total_tokens = 0
+        total_cost = Decimal('0.0')
+
+        # Continue the conversation loop
+        for iteration in range(max_iterations):
+            logger.debug(f"Continuation iteration {iteration + 1}/{max_iterations}")
+
+            try:
+                # Make API request
+                response = self._make_function_request(
+                    messages=messages,
+                    tools=tools,
+                    params=params,
+                    tool_choice="auto"
+                )
+
+                # Track usage
+                usage = response.get('usage', {})
+                cost_breakdown = response.get('cost_breakdown', {})
+
+                iteration_tokens = usage.get('total_tokens', 0)
+                iteration_cost = Decimal(str(cost_breakdown.get('total_cost_usd', 0.0)))
+
+                total_tokens += iteration_tokens
+                total_cost += iteration_cost
+                iteration_costs.append(cost_breakdown)
+
+                # Extract response
+                choice = response['choices'][0]
+                message = choice.get('message', {})
+                finish_reason = choice.get('finish_reason')
+
+                assistant_message = {
+                    "role": "assistant",
+                    "content": message.get('content')
+                }
+
+                tool_calls = message.get('tool_calls')
+
+                if tool_calls:
+                    assistant_message['tool_calls'] = tool_calls
+                    messages.append(assistant_message)
+
+                    # Record tool calls
+                    for tool_call in tool_calls:
+                        try:
+                            function_args = json.loads(tool_call.function.arguments)
+                        except json.JSONDecodeError:
+                            function_args = {}
+
+                        all_function_calls.append({
+                            'id': tool_call.id,
+                            'name': tool_call.function.name,
+                            'arguments': function_args,
+                            'iteration': iteration + 1
+                        })
+
+                    # Return for more function execution
+                    return {
+                        'status': 'requires_function_execution',
+                        'pending_tool_calls': tool_calls,
+                        'messages': messages,
+                        'iterations': iteration + 1,
+                        'function_calls': all_function_calls,
+                        'total_tokens': total_tokens,
+                        'total_cost_usd': float(total_cost),
+                        'cost_breakdown': iteration_costs,
+                        'finish_reason': finish_reason
+                    }
+
+                elif finish_reason == 'stop':
+                    messages.append(assistant_message)
+
+                    return {
+                        'status': 'completed',
+                        'final_response': message.get('content', ''),
+                        'iterations': iteration + 1,
+                        'function_calls': all_function_calls,
+                        'total_tokens': total_tokens,
+                        'total_cost_usd': float(total_cost),
+                        'cost_breakdown': iteration_costs,
+                        'messages': messages,
+                        'finish_reason': finish_reason
+                    }
+
+                else:
+                    messages.append(assistant_message)
+
+                    return {
+                        'status': 'incomplete',
+                        'final_response': message.get('content', ''),
+                        'iterations': iteration + 1,
+                        'function_calls': all_function_calls,
+                        'total_tokens': total_tokens,
+                        'total_cost_usd': float(total_cost),
+                        'cost_breakdown': iteration_costs,
+                        'messages': messages,
+                        'finish_reason': finish_reason
+                    }
+
+            except Exception as e:
+                logger.error(f"Error in continuation iteration {iteration + 1}: {e}")
+
+                return {
+                    'status': 'error',
+                    'error': str(e),
+                    'iterations': iteration + 1,
+                    'function_calls': all_function_calls,
+                    'total_tokens': total_tokens,
+                    'total_cost_usd': float(total_cost),
+                    'cost_breakdown': iteration_costs,
+                    'messages': messages
+                }
+
+        return {
+            'status': 'max_iterations_reached',
+            'iterations': max_iterations,
+            'function_calls': all_function_calls,
+            'total_tokens': total_tokens,
+            'total_cost_usd': float(total_cost),
+            'cost_breakdown': iteration_costs,
+            'messages': messages
+        }
+
+    def _make_function_request(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        params: GenerationParams,
+        tool_choice: Union[str, Dict[str, Any]] = "auto"
+    ) -> Dict[str, Any]:
+        """
+        Make a function calling request to OpenAI API.
+
+        Args:
+            messages: Conversation messages
+            tools: Tool schemas
+            params: Generation parameters
+            tool_choice: Tool selection mode
+
+        Returns:
+            Response dictionary with usage and cost tracking
+
+        Raises:
+            LLMError: If request fails
+        """
+        try:
+            # Prepare request parameters
+            request_params = {
+                'model': self.model_name,
+                'messages': messages,
+                'tools': tools,
+                'tool_choice': tool_choice
+            }
+
+            # Add generation parameters if not None
+            if params.temperature is not None:
+                request_params['temperature'] = params.temperature
+            if params.max_tokens is not None:
+                request_params['max_tokens'] = params.max_tokens
+            if params.top_p is not None:
+                request_params['top_p'] = params.top_p
+            if params.frequency_penalty is not None:
+                request_params['frequency_penalty'] = params.frequency_penalty
+            if params.presence_penalty is not None:
+                request_params['presence_penalty'] = params.presence_penalty
+
+            logger.debug(f"Making OpenAI function calling request to {self.model_name}")
+            start_time = time.time()
+
+            response = self.client.chat.completions.create(**request_params)
+
+            request_time = time.time() - start_time
+            logger.debug(f"OpenAI function request completed in {request_time:.2f}s")
+
+            # Convert to dictionary format
+            response_dict = {
+                'id': response.id,
+                'model': response.model,
+                'choices': [],
+                'usage': {
+                    'prompt_tokens': response.usage.prompt_tokens if response.usage else 0,
+                    'completion_tokens': response.usage.completion_tokens if response.usage else 0,
+                    'total_tokens': response.usage.total_tokens if response.usage else 0
+                },
+                'created': response.created,
+                'request_time': request_time
+            }
+
+            # Process choices (handle tool calls)
+            for choice in response.choices:
+                choice_dict = {
+                    'message': {
+                        'role': choice.message.role,
+                        'content': choice.message.content
+                    },
+                    'finish_reason': choice.finish_reason
+                }
+
+                # Add tool_calls if present
+                if choice.message.tool_calls:
+                    choice_dict['message']['tool_calls'] = [
+                        {
+                            'id': tc.id,
+                            'type': tc.type,
+                            'function': {
+                                'name': tc.function.name,
+                                'arguments': tc.function.arguments
+                            }
+                        }
+                        for tc in choice.message.tool_calls
+                    ]
+
+                response_dict['choices'].append(choice_dict)
+
+            # Track cost
+            cost_breakdown = self._track_usage_with_breakdown(response_dict['usage'])
+            response_dict['cost_breakdown'] = cost_breakdown
+
+            return response_dict
+
+        except openai.RateLimitError as e:
+            logger.warning(f"OpenAI rate limit exceeded: {str(e)}")
+            raise RateLimitError(f"OpenAI rate limit: {str(e)}")
+        except openai.AuthenticationError as e:
+            logger.error(f"OpenAI authentication failed: {str(e)}")
+            raise AuthenticationError(f"OpenAI authentication error: {str(e)}")
+        except openai.NotFoundError as e:
+            logger.error(f"OpenAI model not found: {str(e)}")
+            raise ModelNotFoundError(f"OpenAI model '{self.model_name}' not found: {str(e)}")
+        except openai.BadRequestError as e:
+            logger.error(f"OpenAI bad request: {str(e)}")
+            raise LLMError(f"OpenAI request error: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected OpenAI error: {str(e)}")
+            self._handle_openai_error(e)
 
 
 # Helper function for component factory registration
