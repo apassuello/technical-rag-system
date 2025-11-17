@@ -111,13 +111,28 @@ def main():
     with col2:
         st.markdown("### Parameters")
 
-        top_k = st.slider(
-            "Top-K Results",
-            min_value=1,
-            max_value=20,
-            value=10,
-            help="Number of documents to retrieve"
+        # Check if Epic1 is available
+        has_epic1 = health.get('query_analyzer', False)
+        has_answer_gen = health.get('answer_generator', False)
+
+        use_epic1 = st.checkbox(
+            "🧠 Use Epic1 Classification",
+            value=has_epic1,
+            disabled=not has_epic1,
+            help="Use ML-based query classification for intelligent routing"
         )
+
+        if use_epic1:
+            top_k = None  # Will use Epic1 suggestion
+            st.info("Top-K will be determined by query complexity")
+        else:
+            top_k = st.slider(
+                "Top-K Results",
+                min_value=1,
+                max_value=20,
+                value=10,
+                help="Number of documents to retrieve"
+            )
 
     st.markdown("---")
 
@@ -150,14 +165,42 @@ def main():
     # Execute Query
     if search_button and query_text:
         with st.spinner(f"Searching with {strategy_names[selected_strategy]}..."):
-            # Execute query
+            # Execute query with or without Epic1 classification
             start_time = time.time()
-            result = engine.query(
-                query_text=query_text,
-                strategy=selected_strategy,
-                top_k=top_k,
-                generate_answer=False
-            )
+
+            if use_epic1:
+                # Use Epic1 classification and answer generation
+                result_dict = engine.query_with_classification(
+                    query_text=query_text,
+                    strategy=selected_strategy,
+                    top_k=top_k,
+                    use_recommended_model=True
+                )
+
+                # Convert to QueryResult format for compatibility
+                from demo.components.rag_engine import QueryResult
+                result = QueryResult(
+                    query=query_text,
+                    answer=result_dict.get('answer'),
+                    documents=result_dict.get('documents', []),
+                    retrieval_results=result_dict.get('retrieval_results', []),
+                    performance=result_dict.get('performance', {}),
+                    strategy=selected_strategy,
+                    metadata=result_dict.get('metadata', {})
+                )
+
+                # Store Epic1 analysis for display
+                query_analysis = result_dict.get('query_analysis')
+            else:
+                # Standard query without Epic1
+                result = engine.query(
+                    query_text=query_text,
+                    strategy=selected_strategy,
+                    top_k=top_k if top_k else 10,
+                    generate_answer=False
+                )
+                query_analysis = None
+
             query_time = (time.time() - start_time) * 1000
 
             # Record metrics
@@ -170,6 +213,57 @@ def main():
 
         # Display Results
         st.markdown("---")
+
+        # Epic1 Query Analysis (if available)
+        if query_analysis:
+            st.markdown("### 🧠 Query Analysis (Epic1)")
+
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                complexity = query_analysis.get('complexity_level', 'unknown')
+                color_map = {'simple': 'green', 'medium': 'orange', 'complex': 'red'}
+                color = color_map.get(complexity, 'gray')
+                st.markdown(f"**Complexity:** :{color}[{complexity.upper()}]")
+                score = query_analysis.get('complexity_score', 0.0)
+                st.caption(f"Score: {score:.2f}")
+
+            with col2:
+                model = query_analysis.get('recommended_model', 'default')
+                st.markdown(f"**Recommended Model:**")
+                st.code(model, language=None)
+
+            with col3:
+                routing_conf = query_analysis.get('routing_confidence', 0.0)
+                st.metric("Routing Confidence", f"{routing_conf:.2%}")
+
+            with col4:
+                suggested_k = query_analysis.get('suggested_k', 5)
+                st.metric("Suggested Top-K", suggested_k)
+
+            # Additional metadata in expander
+            with st.expander("📊 Full Analysis Details"):
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.markdown("**Intent & Features:**")
+                    st.markdown(f"- **Intent:** {query_analysis.get('intent_category', 'unknown')}")
+
+                    technical_terms = query_analysis.get('technical_terms', [])
+                    if technical_terms:
+                        st.markdown(f"- **Technical Terms:** {', '.join(technical_terms[:5])}")
+
+                    entities = query_analysis.get('entities', [])
+                    if entities:
+                        st.markdown(f"- **Entities:** {', '.join(entities[:5])}")
+
+                with col2:
+                    st.markdown("**Cost & Performance:**")
+                    st.markdown(f"- **Cost Estimate:** ${query_analysis.get('cost_estimate', 0.0):.6f}")
+                    st.markdown(f"- **Latency Estimate:** {query_analysis.get('latency_estimate', 0.0):.0f}ms")
+                    st.markdown(f"- **Complexity Confidence:** {query_analysis.get('complexity_confidence', 0.0):.2%}")
+
+            st.markdown("---")
 
         # Performance Metrics
         st.markdown("### ⏱️ Performance Metrics")
@@ -200,11 +294,32 @@ def main():
                 f"{len(result.documents)}"
             )
 
-        # Answer (placeholder)
+        # Generated Answer (from Epic1 or fallback)
         if result.answer:
             st.markdown("---")
-            st.markdown("### 📝 Generated Answer")
-            st.info(result.answer)
+            st.markdown("### ✨ Generated Answer")
+
+            # Display answer with confidence
+            st.markdown(result.answer)
+
+            # Show answer metadata
+            if hasattr(result, 'metadata') and 'answer_confidence' in result.metadata:
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    conf = result.metadata.get('answer_confidence', 0.0)
+                    st.metric("Answer Confidence", f"{conf:.2%}")
+                with col2:
+                    gen_time = result.performance.get('generation_ms', 0)
+                    st.metric("Generation Time", f"{gen_time:.0f}ms")
+                with col3:
+                    num_docs = len(result.documents)
+                    st.metric("Context Documents", num_docs)
+
+            # Answer metadata expander
+            if hasattr(result, 'metadata') and 'answer_metadata' in result.metadata:
+                with st.expander("📋 Answer Generation Details"):
+                    answer_meta = result.metadata['answer_metadata']
+                    st.json(answer_meta)
 
         # Retrieved Documents
         st.markdown("---")

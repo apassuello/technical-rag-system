@@ -66,6 +66,7 @@ class RAGEngine:
         self.factory = ComponentFactory()
         self.embedder = None
         self.retrievers: Dict[str, Any] = {}  # Strategy name -> retriever instance
+        self.query_analyzer = None  # Epic1 query analyzer
         self.answer_generator = None
 
         # Load documents and indices
@@ -105,8 +106,11 @@ class RAGEngine:
             # 3. Initialize retrievers for each strategy
             self._init_retrievers()
 
-            # 4. Initialize answer generator (optional for now)
-            # self._init_answer_generator()
+            # 4. Initialize Epic1 query analyzer (optional)
+            self._init_query_analyzer()
+
+            # 5. Initialize answer generator (optional)
+            self._init_answer_generator()
 
             logger.info("RAG Engine initialization complete")
             return True
@@ -190,6 +194,56 @@ class RAGEngine:
         except Exception as e:
             logger.error(f"Failed to initialize retrievers: {e}")
             raise
+
+    def _init_query_analyzer(self) -> None:
+        """Initialize Epic1 query analyzer for ML-based classification."""
+        try:
+            if 'query_analyzer' not in self.config:
+                logger.info("Query analyzer not configured, skipping...")
+                return
+
+            analyzer_config = self.config['query_analyzer']
+            analyzer_type = analyzer_config.get('type', 'epic1')
+            analyzer_params = analyzer_config.get('config', {})
+
+            # Create Epic1 query analyzer
+            self.query_analyzer = self.factory.create_query_analyzer(
+                analyzer_type,
+                config=analyzer_params
+            )
+
+            logger.info(f"Query analyzer initialized: {analyzer_type}")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize query analyzer: {e}")
+            logger.warning("Demo will run without query classification")
+
+    def _init_answer_generator(self) -> None:
+        """Initialize answer generator for LLM-based generation."""
+        try:
+            if 'answer_generator' not in self.config:
+                logger.info("Answer generator not configured, skipping...")
+                return
+
+            gen_config = self.config['answer_generator']
+            gen_type = gen_config.get('type', 'answer_generator')
+            gen_params = gen_config.get('config', {})
+
+            # Create answer generator
+            self.answer_generator = self.factory.create_generator(
+                gen_type,
+                **gen_params
+            )
+
+            # Set embedder for semantic confidence scoring
+            if self.embedder and hasattr(self.answer_generator, 'set_embedder'):
+                self.answer_generator.set_embedder(self.embedder)
+
+            logger.info(f"Answer generator initialized: {gen_type}")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize answer generator: {e}")
+            logger.warning("Demo will run without answer generation")
 
     def query(
         self,
@@ -312,6 +366,147 @@ class RAGEngine:
 
         return results
 
+    def query_with_classification(
+        self,
+        query_text: str,
+        strategy: str = "hybrid_rrf",
+        top_k: Optional[int] = None,
+        use_recommended_model: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Execute RAG query with Epic1 classification and answer generation.
+
+        This method:
+        1. Analyzes the query with Epic1QueryAnalyzer (complexity classification)
+        2. Retrieves documents with complexity-aware top-k
+        3. Generates answer with recommended model
+
+        Args:
+            query_text: The query string
+            strategy: Retrieval strategy name (from config)
+            top_k: Number of documents to retrieve (None = use Epic1 suggestion)
+            use_recommended_model: Whether to use Epic1's model recommendation
+
+        Returns:
+            Dictionary with results including query analysis, retrieval, and answer
+        """
+        start_time = time.time()
+        result = {
+            'query': query_text,
+            'strategy': strategy,
+            'performance': {},
+            'metadata': {}
+        }
+
+        try:
+            # Step 1: Query Analysis (Epic1)
+            query_analysis = None
+            epic1_metadata = {}
+
+            if self.query_analyzer:
+                analysis_start = time.time()
+                try:
+                    query_analysis = self.query_analyzer.analyze(query_text)
+                    epic1_metadata = query_analysis.metadata.get('epic1_analysis', {})
+                    result['performance']['analysis_ms'] = (time.time() - analysis_start) * 1000
+                    logger.info(
+                        f"Query classified as {epic1_metadata.get('complexity_level', 'unknown')} "
+                        f"(confidence: {epic1_metadata.get('complexity_confidence', 0):.2f})"
+                    )
+                except Exception as e:
+                    logger.error(f"Query analysis failed: {e}")
+                    query_analysis = None
+
+            # Determine actual top-k (use Epic1 suggestion if available)
+            if top_k is None and query_analysis:
+                actual_top_k = query_analysis.suggested_k
+                result['metadata']['top_k_source'] = 'epic1_suggested'
+            elif top_k is not None:
+                actual_top_k = top_k
+                result['metadata']['top_k_source'] = 'user_specified'
+            else:
+                actual_top_k = self.config.get('demo_settings', {}).get('default_top_k', 10)
+                result['metadata']['top_k_source'] = 'default'
+
+            # Step 2: Retrieval
+            retrieval_start = time.time()
+            query_result = self.query(
+                query_text=query_text,
+                strategy=strategy,
+                top_k=actual_top_k,
+                generate_answer=False
+            )
+            result['performance']['retrieval_ms'] = (time.time() - retrieval_start) * 1000
+
+            # Copy retrieval results
+            result['documents'] = query_result.documents
+            result['retrieval_results'] = query_result.retrieval_results
+            result['performance'].update(query_result.performance)
+
+            # Step 3: Answer Generation
+            if self.answer_generator and query_result.documents:
+                generation_start = time.time()
+                try:
+                    # TODO: Update generator model based on Epic1 recommendation
+                    # For now, use default model
+                    recommended_model = epic1_metadata.get('recommended_model')
+                    if use_recommended_model and recommended_model:
+                        logger.info(f"Using Epic1 recommended model: {recommended_model}")
+                        # Note: Model switching would require updating LLM client config
+                        # This is a future enhancement
+
+                    answer = self.answer_generator.generate(
+                        query_text,
+                        query_result.documents
+                    )
+
+                    result['answer'] = answer.text
+                    result['answer_confidence'] = answer.confidence
+                    result['answer_metadata'] = answer.metadata
+                    result['performance']['generation_ms'] = (time.time() - generation_start) * 1000
+
+                    logger.info(
+                        f"Generated answer (confidence: {answer.confidence:.2f}) in "
+                        f"{result['performance']['generation_ms']:.1f}ms"
+                    )
+
+                except Exception as e:
+                    logger.error(f"Answer generation failed: {e}")
+                    result['answer'] = None
+                    result['answer_error'] = str(e)
+
+            # Step 4: Add Epic1 Analysis Metadata
+            if query_analysis and epic1_metadata:
+                result['query_analysis'] = {
+                    'complexity_level': epic1_metadata.get('complexity_level', 'unknown'),
+                    'complexity_score': query_analysis.complexity_score,
+                    'complexity_confidence': epic1_metadata.get('complexity_confidence', 0.0),
+                    'recommended_model': epic1_metadata.get('recommended_model', 'default'),
+                    'model_provider': epic1_metadata.get('model_provider', 'unknown'),
+                    'routing_confidence': epic1_metadata.get('routing_confidence', 0.0),
+                    'suggested_k': query_analysis.suggested_k,
+                    'intent_category': query_analysis.intent_category,
+                    'technical_terms': query_analysis.technical_terms,
+                    'entities': query_analysis.entities,
+                    'cost_estimate': epic1_metadata.get('cost_estimate', 0.0),
+                    'latency_estimate': epic1_metadata.get('latency_estimate', 0.0),
+                    'full_metadata': epic1_metadata
+                }
+
+            # Calculate total time
+            result['performance']['total_ms'] = (time.time() - start_time) * 1000
+            result['metadata']['has_query_analysis'] = query_analysis is not None
+            result['metadata']['has_answer'] = 'answer' in result
+            result['metadata']['num_documents'] = len(result.get('documents', []))
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Query with classification failed: {e}", exc_info=True)
+            result['error'] = str(e)
+            result['performance']['total_ms'] = (time.time() - start_time) * 1000
+            return result
+
     def get_available_strategies(self) -> List[str]:
         """Get list of available retrieval strategies."""
         return list(self.retrievers.keys())
@@ -340,5 +535,6 @@ class RAGEngine:
             'embedder': self.embedder is not None,
             'retrievers': len(self.retrievers) > 0,
             'documents': self.indices_loaded,
+            'query_analyzer': self.query_analyzer is not None,
             'answer_generator': self.answer_generator is not None
         }
