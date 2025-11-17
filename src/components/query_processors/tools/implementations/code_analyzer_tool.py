@@ -26,7 +26,7 @@ Usage:
 """
 
 import ast
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any
 import logging
 
 from ..base_tool import BaseTool
@@ -450,7 +450,7 @@ class CodeAnalyzerTool(BaseTool):
 
         # Basic metrics
         lines.append("=== Basic Metrics ===")
-        lines.append(f"Syntax Valid: Yes")
+        lines.append("Syntax Valid: Yes")
         lines.append(f"Lines of Code: {analysis['lines_of_code']}")
         lines.append(f"Total Statements: {analysis['num_statements']}")
         lines.append(f"Functions: {analysis['num_functions']}")

@@ -37,11 +37,9 @@ Configuration Example:
 
 import os
 import time
-import json
 import logging
 from typing import Dict, Any, Optional, Iterator, List, Tuple
 from decimal import Decimal
-from datetime import datetime
 
 try:
     import anthropic
@@ -483,8 +481,8 @@ class AnthropicAdapter(BaseLLMAdapter):
                 # Note: Tool results should be added by caller via continue_with_tool_results()
                 # For this basic implementation, we return incomplete conversation
                 logger.warning(
-                    f"Tool calls requested but not executed. "
-                    f"Use continue_with_tool_results() to continue conversation."
+                    "Tool calls requested but not executed. "
+                    "Use continue_with_tool_results() to continue conversation."
                 )
 
                 total_time = time.time() - start_time
@@ -640,8 +638,7 @@ class AnthropicAdapter(BaseLLMAdapter):
 
             logger.debug(f"Starting Anthropic streaming request to {self.model_name}")
 
-            # Track tokens for streaming (approximate)
-            input_tokens = 0
+            # Track tokens for streaming (approximate from words)
             output_tokens = 0
 
             # Stream response
@@ -679,7 +676,8 @@ class AnthropicAdapter(BaseLLMAdapter):
             # Test with a minimal request
             test_messages = [{"role": "user", "content": "Hi"}]
 
-            response = self.client.messages.create(
+            # Validate model is accessible (response content not needed)
+            self.client.messages.create(
                 model=self.model_name,
                 messages=test_messages,
                 max_tokens=10

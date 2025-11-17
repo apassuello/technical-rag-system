@@ -45,7 +45,6 @@ import time
 
 from .models import (
     ToolParameter,
-    ToolParameterType,
     ToolResult,
 )
 

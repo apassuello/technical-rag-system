@@ -27,7 +27,7 @@ Usage:
     >>> print(result.content)  # Formatted search results
 """
 
-from typing import List, Optional, Any
+from typing import List, Optional
 import logging
 
 from ..base_tool import BaseTool

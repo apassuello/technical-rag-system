@@ -26,7 +26,7 @@ Usage:
 import ast
 import operator
 import math
-from typing import List, Any, Union
+from typing import List, Union
 import logging
 
 from ..base_tool import BaseTool
