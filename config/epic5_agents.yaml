@@ -84,18 +84,39 @@ planning:
     max_parallel_tasks: 3
     timeout_per_task: 60
 
-# Integration Settings (Block 3 - pending)
+# Integration Settings (Block 3 - implemented)
 integration:
   # RAG Pipeline Integration
   rag_pipeline:
     enabled: true
     fallback_on_agent_failure: true
-    use_agent_for_complex_queries: false  # Until agents implemented
+    use_agent_for_complex_queries: true  # Now implemented in Block 3
 
   # Tool Integration
   tools:
     inherit_from_phase1: true  # Use Phase 1 tool configurations
-    enable_tool_selection: false  # Until agents implemented
+    enable_tool_selection: true  # Enabled with agent system
+
+# Intelligent Query Processor Configuration (Block 3 - implemented)
+intelligent_processor:
+  enabled: true  # Enable intelligent routing
+
+  # Routing Configuration
+  complexity_threshold: 0.7  # Use agent if complexity > 0.7
+  use_agent_by_default: false  # Use RAG by default unless complexity high
+
+  # Cost & Performance
+  max_agent_cost: 0.10  # Max cost per agent query (USD)
+  track_routing_decisions: true  # Log which path taken
+
+  # Planning Integration
+  use_planning: false  # Use query planning for complex queries (Block 2 pending)
+
+  # Fallback Behavior
+  fallback_to_rag_on_failure: true  # Fallback if agent fails
+
+  # Parallel Execution
+  enable_parallel_execution: false  # Parallel task execution (Block 2 pending)
 
 # Cost & Performance Budgets
 budgets:

@@ -93,6 +93,8 @@ class ComponentFactory:
         "modular_query_processor": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",  # Alias for compatibility
         "domain_aware": "src.components.query_processors.domain_aware_query_processor.DomainAwareQueryProcessor",  # Epic 1 Phase 1 Domain-Aware Processor
         "epic1_domain_aware": "src.components.query_processors.domain_aware_query_processor.DomainAwareQueryProcessor",  # Alias for Epic 1
+        "intelligent": "src.components.query_processors.intelligent_query_processor.IntelligentQueryProcessor",  # Epic 5 Phase 2 Block 3 Intelligent Processor
+        "epic5_intelligent": "src.components.query_processors.intelligent_query_processor.IntelligentQueryProcessor",  # Alias for Epic 5
     }
     
     # Query analyzer implementations (used by ModularQueryProcessor)
@@ -939,21 +941,21 @@ class ComponentFactory:
             if processor_type == 'modular' or processor_type == 'modular_query_processor':
                 # ModularQueryProcessor needs retriever and generator instances
                 from src.components.query_processors.base import QueryProcessorConfig
-                
+
                 # Get or create required dependencies
                 retriever = kwargs.pop('retriever', None)
                 generator = kwargs.pop('generator', None)
-                
+
                 if retriever is None:
                     # Create a default retriever if not provided
                     # ModularUnifiedRetriever needs an embedder
                     embedder = cls.create_embedder('sentence_transformer')
                     retriever = cls.create_retriever('modular_unified', embedder=embedder)
-                    
+
                 if generator is None:
                     # Create a default generator if not provided
                     generator = cls.create_generator('adaptive_modular')
-                
+
                 # Build config from remaining kwargs
                 config = QueryProcessorConfig(
                     analyzer_type=kwargs.pop('analyzer_type', 'rule_based'),
@@ -963,12 +965,12 @@ class ComponentFactory:
                     assembler_type=kwargs.pop('assembler_type', 'standard'),
                     assembler_config=kwargs.pop('assembler_config', {})
                 )
-                
+
                 # Remove legacy parameters that don't belong to ModularQueryProcessor
                 legacy_params = ['default_k', 'min_confidence', 'enable_performance_monitoring']
                 for param in legacy_params:
                     kwargs.pop(param, None)
-                
+
                 # Create processor with correct arguments
                 return cls._create_with_tracking(
                     processor_class,
@@ -978,11 +980,52 @@ class ComponentFactory:
                     config=config,
                     **kwargs  # Any remaining kwargs
                 )
+            # Special handling for IntelligentQueryProcessor (Epic 5 Phase 2 Block 3)
+            elif processor_type == 'intelligent' or processor_type == 'epic5_intelligent':
+                # IntelligentQueryProcessor needs retriever, generator, agent, and query_analyzer
+                from src.components.query_processors.agents.models import ProcessorConfig
+
+                # Get required dependencies (must be provided)
+                retriever = kwargs.pop('retriever', None)
+                generator = kwargs.pop('generator', None)
+                agent = kwargs.pop('agent', None)
+                query_analyzer = kwargs.pop('query_analyzer', None)
+
+                if retriever is None:
+                    raise ValueError("IntelligentQueryProcessor requires 'retriever' parameter")
+                if generator is None:
+                    raise ValueError("IntelligentQueryProcessor requires 'generator' parameter")
+                if agent is None:
+                    raise ValueError("IntelligentQueryProcessor requires 'agent' parameter (ReActAgent)")
+                if query_analyzer is None:
+                    raise ValueError("IntelligentQueryProcessor requires 'query_analyzer' parameter (QueryAnalyzer)")
+
+                # Build config from remaining kwargs or use provided config
+                config = kwargs.pop('config', None)
+                if config is None:
+                    config = ProcessorConfig(
+                        use_agent_by_default=kwargs.pop('use_agent_by_default', False),
+                        complexity_threshold=kwargs.pop('complexity_threshold', 0.7),
+                        max_agent_cost=kwargs.pop('max_agent_cost', 0.10),
+                        enable_planning=kwargs.pop('enable_planning', False),
+                        enable_parallel_execution=kwargs.pop('enable_parallel_execution', False)
+                    )
+
+                # Create processor with correct arguments
+                return cls._create_with_tracking(
+                    processor_class,
+                    f"query_processor_{processor_type}",
+                    retriever=retriever,
+                    generator=generator,
+                    agent=agent,
+                    query_analyzer=query_analyzer,
+                    config=config
+                )
             else:
                 # Default handling for other processor types
                 return cls._create_with_tracking(
-                    processor_class, 
-                    f"query_processor_{processor_type}", 
+                    processor_class,
+                    f"query_processor_{processor_type}",
                     **kwargs
                 )
         except Exception as e:
