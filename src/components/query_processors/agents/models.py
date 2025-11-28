@@ -139,6 +139,11 @@ class AgentConfig:
     early_stopping: str = "force"  # or "generate"
     verbose: bool = False
 
+    # Prompt configuration
+    use_technical_prompts: bool = True  # Use domain-specific prompts
+    include_few_shot: bool = True  # Include few-shot examples in prompt
+    agent_role: str = "technical_docs"  # "technical_docs", "code_assistant", "research", "general"
+
     def __post_init__(self) -> None:
         """Validate configuration."""
         if self.llm_provider not in ["openai", "anthropic"]:
@@ -155,6 +160,10 @@ class AgentConfig:
 
         if self.max_execution_time <= 0:
             raise ValueError("max_execution_time must be positive")
+
+        valid_roles = ["technical_docs", "code_assistant", "research", "general"]
+        if self.agent_role not in valid_roles:
+            raise ValueError(f"agent_role must be one of {valid_roles}")
 
 
 # =============================================================================

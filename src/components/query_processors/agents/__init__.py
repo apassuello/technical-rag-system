@@ -62,6 +62,15 @@ from .memory import ConversationMemory, WorkingMemory
 from .react_agent import ReActAgent
 from .langchain_adapter import PhaseOneToolAdapter, convert_tools_to_langchain
 
+# Prompt engineering
+from .prompts import (
+    TechnicalReActPrompt,
+    AgentRole,
+    get_system_prompt,
+    get_tool_guidance,
+    get_react_prompt,
+)
+
 # Planning components
 from .planning import QueryAnalyzer, QueryDecomposer, ExecutionPlanner, PlanExecutor
 
@@ -105,6 +114,13 @@ __all__ = [
     "ReActAgent",
     "PhaseOneToolAdapter",
     "convert_tools_to_langchain",
+
+    # Prompt engineering
+    "TechnicalReActPrompt",
+    "AgentRole",
+    "get_system_prompt",
+    "get_tool_guidance",
+    "get_react_prompt",
 
     # Planning components
     "QueryAnalyzer",

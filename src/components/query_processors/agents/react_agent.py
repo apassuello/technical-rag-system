@@ -58,6 +58,7 @@ from .models import (
 from .langchain_adapter import PhaseOneToolAdapter, convert_tools_to_langchain
 from .memory.conversation_memory import ConversationMemory
 from .memory.working_memory import WorkingMemory
+from .prompts import TechnicalReActPrompt, AgentRole
 from ...query_processors.tools.base_tool import BaseTool as Phase1BaseTool
 from ...query_processors.tools.models import ToolCall, ToolResult
 
@@ -65,7 +66,7 @@ from ...query_processors.tools.models import ToolCall, ToolResult
 logger = logging.getLogger(__name__)
 
 
-# ReAct prompt template
+# Legacy ReAct prompt template (kept for backward compatibility)
 REACT_PROMPT_TEMPLATE = """Answer the following questions as best you can. You have access to the following tools:
 
 {tools}
@@ -85,6 +86,17 @@ Begin!
 
 Question: {input}
 Thought: {agent_scratchpad}"""
+
+
+def _get_agent_role(role_str: str) -> AgentRole:
+    """Convert role string to AgentRole enum."""
+    role_map = {
+        "technical_docs": AgentRole.TECHNICAL_DOCS,
+        "code_assistant": AgentRole.CODE_ASSISTANT,
+        "research": AgentRole.RESEARCH,
+        "general": AgentRole.GENERAL,
+    }
+    return role_map.get(role_str, AgentRole.TECHNICAL_DOCS)
 
 
 class ReActAgent(BaseAgent):
@@ -165,8 +177,24 @@ class ReActAgent(BaseAgent):
         # Convert Phase 1 tools to LangChain format
         self.langchain_tools = convert_tools_to_langchain(tools)
 
-        # Create ReAct prompt
-        self.prompt = PromptTemplate.from_template(REACT_PROMPT_TEMPLATE)
+        # Create ReAct prompt (use technical prompts by default)
+        tool_names = [t.name for t in tools]
+        if config.use_technical_prompts:
+            role = _get_agent_role(config.agent_role)
+            prompt_template = TechnicalReActPrompt.get_react_prompt(
+                role=role,
+                include_few_shot=config.include_few_shot,
+                tool_names=tool_names
+            )
+            logger.info(
+                f"Using technical ReAct prompt with role={config.agent_role}, "
+                f"few_shot={config.include_few_shot}"
+            )
+        else:
+            prompt_template = REACT_PROMPT_TEMPLATE
+            logger.info("Using legacy ReAct prompt template")
+
+        self.prompt = PromptTemplate.from_template(prompt_template)
 
         # Create ReAct agent
         self.react_agent = create_react_agent(
