@@ -58,6 +58,13 @@ from .models import (
 # Memory implementations
 from .memory import ConversationMemory, WorkingMemory
 
+# Agent implementations
+from .react_agent import ReActAgent
+from .langchain_adapter import PhaseOneToolAdapter, convert_tools_to_langchain
+
+# Planning components
+from .planning import QueryAnalyzer, QueryDecomposer, ExecutionPlanner, PlanExecutor
+
 __all__ = [
     # Base classes
     "BaseAgent",
@@ -93,4 +100,15 @@ __all__ = [
     # Memory implementations
     "ConversationMemory",
     "WorkingMemory",
+
+    # Agent implementations
+    "ReActAgent",
+    "PhaseOneToolAdapter",
+    "convert_tools_to_langchain",
+
+    # Planning components
+    "QueryAnalyzer",
+    "QueryDecomposer",
+    "ExecutionPlanner",
+    "PlanExecutor",
 ]

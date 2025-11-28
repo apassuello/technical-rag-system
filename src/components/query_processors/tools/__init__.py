@@ -43,6 +43,13 @@ from .models import (
 from .base_tool import BaseTool
 from .tool_registry import ToolRegistry
 
+# Concrete tool implementations
+from .implementations import (
+    CalculatorTool,
+    CodeAnalyzerTool,
+    DocumentSearchTool,
+)
+
 __all__ = [
     # Data models
     "ToolParameterType",
@@ -55,8 +62,10 @@ __all__ = [
     "BaseTool",
     # Registry
     "ToolRegistry",
-    # Will be added in subsequent tasks:
-    # "ToolExecutor",
+    # Concrete tools
+    "CalculatorTool",
+    "CodeAnalyzerTool",
+    "DocumentSearchTool",
 ]
 
 __version__ = "1.0.0"

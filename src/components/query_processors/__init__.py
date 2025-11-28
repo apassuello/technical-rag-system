@@ -80,33 +80,41 @@ from .base import (
 # Main implementation
 from .modular_query_processor import ModularQueryProcessor
 
+# Epic 1: Domain-Aware Query Processor
+from .domain_aware_query_processor import DomainAwareQueryProcessor
+
+# Epic 5: Intelligent Query Processor (Phase 2 Block 3)
+from .intelligent_query_processor import IntelligentQueryProcessor
+
 # Sub-component implementations
 from .analyzers import NLPAnalyzer, RuleBasedAnalyzer
-from .selectors import MMRSelector, TokenLimitSelector  
+from .selectors import MMRSelector, TokenLimitSelector
 from .assemblers import StandardAssembler, RichAssembler
 
 __all__ = [
     # Interfaces
     'QueryProcessor',
     'QueryAnalyzer',
-    'ContextSelector', 
+    'ContextSelector',
     'ResponseAssembler',
-    
+
     # Data structures
     'QueryAnalysis',
     'ContextSelection',
     'QueryProcessorConfig',
-    
+
     # Utilities
     'validate_config',
     'QueryProcessorMetrics',
-    
-    # Main implementation
+
+    # Main implementations
     'ModularQueryProcessor',
-    
+    'DomainAwareQueryProcessor',  # Epic 1
+    'IntelligentQueryProcessor',  # Epic 5
+
     # Sub-component implementations
     'NLPAnalyzer',
-    'RuleBasedAnalyzer', 
+    'RuleBasedAnalyzer',
     'MMRSelector',
     'TokenLimitSelector',
     'StandardAssembler',
