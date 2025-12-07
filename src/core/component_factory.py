@@ -971,6 +971,9 @@ class ComponentFactory:
                 for param in legacy_params:
                     kwargs.pop(param, None)
 
+                # Remove config from kwargs if it exists to avoid duplicate
+                kwargs.pop('config', None)
+
                 # Create processor with correct arguments
                 return cls._create_with_tracking(
                     processor_class,

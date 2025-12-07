@@ -523,13 +523,13 @@ class ModularQueryProcessor(QueryProcessor):
         # Convert to HealthStatus format
         return HealthStatus(
             is_healthy=self._health_status.get('healthy', True),
-            status="healthy" if self._health_status.get('healthy', True) else "unhealthy",
-            details={
+            last_check=self._last_health_check,
+            issues=self._health_status.get('issues', []),
+            metrics={
                 "sub_components": self._get_component_summary(),
                 "performance_metrics": self._metrics.get_stats(),
-                "last_check": self._last_health_check,
-                "issues": self._health_status.get('issues', [])
-            }
+            },
+            component_name="ModularQueryProcessor"
         )
 
     def get_metrics(self) -> Dict[str, Any]:

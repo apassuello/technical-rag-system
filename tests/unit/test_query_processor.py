@@ -184,16 +184,20 @@ class TestQueryProcessor(unittest.TestCase):
     def test_health_status(self):
         """Test health status functionality (replaces explain_query for ModularQueryProcessor)."""
         health_status = self.processor.get_health_status()
-        
-        # Verify health status structure
-        self.assertIn("healthy", health_status)
-        self.assertIn("issues", health_status)
-        self.assertIn("performance_metrics", health_status)
-        
+
+        # Verify health status is a HealthStatus object
+        from src.core.interfaces import HealthStatus
+        self.assertIsInstance(health_status, HealthStatus)
+
+        # Verify health status attributes
+        self.assertTrue(hasattr(health_status, 'is_healthy'))
+        self.assertTrue(hasattr(health_status, 'issues'))
+        self.assertTrue(hasattr(health_status, 'metrics'))
+
         # Should be healthy with properly mocked components
-        self.assertTrue(health_status["healthy"])
-        self.assertIsInstance(health_status["issues"], list)
-        self.assertIsInstance(health_status["performance_metrics"], dict)
+        self.assertTrue(health_status.is_healthy)
+        self.assertIsInstance(health_status.issues, list)
+        self.assertIsInstance(health_status.metrics, dict)
     
     def test_error_propagation(self):
         """Test that errors are handled appropriately by ModularQueryProcessor."""
