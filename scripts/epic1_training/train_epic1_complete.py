@@ -49,6 +49,16 @@ from scipy.optimize import minimize
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# MLflow imports and initialization
+try:
+    from src.training.mlflow_logger import get_mlflow_logger
+    mlflow_logger = get_mlflow_logger()
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    logger.warning("MLflow not available. Install with: pip install mlflow>=2.9.0")
+    MLFLOW_AVAILABLE = False
+    mlflow_logger = None
+
 # Set seeds for reproducibility
 SEED = 42
 random.seed(SEED)
@@ -256,23 +266,50 @@ class Epic1CompleteTrainer:
         # Train each view model
         for view_name in self.view_names:
             logger.info(f"\\nTraining {view_name} view model...")
-            
+
             # Create datasets
             train_dataset = SimpleViewDataset(self.train_data, view_name)
             val_dataset = SimpleViewDataset(self.val_data, view_name)
-            
+
             train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
             val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
-            
+
             # Create model
             model = SimpleViewModel(input_dim=10)  # Enhanced features
             optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=0.01)
             criterion = nn.MSELoss()
             scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, factor=0.5)
-            
-            # Training loop
-            best_val_loss = float('inf')
-            patience_counter = 0
+
+            # Start MLflow run for this view model
+            mlflow_context = mlflow_logger.start_run(
+                experiment_name="epic1-view-models",
+                run_name=f"{view_name}_view_training",
+                tags={"view": view_name, "epic": "1", "component": "query_analyzer"}
+            ) if MLFLOW_AVAILABLE else None
+
+            try:
+                if MLFLOW_AVAILABLE:
+                    # Log hyperparameters
+                    mlflow_logger.log_params({
+                        "view_name": view_name,
+                        "epochs": epochs,
+                        "learning_rate": 0.001,
+                        "batch_size": 64,
+                        "hidden_dim": 128,
+                        "dropout": 0.3,
+                        "optimizer": "AdamW",
+                        "weight_decay": 0.01,
+                        "train_samples": len(train_dataset),
+                        "val_samples": len(val_dataset),
+                        "feature_dim": 10,
+                        "seed": SEED,
+                        "quick_mode": quick_mode,
+                        "patience": patience
+                    })
+
+                # Training loop
+                best_val_loss = float('inf')
+                patience_counter = 0
             
             for epoch in range(epochs):
                 # Training phase
@@ -314,10 +351,19 @@ class Epic1CompleteTrainer:
                 val_mae = mean_absolute_error(val_targets, val_predictions)
                 
                 scheduler.step(avg_val_loss)
-                
+
+                # Log metrics to MLflow
+                if MLFLOW_AVAILABLE:
+                    mlflow_logger.log_metrics({
+                        "train_loss": avg_train_loss,
+                        "val_loss": avg_val_loss,
+                        "val_mae": val_mae,
+                        "learning_rate": optimizer.param_groups[0]['lr']
+                    }, step=epoch)
+
                 if epoch % 5 == 0:
                     logger.info(f"  Epoch {epoch}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}, Val MAE={val_mae:.4f}")
-                
+
                 # Early stopping
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
@@ -340,20 +386,36 @@ class Epic1CompleteTrainer:
                         logger.info(f"  Early stopping at epoch {epoch}")
                         break
             
-            # Load best model
-            checkpoint = torch.load(self.output_dir / f"{view_name}_model.pth")
-            model.load_state_dict(checkpoint['model_state_dict'])
-            
-            # Store model and results
-            self.view_models[view_name] = model
-            self.view_training_results[view_name] = {
-                'val_mae': checkpoint['val_mae'],
-                'val_loss': checkpoint['val_loss'],
-                'epochs_trained': checkpoint['epoch'],
-                'model_path': str(self.output_dir / f"{view_name}_model.pth")
-            }
-            
-            logger.info(f"  {view_name} model trained. Best Val MAE: {checkpoint['val_mae']:.4f}")
+                # Load best model
+                checkpoint = torch.load(self.output_dir / f"{view_name}_model.pth")
+                model.load_state_dict(checkpoint['model_state_dict'])
+
+                # Log final metrics to MLflow
+                if MLFLOW_AVAILABLE:
+                    mlflow_logger.log_metrics({
+                        "final_val_loss": float(checkpoint['val_loss']),
+                        "final_val_mae": float(checkpoint['val_mae']),
+                        "epochs_trained": int(checkpoint['epoch'])
+                    })
+
+                    # Log the trained model
+                    mlflow_logger.log_artifact(str(self.output_dir / f"{view_name}_model.pth"))
+
+                # Store model and results
+                self.view_models[view_name] = model
+                self.view_training_results[view_name] = {
+                    'val_mae': checkpoint['val_mae'],
+                    'val_loss': checkpoint['val_loss'],
+                    'epochs_trained': checkpoint['epoch'],
+                    'model_path': str(self.output_dir / f"{view_name}_model.pth")
+                }
+
+                logger.info(f"  {view_name} model trained. Best Val MAE: {checkpoint['val_mae']:.4f}")
+
+            finally:
+                # Close MLflow run
+                if MLFLOW_AVAILABLE and mlflow_context:
+                    mlflow_context.__exit__(None, None, None)
         
         # Test trained models
         self._test_trained_view_models()
@@ -426,35 +488,69 @@ class Epic1CompleteTrainer:
     def train_fusion_layer(self, quick_mode: bool = False):
         """
         Train fusion layer with multiple strategies.
-        
+
         Args:
             quick_mode: If True, skip neural fusion for faster training
         """
         logger.info("\\n" + "="*70)
         logger.info("PHASE 2: TRAINING FUSION LAYER")
         logger.info("="*70)
-        
+
         if not self.view_models:
             raise ValueError("View models must be trained first. Run train_view_models() or load existing models.")
-        
-        # Extract view predictions for all splits
-        self.train_view_preds, self.train_scores, self.train_levels = self._extract_view_predictions(self.train_data)
-        self.val_view_preds, self.val_scores, self.val_levels = self._extract_view_predictions(self.val_data)
-        self.test_view_preds, self.test_scores, self.test_levels = self._extract_view_predictions(self.test_data)
-        
-        # Train different fusion strategies
-        self._train_weighted_average_fusion()
-        self._train_ensemble_fusion()
-        
-        if not quick_mode:
-            self._train_neural_fusion()
-        else:
-            logger.info("Skipping neural fusion in quick mode")
-        
-        # Evaluate all fusion methods
-        self._evaluate_fusion_methods()
-        
-        logger.info("\\n🎉 Phase 2 Complete: Fusion layer trained with multiple strategies!")
+
+        # Start MLflow run for fusion layer training
+        mlflow_context = mlflow_logger.start_run(
+            experiment_name="epic1-fusion-layer",
+            run_name=f"fusion_training",
+            tags={"epic": "1", "component": "fusion_layer", "quick_mode": str(quick_mode)}
+        ) if MLFLOW_AVAILABLE else None
+
+        try:
+            if MLFLOW_AVAILABLE:
+                mlflow_logger.log_params({
+                    "num_views": len(self.view_names),
+                    "view_names": ", ".join(self.view_names),
+                    "quick_mode": quick_mode,
+                    "train_samples": len(self.train_data),
+                    "val_samples": len(self.val_data),
+                    "test_samples": len(self.test_data),
+                    "fusion_strategies": "weighted_average, ensemble" + ("" if quick_mode else ", neural")
+                })
+
+            # Extract view predictions for all splits
+            self.train_view_preds, self.train_scores, self.train_levels = self._extract_view_predictions(self.train_data)
+            self.val_view_preds, self.val_scores, self.val_levels = self._extract_view_predictions(self.val_data)
+            self.test_view_preds, self.test_scores, self.test_levels = self._extract_view_predictions(self.test_data)
+
+            # Train different fusion strategies
+            self._train_weighted_average_fusion()
+            self._train_ensemble_fusion()
+
+            if not quick_mode:
+                self._train_neural_fusion()
+            else:
+                logger.info("Skipping neural fusion in quick mode")
+
+            # Evaluate all fusion methods
+            self._evaluate_fusion_methods()
+
+            # Log fusion results to MLflow
+            if MLFLOW_AVAILABLE and hasattr(self, 'fusion_results'):
+                for fusion_name, results in self.fusion_results.items():
+                    if isinstance(results, dict):
+                        for metric_name, metric_value in results.items():
+                            if isinstance(metric_value, (int, float)):
+                                mlflow_logger.log_metrics({
+                                    f"{fusion_name}_{metric_name}": float(metric_value)
+                                })
+
+            logger.info("\\n🎉 Phase 2 Complete: Fusion layer trained with multiple strategies!")
+
+        finally:
+            # Close MLflow run
+            if MLFLOW_AVAILABLE and mlflow_context:
+                mlflow_context.__exit__(None, None, None)
     
     def _extract_view_predictions(self, data: List[Dict]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Extract predictions from all view models."""
@@ -1090,8 +1186,33 @@ def main():
     
     # Initialize trainer
     trainer = Epic1CompleteTrainer(args.dataset, args.output_dir)
-    
+
+    # Start top-level MLflow run for the complete pipeline
+    pipeline_mlflow_context = mlflow_logger.start_run(
+        experiment_name="epic1-complete-pipeline",
+        run_name=f"complete_training_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        tags={
+            "epic": "1",
+            "pipeline": "complete",
+            "views_only": str(args.views_only),
+            "fusion_only": str(args.fusion_only),
+            "quick_mode": str(args.quick)
+        }
+    ) if MLFLOW_AVAILABLE else None
+
     try:
+        if MLFLOW_AVAILABLE:
+            # Log pipeline configuration
+            mlflow_logger.log_params({
+                "dataset_path": args.dataset,
+                "output_dir": args.output_dir,
+                "views_only": args.views_only,
+                "fusion_only": args.fusion_only,
+                "quick_mode": args.quick,
+                "epochs": args.epochs,
+                "seed": SEED
+            })
+
         if args.fusion_only:
             # Load existing view models
             logger.info("Loading existing view models for fusion training...")
@@ -1123,6 +1244,10 @@ def main():
     except Exception as e:
         logger.error(f"\\n❌ Training failed: {e}")
         raise
+    finally:
+        # Close top-level MLflow run
+        if MLFLOW_AVAILABLE and pipeline_mlflow_context:
+            pipeline_mlflow_context.__exit__(None, None, None)
 
 
 if __name__ == "__main__":
