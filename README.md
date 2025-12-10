@@ -4,6 +4,8 @@
 [![Code Quality](https://img.shields.io/badge/type%20hints-93.9%25-brightgreen.svg)](./src/)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
+[![K8s Tests](https://github.com/apassuello/rag-portfolio/actions/workflows/k8s-testing.yml/badge.svg)](https://github.com/apassuello/rag-portfolio/actions/workflows/k8s-testing.yml)
+[![Helm Tests](https://github.com/apassuello/rag-portfolio/actions/workflows/helm-testing.yml/badge.svg)](https://github.com/apassuello/rag-portfolio/actions/workflows/helm-testing.yml)
 
 A production-grade Retrieval-Augmented Generation (RAG) system for technical documentation with multi-model routing, hybrid retrieval, and comprehensive K8s deployment infrastructure. Demonstrates ML engineering discipline from embedded systems background with 93.9% type hint coverage and 241K lines of test code.
 
