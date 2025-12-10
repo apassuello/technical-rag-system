@@ -1,0 +1,112 @@
+# MLflow Configuration for RAG Portfolio
+# Experiment tracking and model registry settings
+
+mlflow:
+  # Tracking server configuration
+  tracking:
+    # Local file-based tracking (for development)
+    uri: "file:./mlruns"
+
+    # Alternative: Remote tracking server (for production)
+    # uri: "http://mlflow-server:5000"
+
+  # Experiment organization
+  experiments:
+    # Epic 1: Multi-model query complexity classification
+    epic1_view_models:
+      name: "epic1-view-models"
+      description: "Training individual view models for query complexity analysis"
+      tags:
+        epic: "1"
+        component: "query_analyzer"
+        task: "complexity_classification"
+
+    epic1_fusion:
+      name: "epic1-fusion-layer"
+      description: "Training ensemble fusion layer for multi-view aggregation"
+      tags:
+        epic: "1"
+        component: "fusion_layer"
+        task: "ensemble_learning"
+
+    epic1_meta:
+      name: "epic1-meta-classifier"
+      description: "Training meta-classifier for final complexity prediction"
+      tags:
+        epic: "1"
+        component: "meta_classifier"
+        task: "final_classification"
+
+    # Epic 2: Retrieval system evaluation
+    epic2_retrieval:
+      name: "epic2-retrieval-evaluation"
+      description: "RAGAS evaluation for retrieval quality metrics"
+      tags:
+        epic: "2"
+        component: "retriever"
+        task: "retrieval_quality"
+
+  # Artifact storage
+  artifacts:
+    location: "./mlartifacts"
+
+  # Model registry configuration
+  registry:
+    # Model naming conventions
+    model_prefix: "rag_portfolio"
+
+    # Model stages
+    stages:
+      - "None"
+      - "Staging"
+      - "Production"
+      - "Archived"
+
+  # Logging configuration
+  logging:
+    # What to log
+    log_params: true       # Hyperparameters
+    log_metrics: true      # Training/validation metrics
+    log_models: true       # Model artifacts
+    log_artifacts: true    # Additional artifacts (plots, configs)
+    log_system_metrics: false  # CPU, GPU, memory (optional, adds overhead)
+
+    # Autologging (optional - can be noisy)
+    autolog:
+      enabled: false
+      frameworks:
+        - pytorch
+        - sklearn
+
+  # Performance settings
+  performance:
+    # Batch metric logging (reduces I/O)
+    batch_metrics: true
+
+    # Async logging (experimental)
+    async_logging: false
+
+# Environment-specific overrides
+environments:
+  development:
+    mlflow:
+      tracking:
+        uri: "file:./mlruns"
+      logging:
+        log_system_metrics: false
+
+  staging:
+    mlflow:
+      tracking:
+        uri: "${MLFLOW_TRACKING_URI}"
+      logging:
+        log_system_metrics: true
+
+  production:
+    mlflow:
+      tracking:
+        uri: "${MLFLOW_TRACKING_URI}"
+      registry:
+        model_prefix: "rag_portfolio_prod"
+      logging:
+        log_system_metrics: true

@@ -14,6 +14,9 @@ sentence-transformers>=2.2.0,<3.0.0
 transformers>=4.30.0,<5.0.0
 tokenizers>=0.13.0
 
+# ML Operations & Experiment Tracking
+mlflow>=2.9.0,<3.0.0  # Experiment tracking, model registry, and reproducibility
+
 # Vector Search & Indexing
 faiss-cpu>=1.7.4
 
