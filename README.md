@@ -7,6 +7,8 @@
 
 A production-grade Retrieval-Augmented Generation (RAG) system for technical documentation with multi-model routing, hybrid retrieval, and comprehensive K8s deployment infrastructure. Demonstrates ML engineering discipline from embedded systems background with 93.9% type hint coverage and 241K lines of test code.
 
+**🚀 [Try Live Demo on HuggingFace Spaces](https://huggingface.co/spaces/ArthyP/enhanced-rag-demo)** | *Earlier version - current code adds Epic 1 & 2 enhancements*
+
 ## Epic 1: Multi-Model Intelligence
 
 ### Query Processing Architecture
