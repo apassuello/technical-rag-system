@@ -1,33 +1,42 @@
 # Technical Documentation RAG System
 
-A production-ready Retrieval-Augmented Generation (RAG) system designed for technical documentation, featuring breakthrough Epic 1 multi-model intelligence with **99.5% accuracy** and advanced Epic 2 enhancements with **48.7% MRR improvement**.
+[![Tests](https://img.shields.io/badge/tests-2555%20functions-brightgreen.svg)](./tests/)
+[![Code Quality](https://img.shields.io/badge/type%20hints-93.9%25-brightgreen.svg)](./src/)
+![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
 
-## 🎯 Epic 1: Multi-Model Intelligence (99.5% Accuracy) ✨
+A production-grade Retrieval-Augmented Generation (RAG) system for technical documentation with multi-model routing, hybrid retrieval, and comprehensive K8s deployment infrastructure. Demonstrates ML engineering discipline from embedded systems background with 93.9% type hint coverage and 241K lines of test code.
 
-### **Revolutionary Query Processing**
-Epic 1 transforms the system from single-model to intelligent multi-model operation with **99.5% classification accuracy**:
+## Epic 1: Multi-Model Intelligence
 
-- **🧠 Multi-Model Answer Generation**: Intelligent routing between OpenAI, Mistral, and Ollama models
-- **🎯 99.5% Query Classification**: Advanced ML-based complexity analysis (5-dimensional assessment)
-- **⚡ <25ms Routing Decisions**: Lightning-fast model selection with cost optimization
-- **💰 $0.001 Cost Precision**: Real-time cost tracking with budget enforcement
-- **🛡️ 100% Reliability**: Comprehensive fallback mechanisms ensuring zero downtime
+### Query Processing Architecture
+Multi-model routing system with ML-based query complexity analysis:
 
-### **Bridge Architecture Innovation**
-- **Seamless Integration**: Trained PyTorch models integrated without breaking changes
-- **Multi-Level Fallbacks**: ML models → Epic 1 infrastructure → conservative analysis
-- **Swiss Quality Engineering**: 147 test cases with comprehensive validation
+- **Multi-Provider Integration**: Intelligent routing between OpenAI, Mistral, and Ollama models
+- **ML-Based Classification**: Query complexity analysis with 5-dimensional feature assessment
+- **Cost Optimization**: Real-time cost tracking with $0.001 precision using thread-safe Decimal types
+- **Reliability**: Comprehensive fallback chains (OpenAI → Mistral → Ollama → Mock)
 
-## 🚀 Epic 2: Advanced Retrieval (48.7% MRR Improvement) 
+### Implementation Patterns
+- **Bridge Pattern**: PyTorch models integrated without breaking existing interfaces
+- **Multi-Level Fallbacks**: ML models → heuristic analysis → conservative defaults
+- **Test Coverage**: 296 test functions with unit, integration, and validation scenarios
 
-### **Validated Performance Improvements**
-- **📈 48.7% MRR improvement** (0.600 → 0.892) with graph-enhanced fusion
-- **📊 33.7% NDCG@5 improvement** (0.576 → 0.770) for position-weighted quality
-- **⚡ 114,923% score discrimination** improvement eliminating score compression
-- **✅ 100% system integration** - All Epic 2 components operational
+## Epic 2: Advanced Retrieval Systems
 
-### **Technical Breakthrough: Score Compression Fix**
-Resolved critical GraphEnhancedRRFFusion issue with automatic score normalization and proportional enhancement scaling.
+### Hybrid Retrieval Implementation
+Multi-strategy retrieval combining dense and sparse methods:
+
+- **Vector Search**: FAISS IndexFlatIP with 2,538 document chunks (384-dimensional embeddings)
+- **Sparse Retrieval**: BM25 algorithm for keyword-based document matching
+- **Fusion Strategies**: RRF (Reciprocal Rank Fusion) and graph-enhanced fusion
+- **Neural Reranking**: Cross-encoder models for precision improvement
+- **System Integration**: All retrieval components operational with comprehensive testing
+
+### Technical Implementation
+- **Score Normalization**: Automatic calibration preventing score compression
+- **Graph Enhancement**: Document relationship analysis with proportional scaling
+- **Performance**: 0.35ms average query time on 2,538 indexed chunks
 
 ## 🚀 System Features
 
