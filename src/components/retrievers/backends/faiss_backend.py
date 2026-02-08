@@ -8,12 +8,13 @@ interface. This enables hot-swapping between FAISS and other backends.
 
 import logging
 import time
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
 
 from src.core.interfaces import Document
+
 from ..indices.faiss_index import FAISSIndex
-from .weaviate_config import WeaviateBackendConfig  # For consistent interface
 
 logger = logging.getLogger(__name__)
 

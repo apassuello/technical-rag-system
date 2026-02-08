@@ -31,7 +31,6 @@ from typing import Any, Dict, List, Optional
 # Import Phase 1 models
 from src.components.query_processors.tools.models import ToolCall, ToolResult
 
-
 # =============================================================================
 # Enumerations
 # =============================================================================

@@ -5,7 +5,8 @@ API Gateway Service - Core orchestration logic.
 import asyncio
 import time
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 import structlog
 
 from .config import APIGatewaySettings, get_settings
@@ -42,27 +43,24 @@ class SimpleCircuitBreaker:
 
 
 from ..clients import (
-    QueryAnalyzerClient,
-    GeneratorClient,
-    RetrieverClient,
-    CacheClient,
     AnalyticsClient,
-    ServiceError,
-    ServiceTimeoutError,
-    ServiceUnavailableError
+    CacheClient,
+    GeneratorClient,
+    QueryAnalyzerClient,
+    RetrieverClient,
 )
-from ..schemas.requests import UnifiedQueryRequest, BatchQueryRequest
+from ..schemas.requests import BatchQueryRequest, UnifiedQueryRequest
 from ..schemas.responses import (
-    UnifiedQueryResponse,
+    AvailableModelsResponse,
     BatchQueryResponse,
     BatchQueryResult,
-    ProcessingMetrics,
     CostBreakdown,
     DocumentSource,
     GatewayStatusResponse,
+    ModelInfo,
+    ProcessingMetrics,
     ServiceStatus,
-    AvailableModelsResponse,
-    ModelInfo
+    UnifiedQueryResponse,
 )
 
 logger = structlog.get_logger(__name__)

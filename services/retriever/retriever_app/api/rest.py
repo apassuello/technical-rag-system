@@ -6,28 +6,27 @@ providing comprehensive error handling, request validation, and monitoring.
 """
 
 import time
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException, Depends, status
-from prometheus_client import Counter, Histogram, Gauge
+
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, status
+from prometheus_client import Counter, Gauge, Histogram
 
 from ..core.retriever import RetrieverService
 from ..schemas.requests import (
-    RetrievalRequest,
     BatchRetrievalRequest,
     IndexDocumentsRequest,
-    ReindexRequest
+    ReindexRequest,
+    RetrievalRequest,
 )
 from ..schemas.responses import (
-    RetrievalResponse,
     BatchRetrievalResponse,
+    ComponentStatus,
+    DocumentResult,
+    ErrorResponse,
     IndexingResponse,
     ReindexingResponse,
+    RetrievalResponse,
     RetrieverStatusResponse,
-    HealthResponse,
-    ErrorResponse,
-    DocumentResult,
-    ComponentStatus
 )
 
 logger = structlog.get_logger(__name__)

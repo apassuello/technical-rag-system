@@ -10,12 +10,11 @@ the enhanced neural reranker in the rerankers/ component.
 """
 
 import logging
-import time
 import os
-from typing import Dict, List, Optional, Any, Union
 import threading
+import time
 from dataclasses import dataclass
-import numpy as np
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -243,7 +242,7 @@ class ModelManager:
             
             # Try fallback to local if API fails and fallback is enabled
             if self.config.backend == "huggingface_api" and self.config.fallback_to_local:
-                logger.warning(f"API prediction failed, attempting fallback to local model")
+                logger.warning("API prediction failed, attempting fallback to local model")
                 try:
                     return self._fallback_to_local(query_doc_pairs)
                 except Exception as fallback_error:

@@ -19,15 +19,15 @@ Architecture Notes:
 """
 
 import re
-from typing import List, Dict, Any, Tuple
-from pathlib import Path
 import sys
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from ..base import ContentCleaner, ConfigurableComponent, QualityAssessment
+from ..base import ConfigurableComponent, ContentCleaner, QualityAssessment
 
 
 class TechnicalContentCleaner(ContentCleaner, ConfigurableComponent, QualityAssessment):

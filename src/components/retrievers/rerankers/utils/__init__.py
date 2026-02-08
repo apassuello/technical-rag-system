@@ -9,10 +9,15 @@ Migrated and simplified from the reranking/ module for proper integration
 with the architecture-compliant rerankers/ component.
 """
 
-from .score_fusion import ScoreFusion, ScoreNormalizer, WeightsConfig, NormalizationConfig
-from .adaptive_strategies import AdaptiveStrategies, QueryTypeDetector, QueryAnalysis
-from .model_manager import ModelManager, CrossEncoderModels, ModelConfig, ModelInfo
-from .performance_cache import PerformanceOptimizer, LRUCache, BatchProcessor
+from .adaptive_strategies import AdaptiveStrategies, QueryAnalysis, QueryTypeDetector
+from .model_manager import CrossEncoderModels, ModelConfig, ModelInfo, ModelManager
+from .performance_cache import BatchProcessor, LRUCache, PerformanceOptimizer
+from .score_fusion import (
+    NormalizationConfig,
+    ScoreFusion,
+    ScoreNormalizer,
+    WeightsConfig,
+)
 
 __all__ = [
     # Score Fusion

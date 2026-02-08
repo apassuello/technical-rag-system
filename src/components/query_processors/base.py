@@ -12,17 +12,17 @@ Key Design Principles:
 - Type hints for better IDE support
 """
 
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
-import sys
+from typing import Any, Dict, List, Optional
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.interfaces import Document, Answer, QueryOptions
+from src.core.interfaces import Answer, Document, QueryOptions
 
 
 @dataclass 

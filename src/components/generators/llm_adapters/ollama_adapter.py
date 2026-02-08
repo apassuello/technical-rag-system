@@ -12,13 +12,14 @@ Architecture Notes:
 """
 
 import json
-import requests
 import logging
-from typing import Dict, Any, Optional, Iterator
+from typing import Any, Dict, Iterator, Optional
 from urllib.parse import urljoin
 
-from .base_adapter import BaseLLMAdapter, LLMError, ModelNotFoundError
+import requests
+
 from ..base import GenerationParams
+from .base_adapter import BaseLLMAdapter, LLMError, ModelNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -335,7 +336,7 @@ class OllamaAdapter(BaseLLMAdapter):
         if 'connection' in error_msg:
             raise LLMError(f"Cannot connect to Ollama at {self.base_url}. Is Ollama running?")
         elif 'timeout' in error_msg:
-            raise LLMError(f"Request to Ollama timed out")
+            raise LLMError("Request to Ollama timed out")
         elif 'model' in error_msg and 'not found' in error_msg:
             raise ModelNotFoundError(f"Model '{self.model_name}' not found")
         else:

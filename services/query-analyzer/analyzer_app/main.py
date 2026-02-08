@@ -5,22 +5,20 @@ This module implements the main FastAPI application for the Query Analyzer servi
 providing both REST and gRPC endpoints for query analysis functionality.
 """
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
-import uvicorn
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import make_asgi_app, Counter, Histogram, Gauge
 import structlog
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import Counter, Gauge, Histogram, make_asgi_app
 
 from .api import rest
-from .core.config import get_settings, get_analyzer_config
 from .core.analyzer import QueryAnalyzerService
-from .schemas.requests import AnalyzeRequest
-from .schemas.responses import AnalyzeResponse, HealthResponse
+from .core.config import get_analyzer_config, get_settings
+from .schemas.responses import HealthResponse
 
 # Configure structured logging
 logging.basicConfig(level=logging.INFO)

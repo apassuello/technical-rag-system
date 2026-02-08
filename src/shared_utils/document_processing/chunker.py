@@ -33,9 +33,9 @@ Date: June 2025
 Project: RAG Portfolio - Technical Documentation System
 """
 
-from typing import List, Dict
-import re
 import hashlib
+import re
+from typing import Dict, List
 
 
 def _is_low_quality_chunk(text: str) -> bool:
@@ -214,7 +214,7 @@ def chunk_technical_text(
         if chunk_text and not _is_low_quality_chunk(chunk_text):
             # Generate deterministic chunk ID using content hash
             # MD5 is sufficient for deduplication (not cryptographic use)
-            chunk_hash = hashlib.md5(chunk_text.encode()).hexdigest()[:8]
+            chunk_hash = hashlib.md5(chunk_text.encode(), usedforsecurity=False).hexdigest()[:8]
             chunk_id = f"chunk_{chunk_hash}"
             
             # Calculate word count for chunk statistics

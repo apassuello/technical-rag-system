@@ -9,14 +9,21 @@ backend management capabilities.
 
 import logging
 import time
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List
 
-from .interfaces import (
-    ComponentHealthService, SystemAnalyticsService, ABTestingService,
-    ConfigurationService, BackendManagementService,
-    HealthStatus, ComponentMetrics, ExperimentAssignment, ExperimentResult, BackendStatus
-)
 from .config import ConfigManager
+from .interfaces import (
+    ABTestingService,
+    BackendManagementService,
+    BackendStatus,
+    ComponentHealthService,
+    ComponentMetrics,
+    ConfigurationService,
+    ExperimentAssignment,
+    ExperimentResult,
+    HealthStatus,
+    SystemAnalyticsService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -98,8 +105,9 @@ class ComponentHealthServiceImpl(ComponentHealthService):
 
             # Check 4: Memory usage (if available)
             try:
-                import psutil
                 import os
+
+                import psutil
                 process = psutil.Process(os.getpid())
                 memory_mb = process.memory_info().rss / 1024 / 1024
                 health_status.metrics["memory_mb"] = round(memory_mb, 1)
@@ -351,8 +359,9 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
 
             # Collect resource usage
             try:
-                import psutil
                 import os
+
+                import psutil
                 process = psutil.Process(os.getpid())
                 memory_info = process.memory_info()
                 metrics.resource_usage = {
@@ -768,7 +777,7 @@ class ABTestingServiceImpl(ABTestingService):
         # Simple hash-based assignment for consistency
         import hashlib
         hash_input = f"{session_id}_{experiment_id}".encode()
-        hash_value = int(hashlib.md5(hash_input).hexdigest(), 16)
+        hash_value = int(hashlib.md5(hash_input, usedforsecurity=False).hexdigest(), 16)
         variant_index = hash_value % len(variants)
         selected_variant = variants[variant_index]
 

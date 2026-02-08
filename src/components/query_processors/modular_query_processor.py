@@ -9,31 +9,44 @@ Key Features:
 - Complete query workflow orchestration
 - Comprehensive error handling and fallbacks
 - Performance monitoring and metrics
-- Production-ready reliability
+- Comprehensive reliability
 """
 
-import time
 import logging
-from typing import Dict, Any, List, Optional, Union
-from pathlib import Path
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from .base import (
-    QueryProcessor, QueryAnalysis, ContextSelection, QueryProcessorConfig,
-    QueryProcessorMetrics, validate_config
-)
-from .analyzers import QueryAnalyzer, NLPAnalyzer, RuleBasedAnalyzer, Epic1QueryAnalyzer
-from .analyzers.epic1_ml_analyzer import Epic1MLAnalyzer
-from .selectors import ContextSelector, MMRSelector, TokenLimitSelector
-from .assemblers import ResponseAssembler, StandardAssembler, RichAssembler
-from src.core.interfaces import Answer, QueryOptions, Document, Retriever, AnswerGenerator, HealthStatus
-
 # Forward declaration to avoid circular import
 from typing import TYPE_CHECKING
+
+from src.core.interfaces import (
+    Answer,
+    AnswerGenerator,
+    Document,
+    HealthStatus,
+    QueryOptions,
+    Retriever,
+)
+
+from .analyzers import Epic1QueryAnalyzer, NLPAnalyzer, QueryAnalyzer, RuleBasedAnalyzer
+from .analyzers.epic1_ml_analyzer import Epic1MLAnalyzer
+from .assemblers import ResponseAssembler, RichAssembler, StandardAssembler
+from .base import (
+    ContextSelection,
+    QueryAnalysis,
+    QueryProcessor,
+    QueryProcessorConfig,
+    QueryProcessorMetrics,
+    validate_config,
+)
+from .selectors import ContextSelector, MMRSelector, TokenLimitSelector
+
 if TYPE_CHECKING:
     from src.core.platform_orchestrator import PlatformOrchestrator
 
@@ -300,7 +313,7 @@ class ModularQueryProcessor(QueryProcessor):
     - Comprehensive error handling and fallbacks
     - Performance metrics and monitoring
     - Graceful degradation on component failures
-    - Production-ready reliability
+    - Comprehensive reliability
     """
     
     def __init__(

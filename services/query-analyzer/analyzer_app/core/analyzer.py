@@ -13,28 +13,30 @@ Epic 8 Enhancements:
 """
 
 import asyncio
-import time
-import uuid
-import logging
-from typing import Dict, Any, Optional, List
-from pathlib import Path
-import sys
-from dataclasses import dataclass
-from enum import Enum
-import traceback
-
-import structlog
-from prometheus_client import Counter, Histogram, Gauge
 
 # Add main project to path to import existing components
 # Use environment variable for containerized deployment
 import os
+import sys
+import time
+import traceback
+import uuid
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import structlog
+from prometheus_client import Counter, Gauge, Histogram
+
 project_root = Path(os.getenv('PROJECT_ROOT', Path(__file__).parent.parent.parent.parent.parent))
 if project_root.exists():
     sys.path.insert(0, str(project_root))
 
 # Import existing Epic 1 components
-from src.components.query_processors.analyzers.epic1_query_analyzer import Epic1QueryAnalyzer
+from src.components.query_processors.analyzers.epic1_query_analyzer import (
+    Epic1QueryAnalyzer,
+)
 from src.components.query_processors.base import QueryAnalysis
 
 logger = structlog.get_logger(__name__)

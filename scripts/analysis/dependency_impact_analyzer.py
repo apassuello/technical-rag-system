@@ -352,7 +352,7 @@ class DependencyAnalyzer:
 
 def main():
     """Main execution function."""
-    project_root = Path("/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag")
+    project_root = Path(__file__).resolve().parents[2]
     
     analyzer = DependencyAnalyzer(project_root)
     report = analyzer.generate_impact_report()

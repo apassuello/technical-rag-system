@@ -3,24 +3,26 @@ Hybrid retrieval combining dense semantic search with sparse BM25 keyword matchi
 Uses modern modular components following the architecture specification.
 """
 
-from typing import List, Dict, Tuple, Optional
-import numpy as np
-from pathlib import Path
 import sys
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
 
 # Add project root to Python path for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
 # Modern modular components
-from src.components.retrievers.sparse.bm25_retriever import BM25Retriever
-from src.components.retrievers.fusion.rrf_fusion import RRFFusion
-from src.components.retrievers.fusion.weighted_fusion import WeightedFusion
-from src.components.retrievers.fusion.score_aware_fusion import ScoreAwareFusion
-from src.shared_utils.embeddings.generator import generate_embeddings
-import faiss
 import logging
 
+import faiss
+
+from src.components.retrievers.fusion.rrf_fusion import RRFFusion
+from src.components.retrievers.fusion.score_aware_fusion import ScoreAwareFusion
+from src.components.retrievers.fusion.weighted_fusion import WeightedFusion
+from src.components.retrievers.sparse.bm25_retriever import BM25Retriever
+from src.shared_utils.embeddings.generator import generate_embeddings
 
 logger = logging.getLogger(__name__)
 

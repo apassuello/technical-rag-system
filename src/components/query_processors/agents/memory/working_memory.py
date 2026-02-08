@@ -26,8 +26,8 @@ Usage:
     >>> all_context = working.get_all_context()
 """
 
-from typing import Any, Dict, Optional
 import logging
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 

@@ -4,8 +4,10 @@ Fix all examples in medium_focus_2 to use simple structure.
 """
 
 import re
+from pathlib import Path
 
-file_path = "/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/prompts/claude_training_generation/claude_prompt_medium_focus_2.md"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+file_path = str(PROJECT_ROOT / "prompts/claude_training_generation/claude_prompt_medium_focus_2.md")
 
 # Fixed examples with simple structure
 example1_fixed = '''### Example 1: Medium-Simple Boundary (Score: 0.36) - Data Engineering Focus

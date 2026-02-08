@@ -10,13 +10,12 @@ Architecture Notes:
 - Each provider's peculiarities are hidden behind the unified interface
 """
 
-import time
 import logging
-from typing import Dict, Any, Optional, List, Iterator
+import time
 from abc import abstractmethod
-import json
+from typing import Any, Dict, Iterator, List, Optional
 
-from ..base import LLMAdapter, LLMError, GenerationParams, ConfigurableComponent
+from ..base import ConfigurableComponent, GenerationParams, LLMAdapter, LLMError
 
 logger = logging.getLogger(__name__)
 

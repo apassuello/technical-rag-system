@@ -10,13 +10,15 @@ Validates all Epic 8 services including:
 - Component status verification
 """
 
-import asyncio
 import json
+import logging
 import sys
 import time
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict
+
+logger = logging.getLogger(__name__)
+
 import requests
-from pathlib import Path
 
 # Service configuration
 SERVICES = {
@@ -322,7 +324,7 @@ class ComprehensiveValidator:
         print("=" * 70)
         
         summary = results["summary"]
-        print(f"\n📈 SUMMARY:")
+        print("\n📈 SUMMARY:")
         print(f"   Total Services: {summary['total_services']}")
         print(f"   ✅ Healthy: {summary['healthy_services']}")
         print(f"   ⚠️  Unhealthy: {summary['unhealthy_services']}")

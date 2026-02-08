@@ -5,18 +5,18 @@ Tests the ServiceSettings and AnalyzerConfig classes, along with
 configuration loading from files and environment variables.
 """
 
-import pytest
 import os
 import tempfile
-import yaml
 from pathlib import Path
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 
+import pytest
+import yaml
 from analyzer_app.core.config import (
-    ServiceSettings,
     AnalyzerConfig,
+    ServiceSettings,
+    get_analyzer_config,
     get_settings,
-    get_analyzer_config
 )
 
 

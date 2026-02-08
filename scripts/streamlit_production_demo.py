@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Production Streamlit Demo with Confidence Monitoring.
+Streamlit Demo with Confidence Monitoring.
 
-This demonstrates a production-ready Streamlit interface with the current
+This demonstrates a robust Streamlit interface with the current
 PlatformOrchestrator architecture, focusing on confidence scores and quality metrics.
 
 Note: This version uses the current architecture. System-level calibration is available

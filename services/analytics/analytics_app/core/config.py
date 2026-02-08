@@ -5,12 +5,12 @@ Handles service configuration including Epic 1 cost tracking integration,
 performance monitoring settings, and data persistence options.
 """
 
-import os
-from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from pydantic_settings import BaseSettings
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import yaml
+from pydantic import ConfigDict, field_validator
+from pydantic_settings import BaseSettings
 
 
 class AnalyticsSettings(BaseSettings):

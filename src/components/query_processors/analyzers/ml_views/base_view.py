@@ -17,20 +17,20 @@ Design Principles:
 - Configuration-driven behavior switching
 """
 
-import time
-import logging
 import asyncio
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Union, Callable
-from pathlib import Path
+import logging
 import sys
+import time
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Any, Callable, Dict, Optional
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from .view_result import ViewResult, AnalysisMethod
 from ..ml_models.model_manager import ModelManager
+from .view_result import AnalysisMethod, ViewResult
 
 logger = logging.getLogger(__name__)
 

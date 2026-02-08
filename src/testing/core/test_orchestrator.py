@@ -10,23 +10,25 @@ Manages test execution across multiple suites with support for:
 """
 
 import asyncio
+import logging
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable, Union
-import subprocess
-import sys
-import logging
+from typing import Any, Callable, Dict, List, Optional
 
-from src.testing.adapters.pytest_adapter import PytestAdapter
 from src.testing.adapters.custom_adapter import CustomTestAdapter
-from src.testing.models.test_models import TestPlan, TestResult, ExecutionConfig, TestStatus
-from src.testing.utils.resource_monitor import ResourceMonitor
+from src.testing.adapters.pytest_adapter import PytestAdapter
+from src.testing.models.test_models import (
+    ExecutionConfig,
+    TestPlan,
+    TestResult,
+    TestStatus,
+)
 from src.testing.utils.progress_tracker import ProgressTracker
-
+from src.testing.utils.resource_monitor import ResourceMonitor
 
 logger = logging.getLogger(__name__)
 

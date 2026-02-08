@@ -2,17 +2,17 @@
 REST API endpoints for Query Analyzer Service.
 """
 
-import uuid
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import JSONResponse
-import structlog
-from prometheus_client import Counter, Histogram
 import time
+import uuid
+from typing import Any, Dict
+
+import structlog
+from fastapi import APIRouter, Depends, HTTPException, Request
+from prometheus_client import Counter, Histogram
 
 from ..core.analyzer import QueryAnalyzerService
-from ..schemas.requests import AnalyzeRequest, StatusRequest
-from ..schemas.responses import AnalyzeResponse, StatusResponse, ErrorResponse
+from ..schemas.requests import AnalyzeRequest
+from ..schemas.responses import AnalyzeResponse, ErrorResponse
 
 logger = structlog.get_logger(__name__)
 

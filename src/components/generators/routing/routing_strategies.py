@@ -19,10 +19,10 @@ Epic 1 Integration:
 """
 
 import logging
-from typing import Dict, Any, Optional, List, Tuple
 from abc import ABC, abstractmethod
-from decimal import Decimal
 from dataclasses import dataclass
+from decimal import Decimal
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

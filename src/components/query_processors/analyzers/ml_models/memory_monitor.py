@@ -11,13 +11,13 @@ Key Features:
 - Cross-platform compatibility (Linux, macOS, Windows)
 """
 
-import psutil
 import logging
-import time
-from typing import Dict, Optional, NamedTuple, Any
-from dataclasses import dataclass
-from pathlib import Path
 import threading
+import time
+from dataclasses import dataclass
+from typing import Any, Dict, NamedTuple, Optional
+
+import psutil
 
 logger = logging.getLogger(__name__)
 

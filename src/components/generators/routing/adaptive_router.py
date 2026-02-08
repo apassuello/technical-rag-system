@@ -19,23 +19,20 @@ Epic 1 Integration:
 - Supports multiple optimization strategies for different use cases
 """
 
-import time
 import logging
-from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
-from decimal import Decimal
-
-from .routing_strategies import (
-    RoutingStrategy, 
-    CostOptimizedStrategy,
-    QualityFirstStrategy, 
-    BalancedStrategy,
-    ModelOption,
-    get_strategy_class
-)
-from .model_registry import ModelRegistry
+import time
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 # Import cost tracking
 from ..llm_adapters.cost_tracker import get_cost_tracker
+from .model_registry import ModelRegistry
+from .routing_strategies import (
+    BalancedStrategy,
+    CostOptimizedStrategy,
+    ModelOption,
+    QualityFirstStrategy,
+    RoutingStrategy,
+)
 
 # Forward declaration for type hints
 if TYPE_CHECKING:
@@ -590,9 +587,13 @@ class AdaptiveRouter:
         
         try:
             # Import adapter classes dynamically to avoid circular imports
-            from ..llm_adapters import get_adapter_class
             from ..base import GenerationParams
-            from ..llm_adapters.base_adapter import AuthenticationError, ModelNotFoundError, RateLimitError
+            from ..llm_adapters import get_adapter_class
+            from ..llm_adapters.base_adapter import (
+                AuthenticationError,
+                ModelNotFoundError,
+                RateLimitError,
+            )
             
             # Get adapter class for provider
             adapter_class = get_adapter_class(model_option.provider)
@@ -955,6 +956,7 @@ class AdaptiveRouter:
             if primary_provider and primary_model_name:
                 logger.info(f"Creating dynamic model for fallback chain: {primary_provider}/{primary_model_name}")
                 from decimal import Decimal
+
                 from .routing_strategies import ModelOption
                 dynamic_model = ModelOption(
                     provider=primary_provider,
@@ -1199,8 +1201,9 @@ class AdaptiveRouter:
             ModelOption for emergency local fallback, or None if creation fails
         """
         try:
-            from .routing_strategies import ModelOption
             from decimal import Decimal
+
+            from .routing_strategies import ModelOption
             
             # Create minimal Ollama fallback with conservative settings
             emergency_fallback = ModelOption(

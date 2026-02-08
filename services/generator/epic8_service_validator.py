@@ -11,14 +11,14 @@ Comprehensive validation of all Epic 8 microservices:
 - Configuration validation
 """
 
-import asyncio
 import json
+import subprocess
 import sys
 import time
-from typing import Dict, List, Any, Optional
-import subprocess
-import requests
 from pathlib import Path
+from typing import Any, Dict
+
+import requests
 
 # Service configuration
 SERVICES = {
@@ -35,7 +35,7 @@ class ServiceValidator:
     
     def __init__(self):
         self.results = {}
-        self.project_root = Path("/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag")
+        self.project_root = Path(__file__).resolve().parents[2]
         
     def check_service_health(self, service_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
         """Check health endpoint for a service."""
@@ -262,7 +262,7 @@ except Exception as e:
         print("=" * 60)
         
         summary = results["summary"]
-        print(f"\n📈 SUMMARY:")
+        print("\n📈 SUMMARY:")
         print(f"   Total Services: {summary['total_services']}")
         print(f"   ✅ Healthy: {summary['healthy_services']}")
         print(f"   ⚠️  Unhealthy: {summary['unhealthy_services']}")

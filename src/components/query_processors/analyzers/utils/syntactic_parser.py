@@ -11,9 +11,9 @@ Architecture Notes:
 - Optimized for <50ms performance
 """
 
-import re
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+import re
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

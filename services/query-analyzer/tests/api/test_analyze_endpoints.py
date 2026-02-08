@@ -4,15 +4,13 @@ API tests for analysis endpoints.
 Tests /analyze and /batch-analyze endpoints through the FastAPI application.
 """
 
-import pytest
 import json
-import asyncio
 from unittest.mock import patch
 
 from conftest import (
-    validate_response_structure,
+    assert_confidence_range,
     assert_valid_complexity,
-    assert_confidence_range
+    validate_response_structure,
 )
 
 
@@ -263,7 +261,6 @@ class TestAnalyzeEndpoint:
         
         # Make multiple concurrent requests using threading
         import threading
-        import time
         
         results = []
         errors = []

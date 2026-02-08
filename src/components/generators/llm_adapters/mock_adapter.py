@@ -12,11 +12,11 @@ Architecture Notes:
 """
 
 import logging
-from typing import Dict, Any, Optional, Iterator
 import random
+from typing import Any, Dict, Iterator, Optional
 
-from .base_adapter import BaseLLMAdapter, LLMError
 from ..base import GenerationParams
+from .base_adapter import BaseLLMAdapter, LLMError
 
 logger = logging.getLogger(__name__)
 

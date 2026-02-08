@@ -5,10 +5,10 @@ This module provides detailed performance monitoring layout including
 latency analysis, throughput metrics, and component performance breakdown.
 """
 
-from typing import Dict, Any, List
-from dash import html, dcc
+from typing import Any, Dict
+
 import plotly.graph_objs as go
-import plotly.express as px
+from dash import dcc, html
 
 
 def create_performance_layout(dashboard_data: Dict[str, Any]) -> html.Div:

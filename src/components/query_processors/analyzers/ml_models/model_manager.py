@@ -18,18 +18,15 @@ import asyncio
 import logging
 import threading
 import time
-from typing import Dict, Any, Optional, Union, List, Callable, Tuple
-from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from contextlib import contextmanager
-import weakref
+from typing import Any, Callable, Dict, List, Optional
 
 # Import our infrastructure components
-from .memory_monitor import MemoryMonitor, MemoryStats
+from .memory_monitor import MemoryMonitor
 from .model_cache import ModelCache
-from .quantization import QuantizationUtils, QuantizationResult
 from .performance_monitor import PerformanceMonitor
+from .quantization import QuantizationUtils
 
 logger = logging.getLogger(__name__)
 
@@ -429,15 +426,18 @@ class ModelManager:
             try:
                 from transformers import AutoModel, AutoTokenizer
                 
+                # TODO: Pin model revision hash for supply-chain security
                 model = AutoModel.from_pretrained(hf_model_name)
                 
                 # Try to load tokenizer, with fallback for problematic models
                 try:
+                    # TODO: Pin model revision hash for supply-chain security
                     tokenizer = AutoTokenizer.from_pretrained(hf_model_name)
                     logger.debug(f"✅ Fast tokenizer loaded for {hf_model_name}: {type(tokenizer)}")
                 except Exception as tokenizer_error:
                     logger.warning(f"Fast tokenizer failed for {hf_model_name}, trying slow tokenizer: {tokenizer_error}")
                     try:
+                        # TODO: Pin model revision hash for supply-chain security
                         tokenizer = AutoTokenizer.from_pretrained(hf_model_name, use_fast=False)
                         logger.debug(f"✅ Slow tokenizer loaded for {hf_model_name}: {type(tokenizer)}")
                     except Exception as slow_tokenizer_error:
@@ -447,6 +447,7 @@ class ModelManager:
                             logger.info(f"Attempting DeBERTa-specific tokenizer for {hf_model_name}")
                             try:
                                 from transformers import DebertaV2Tokenizer
+                                # TODO: Pin model revision hash for supply-chain security
                                 tokenizer = DebertaV2Tokenizer.from_pretrained(hf_model_name)
                                 logger.info(f"✅ DeBertaV2Tokenizer loaded for {hf_model_name}")
                             except Exception as deberta_error:

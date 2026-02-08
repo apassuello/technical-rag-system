@@ -19,14 +19,13 @@ Epic 1 Integration:
 - Supports cost budgeting and alerts
 """
 
-import time
+import json
 import logging
-from typing import Dict, Any, Optional, List, Tuple
-from decimal import Decimal, ROUND_HALF_UP
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from threading import Lock
-import json
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -736,8 +735,8 @@ class CostTracker:
     
     def _export_csv(self, include_metadata: bool) -> str:
         """Export usage data as CSV."""
-        import io
         import csv
+        import io
         
         output = io.StringIO()
         

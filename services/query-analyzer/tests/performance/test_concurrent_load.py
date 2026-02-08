@@ -5,13 +5,11 @@ Tests the service's ability to handle multiple concurrent requests
 and maintain performance under load.
 """
 
-import pytest
-import time
 import statistics
-import asyncio
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed, Future
-from typing import List, Dict, Tuple
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import pytest
 
 
 class TestConcurrentRequests:
@@ -197,7 +195,7 @@ class TestConcurrentRequests:
             assert success_rate >= 0.7  # At least 70% success rate
         
         # Validate scaling characteristics
-        print(f"\nScaling Results:")
+        print("\nScaling Results:")
         for concurrency, metrics in results.items():
             print(f"  Concurrency {concurrency}: "
                   f"Success={metrics['success_rate']:.1%}, "
@@ -272,7 +270,7 @@ class TestConcurrentRequests:
             avg_response_time = statistics.mean([r["response_time"] for r in successful_requests])
             throughput = len(successful_requests) / duration
             
-            print(f"\nSustained Load Results:")
+            print("\nSustained Load Results:")
             print(f"  Duration: {duration}s")
             print(f"  Total Requests: {total_requests}")
             print(f"  Success Rate: {success_rate:.1%}")
@@ -351,7 +349,7 @@ class TestLoadTesting:
             avg_response_time = statistics.mean([r[1] for r in successful_requests])
             max_response_time = max([r[1] for r in successful_requests])
             
-            print(f"\nSpike Load Results:")
+            print("\nSpike Load Results:")
             print(f"  Spike Size: {spike_size} requests")
             print(f"  Spike Duration: {spike_duration:.2f}s")
             print(f"  Success Rate: {success_rate:.1%}")
@@ -399,7 +397,7 @@ class TestLoadTesting:
             # Brief pause between ramp steps
             time.sleep(1)
         
-        print(f"\nRamp-up Results:")
+        print("\nRamp-up Results:")
         for concurrency, metrics in results.items():
             print(f"  {concurrency} concurrent: "
                   f"Success={metrics['success_rate']:.1%}, "
@@ -520,7 +518,7 @@ class TestLoadTesting:
             avg_response_time = statistics.mean([r["response_time"] for r in successful_requests])
             throughput = len(successful_requests) / test_duration
             
-            print(f"\nEndurance Test Results:")
+            print("\nEndurance Test Results:")
             print(f"  Duration: {test_duration / 60:.1f} minutes")
             print(f"  Total Requests: {total_requests}")
             print(f"  Success Rate: {success_rate:.1%}")

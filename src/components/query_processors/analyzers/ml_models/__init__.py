@@ -12,11 +12,11 @@ The module implements lazy loading, memory-aware model management, and
 comprehensive performance tracking to support the multi-view ML architecture.
 """
 
-from .model_manager import ModelManager
 from .memory_monitor import MemoryMonitor
 from .model_cache import ModelCache
-from .quantization import QuantizationUtils
+from .model_manager import ModelManager
 from .performance_monitor import PerformanceMonitor
+from .quantization import QuantizationUtils
 
 __all__ = [
     'ModelManager',

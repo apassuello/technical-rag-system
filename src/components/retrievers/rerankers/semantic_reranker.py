@@ -6,10 +6,10 @@ to improve retrieval quality by reordering candidates based on query relevance.
 """
 
 import logging
-from typing import List, Dict, Any, Tuple, Optional
-import numpy as np
+from typing import Any, Dict, List, Tuple
 
 from src.core.interfaces import Document
+
 from .base import Reranker
 
 logger = logging.getLogger(__name__)

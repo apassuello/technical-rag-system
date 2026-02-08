@@ -8,11 +8,13 @@ extracted from the existing sparse retrieval system for improved modularity.
 import logging
 import re
 import time
-from typing import List, Dict, Any, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 from rank_bm25 import BM25Okapi
 
 from src.core.interfaces import Document
+
 from .base import SparseRetriever
 
 logger = logging.getLogger(__name__)
@@ -435,7 +437,7 @@ class BM25Retriever(SparseRetriever):
                 if length_filtered:
                     filter_rate = len(stop_words_removed) / len(length_filtered) * 100
                     logger.info(f"[BM25_DEBUG] Filtering impact: {filter_rate:.1f}% tokens removed")
-                logger.info(f"[BM25_DEBUG] ---")
+                logger.info("[BM25_DEBUG] ---")
             
             return filtered_tokens
         else:

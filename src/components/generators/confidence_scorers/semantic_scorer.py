@@ -12,11 +12,12 @@ Architecture Notes:
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-from ..base import ConfidenceScorer, Document, ConfigurableComponent
+from ..base import ConfidenceScorer, ConfigurableComponent, Document
 
 logger = logging.getLogger(__name__)
 

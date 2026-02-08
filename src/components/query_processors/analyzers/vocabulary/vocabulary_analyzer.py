@@ -6,11 +6,11 @@ vocabulary-based complexity scoring for query analysis.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
-from .base import VocabularyAnalyzerBase, TermClassifier, IntentClassifier
-from .term_classifiers import RuleBasedTermClassifier
+from .base import IntentClassifier, TermClassifier, VocabularyAnalyzerBase
 from .intent_classifiers import RuleBasedIntentClassifier
+from .term_classifiers import RuleBasedTermClassifier
 
 logger = logging.getLogger(__name__)
 

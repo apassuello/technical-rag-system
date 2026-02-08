@@ -11,10 +11,10 @@ Architecture Notes:
 """
 
 import logging
-from typing import List, Dict, Any, Optional
 from textwrap import dedent
+from typing import Any, Dict, List, Optional
 
-from ..base import PromptBuilder, Document, ConfigurableComponent
+from ..base import ConfigurableComponent, Document, PromptBuilder
 
 logger = logging.getLogger(__name__)
 

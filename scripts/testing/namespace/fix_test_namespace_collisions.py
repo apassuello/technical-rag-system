@@ -81,7 +81,8 @@ def fix_service_test_namespace(service_dir: Path, service_name: str):
 
 def main():
     """Fix all Epic 8 test namespace collisions."""
-    services_dir = Path("/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services")
+    project_root = Path(__file__).resolve().parents[3]
+    services_dir = project_root / "services"
     
     services = [
         "generator", "cache", "retriever", "query-analyzer", "api-gateway", "analytics"

@@ -5,17 +5,17 @@ Provides common interface and shared functionality for different metrics
 collector implementations across the RAG system.
 """
 
-import logging
 import json
-from typing import Dict, Any, List, Optional, Protocol, Union
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Protocol
 
 from .data_models import (
     BaseQueryMetrics,
-    SystemMetrics,
+    ComponentMetrics,
     SessionMetadata,
-    ComponentMetrics
+    SystemMetrics,
 )
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@
 
 set -e
 
-PROJECT_ROOT="/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag"
+PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PYTHONPATH_SETTING="PYTHONPATH=${PROJECT_ROOT}"
 
 echo "🚀 Starting Epic 8 Services..."

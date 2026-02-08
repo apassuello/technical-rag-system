@@ -30,9 +30,10 @@ Date: June 2025
 Project: RAG Portfolio - Technical Documentation System
 """
 
-from typing import Dict, List, Any
-from pathlib import Path
 import time
+from pathlib import Path
+from typing import Any, Dict
+
 import fitz  # PyMuPDF
 
 

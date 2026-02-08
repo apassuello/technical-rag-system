@@ -12,14 +12,13 @@ Key Features:
 - Configurable cache warming strategies
 """
 
+import logging
 import threading
 import time
-import logging
-from typing import Dict, Any, Optional, List, Tuple, TypeVar, Generic
 from collections import OrderedDict
-from dataclasses import dataclass, field
 from concurrent.futures import ThreadPoolExecutor
-import weakref
+from dataclasses import dataclass, field
+from typing import Any, Dict, Generic, List, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 

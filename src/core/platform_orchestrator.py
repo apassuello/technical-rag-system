@@ -8,23 +8,26 @@ It uses ComponentFactory for direct component instantiation with optimal perform
 
 import logging
 import time
-from typing import Dict, Any, List, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from .interfaces import (
-    Document, Answer, RetrievalResult,
-    ComponentHealthService, SystemAnalyticsService, ABTestingService,
-    ConfigurationService, BackendManagementService,
-    HealthStatus, ComponentMetrics, ExperimentAssignment, ExperimentResult, BackendStatus
-)
-from .config import ConfigManager, PipelineConfig
 from .component_factory import ComponentFactory
+from .config import ConfigManager
+from .interfaces import (
+    Answer,
+    BackendStatus,
+    ComponentMetrics,
+    Document,
+    ExperimentAssignment,
+    ExperimentResult,
+    HealthStatus,
+)
 from .platform_services import (
-    ComponentHealthServiceImpl,
-    SystemAnalyticsServiceImpl,
     ABTestingServiceImpl,
+    BackendManagementServiceImpl,
+    ComponentHealthServiceImpl,
     ConfigurationServiceImpl,
-    BackendManagementServiceImpl
+    SystemAnalyticsServiceImpl,
 )
 
 logger = logging.getLogger(__name__)
@@ -327,7 +330,7 @@ class PlatformOrchestrator:
             if self._using_unified_retriever:
                 # Phase 2: Direct indexing in unified retriever
                 retriever.index_documents(documents)
-                logger.debug(f"Indexed documents in unified retriever")
+                logger.debug("Indexed documents in unified retriever")
             else:
                 # Phase 1: Legacy architecture - store in vector store first
                 vector_store = self._components['vector_store']
@@ -337,7 +340,7 @@ class PlatformOrchestrator:
                 if hasattr(retriever, 'index_documents'):
                     retriever.index_documents(documents)
                 
-                logger.debug(f"Indexed documents in legacy vector store + retriever")
+                logger.debug("Indexed documents in legacy vector store + retriever")
             
             logger.info(f"Successfully indexed {len(documents)} chunks from {file_path}")
             return len(documents)
@@ -426,7 +429,7 @@ class PlatformOrchestrator:
             if self._using_unified_retriever:
                 # Phase 4: Direct indexing in unified retriever
                 retriever.index_documents(documents)
-                logger.debug(f"Indexed documents in unified retriever")
+                logger.debug("Indexed documents in unified retriever")
             else:
                 # Legacy architecture - store in vector store first
                 vector_store = self._components['vector_store']
@@ -436,7 +439,7 @@ class PlatformOrchestrator:
                 if hasattr(retriever, 'index_documents'):
                     retriever.index_documents(documents)
                 
-                logger.debug(f"Indexed documents in legacy vector store + retriever")
+                logger.debug("Indexed documents in legacy vector store + retriever")
             
             logger.info(f"Successfully indexed {len(documents)} documents")
             return len(documents)
@@ -635,8 +638,9 @@ class PlatformOrchestrator:
         
         # Check 3: Memory usage validation (if available)
         try:
-            import psutil
             import os
+
+            import psutil
             process = psutil.Process(os.getpid())
             memory_mb = process.memory_info().rss / 1024 / 1024
             health_checks["memory"] = {
@@ -695,8 +699,9 @@ class PlatformOrchestrator:
         
         # Check 2: Memory usage within limits
         try:
-            import psutil
             import os
+
+            import psutil
             process = psutil.Process(os.getpid())
             memory_mb = process.memory_info().rss / 1024 / 1024
             
@@ -795,7 +800,7 @@ class PlatformOrchestrator:
         
         # Add readiness level
         if readiness["score"] >= 90:
-            readiness["level"] = "production_ready"
+            readiness["level"] = "fully_validated"
         elif readiness["score"] >= 70:
             readiness["level"] = "staging_ready"
         elif readiness["score"] >= 50:

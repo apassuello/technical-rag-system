@@ -12,11 +12,11 @@ Architecture Notes:
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, Iterator
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, Iterator, List, Optional
 
-from src.core.interfaces import Document, Answer
+from src.core.interfaces import Document
 
 
 class GenerationError(Exception):

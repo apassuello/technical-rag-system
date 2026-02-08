@@ -5,27 +5,27 @@ This module provides answer generation using HuggingFace's Inference API,
 optimized for cloud deployment where local LLMs aren't feasible.
 """
 
-import json
 import logging
-from dataclasses import dataclass
-from typing import List, Dict, Any, Optional, Generator, Tuple
-from datetime import datetime
-import re
-from pathlib import Path
-import requests
 import os
+import re
 import sys
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import requests
 
 # Import technical prompt templates
 from .prompt_templates import TechnicalPromptTemplates
 
 # Import standard interfaces (add this for the adapter)
 try:
-    from pathlib import Path
     import sys
+    from pathlib import Path
     project_root = Path(__file__).parent.parent.parent.parent.parent
     sys.path.append(str(project_root))
-    from src.core.interfaces import Document, Answer, AnswerGenerator
+    from src.core.interfaces import Answer, AnswerGenerator, Document
 except ImportError:
     # Fallback for standalone usage
     Document = None
@@ -131,7 +131,7 @@ class HuggingFaceAnswerGenerator(AnswerGenerator if AnswerGenerator != object el
         
         # Handle 401 error
         if response.status_code == 401 and not self._auth_failed and self.api_token:
-            logger.error(f"API request failed: 401 Unauthorized")
+            logger.error("API request failed: 401 Unauthorized")
             logger.error(f"Response body: {response.text}")
             logger.warning("Token appears invalid, retrying without authentication...")
             self._auth_failed = True

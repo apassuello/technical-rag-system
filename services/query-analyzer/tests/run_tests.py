@@ -5,10 +5,10 @@ Test runner script for Query Analyzer Service.
 This script provides different test execution modes and reporting options.
 """
 
-import sys
+import argparse
 import os
 import subprocess
-import argparse
+import sys
 from pathlib import Path
 
 

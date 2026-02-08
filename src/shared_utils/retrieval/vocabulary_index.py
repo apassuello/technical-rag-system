@@ -5,11 +5,11 @@ Tracks all unique terms in the document corpus to enable intelligent
 synonym expansion that only adds terms actually present in documents.
 """
 
-from typing import Set, Dict, List, Optional
-from collections import defaultdict
-import re
-from pathlib import Path
 import json
+import re
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Set
 
 
 class VocabularyIndex:

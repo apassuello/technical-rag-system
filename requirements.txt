@@ -9,13 +9,13 @@ pandas>=1.4.0
 scipy>=1.9.0
 
 # Machine Learning & NLP (Memory optimized)
-torch>=2.0.0,<2.5.0
+torch>=2.0.0,<2.5.0  # TODO: upgrade to >=2.6.0 (5 CVEs) after full test pass
 sentence-transformers>=2.2.0,<3.0.0
 transformers>=4.30.0,<5.0.0
 tokenizers>=0.13.0
 
 # ML Operations & Experiment Tracking
-mlflow>=2.9.0,<3.0.0  # Experiment tracking, model registry, and reproducibility
+mlflow>=2.9.0,<3.0.0  # Experiment tracking. TODO: upgrade to >=3.1.0 (4 CVEs) — major version, API changes expected
 
 # Vector Search & Indexing
 faiss-cpu>=1.7.4
@@ -74,5 +74,6 @@ ragas>=0.1.0  # RAG evaluation framework with quality metrics
 # en-core-web-sm>=3.7  # Installed via spacy download
 # Epic 5 Agent System Dependencies
 langchain>=0.1.0
+langchain-community>=0.1.0
 langchain-core>=0.1.0
 langchain-openai>=0.0.5  # For OpenAI agent examples

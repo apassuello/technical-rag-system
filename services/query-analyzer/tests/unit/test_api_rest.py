@@ -5,15 +5,14 @@ Tests the FastAPI router and endpoint logic independently from
 the full application context.
 """
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
-import uuid
-from fastapi import HTTPException
+from unittest.mock import AsyncMock, Mock, patch
 
-from analyzer_app.api.rest import router, get_analyzer_service
+import pytest
+from analyzer_app.api.rest import get_analyzer_service
 from analyzer_app.core.analyzer import QueryAnalyzerService
 from analyzer_app.schemas.requests import AnalyzeRequest, StatusRequest
 from analyzer_app.schemas.responses import AnalyzeResponse, StatusResponse
+from fastapi import HTTPException
 
 
 class TestGetAnalyzerServiceDependency:

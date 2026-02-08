@@ -5,12 +5,12 @@ This module handles configuration loading and validation for the
 retriever service using Pydantic settings with YAML support.
 """
 
-import os
 from pathlib import Path
-from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from pydantic_settings import BaseSettings
+from typing import Any, Dict, Optional
+
 import yaml
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_settings import BaseSettings
 
 
 class CircuitBreakerConfig(BaseModel):

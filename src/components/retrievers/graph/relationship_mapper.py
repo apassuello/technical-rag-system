@@ -7,11 +7,11 @@ identify and classify relationships between RISC-V concepts.
 """
 
 import logging
-import time
-from typing import List, Dict, Any, Optional, Set, Tuple
-from dataclasses import dataclass
-from collections import defaultdict
 import re
+import time
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 try:
     import numpy as np
@@ -21,9 +21,9 @@ except ImportError:
     SentenceTransformer = None
 
 from src.core.interfaces import Document
+
 from .config.graph_config import RelationshipDetectionConfig
 from .entity_extraction import Entity
-from .document_graph_builder import GraphNode, GraphEdge
 
 logger = logging.getLogger(__name__)
 

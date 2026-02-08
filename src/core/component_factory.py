@@ -6,20 +6,19 @@ eliminating the ComponentRegistry overhead and improving startup performance.
 It supports both legacy and unified architectures with type-safe component creation.
 """
 
+import hashlib
 import logging
 import time
-import hashlib
-from typing import Dict, Type, Any, Optional, Union
-from pathlib import Path
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
+from typing import Any, Dict, Optional, Type
 
 from .interfaces import (
-    DocumentProcessor, 
-    Embedder, 
-    VectorStore, 
-    Retriever, 
     AnswerGenerator,
-    QueryProcessor
+    DocumentProcessor,
+    Embedder,
+    QueryProcessor,
+    Retriever,
+    VectorStore,
 )
 
 # Component classes will be imported lazily to avoid circular imports
@@ -257,7 +256,7 @@ class ComponentFactory:
         # Create deterministic key from component type and config
         config_str = str(sorted(kwargs.items()))
         key_material = f"{component_type}:{config_str}"
-        return hashlib.md5(key_material.encode()).hexdigest()[:16]
+        return hashlib.md5(key_material.encode(), usedforsecurity=False).hexdigest()[:16]
     
     @classmethod
     def _get_from_cache(cls, cache_key: str) -> Optional[Any]:
@@ -390,7 +389,7 @@ class ComponentFactory:
             
             cls._track_performance(component_type, creation_time)
             return component
-        except Exception as e:
+        except Exception:
             creation_time = time.time() - start_time
             cls._track_performance(f"{component_type}_failed", creation_time)
             raise
@@ -551,7 +550,7 @@ class ComponentFactory:
                 # Extract embedder and config from kwargs
                 embedder = kwargs.pop("embedder", None)
                 if embedder is None:
-                    raise ValueError(f"ModularUnifiedRetriever requires 'embedder' parameter")
+                    raise ValueError("ModularUnifiedRetriever requires 'embedder' parameter")
                 
                 # All remaining kwargs become the config
                 config = kwargs
@@ -802,7 +801,7 @@ class ComponentFactory:
                 }
             }
             
-            logger.info(f"✅ ComponentFactory: Neural reranker config transformed successfully")
+            logger.info("✅ ComponentFactory: Neural reranker config transformed successfully")
             logger.debug(f"Neural reranker config: {neural_config}")
             
             return {
@@ -986,7 +985,9 @@ class ComponentFactory:
             # Special handling for IntelligentQueryProcessor (Epic 5 Phase 2 Block 3)
             elif processor_type == 'intelligent' or processor_type == 'epic5_intelligent':
                 # IntelligentQueryProcessor needs retriever, generator, agent, and query_analyzer
-                from src.components.query_processors.agents.models import ProcessorConfig
+                from src.components.query_processors.agents.models import (
+                    ProcessorConfig,
+                )
 
                 # Get required dependencies (must be provided)
                 retriever = kwargs.pop('retriever', None)

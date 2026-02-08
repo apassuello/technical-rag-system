@@ -113,7 +113,7 @@ def main():
     print(f"   - ✅ Type Safety: Automatic component validation")
     print(f"   - ✅ Extensibility: Easy to add new fusion strategies")
     print(f"   - ✅ Testing: Each sub-component can be tested independently")
-    print(f"   - ✅ Production Ready: Enterprise configuration management")
+    print(f"   - ✅ Robust: Enterprise configuration management")
 
 
 if __name__ == "__main__":

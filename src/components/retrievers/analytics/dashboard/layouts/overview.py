@@ -5,10 +5,10 @@ This module provides the overview layout for the analytics dashboard,
 showing high-level system metrics and status.
 """
 
-from typing import Dict, Any
-from dash import html, dcc
+from typing import Any, Dict
+
 import plotly.graph_objs as go
-import plotly.express as px
+from dash import dcc, html
 
 
 def create_overview_layout(dashboard_data: Dict[str, Any]) -> html.Div:

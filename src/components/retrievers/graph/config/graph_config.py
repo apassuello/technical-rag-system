@@ -5,9 +5,9 @@ This module provides configuration classes for graph-based retrieval components,
 following the established configuration patterns used throughout the system.
 """
 
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

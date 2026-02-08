@@ -7,7 +7,7 @@ in the modular architecture while preserving all existing functionality.
 """
 
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from src.core.interfaces import Document, DocumentProcessor
 from src.shared_utils.document_processing.hybrid_parser import HybridParser

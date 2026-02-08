@@ -12,8 +12,8 @@ the enhanced neural reranker in the rerankers/ component.
 import logging
 import re
 import time
-from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

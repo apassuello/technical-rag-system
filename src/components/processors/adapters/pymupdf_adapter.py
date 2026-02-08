@@ -12,12 +12,13 @@ Architecture Notes:
 - Provides consistent interface for pipeline integration
 """
 
-from pathlib import Path
-from typing import List, Dict, Any
 import time
+from pathlib import Path
+from typing import Any, Dict, List
 
-from ..base import DocumentParser, ValidationResult, ConfigurableComponent
 from src.shared_utils.document_processing.pdf_parser import extract_text_with_metadata
+
+from ..base import ConfigurableComponent, DocumentParser, ValidationResult
 
 
 class PyMuPDFAdapter(DocumentParser, ConfigurableComponent):

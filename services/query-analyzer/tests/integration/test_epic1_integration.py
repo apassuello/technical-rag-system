@@ -5,16 +5,16 @@ Tests the actual integration with Epic1QueryAnalyzer components,
 ensuring proper data flow and compatibility.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
 import sys
+from pathlib import Path
+from unittest.mock import Mock, patch
 
+import pytest
 from analyzer_app.core.analyzer import QueryAnalyzerService
 from conftest import (
-    assert_valid_complexity,
     assert_confidence_range,
-    assert_processing_time
+    assert_processing_time,
+    assert_valid_complexity,
 )
 
 # Add project root to path for Epic1 imports
@@ -22,7 +22,9 @@ project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 try:
-    from src.components.query_processors.analyzers.epic1_query_analyzer import Epic1QueryAnalyzer
+    from src.components.query_processors.analyzers.epic1_query_analyzer import (
+        Epic1QueryAnalyzer,
+    )
     from src.components.query_processors.base import QueryAnalysis
     EPIC1_AVAILABLE = True
 except ImportError:
@@ -351,7 +353,7 @@ class TestEpic1UnavailableHandling:
         # Mock import failure
         with patch.dict('sys.modules', {'components.query_processors.analyzers.epic1_query_analyzer': None}):
             with pytest.raises(ImportError):
-                from analyzer_app.core.analyzer import Epic1QueryAnalyzer
+                pass
 
 
 class TestEpic1MockedIntegration:

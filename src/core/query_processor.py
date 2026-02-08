@@ -7,9 +7,9 @@ it extracts the query logic from RAGPipeline.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
-from .interfaces import Answer, RetrievalResult, Retriever, AnswerGenerator, Document
+from .interfaces import Answer, AnswerGenerator, Document, RetrievalResult, Retriever
 
 logger = logging.getLogger(__name__)
 

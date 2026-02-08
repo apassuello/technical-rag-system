@@ -17,16 +17,15 @@ Author: Arthur Passuello
 Date: 2025-07-01
 """
 
-import re
-import pdfplumber
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass
-
-from .toc_guided_parser import TOCGuidedParser, TOCEntry
-from .pdfplumber_parser import PDFPlumberParser
 import logging
+import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
+import pdfplumber
+
+from .pdfplumber_parser import PDFPlumberParser
+from .toc_guided_parser import TOCEntry, TOCGuidedParser
 
 logger = logging.getLogger(__name__)
 

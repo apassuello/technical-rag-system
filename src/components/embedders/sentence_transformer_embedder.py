@@ -6,8 +6,7 @@ functionality to conform to the Embedder interface, enabling it to be used
 in the modular architecture while preserving all existing functionality.
 """
 
-from pathlib import Path
-from typing import List, Dict, Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from src.core.interfaces import Embedder, HealthStatus
 from src.shared_utils.embeddings.generator import generate_embeddings

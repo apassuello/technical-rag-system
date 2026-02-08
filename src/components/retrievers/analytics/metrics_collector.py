@@ -26,7 +26,11 @@ git history prior to the metrics consolidation commit.
 
 import logging
 import warnings
-from src.shared_utils.metrics import BaseMetricsCollector, AnalyticsQueryMetrics, SystemMetrics
+
+from src.shared_utils.metrics import (
+    AnalyticsQueryMetrics,
+    BaseMetricsCollector,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -10,10 +10,10 @@ Available Assemblers:
 - StreamingAssembler: Support for streaming response assembly (future)
 """
 
-from ..base import ResponseAssembler, Answer
+from ..base import Answer, ResponseAssembler
 from .base_assembler import BaseResponseAssembler
-from .standard_assembler import StandardAssembler
 from .rich_assembler import RichAssembler
+from .standard_assembler import StandardAssembler
 
 # Future implementations
 # from .streaming_assembler import StreamingAssembler

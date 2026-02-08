@@ -6,8 +6,7 @@ semantic relevance signals while maintaining hybrid retrieval benefits.
 """
 
 import logging
-from typing import List, Dict, Any, Tuple
-from collections import defaultdict
+from typing import Any, Dict, List, Tuple
 
 from .base import FusionStrategy
 
@@ -192,7 +191,7 @@ class ScoreAwareFusion(FusionStrategy):
         # Log score preservation results
         if fused_results:
             top_fused = fused_results[0]
-            logger.info(f"📊 SCORE PRESERVATION RESULTS:")
+            logger.info("📊 SCORE PRESERVATION RESULTS:")
             logger.info(f"   📈 TOP FUSED: [{top_fused[0]}] → {top_fused[1]:.4f}")
             
             # Show score preservation ratio

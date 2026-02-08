@@ -5,8 +5,9 @@ This module provides a registry of available models with their capabilities,
 costs, and performance characteristics for the Epic 1 multi-model routing system.
 """
 
-from typing import List, Dict, Any, Optional
 from decimal import Decimal
+from typing import List
+
 from .routing_strategies import ModelOption
 
 

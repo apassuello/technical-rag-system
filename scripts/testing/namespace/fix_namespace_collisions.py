@@ -76,7 +76,8 @@ def fix_service_namespace(service_dir: Path, new_app_name: str):
 
 def main():
     """Main function to fix all Epic 8 service namespace collisions."""
-    services_dir = Path("/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services")
+    project_root = Path(__file__).resolve().parents[3]
+    services_dir = project_root / "services"
     
     services_to_fix = [
         ("retriever", "retriever_app"),

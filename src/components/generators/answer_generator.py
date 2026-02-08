@@ -13,30 +13,32 @@ Architecture Notes:
 - Extensive use of adapters for LLM integration
 """
 
-import time
 import logging
 import os
-from typing import List, Dict, Any, Optional, Iterator
-from pathlib import Path
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.interfaces import AnswerGenerator as AnswerGeneratorInterface, Document, Answer, HealthStatus
-
 # Forward declaration to avoid circular import
 from typing import TYPE_CHECKING
+
+from src.core.interfaces import Answer, Document, HealthStatus
+from src.core.interfaces import AnswerGenerator as AnswerGeneratorInterface
+
 if TYPE_CHECKING:
     from src.core.platform_orchestrator import PlatformOrchestrator
-from .base import ConfigurableComponent, GenerationParams, GenerationError, Citation
+from .base import Citation, ConfigurableComponent, GenerationError, GenerationParams
+from .confidence_scorers import get_scorer_class
+from .llm_adapters import get_adapter_class
 
 # Import sub-component registries
 from .prompt_builders import get_builder_class
-from .llm_adapters import get_adapter_class
 from .response_parsers import get_parser_class
-from .confidence_scorers import get_scorer_class
 
 logger = logging.getLogger(__name__)
 

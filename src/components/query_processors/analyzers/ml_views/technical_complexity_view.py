@@ -15,21 +15,18 @@ Key Features:
 """
 
 import logging
-import asyncio
-import numpy as np
-import torch
-from typing import Dict, Any, Optional, List, Set, Tuple
-from pathlib import Path
 import sys
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import numpy as np
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from .base_view import HybridView
-from .view_result import ViewResult, AnalysisMethod
 from ..utils.technical_terms import TechnicalTermManager
-from ..ml_models.model_manager import ModelManager
+from .base_view import HybridView
 
 logger = logging.getLogger(__name__)
 

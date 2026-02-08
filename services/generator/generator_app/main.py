@@ -5,16 +5,15 @@ This service provides multi-model answer generation capabilities by encapsulatin
 the Epic1AnswerGenerator with intelligent routing and cost optimization.
 """
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
-import uvicorn
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import make_asgi_app, Counter, Histogram, Gauge
 import structlog
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import Counter, Gauge, Histogram, make_asgi_app
 
 from .api import rest
 from .core.config import get_settings

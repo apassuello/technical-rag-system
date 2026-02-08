@@ -5,12 +5,12 @@ Contains common data structures used by different metrics collectors
 for consistent metric representation and interoperability.
 """
 
-import time
 import logging
-from typing import Dict, Any, List, Optional, Union
+import time
+from abc import ABC
 from dataclasses import dataclass, field
 from datetime import datetime
-from abc import ABC
+from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 

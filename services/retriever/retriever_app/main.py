@@ -6,22 +6,21 @@ Epic 2's ModularUnifiedRetriever with comprehensive error handling,
 circuit breakers, and performance monitoring.
 """
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
+import structlog
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from prometheus_client import make_asgi_app, Counter, Histogram, Gauge
-import structlog
+from prometheus_client import Counter, Gauge, Histogram, make_asgi_app
 
 from .api import rest
 from .core.config import get_settings
 from .core.retriever import RetrieverService
-from .schemas.responses import HealthResponse, ErrorResponse
+from .schemas.responses import ErrorResponse, HealthResponse
 
 # Configure structured logging
 logging.basicConfig(level=logging.INFO)

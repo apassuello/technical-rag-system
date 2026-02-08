@@ -5,23 +5,27 @@ Comprehensive fixtures for unit, API, integration, and performance testing.
 Based on Epic 8 test specifications and patterns.
 """
 
-import pytest
 import asyncio
-import time
 import uuid
-from typing import Dict, Any, List, Optional
-from unittest.mock import AsyncMock, MagicMock, Mock
-from fastapi.testclient import TestClient
-import httpx
+from typing import Any, Dict, List
+from unittest.mock import AsyncMock, MagicMock
 
-from gateway_app.main import app, gateway_service
+import httpx
+import pytest
+from fastapi.testclient import TestClient
 from gateway_app.core.config import APIGatewaySettings
-from gateway_app.core.gateway import APIGatewayService, SimpleCircuitBreaker
-from gateway_app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
+from gateway_app.core.gateway import APIGatewayService
+from gateway_app.main import app
+from gateway_app.schemas.requests import (
+    BatchQueryRequest,
+    QueryOptions,
+    UnifiedQueryRequest,
+)
 from gateway_app.schemas.responses import (
-    UnifiedQueryResponse, BatchQueryResponse, BatchQueryResult,
-    ProcessingMetrics, CostBreakdown, DocumentSource, GatewayStatusResponse,
-    ServiceStatus, AvailableModelsResponse, ModelInfo
+    CostBreakdown,
+    DocumentSource,
+    ProcessingMetrics,
+    UnifiedQueryResponse,
 )
 
 

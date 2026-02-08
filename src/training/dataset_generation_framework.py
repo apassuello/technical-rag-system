@@ -8,15 +8,14 @@ using Claude, following the defined data structures and validation methods.
 
 import json
 import logging
-import asyncio
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Union
-from dataclasses import dataclass, asdict
-from enum import Enum
-import numpy as np
-from concurrent.futures import ThreadPoolExecutor
 import statistics
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -25,10 +24,10 @@ logger = logging.getLogger(__name__)
 # Import validation framework (would be implemented separately)
 try:
     from .statistical_validation import (
-        validate_individual_entry,
-        validate_category_distribution, 
+        calculate_overall_dataset_health,
+        validate_category_distribution,
         validate_dataset_coverage,
-        calculate_overall_dataset_health
+        validate_individual_entry,
     )
 except ImportError:
     logger.warning("Statistical validation module not available - using mock validation")
@@ -354,7 +353,7 @@ Your task is to generate realistic queries with detailed complexity assessments 
             except Exception as e:
                 logger.error(f"Batch generation failed: {e}")
                 if retry == self.config.max_retries - 1:
-                    logger.error(f"Max retries reached, generating fallback batch")
+                    logger.error("Max retries reached, generating fallback batch")
                     return self._generate_fallback_batch(batch_spec)
         
         return []

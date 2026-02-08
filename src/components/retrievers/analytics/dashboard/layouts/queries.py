@@ -5,11 +5,11 @@ This module provides query analysis and monitoring layout including
 recent queries, query patterns, and quality analysis.
 """
 
-from typing import Dict, Any, List
-from dash import html, dcc, dash_table
-import plotly.graph_objs as go
-import plotly.express as px
+from typing import Any, Dict, List
+
 import pandas as pd
+import plotly.graph_objs as go
+from dash import dash_table, dcc, html
 
 
 def create_queries_layout(dashboard_data: Dict[str, Any]) -> html.Div:

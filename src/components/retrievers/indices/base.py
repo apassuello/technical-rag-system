@@ -6,7 +6,8 @@ in the modular retriever architecture.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
 
 from src.core.interfaces import Document

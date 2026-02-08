@@ -4,8 +4,10 @@ Fix all examples in complex_focus to use simple structure.
 """
 
 import re
+from pathlib import Path
 
-file_path = "/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/prompts/claude_training_generation/claude_prompt_complex_focus.md"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+file_path = str(PROJECT_ROOT / "prompts/claude_training_generation/claude_prompt_complex_focus.md")
 
 # Fixed examples with simple structure
 example1_fixed = '''### Example 1: Complex-Medium Boundary (Score: 0.68)

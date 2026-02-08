@@ -5,11 +5,11 @@ Implements pattern-based intent classification to determine cognitive complexity
 of queries independent of technical vocabulary density.
 """
 
-import re
 import logging
-from typing import Dict, List, Any, Tuple
+import re
+from typing import Any, Dict, List
 
-from ..base import IntentClassifier, IntentClassificationResult
+from ..base import IntentClassificationResult, IntentClassifier
 
 logger = logging.getLogger(__name__)
 

@@ -11,13 +11,14 @@ enhancement.
 
 import logging
 import time
-from typing import List, Dict, Any, Tuple, Optional, Union
-from collections import defaultdict
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
+
+from src.core.interfaces import Document
 
 from .base import FusionStrategy
 from .rrf_fusion import RRFFusion
-from src.core.interfaces import Document, RetrievalResult
 
 # Import spaCy for entity extraction
 try:
@@ -235,7 +236,7 @@ class GraphEnhancedRRFFusion(FusionStrategy):
             
             # If base range is too small, normalize scores to improve discrimination
             if base_range < 0.01:  # Very small range indicates poor discrimination
-                logger.debug(f"Small base range detected, applying normalization")
+                logger.debug("Small base range detected, applying normalization")
                 
                 # Normalize to [0.1, 1.0] range to preserve ranking while improving discrimination
                 normalized_scores = {}

@@ -6,16 +6,16 @@ experiments, logging metrics, and managing model artifacts in the
 RAG portfolio training pipeline.
 """
 
-import os
-import yaml
-from pathlib import Path
-from typing import Dict, Any, Optional, List
-from contextlib import contextmanager
 import logging
+import os
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 import mlflow
 import mlflow.pytorch
 import mlflow.sklearn
+import yaml
 
 logger = logging.getLogger(__name__)
 

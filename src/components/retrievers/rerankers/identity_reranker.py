@@ -6,9 +6,10 @@ useful for disabling reranking while maintaining the same interface.
 """
 
 import logging
-from typing import List, Dict, Any, Tuple
+from typing import Any, Dict, List, Tuple
 
 from src.core.interfaces import Document
+
 from .base import Reranker
 
 logger = logging.getLogger(__name__)

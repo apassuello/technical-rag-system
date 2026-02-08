@@ -8,20 +8,23 @@ and the ensemble Epic1MLAnalyzer system.
 
 import json
 import logging
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Any, Dict, List, Optional
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import (
-    accuracy_score, precision_recall_fscore_support, confusion_matrix,
-    mean_squared_error, mean_absolute_error, r2_score,
-    classification_report, roc_auc_score, roc_curve
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    mean_absolute_error,
+    mean_squared_error,
+    precision_recall_fscore_support,
+    r2_score,
 )
-from sklearn.preprocessing import label_binarize
-import scipy.stats as stats
-from dataclasses import dataclass
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -26,6 +26,7 @@ PARSER_REGISTRY = {
 
 from typing import Type
 
+
 def get_parser_class(parser_type: str) -> Type[MarkdownParser]:
     """
     Get response parser class by type.

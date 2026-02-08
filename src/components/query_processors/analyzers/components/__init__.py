@@ -10,8 +10,8 @@ Architecture:
 - ModelRecommender: Model routing recommendations
 """
 
-from .feature_extractor import FeatureExtractor
 from .complexity_classifier import ComplexityClassifier
+from .feature_extractor import FeatureExtractor
 from .model_recommender import ModelRecommender
 
 __all__ = [

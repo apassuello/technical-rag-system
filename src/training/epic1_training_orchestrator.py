@@ -11,25 +11,19 @@ This script coordinates:
 5. Performance reporting
 """
 
-import os
 import json
 import logging
-import asyncio
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
-import numpy as np
-import torch
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
+
+import numpy as np
 import yaml
 
+# Import Epic 1 components for integration
 # Import our training modules
 from .data_loader import Epic1DataLoader, TrainingExample
 from .view_trainer import ViewTrainer
-from .evaluation_framework import ViewEvaluator, EnsembleEvaluator
-
-# Import Epic 1 components for integration
-from ..components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer
-from ..components.query_processors.analyzers.ml_models.model_manager import ModelManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -70,7 +64,7 @@ class Epic1TrainingOrchestrator:
         self.training_results = {}
         self.evaluation_results = {}
         
-        logger.info(f"Initialized Epic1TrainingOrchestrator")
+        logger.info("Initialized Epic1TrainingOrchestrator")
         logger.info(f"Data path: {self.data_path}")
         logger.info(f"Output directory: {self.output_dir}")
     
@@ -493,7 +487,7 @@ class Epic1TrainingOrchestrator:
         ensemble_acc = report['evaluation_results']['ensemble_performance']['accuracy']
         target_acc = report['training_summary']['configuration']['evaluation']['target_accuracy']
         
-        logger.info(f"\nEnsemble Performance:")
+        logger.info("\nEnsemble Performance:")
         logger.info(f"  - Accuracy: {ensemble_acc:.3f}")
         logger.info(f"  - Target: {target_acc:.3f}")
         logger.error(f"  - Meets Target: {'✅ YES' if ensemble_acc >= target_acc else '❌ NO'}")
@@ -503,12 +497,12 @@ class Epic1TrainingOrchestrator:
         logger.info(f"  - Grade: {assessment['performance_grade']}")
         
         if assessment['key_achievements']:
-            logger.info(f"\nKey Achievements:")
+            logger.info("\nKey Achievements:")
             for achievement in assessment['key_achievements']:
                 logger.info(f"  ✅ {achievement}")
         
         if assessment['areas_for_improvement']:
-            logger.info(f"\nAreas for Improvement:")
+            logger.info("\nAreas for Improvement:")
             for area in assessment['areas_for_improvement']:
                 logger.debug(f"  🔧 {area}")
         
@@ -537,7 +531,7 @@ def main():
     import asyncio
     results = asyncio.run(run_training())
     
-    logger.info(f"\nTraining completed!")
+    logger.info("\nTraining completed!")
     logger.info(f"Final ensemble accuracy: {results['evaluation_results']['ensemble_performance']['accuracy']:.3f}")
 
 

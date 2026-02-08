@@ -7,11 +7,12 @@ following the architecture specification in COMPONENT-3-EMBEDDER.md.
 Interfaces are derived from rag-interface-reference.md section 3.2.
 """
 
-from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any, Tuple
-import numpy as np
 import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent.parent

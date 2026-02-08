@@ -2,9 +2,11 @@
 Response schemas for API Gateway Service.
 """
 
-from typing import Dict, Any, List, Optional, Union
-from pydantic import BaseModel, Field
 import time
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
+
 
 class DocumentSource(BaseModel):
     """Document source information."""

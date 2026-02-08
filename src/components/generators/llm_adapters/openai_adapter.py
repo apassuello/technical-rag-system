@@ -17,18 +17,18 @@ Epic 1 Integration:
 - Provides high-quality responses for complex technical queries
 """
 
-import os
-import time
+import copy
 import json
 import logging
-from typing import Dict, Any, Optional, Iterator, List, Union
+import os
+import time
 from decimal import Decimal
-import copy
+from typing import Any, Dict, Iterator, List, Optional, Union
 
 try:
     import openai
-    from openai import OpenAI
     import tiktoken
+    from openai import OpenAI
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
@@ -36,7 +36,12 @@ except ImportError:
     tiktoken = None
 
 try:
-    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+    from tenacity import (
+        retry,
+        retry_if_exception_type,
+        stop_after_attempt,
+        wait_exponential,
+    )
     TENACITY_AVAILABLE = True
 except ImportError:
     TENACITY_AVAILABLE = False
@@ -55,8 +60,13 @@ except ImportError:
     def retry_if_exception_type(*args, **kwargs):
         return None
 
-from .base_adapter import BaseLLMAdapter, RateLimitError, AuthenticationError, ModelNotFoundError
 from ..base import GenerationParams, LLMError
+from .base_adapter import (
+    AuthenticationError,
+    BaseLLMAdapter,
+    ModelNotFoundError,
+    RateLimitError,
+)
 
 logger = logging.getLogger(__name__)
 

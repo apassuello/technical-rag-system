@@ -4,7 +4,6 @@ API tests for health check endpoints.
 Tests /health, /health/live, and /health/ready endpoints for Kubernetes integration.
 """
 
-import pytest
 from unittest.mock import patch
 
 
@@ -379,7 +378,6 @@ class TestHealthEndpointIntegration:
     def test_health_endpoints_concurrent_access(self, client):
         """Test concurrent access to health endpoints."""
         import threading
-        import time
         
         results = {"health": [], "live": [], "ready": []}
         

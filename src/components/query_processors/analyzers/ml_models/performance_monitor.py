@@ -14,16 +14,15 @@ Key Features:
 - Comprehensive reporting and logging
 """
 
-import time
-import threading
-import logging
-from typing import Dict, List, Optional, Any, NamedTuple, Callable
-from dataclasses import dataclass, field
-from collections import deque, defaultdict
-from statistics import mean, median
 import json
-from pathlib import Path
+import logging
+import threading
+import time
+from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable, Dict, List, NamedTuple, Optional
 
 logger = logging.getLogger(__name__)
 

@@ -15,18 +15,20 @@ Features:
 """
 
 import logging
-import numpy as np
-from typing import Dict, Any, List, Optional, Tuple
-from pathlib import Path
 import sys
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
+from src.core.interfaces import Document
+
 from ..base import ContextSelection, QueryAnalysis
 from .base_selector import BaseContextSelector
-from src.core.interfaces import Document
 
 logger = logging.getLogger(__name__)
 

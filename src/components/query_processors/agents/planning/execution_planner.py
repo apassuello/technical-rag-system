@@ -19,15 +19,15 @@ Usage:
     >>> print(f"Estimated time: {plan.estimated_time:.2f}s")
 """
 
-import uuid
 import logging
-from typing import List, Dict, Optional, Set
+import uuid
+from typing import Dict, List, Optional, Set
 
 from ..models import (
     ExecutionPlan,
     ExecutionStrategy,
-    SubTask,
     QueryAnalysis,
+    SubTask,
 )
 
 logger = logging.getLogger(__name__)

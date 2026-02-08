@@ -13,35 +13,38 @@ Architecture Notes:
 - Includes comprehensive error handling and metrics
 """
 
-import time
-from pathlib import Path
-from typing import List, Dict, Any, Optional
-import numpy as np
 import logging
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.interfaces import Embedder as EmbedderInterface, HealthStatus
-
 # Forward declaration to avoid circular import
 from typing import TYPE_CHECKING
+
+from src.core.interfaces import Embedder as EmbedderInterface
+from src.core.interfaces import HealthStatus
+
 if TYPE_CHECKING:
     from src.core.platform_orchestrator import PlatformOrchestrator
 from .base import (
-    EmbeddingModel, 
-    BatchProcessor, 
-    EmbeddingCache, 
+    BatchProcessor,
+    ComponentValidationResult,
     ConfigurableEmbedderComponent,
-    ComponentValidationResult
+    EmbeddingCache,
+    EmbeddingModel,
 )
+from .batch_processors.dynamic_batch_processor import DynamicBatchProcessor
+from .caches.memory_cache import MemoryCache
 
 # Import sub-component implementations
 from .models.sentence_transformer_model import SentenceTransformerModel
-from .batch_processors.dynamic_batch_processor import DynamicBatchProcessor
-from .caches.memory_cache import MemoryCache
 
 logger = logging.getLogger(__name__)
 

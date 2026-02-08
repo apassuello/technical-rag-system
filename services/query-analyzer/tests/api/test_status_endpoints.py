@@ -4,8 +4,6 @@ API tests for status and information endpoints.
 Tests /status and /components endpoints through the FastAPI application.
 """
 
-import pytest
-import json
 from unittest.mock import patch
 
 

@@ -28,11 +28,11 @@ Usage:
 """
 
 import json
-from typing import List, Optional
-from pathlib import Path
 import logging
+from pathlib import Path
+from typing import List, Optional
 
-from ..base_memory import BaseMemory, MemoryCapacityError, MemoryPersistenceError
+from ..base_memory import BaseMemory, MemoryPersistenceError
 from ..models import Message
 
 logger = logging.getLogger(__name__)

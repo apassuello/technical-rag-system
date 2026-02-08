@@ -5,12 +5,20 @@ This module provides Prometheus metrics integration with comprehensive
 performance and business metrics tracking.
 """
 
-import time
-from typing import Dict, Any, Optional
-from contextlib import contextmanager
-from prometheus_client import Counter, Histogram, Gauge, Info, CollectorRegistry, generate_latest
-from prometheus_client.core import REGISTRY
 import logging
+import time
+from contextlib import contextmanager
+from typing import Any, Dict, Optional
+
+from prometheus_client import (
+    CollectorRegistry,
+    Counter,
+    Gauge,
+    Histogram,
+    Info,
+    generate_latest,
+)
+from prometheus_client.core import REGISTRY
 
 logger = logging.getLogger(__name__)
 

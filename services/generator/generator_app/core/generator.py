@@ -6,19 +6,18 @@ Epic1AnswerGenerator for multi-model answer generation in microservices.
 """
 
 import asyncio
-import time
-import logging
-from typing import Dict, Any, Optional, List
-from pathlib import Path
-import sys
-from decimal import Decimal
-
-import structlog
-from prometheus_client import Counter, Histogram, Gauge
 
 # Add main project to path to import existing components
 # Use environment variable for containerized deployment
 import os
+import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import structlog
+from prometheus_client import Counter, Gauge, Histogram
+
 project_root = Path(os.getenv('PROJECT_ROOT', Path(__file__).parent.parent.parent.parent.parent))
 src_path = project_root / "src"
 if src_path.exists():
@@ -284,8 +283,9 @@ class GeneratorService:
             
             # Check if Ollama is accessible
             try:
-                import requests
                 import os
+
+                import requests
                 # Use environment variable if available, otherwise use docker service name
                 ollama_url = os.getenv("OLLAMA_URL", "http://ollama:11434")
                 response = requests.get(f"{ollama_url}/api/tags", timeout=5)

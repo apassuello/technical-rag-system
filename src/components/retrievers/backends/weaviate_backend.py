@@ -10,7 +10,8 @@ import logging
 import time
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 
 try:
@@ -25,6 +26,7 @@ except ImportError:
     WeaviateException = Exception
 
 from src.core.interfaces import Document
+
 from .weaviate_config import WeaviateBackendConfig
 
 logger = logging.getLogger(__name__)

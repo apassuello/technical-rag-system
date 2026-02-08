@@ -6,11 +6,13 @@ extracted from the UnifiedRetriever for improved modularity.
 """
 
 import logging
-from typing import List, Dict, Any, Optional, Tuple
-import numpy as np
+from typing import Any, Dict, List, Optional, Tuple
+
 import faiss
+import numpy as np
 
 from src.core.interfaces import Document
+
 from .base import VectorIndex
 
 logger = logging.getLogger(__name__)

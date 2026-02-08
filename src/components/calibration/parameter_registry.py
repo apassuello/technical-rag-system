@@ -6,9 +6,10 @@ for centralized management of all tunable system parameters.
 """
 
 import logging
-from typing import Dict, Any, List, Optional, Union
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
 import yaml
 
 logger = logging.getLogger(__name__)

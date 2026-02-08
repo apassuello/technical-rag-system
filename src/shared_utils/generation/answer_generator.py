@@ -5,15 +5,14 @@ This module provides answer generation with citation support for RAG systems,
 optimized for technical documentation Q&A on Apple Silicon.
 """
 
-import json
 import logging
-from dataclasses import dataclass
-from typing import List, Dict, Any, Optional, Generator, Tuple
-import ollama
-from datetime import datetime
 import re
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-import sys
+from typing import Any, Dict, Generator, List, Tuple
+
+import ollama
 
 # Calibration framework has been removed
 

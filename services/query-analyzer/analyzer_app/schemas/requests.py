@@ -2,7 +2,8 @@
 Request schemas for Query Analyzer Service API.
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from pydantic import BaseModel, Field, field_validator
 
 

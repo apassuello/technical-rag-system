@@ -5,19 +5,17 @@ Tests the complete Query Analyzer Service including FastAPI application,
 service lifecycle, and full request-response cycles.
 """
 
-import pytest
 import asyncio
-from unittest.mock import patch, Mock
-import json
-import time
+from unittest.mock import Mock, patch
 
-from analyzer_app.main import create_app, get_analyzer_service
+import pytest
 from analyzer_app.core.analyzer import QueryAnalyzerService
+from analyzer_app.main import create_app
 from conftest import (
-    validate_response_structure,
-    assert_valid_complexity,
     assert_confidence_range,
-    assert_processing_time
+    assert_processing_time,
+    assert_valid_complexity,
+    validate_response_structure,
 )
 
 
@@ -249,8 +247,9 @@ class TestFullRequestResponseCycle:
     async def test_memory_usage_stability(self, analyzer_service, sample_queries):
         """Test that service doesn't leak memory over multiple requests."""
         import gc
-        import psutil
         import os
+
+        import psutil
         
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss
@@ -277,8 +276,9 @@ class TestServiceConfiguration:
     @pytest.mark.asyncio
     async def test_configuration_loading(self, temp_config_file):
         """Test configuration loading from file."""
-        from analyzer_app.core.config import get_settings
         import os
+
+        from analyzer_app.core.config import get_settings
         
         # Set config file environment variable
         with patch.dict(os.environ, {"QUERY_ANALYZER_CONFIG_FILE": str(temp_config_file)}):
@@ -304,8 +304,9 @@ class TestServiceConfiguration:
     @pytest.mark.asyncio
     async def test_environment_variable_integration(self):
         """Test environment variable integration."""
-        from analyzer_app.core.config import ServiceSettings
         import os
+
+        from analyzer_app.core.config import ServiceSettings
         
         env_vars = {
             "QUERY_ANALYZER_LOG_LEVEL": "DEBUG",

@@ -12,20 +12,19 @@ Epic 8 Integration:
 - Real-time and historical analytics
 """
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
-import uvicorn
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import make_asgi_app, Counter, Histogram, Gauge
 import structlog
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import Counter, Gauge, Histogram, make_asgi_app
 
 from .api import rest
-from .core.config import get_settings
 from .core.analytics import AnalyticsService
+from .core.config import get_settings
 from .schemas.responses import HealthResponse
 
 # Configure structured logging

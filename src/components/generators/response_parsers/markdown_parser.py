@@ -11,12 +11,17 @@ Architecture Notes:
 - Robust citation extraction
 """
 
-import re
 import logging
-from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass
+import re
+from typing import Any, Dict, List, Optional
 
-from ..base import ResponseParser, Citation, Document, ParsingError, ConfigurableComponent
+from ..base import (
+    Citation,
+    ConfigurableComponent,
+    Document,
+    ParsingError,
+    ResponseParser,
+)
 
 logger = logging.getLogger(__name__)
 

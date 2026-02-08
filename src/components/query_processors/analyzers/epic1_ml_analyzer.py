@@ -19,34 +19,37 @@ Architecture:
 - Comprehensive error handling and fallback strategies
 """
 
-import asyncio
 import logging
-import time
-from typing import Dict, Any, Optional, List, Tuple
-from pathlib import Path
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import joblib
 import numpy as np
 import torch
 import torch.nn as nn
-import joblib
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from .base_analyzer import BaseQueryAnalyzer
 from ..base import QueryAnalysis
-from .ml_views.technical_complexity_view import TechnicalComplexityView
-from .ml_views.linguistic_complexity_view import LinguisticComplexityView
-from .ml_views.task_complexity_view import TaskComplexityView
-from .ml_views.semantic_complexity_view import SemanticComplexityView
-from .ml_views.computational_complexity_view import ComputationalComplexityView
-from .ml_views.view_result import ViewResult, AnalysisResult, AnalysisMethod, ComplexityLevel
-from .components.complexity_classifier import ComplexityClassifier, ComplexityClassification
+from .base_analyzer import BaseQueryAnalyzer
+from .components.complexity_classifier import (
+    ComplexityClassifier,
+)
 from .components.model_recommender import ModelRecommender
 from .ml_models.model_manager import ModelManager
-from .ml_models.performance_monitor import PerformanceMonitor
-from .ml_models.memory_monitor import MemoryMonitor
+from .ml_views.computational_complexity_view import ComputationalComplexityView
+from .ml_views.linguistic_complexity_view import LinguisticComplexityView
+from .ml_views.semantic_complexity_view import SemanticComplexityView
+from .ml_views.task_complexity_view import TaskComplexityView
+from .ml_views.technical_complexity_view import TechnicalComplexityView
+from .ml_views.view_result import (
+    AnalysisResult,
+    ComplexityLevel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -236,7 +239,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             except Exception as e:
                 logger.warning(f"Failed to reconfigure model recommender: {e}")
         
-        logger.info(f"Reconfigured Epic1MLAnalyzer with updated settings")
+        logger.info("Reconfigured Epic1MLAnalyzer with updated settings")
     
     def get_supported_features(self) -> List[str]:
         """
@@ -280,7 +283,12 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             
             if prediction_result:
                 # Create AnalysisResult from prediction
-                from .ml_views.view_result import AnalysisResult, ComplexityLevel, ViewResult, AnalysisMethod
+                from .ml_views.view_result import (
+                    AnalysisMethod,
+                    AnalysisResult,
+                    ComplexityLevel,
+                    ViewResult,
+                )
                 
                 # Create view results
                 view_results = {}
@@ -412,7 +420,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         except Exception as e:
             logger.error(f"Failed to convert ML analysis result to QueryAnalysis: {e}")
             # Return conservative fallback  
-            fallback_query = query  # query is available from the method parameter
+            fallback_query = ml_result.query
             if hasattr(ml_result, 'query'):
                 fallback_query = ml_result.query
             
@@ -609,7 +617,11 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                     return self.network(features).squeeze()
             
             model = SimpleViewModel()
-            checkpoint = torch.load(model_path, map_location='cpu')
+            # weights_only=True prevents arbitrary code execution during unpickling.
+            # Checkpoint contains model_state_dict (tensors only); if optimizers or
+            # schedulers are added later, this may need weights_only=False with an
+            # explicit safe-globals allowlist.
+            checkpoint = torch.load(model_path, map_location='cpu', weights_only=True)
             model.load_state_dict(checkpoint['model_state_dict'])
             model.eval()
             logger.debug(f"Successfully loaded view model: {model_path}")
@@ -622,7 +634,11 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         """Load neural fusion model matching the training architecture."""
         try:
             model = NeuralFusionModel(input_dim=5, hidden_dim=64)
-            checkpoint = torch.load(model_path, map_location='cpu')
+            # weights_only=True prevents arbitrary code execution during unpickling.
+            # Checkpoint contains model_state_dict (tensors only); if optimizers or
+            # schedulers are added later, this may need weights_only=False with an
+            # explicit safe-globals allowlist.
+            checkpoint = torch.load(model_path, map_location='cpu', weights_only=True)
             model.load_state_dict(checkpoint['model_state_dict'])
             model.eval()
             logger.info(f"Successfully loaded neural fusion model from {model_path}")
@@ -676,7 +692,6 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         self._analysis_count += 1
         
         try:
-            from .ml_views.view_result import AnalysisResult, ComplexityLevel, AnalysisMethod
             
             # Check if we should use trained models
             use_trained_models = (
@@ -698,7 +713,11 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
     
     async def _analyze_with_trained_models(self, query: str, mode: str, start_time: float) -> 'AnalysisResult':
         """Perform analysis using trained PyTorch models and fusion."""
-        from .ml_views.view_result import AnalysisResult, ComplexityLevel, AnalysisMethod, ViewResult
+        from .ml_views.view_result import (
+            AnalysisMethod,
+            AnalysisResult,
+            ViewResult,
+        )
         
         # Get predictions from the trained predictor (epic1_predictor.py approach)
         prediction_result = self._get_trained_model_predictions(query)
@@ -763,7 +782,9 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
     
     async def _analyze_with_epic1_fallback(self, query: str, mode: str, start_time: float) -> 'AnalysisResult':
         """Fallback to Epic 1 infrastructure when trained models unavailable."""
-        from .ml_views.view_result import AnalysisResult, ComplexityLevel, AnalysisMethod
+        from .ml_views.view_result import (
+            AnalysisResult,
+        )
         
         # Use Epic 1 infrastructure views if available
         view_results = {}
@@ -842,9 +863,9 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         """Get predictions using the trained model approach (like epic1_predictor.py)."""
         try:
             # Import the feature extraction logic
-            import torch
+
             import numpy as np
-            from pathlib import Path
+            import torch
             
             # Use the same feature extraction approach as in epic1_predictor.py
             view_scores = {}

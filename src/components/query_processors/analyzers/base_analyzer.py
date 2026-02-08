@@ -5,17 +5,17 @@ This module provides concrete base functionality that can be inherited
 by specific analyzer implementations, reducing code duplication.
 """
 
-import time
 import logging
-from typing import Dict, Any, List, Optional
-from pathlib import Path
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from ..base import QueryAnalyzer, QueryAnalysis
+from ..base import QueryAnalysis, QueryAnalyzer
 
 logger = logging.getLogger(__name__)
 

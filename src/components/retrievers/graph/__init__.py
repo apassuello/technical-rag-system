@@ -13,12 +13,12 @@ Components:
 - GraphAnalytics: Graph metrics and visualization capabilities
 """
 
+from .config.graph_config import GraphConfig
 from .document_graph_builder import DocumentGraphBuilder
 from .entity_extraction import EntityExtractor
-from .relationship_mapper import RelationshipMapper
-from .graph_retriever import GraphRetriever
 from .graph_analytics import GraphAnalytics
-from .config.graph_config import GraphConfig
+from .graph_retriever import GraphRetriever
+from .relationship_mapper import RelationshipMapper
 
 __all__ = [
     "DocumentGraphBuilder",

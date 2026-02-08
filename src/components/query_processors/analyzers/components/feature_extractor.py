@@ -11,17 +11,17 @@ Architecture Notes:
 - Configurable feature sets
 """
 
-import re
 import logging
-from typing import Dict, Any, List, Optional
-from pathlib import Path
+import re
 import sys
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from ..utils import TechnicalTermManager, SyntacticParser
+from ..utils import SyntacticParser, TechnicalTermManager
 
 logger = logging.getLogger(__name__)
 

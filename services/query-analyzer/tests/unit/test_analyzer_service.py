@@ -4,17 +4,17 @@ Unit tests for QueryAnalyzerService class.
 Tests the core business logic of the service wrapper around Epic1QueryAnalyzer.
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock
 import time
+from unittest.mock import Mock, patch
 
+import pytest
 from analyzer_app.core.analyzer import QueryAnalyzerService
 from conftest import (
-    validate_response_structure,
-    assert_valid_complexity,
     assert_confidence_range,
-    assert_processing_time
+    assert_processing_time,
+    assert_valid_complexity,
+    validate_response_structure,
 )
 
 

@@ -2,7 +2,7 @@
 Core package for API Gateway Service.
 """
 
-from .config import get_settings, APIGatewaySettings
+from .config import APIGatewaySettings, get_settings
 from .gateway import APIGatewayService
 
 __all__ = [

@@ -13,12 +13,14 @@ Key Features:
 - JSON serialization support
 """
 
-import time
-import numpy as np
-from typing import Dict, Any, Optional, List, Union
-from dataclasses import dataclass, field, asdict
 import json
+import time
+from dataclasses import asdict, dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+
 
 class AnalysisMethod(Enum):
     """Analysis method used by a view."""

@@ -4,9 +4,9 @@ Request schemas for Analytics Service.
 This module defines Pydantic models for all Analytics Service REST API requests.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field, field_validator
-from datetime import datetime
 
 
 class RecordQueryRequest(BaseModel):

@@ -22,9 +22,9 @@ Usage:
     >>> print(result.answer)
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional
 
 from .models import AgentResult, ReasoningStep
 

@@ -25,12 +25,12 @@ Usage:
 
 import json
 import logging
-import uuid
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
 from src.components.generators.base import GenerationParams
 from src.components.generators.llm_adapters.base_adapter import BaseLLMAdapter
-from ..models import SubTask, QueryAnalysis, QueryType
+
+from ..models import QueryAnalysis, SubTask
 
 logger = logging.getLogger(__name__)
 

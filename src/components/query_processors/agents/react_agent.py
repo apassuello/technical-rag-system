@@ -38,30 +38,26 @@ Usage:
     >>> print(result.answer)  # "1187"
 """
 
-import time
-from typing import Any, Dict, List, Optional
 import logging
+import time
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain_core.prompts import PromptTemplate
+try:
+    from langchain.agents import AgentExecutor, create_react_agent
+except ImportError:
+    from langchain_community.agents import AgentExecutor, create_react_agent
 from langchain_core.language_models import BaseChatModel
+from langchain_core.prompts import PromptTemplate
 
-from .base_agent import BaseAgent
-from .models import (
-    AgentConfig,
-    AgentResult,
-    ReasoningStep,
-    StepType,
-    Message
-)
-from .langchain_adapter import PhaseOneToolAdapter, convert_tools_to_langchain
-from .memory.conversation_memory import ConversationMemory
-from .memory.working_memory import WorkingMemory
-from .prompts import TechnicalReActPrompt, AgentRole
 from ...query_processors.tools.base_tool import BaseTool as Phase1BaseTool
 from ...query_processors.tools.models import ToolCall, ToolResult
-
+from .base_agent import BaseAgent
+from .langchain_adapter import convert_tools_to_langchain
+from .memory.conversation_memory import ConversationMemory
+from .memory.working_memory import WorkingMemory
+from .models import AgentConfig, AgentResult, ReasoningStep, StepType
+from .prompts import AgentRole, TechnicalReActPrompt
 
 logger = logging.getLogger(__name__)
 

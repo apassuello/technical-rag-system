@@ -2,22 +2,22 @@
 REST API endpoints for API Gateway Service.
 """
 
-import uuid
 import time
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
-from fastapi.responses import JSONResponse
+import uuid
+from typing import Any, Dict
+
 import structlog
-from prometheus_client import Counter, Histogram, Gauge
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from prometheus_client import Counter, Gauge, Histogram
 
 from ..core.gateway import APIGatewayService
-from ..schemas.requests import UnifiedQueryRequest, BatchQueryRequest
+from ..schemas.requests import BatchQueryRequest, UnifiedQueryRequest
 from ..schemas.responses import (
-    UnifiedQueryResponse,
-    BatchQueryResponse,
-    GatewayStatusResponse,
     AvailableModelsResponse,
-    ErrorResponse
+    BatchQueryResponse,
+    ErrorResponse,
+    GatewayStatusResponse,
+    UnifiedQueryResponse,
 )
 
 logger = structlog.get_logger(__name__)

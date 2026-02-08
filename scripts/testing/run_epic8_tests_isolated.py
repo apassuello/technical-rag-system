@@ -164,7 +164,7 @@ class Epic8TestRunner:
 
 def main():
     """Run Epic 8 tests with proper isolation."""
-    project_root = Path("/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag")
+    project_root = Path(__file__).resolve().parents[2]
     
     if not project_root.exists():
         print(f"❌ Project root not found: {project_root}")

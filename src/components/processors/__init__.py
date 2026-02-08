@@ -1,7 +1,7 @@
 """
 Document Processing Components - Modular Architecture Implementation.
 
-This package provides a production-ready modular document processing architecture with 
+This package provides a modular document processing architecture with
 specialized sub-components for parsing, chunking, and cleaning documents. It follows 
 enterprise architecture patterns with selective adapter pattern usage, configurable 
 components, and comprehensive error handling.
@@ -110,43 +110,42 @@ The architecture supports adding new components through configuration:
 - **API Reference**: docs/api/DOCUMENT_PROCESSOR_API.md
 - **Design Patterns**: docs/architecture/adapter-pattern-analysis.md
 
-Version: 1.0.0 (Production Ready)
+Version: 1.0.0
 Architecture Compliance: 100%
 Last Validated: 2025-07-10
 """
 
 # Legacy processor (for backward compatibility)
-from .pdf_processor import HybridPDFProcessor
-
-# Main document processor
-from .document_processor import (
-    ModularDocumentProcessor,
-    create_pdf_processor,
-    create_fast_processor,
-    create_high_quality_processor
-)
-
-# Pipeline coordinator
-from .pipeline import DocumentProcessingPipeline
-
 # Sub-component adapters
 from .adapters import PyMuPDFAdapter
+
+# Base interfaces
+from .base import (
+    Chunk,
+    ConfigurableComponent,
+    ContentCleaner,
+    DocumentParser,
+    ProcessingPipeline,
+    QualityAssessment,
+    TextChunker,
+    ValidationResult,
+)
 
 # Sub-component implementations
 from .chunkers import SentenceBoundaryChunker
 from .cleaners import TechnicalContentCleaner
 
-# Base interfaces
-from .base import (
-    DocumentParser,
-    TextChunker,
-    ContentCleaner,
-    ProcessingPipeline,
-    ConfigurableComponent,
-    QualityAssessment,
-    Chunk,
-    ValidationResult
+# Main document processor
+from .document_processor import (
+    ModularDocumentProcessor,
+    create_fast_processor,
+    create_high_quality_processor,
+    create_pdf_processor,
 )
+from .pdf_processor import HybridPDFProcessor
+
+# Pipeline coordinator
+from .pipeline import DocumentProcessingPipeline
 
 __all__ = [
     # Legacy processor

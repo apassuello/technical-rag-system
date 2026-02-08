@@ -6,21 +6,20 @@ This module implements training for individual view models (Technical, Linguisti
 Task, Semantic, Computational) using transformer architectures.
 """
 
-import os
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Any, Dict, Optional
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from sklearn.metrics import accuracy_score
 from torch.utils.data import DataLoader
-from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warmup
-from sklearn.metrics import accuracy_score, classification_report, mean_squared_error
-import wandb
 from tqdm import tqdm
-import matplotlib.pyplot as plt
+from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warmup
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +42,7 @@ class ViewComplexityModel(nn.Module):
         super().__init__()
         
         # Load transformer model
+        # TODO: Pin model revision hash for supply-chain security
         self.transformer = AutoModel.from_pretrained(model_name)
         self.transformer_dim = self.transformer.config.hidden_size
         
@@ -170,10 +170,12 @@ class ViewTrainer:
         
         # Load tokenizer with fallbacks
         try:
+            # TODO: Pin model revision hash for supply-chain security
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         except Exception as e:
             logger.warning(f"Fast tokenizer failed for {self.model_name}: {e}")
             try:
+                # TODO: Pin model revision hash for supply-chain security
                 self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=False)
             except Exception as e2:
                 logger.error(f"Both tokenizers failed: {e2}")
@@ -470,7 +472,11 @@ class ViewTrainer:
         self.setup_model(num_features)
         
         # Load checkpoint
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        # weights_only=True prevents arbitrary code execution during unpickling.
+        # Checkpoint contains model_state_dict and training_history (tensors and
+        # basic Python types). If optimizers or schedulers are added later, this
+        # may need weights_only=False with an explicit safe-globals allowlist.
+        checkpoint = torch.load(checkpoint_path, map_location=self.device, weights_only=True)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.training_history = checkpoint.get('training_history', {})
         

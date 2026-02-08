@@ -6,8 +6,8 @@ extracted from the existing fusion system for improved modularity.
 """
 
 import logging
-from typing import List, Dict, Any, Tuple
 from collections import defaultdict
+from typing import Any, Dict, List, Tuple
 
 from .base import FusionStrategy
 

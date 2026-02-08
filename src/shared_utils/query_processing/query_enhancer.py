@@ -5,10 +5,10 @@ Provides adaptive query enhancement through technical term expansion,
 acronym handling, and intelligent hybrid weighting optimization.
 """
 
-from typing import Dict, List, Any, Tuple, Set, Optional
 import re
-from collections import defaultdict
 import time
+from collections import defaultdict
+from typing import Any, Dict, Optional
 
 
 class QueryEnhancer:
@@ -493,7 +493,7 @@ class QueryEnhancer:
     def expand_technical_terms_with_vocabulary(
         self, 
         query: str, 
-        vocabulary_index: Optional['VocabularyIndex'] = None,
+        vocabulary_index: Optional['VocabularyIndex'] = None,  # noqa: F821
         min_frequency: int = 3
     ) -> str:
         """
@@ -548,7 +548,7 @@ class QueryEnhancer:
     def enhance_query_with_vocabulary(
         self,
         query: str,
-        vocabulary_index: Optional['VocabularyIndex'] = None,
+        vocabulary_index: Optional['VocabularyIndex'] = None,  # noqa: F821
         min_frequency: int = 3,
         require_technical: bool = False
     ) -> Dict[str, Any]:

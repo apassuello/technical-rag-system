@@ -7,13 +7,14 @@ like OllamaAdapter and PyMuPDFAdapter.
 """
 
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 
 from src.core.interfaces import Document
-from .base import VectorIndex
+
 from ..backends.weaviate_backend import WeaviateBackend
-from ..backends.weaviate_config import WeaviateBackendConfig
+from .base import VectorIndex
 
 logger = logging.getLogger(__name__)
 

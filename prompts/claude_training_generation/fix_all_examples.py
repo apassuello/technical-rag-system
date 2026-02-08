@@ -42,7 +42,8 @@ def check_prompt_file(file_path):
     }
 
 def main():
-    prompt_dir = Path("/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/prompts/claude_training_generation")
+    project_root = Path(__file__).resolve().parents[2]
+    prompt_dir = project_root / "prompts" / "claude_training_generation"
     prompt_files = list(prompt_dir.glob("claude_prompt_*.md"))
     
     print("🔍 Checking prompt files for structure issues...")

@@ -6,8 +6,8 @@ This script provides a convenient way to run the service in development mode
 with proper environment setup and configuration.
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add project root to Python path

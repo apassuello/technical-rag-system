@@ -37,32 +37,33 @@ Usage:
     >>> answer = processor.process("Calculate 25*47 and explain steps")  # → Agent
 """
 
-import time
 import logging
-from typing import Dict, Any, List, Optional, Union
-from pathlib import Path
 import sys
+import time
 from dataclasses import asdict
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.interfaces import (
-    QueryProcessor,
-    Answer,
-    QueryOptions,
-    Document,
-    Retriever,
-    AnswerGenerator,
-    HealthStatus
-)
-from .agents.planning.query_analyzer import QueryAnalyzer
-from .agents.react_agent import ReActAgent
-from .agents.models import ProcessorConfig, AgentResult, QueryAnalysis
-
 # Forward declaration to avoid circular import
 from typing import TYPE_CHECKING
+
+from src.core.interfaces import (
+    Answer,
+    AnswerGenerator,
+    HealthStatus,
+    QueryOptions,
+    QueryProcessor,
+    Retriever,
+)
+
+from .agents.models import AgentResult, ProcessorConfig, QueryAnalysis
+from .agents.planning.query_analyzer import QueryAnalyzer
+from .agents.react_agent import ReActAgent
+
 if TYPE_CHECKING:
     from src.core.platform_orchestrator import PlatformOrchestrator
 

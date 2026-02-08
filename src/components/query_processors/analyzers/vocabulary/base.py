@@ -6,8 +6,8 @@ easy swapping between rule-based and ML-based implementations.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 @dataclass

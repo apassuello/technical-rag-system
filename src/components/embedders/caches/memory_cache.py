@@ -14,22 +14,23 @@ Features:
 - Thread-safe operations
 """
 
-import hashlib
-import time
 import fnmatch
-import threading
-from collections import OrderedDict
-from typing import Optional, Dict, Any, List, Tuple
-import numpy as np
+import hashlib
 import logging
-from pathlib import Path
 import sys
+import threading
+import time
+from collections import OrderedDict
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
+
+import numpy as np
 
 # Add project root for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from ..base import EmbeddingCache, ConfigurableEmbedderComponent
+from ..base import ConfigurableEmbedderComponent, EmbeddingCache
 
 logger = logging.getLogger(__name__)
 

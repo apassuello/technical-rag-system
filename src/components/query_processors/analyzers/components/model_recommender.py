@@ -12,9 +12,9 @@ Architecture Notes:
 """
 
 import logging
-from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -555,7 +555,7 @@ class ModelRecommender:
         elif strategy == RoutingStrategy.LATENCY_OPTIMIZED:
             reasoning += f"Latency-optimized selection with ~{model_config.avg_latency_ms}ms response time."
         else:
-            reasoning += f"Balanced selection considering cost, quality, and latency."
+            reasoning += "Balanced selection considering cost, quality, and latency."
         
         return reasoning
     

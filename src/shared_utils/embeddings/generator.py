@@ -1,6 +1,7 @@
+from typing import List
+
 import numpy as np
 import torch
-from typing import List, Optional
 from sentence_transformers import SentenceTransformer
 
 # Global cache for embeddings

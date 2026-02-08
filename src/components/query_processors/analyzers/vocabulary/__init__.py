@@ -6,7 +6,7 @@ analysis in query complexity classification. Supports both rule-based and ML-bas
 approaches through clean abstractions.
 """
 
-from .base import TermClassifier, IntentClassifier
+from .base import IntentClassifier, TermClassifier
 from .vocabulary_analyzer import VocabularyAnalyzer
 
 __all__ = ['TermClassifier', 'IntentClassifier', 'VocabularyAnalyzer']

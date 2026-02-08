@@ -19,19 +19,27 @@ Architecture Notes:
 - Supports different processing strategies (fail-fast vs. graceful)
 """
 
+import sys
 import time
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-import sys
+from typing import Any, Dict, List
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.interfaces import Document
-from .base import ProcessingPipeline, DocumentParser, TextChunker, ContentCleaner, ValidationResult, ConfigurableComponent
 import logging
 
+from src.core.interfaces import Document
+
+from .base import (
+    ConfigurableComponent,
+    ContentCleaner,
+    DocumentParser,
+    ProcessingPipeline,
+    TextChunker,
+    ValidationResult,
+)
 
 logger = logging.getLogger(__name__)
 

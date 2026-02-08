@@ -7,26 +7,28 @@ enabling it to be used in the modular architecture.
 """
 
 import logging
-from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-from src.core.interfaces import Document, Answer, AnswerGenerator
+from src.core.interfaces import Answer, AnswerGenerator, Document
 
 # Import generation components
 from src.shared_utils.generation.hf_answer_generator import (
-    HuggingFaceAnswerGenerator,
     GeneratedAnswer,
+    HuggingFaceAnswerGenerator,
 )
+
 try:
-    from src.shared_utils.generation.ollama_answer_generator import OllamaAnswerGenerator
+    from src.shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
+    from src.shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
     from src.shared_utils.generation.inference_providers_generator import (
         InferenceProvidersGenerator,
     )
+    from src.shared_utils.generation.ollama_answer_generator import (
+        OllamaAnswerGenerator,
+    )
     from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates
-    from src.shared_utils.generation.adaptive_prompt_engine import AdaptivePromptEngine
-    from src.shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEngine
 except ImportError as e:
     # Fallback for missing optional components
     logger.warning(f"Optional generation components not available: {e}")

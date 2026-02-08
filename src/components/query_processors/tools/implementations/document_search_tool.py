@@ -27,15 +27,14 @@ Usage:
     >>> print(result.content)  # Formatted search results
 """
 
-from typing import List, Optional
 import logging
+from typing import List, Optional
+
+# Import Retriever interface
+from src.core.interfaces import RetrievalResult, Retriever
 
 from ..base_tool import BaseTool
 from ..models import ToolParameter, ToolParameterType, ToolResult
-
-# Import Retriever interface
-from src.core.interfaces import Retriever, RetrievalResult
-
 
 logger = logging.getLogger(__name__)
 

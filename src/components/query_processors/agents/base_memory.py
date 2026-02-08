@@ -25,9 +25,9 @@ Usage:
     >>> messages = memory.get_messages(last_n=10)
 """
 
+import logging
 from abc import ABC, abstractmethod
 from typing import List, Optional
-import logging
 
 from .models import Message
 

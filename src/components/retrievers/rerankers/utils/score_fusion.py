@@ -11,10 +11,11 @@ the enhanced neural reranker in the rerankers/ component.
 
 import logging
 import time
-import numpy as np
-from typing import List, Dict, Any, Optional, Tuple
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 
 from src.core.interfaces import Document
 

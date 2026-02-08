@@ -2,13 +2,20 @@
 Unit tests for API Gateway Service core functionality.
 """
 
-import pytest
 import asyncio
-from unittest.mock import AsyncMock, patch
 
-from gateway_app.core.gateway import APIGatewayService
-from gateway_app.schemas.requests import UnifiedQueryRequest, BatchQueryRequest, QueryOptions
-from gateway_app.schemas.responses import UnifiedQueryResponse, BatchQueryResponse, CostBreakdown, ProcessingMetrics
+import pytest
+from gateway_app.schemas.requests import (
+    BatchQueryRequest,
+    QueryOptions,
+    UnifiedQueryRequest,
+)
+from gateway_app.schemas.responses import (
+    BatchQueryResponse,
+    CostBreakdown,
+    ProcessingMetrics,
+    UnifiedQueryResponse,
+)
 
 
 class TestAPIGatewayService:

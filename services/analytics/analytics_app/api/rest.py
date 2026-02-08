@@ -5,23 +5,24 @@ This module implements all REST API endpoints for the Analytics Service,
 providing cost tracking, performance analytics, and usage trend analysis.
 """
 
-import uuid
 import time
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException, Depends, Request, Query
-from fastapi.responses import JSONResponse
+import uuid
+from typing import Any, Dict
+
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram
 
 from ..core.analytics import AnalyticsService
 from ..schemas.requests import (
-    RecordQueryRequest, BatchRecordQueryRequest, CostReportRequest,
-    PerformanceReportRequest, UsageTrendsRequest
+    BatchRecordQueryRequest,
+    RecordQueryRequest,
 )
 from ..schemas.responses import (
-    RecordQueryResponse, BatchRecordQueryResponse, CostReportResponse,
-    PerformanceReportResponse, UsageTrendsResponse, ServiceStatus,
-    ErrorResponse
+    BatchRecordQueryResponse,
+    ErrorResponse,
+    RecordQueryResponse,
 )
 
 logger = structlog.get_logger(__name__)

@@ -11,11 +11,11 @@ Available Analyzers:
 - LLMAnalyzerAdapter: External LLM adapter for advanced analysis (future)
 """
 
-from ..base import QueryAnalyzer, QueryAnalysis
+from ..base import QueryAnalysis, QueryAnalyzer
 from .base_analyzer import BaseQueryAnalyzer
+from .epic1_query_analyzer import Epic1QueryAnalyzer
 from .nlp_analyzer import NLPAnalyzer
 from .rule_based_analyzer import RuleBasedAnalyzer
-from .epic1_query_analyzer import Epic1QueryAnalyzer
 
 # Future implementations
 # from .adapters.llm_analyzer_adapter import LLMAnalyzerAdapter

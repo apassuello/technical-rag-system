@@ -5,18 +5,19 @@ This module provides concrete base functionality for context selection
 components, implementing common patterns for document filtering and token management.
 """
 
-import time
 import logging
-from typing import Dict, Any, List, Optional
-from pathlib import Path
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from ..base import ContextSelector, ContextSelection, QueryAnalysis
 from src.core.interfaces import Document
+
+from ..base import ContextSelection, ContextSelector, QueryAnalysis
 
 logger = logging.getLogger(__name__)
 

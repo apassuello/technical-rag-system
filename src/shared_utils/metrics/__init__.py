@@ -32,27 +32,27 @@ Example usage:
 """
 
 # Import base classes and protocols
+import logging
+
 from .base_metrics_collector import (
     BaseMetricsCollector,
+    InMemoryMetricsStorage,
     MetricsStorage,
-    InMemoryMetricsStorage
-)
-
-# Import data models
-from .data_models import (
-    BaseQueryMetrics,
-    CalibrationQueryMetrics,
-    AnalyticsQueryMetrics,
-    SystemMetrics,
-    SessionMetadata,
-    ComponentMetrics,
-    MetricsConverter
 )
 
 # Import concrete implementations
 from .calibration_collector import MetricsCollector, QueryMetrics
-import logging
 
+# Import data models
+from .data_models import (
+    AnalyticsQueryMetrics,
+    BaseQueryMetrics,
+    CalibrationQueryMetrics,
+    ComponentMetrics,
+    MetricsConverter,
+    SessionMetadata,
+    SystemMetrics,
+)
 
 logger = logging.getLogger(__name__)
 # Define public API

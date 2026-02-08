@@ -35,15 +35,15 @@ Configuration Example:
 }
 """
 
+import logging
 import os
 import time
-import logging
-from typing import Dict, Any, Optional, Iterator, List, Tuple
 from decimal import Decimal
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 try:
     import anthropic
-    from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
+    from anthropic import AI_PROMPT, HUMAN_PROMPT, Anthropic
     ANTHROPIC_AVAILABLE = True
 except ImportError:
     ANTHROPIC_AVAILABLE = False
@@ -51,8 +51,13 @@ except ImportError:
     HUMAN_PROMPT = None
     AI_PROMPT = None
 
-from .base_adapter import BaseLLMAdapter, RateLimitError, AuthenticationError, ModelNotFoundError
 from ..base import GenerationParams, LLMError
+from .base_adapter import (
+    AuthenticationError,
+    BaseLLMAdapter,
+    ModelNotFoundError,
+    RateLimitError,
+)
 
 logger = logging.getLogger(__name__)
 

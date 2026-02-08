@@ -18,9 +18,9 @@ Usage:
     >>> print(f"Tools: {analysis.requires_tools}")
 """
 
-import re
 import logging
-from typing import List, Optional
+import re
+from typing import List
 
 from ..models import QueryAnalysis, QueryType
 

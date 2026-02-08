@@ -8,14 +8,13 @@ This is the production calibration metrics collector moved from the calibration
 component directory to shared utilities for reusability across the system.
 """
 
-import logging
-import time
-from typing import Dict, Any, List, Optional, Tuple
-from dataclasses import dataclass, field
-from pathlib import Path
 import json
+import logging
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
-from datetime import datetime
 
 from .base_metrics_collector import BaseMetricsCollector, InMemoryMetricsStorage
 from .data_models import CalibrationQueryMetrics, SessionMetadata
@@ -385,28 +384,28 @@ class MetricsCollector(BaseMetricsCollector):
         aggregates = self.calculate_aggregate_metrics()
         
         summary = [
-            f"Metrics Collection Summary",
-            f"=" * 40,
+            "Metrics Collection Summary",
+            "=" * 40,
             f"Total Queries: {len(self.query_metrics)}",
             f"Session ID: {self.session_metadata['session_id']}",
-            f"",
-            f"RETRIEVAL PERFORMANCE:",
+            "",
+            "RETRIEVAL PERFORMANCE:",
             f"  Avg Retrieval Time: {aggregates['retrieval_aggregates']['avg_retrieval_time']:.3f}s",
             f"  Avg Documents/Query: {aggregates['retrieval_aggregates']['avg_documents_per_query']:.1f}",
             f"  Avg Score Spread: {aggregates['retrieval_aggregates']['avg_score_spread']:.3f}",
-            f"",
-            f"GENERATION PERFORMANCE:",
+            "",
+            "GENERATION PERFORMANCE:",
             f"  Avg Generation Time: {aggregates['generation_aggregates']['avg_generation_time']:.3f}s",
             f"  Avg Confidence: {aggregates['generation_aggregates']['avg_confidence']:.3f}",
             f"  Avg Answer Length: {aggregates['generation_aggregates']['avg_answer_length']:.0f} chars",
-            f"",
-            f"VALIDATION RESULTS:",
+            "",
+            "VALIDATION RESULTS:",
             f"  Success Rate: {aggregates['validation_aggregates']['success_rate']*100:.1f}%",
             f"  Avg Quality Score: {aggregates['validation_aggregates']['avg_quality_score']:.3f}",
             f"  Passed: {aggregates['validation_aggregates']['total_passed']}",
             f"  Failed: {aggregates['validation_aggregates']['total_failed']}",
-            f"",
-            f"SYSTEM PERFORMANCE:",
+            "",
+            "SYSTEM PERFORMANCE:",
             f"  Avg Total Time: {aggregates['performance_aggregates']['avg_total_time']:.3f}s",
             f"  Throughput: {aggregates['performance_aggregates']['throughput_queries_per_sec']:.2f} queries/sec"
         ]

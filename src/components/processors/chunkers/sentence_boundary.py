@@ -19,12 +19,14 @@ Architecture Notes:
 """
 
 import re
-import hashlib
-from typing import List, Dict, Any
-from pathlib import Path
+from typing import Any, Dict, List
 
-from ..base import TextChunker, Chunk, ConfigurableComponent, QualityAssessment
-from src.shared_utils.document_processing.chunker import chunk_technical_text, _is_low_quality_chunk
+from src.shared_utils.document_processing.chunker import (
+    _is_low_quality_chunk,
+    chunk_technical_text,
+)
+
+from ..base import Chunk, ConfigurableComponent, QualityAssessment, TextChunker
 
 
 class SentenceBoundaryChunker(TextChunker, ConfigurableComponent, QualityAssessment):
@@ -131,7 +133,7 @@ class SentenceBoundaryChunker(TextChunker, ConfigurableComponent, QualityAssessm
                 chunks.append(chunk)
                 self.metrics['chunks_created'] += 1
                 
-            except ValueError as e:
+            except ValueError:
                 # Skip invalid chunks
                 self.metrics['chunks_filtered'] += 1
                 continue

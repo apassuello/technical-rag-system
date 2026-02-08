@@ -11,14 +11,21 @@ sub-component location, enhanced with capabilities from the migrated utilities.
 
 import logging
 import time
-from typing import List, Dict, Any, Tuple, Optional, Union
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
 
 from src.core.interfaces import Document
+
 from .base import Reranker
 from .utils import (
-    ScoreFusion, AdaptiveStrategies, CrossEncoderModels, PerformanceOptimizer,
-    ModelConfig, WeightsConfig, NormalizationConfig
+    AdaptiveStrategies,
+    CrossEncoderModels,
+    ModelConfig,
+    NormalizationConfig,
+    PerformanceOptimizer,
+    ScoreFusion,
+    WeightsConfig,
 )
 
 logger = logging.getLogger(__name__)

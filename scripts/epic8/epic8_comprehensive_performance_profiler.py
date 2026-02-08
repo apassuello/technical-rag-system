@@ -73,7 +73,7 @@ class PerformanceMetrics:
     error_rate_percent: float = 0.0
     
     # Readiness Indicators
-    production_ready_score: float = 0.0
+    fully_validated_score: float = 0.0
     bottleneck_severity: str = "NONE"
     scalability_limit: int = 0
 
@@ -101,7 +101,7 @@ class Epic8PerformanceProfiler:
     
     def __init__(self, project_root: Path = None):
         if project_root is None:
-            project_root = Path("/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag")
+            project_root = Path(__file__).resolve().parents[2]
         self.project_root = project_root
         self.results = SystemPerformanceProfile()
         
@@ -655,8 +655,8 @@ else:
         
         # Performance score based on production readiness
         avg_readiness = statistics.mean([
-            metrics.get('production_ready_score', 0)
-            for metrics in system_performance.values() 
+            metrics.get('fully_validated_score', 0)
+            for metrics in system_performance.values()
         ]) if system_performance else 0
         scores['performance'] = avg_readiness
         
@@ -685,7 +685,7 @@ else:
             readiness_level = 'IMMEDIATE DEPLOYMENT READY'
         elif swiss_score >= 80:
             market_position = 'COMPETITIVE' 
-            readiness_level = 'PRODUCTION READY WITH MONITORING'
+            readiness_level = 'VALIDATED WITH MONITORING'
         elif swiss_score >= 70:
             market_position = 'VIABLE'
             readiness_level = 'STAGING DEPLOYMENT READY'
@@ -750,7 +750,7 @@ else:
             
             # 7. Production readiness score
             readiness_score = self.calculate_production_readiness_score(service_name, service_metrics)
-            service_metrics['production_ready_score'] = readiness_score
+            service_metrics['fully_validated_score'] = readiness_score
             
             # Store service metrics
             all_service_metrics[service_name] = service_metrics
@@ -774,7 +774,7 @@ else:
         swiss_readiness = self.assess_swiss_market_readiness(all_service_metrics)
         
         # Calculate overall system health
-        service_scores = [metrics.get('production_ready_score', 0) for metrics in all_service_metrics.values()]
+        service_scores = [metrics.get('fully_validated_score', 0) for metrics in all_service_metrics.values()]
         overall_health = statistics.mean(service_scores) if service_scores else 0
         
         # Production deployment gates
@@ -811,7 +811,7 @@ else:
                 concurrent_request_capacity=metrics.get('successful_requests', 0),
                 epic1_integration_overhead_ms=metrics.get('epic1_overhead_ms', 0),
                 epic2_integration_overhead_ms=metrics.get('epic2_overhead_ms', 0),
-                production_ready_score=metrics.get('production_ready_score', 0),
+                fully_validated_score=metrics.get('fully_validated_score', 0),
                 scalability_limit=int(metrics.get('theoretical_max_rps', 0))
             )
             self.results.service_metrics[service_name] = service_perf
@@ -871,12 +871,12 @@ else:
         
         # Service performance breakdown
         for service_name, metrics in self.results.service_metrics.items():
-            status_emoji = "🟢" if metrics.production_ready_score >= 80 else "🟡" if metrics.production_ready_score >= 60 else "🔴"
+            status_emoji = "🟢" if metrics.fully_validated_score >= 80 else "🟡" if metrics.fully_validated_score >= 60 else "🔴"
             
             report += f"""
 ### {status_emoji} {service_name.upper()} Service
 
-**Production Readiness**: {metrics.production_ready_score:.1f}%
+**Validation Status**: {metrics.fully_validated_score:.1f}%
 **Response Time**: P95: {metrics.p95_latency_ms:.1f}ms, Avg: {metrics.response_time_ms:.1f}ms
 **Throughput**: {metrics.throughput_rps:.1f} RPS 
 **Memory Usage**: Current: {metrics.memory_usage_mb:.1f}MB, Peak: {metrics.memory_peak_mb:.1f}MB
@@ -1029,7 +1029,7 @@ async def main():
     report = profiler.generate_comprehensive_report()
     
     # Save to file
-    project_root = Path("/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag")
+    project_root = Path(__file__).resolve().parents[2]
     report_path = project_root / "EPIC8_COMPREHENSIVE_PERFORMANCE_ASSESSMENT.md"
     
     with open(report_path, 'w') as f:

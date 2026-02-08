@@ -2,12 +2,17 @@
 Base service client with common functionality.
 """
 
-import asyncio
 import time
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 import httpx
 import structlog
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from ..core.config import ServiceEndpoint
 

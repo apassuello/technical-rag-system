@@ -22,9 +22,9 @@ Usage:
     >>> prompt = TechnicalReActPrompt.get_react_prompt()
 """
 
-from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import List, Optional
 
 
 class AgentRole(Enum):

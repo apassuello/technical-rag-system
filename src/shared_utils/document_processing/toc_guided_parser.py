@@ -8,11 +8,10 @@ document structure and hierarchy.
 Author: Arthur Passuello
 """
 
-import re
-from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass
 import logging
-
+import re
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

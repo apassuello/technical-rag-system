@@ -4,9 +4,10 @@ Response schemas for Analytics Service.
 This module defines Pydantic models for all Analytics Service REST API responses.
 """
 
-from typing import Dict, Any, Optional, List, Union
-from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):

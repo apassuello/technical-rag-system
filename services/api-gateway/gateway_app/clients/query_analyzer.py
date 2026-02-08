@@ -2,11 +2,12 @@
 Query Analyzer service client.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 import structlog
 
-from .base import BaseServiceClient, ServiceError
 from ..core.config import ServiceEndpoint
+from .base import BaseServiceClient, ServiceError
 
 logger = structlog.get_logger(__name__)
 

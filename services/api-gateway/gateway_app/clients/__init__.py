@@ -2,12 +2,17 @@
 Service clients package for API Gateway.
 """
 
-from .base import BaseServiceClient, ServiceError, ServiceTimeoutError, ServiceUnavailableError
-from .query_analyzer import QueryAnalyzerClient
-from .generator import GeneratorClient  
-from .retriever import RetrieverClient
-from .cache import CacheClient
 from .analytics import AnalyticsClient
+from .base import (
+    BaseServiceClient,
+    ServiceError,
+    ServiceTimeoutError,
+    ServiceUnavailableError,
+)
+from .cache import CacheClient
+from .generator import GeneratorClient
+from .query_analyzer import QueryAnalyzerClient
+from .retriever import RetrieverClient
 
 __all__ = [
     "BaseServiceClient",

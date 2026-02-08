@@ -6,16 +6,15 @@ Provides the same interface as HuggingFaceAnswerGenerator but uses
 local Ollama server for model inference.
 """
 
-import time
-import requests
-import json
+import logging
 import re
 import sys
-import logging
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass
+from typing import Any, Dict, List, Tuple
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +24,11 @@ from .prompt_templates import TechnicalPromptTemplates
 
 # Import standard interfaces (add this for the adapter)
 try:
-    from pathlib import Path
     import sys
+    from pathlib import Path
     project_root = Path(__file__).parent.parent.parent.parent.parent
     sys.path.append(str(project_root))
-    from src.core.interfaces import Document, Answer, AnswerGenerator
+    from src.core.interfaces import Answer, AnswerGenerator, Document
 except ImportError:
     # Fallback for standalone usage
     Document = None

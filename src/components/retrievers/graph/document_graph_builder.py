@@ -6,12 +6,12 @@ using NetworkX to build knowledge graphs that capture relationships between
 concepts, protocols, architectures, and extensions in RISC-V documentation.
 """
 
+import hashlib
 import logging
 import time
-import hashlib
-from typing import List, Dict, Any, Optional, Set, Tuple, Union
-from dataclasses import dataclass, field
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 try:
     import networkx as nx
@@ -21,6 +21,7 @@ except ImportError:
     np = None
 
 from src.core.interfaces import Document
+
 from .config.graph_config import GraphBuilderConfig
 from .entity_extraction import Entity, EntityExtractor
 
@@ -547,7 +548,7 @@ class DocumentGraphBuilder:
     
     def _generate_node_id(self, normalized_text: str) -> str:
         """Generate unique node ID from normalized text."""
-        return hashlib.md5(normalized_text.encode()).hexdigest()[:12]
+        return hashlib.md5(normalized_text.encode(), usedforsecurity=False).hexdigest()[:12]
     
     def _map_entity_to_node_type(self, entity_type: str) -> str:
         """Map entity types to node types."""

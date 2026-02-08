@@ -2,11 +2,12 @@
 Cache service client.
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 import structlog
 
-from .base import BaseServiceClient, ServiceError
 from ..core.config import ServiceEndpoint
+from .base import BaseServiceClient, ServiceError
 
 logger = structlog.get_logger(__name__)
 

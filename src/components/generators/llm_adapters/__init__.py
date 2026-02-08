@@ -12,18 +12,18 @@ Available adapters:
 - MistralAdapter: For Mistral AI API
 """
 
-from .base_adapter import (
-    BaseLLMAdapter,
-    RateLimitError,
-    AuthenticationError,
-    ModelNotFoundError
-)
-from .ollama_adapter import OllamaAdapter
-from .huggingface_adapter import HuggingFaceAdapter
-from .mock_adapter import MockLLMAdapter
-from .openai_adapter import OpenAIAdapter
-from .mistral_adapter import MistralAdapter
 from .anthropic_adapter import AnthropicAdapter
+from .base_adapter import (
+    AuthenticationError,
+    BaseLLMAdapter,
+    ModelNotFoundError,
+    RateLimitError,
+)
+from .huggingface_adapter import HuggingFaceAdapter
+from .mistral_adapter import MistralAdapter
+from .mock_adapter import MockLLMAdapter
+from .ollama_adapter import OllamaAdapter
+from .openai_adapter import OpenAIAdapter
 
 __all__ = [
     'BaseLLMAdapter',
@@ -49,6 +49,7 @@ ADAPTER_REGISTRY = {
 }
 
 from typing import Type
+
 
 def get_adapter_class(provider: str) -> Type[BaseLLMAdapter]:
     """

@@ -3,12 +3,13 @@ Sparse Retrieval using BM25 algorithm for keyword-based document search.
 Complements dense semantic search with exact term matching capabilities.
 """
 
-from typing import List, Dict, Tuple, Optional
-from rank_bm25 import BM25Okapi
+import logging
 import re
 import time
-import logging
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
+from rank_bm25 import BM25Okapi
 
 logger = logging.getLogger(__name__)
 

@@ -5,12 +5,12 @@ This module provides structured reasoning capabilities for complex technical
 questions that require multi-step analysis and implementation guidance.
 """
 
-from typing import Dict, List, Optional, Any, Tuple
+import re
 from dataclasses import dataclass
 from enum import Enum
-import re
+from typing import Dict, List
 
-from .prompt_templates import QueryType, PromptTemplate
+from .prompt_templates import PromptTemplate, QueryType
 
 
 class ReasoningStep(Enum):

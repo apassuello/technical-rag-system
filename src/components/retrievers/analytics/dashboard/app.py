@@ -6,14 +6,11 @@ real-time monitoring of the advanced retriever system.
 """
 
 import logging
-from typing import Optional, Dict, Any
-import dash
-from dash import dcc, html, Input, Output, State
-import plotly.graph_objs as go
-import plotly.express as px
-import pandas as pd
-import threading
 import time
+from typing import Any, Dict
+
+import dash
+from dash import Input, Output, State, dcc, html
 
 from ..metrics_collector import MetricsCollector
 from .layouts.overview import create_overview_layout

@@ -2,20 +2,29 @@
 REST API endpoints for Generator Service.
 """
 
-import uuid
 import time
-from typing import Dict, Any, List
-from fastapi import APIRouter, HTTPException, Depends, Request
+import uuid
+
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, Request
 from prometheus_client import Counter, Histogram
 
 from ..core.generator import GeneratorService
 from ..schemas.requests import (
-    GenerateRequest, BatchGenerateRequest, ModelStatusRequest, RoutingTestRequest
+    BatchGenerateRequest,
+    GenerateRequest,
+    ModelStatusRequest,
+    RoutingTestRequest,
 )
 from ..schemas.responses import (
-    GenerateResponse, BatchGenerateResponse, ModelsResponse, GeneratorStatusResponse,
-    RoutingTestResponse, ErrorResponse, CostSummaryResponse, ModelInfo, RoutingDecision
+    BatchGenerateResponse,
+    ErrorResponse,
+    GenerateResponse,
+    GeneratorStatusResponse,
+    ModelInfo,
+    ModelsResponse,
+    RoutingDecision,
+    RoutingTestResponse,
 )
 
 logger = structlog.get_logger(__name__)

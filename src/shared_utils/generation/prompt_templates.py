@@ -5,9 +5,9 @@ This module provides specialized prompt templates for different types of
 technical queries, with a focus on embedded systems and AI documentation.
 """
 
+from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional
-from dataclasses import dataclass
 
 
 class QueryType(Enum):

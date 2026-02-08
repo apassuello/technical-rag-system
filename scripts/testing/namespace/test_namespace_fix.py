@@ -114,7 +114,7 @@ def main():
     print("=" * 50)
     
     # Change to project directory
-    project_root = Path("/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag")
+    project_root = Path(__file__).resolve().parents[3]
     import os
     os.chdir(project_root)
     

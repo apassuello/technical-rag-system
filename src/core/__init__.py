@@ -1,20 +1,20 @@
 """Core abstractions for the modular RAG system."""
 
+from .component_factory import ComponentFactory
 from .interfaces import (
-    Document,
-    RetrievalResult,
     Answer,
+    AnswerGenerator,
+    Document,
     DocumentProcessor,
     Embedder,
-    VectorStore,
+    RetrievalResult,
     Retriever,
-    AnswerGenerator
+    VectorStore,
 )
 
 # Phase 4: Clean architecture components
 from .platform_orchestrator import PlatformOrchestrator
 from .query_processor import QueryProcessor
-from .component_factory import ComponentFactory
 
 __all__ = [
     # Data types

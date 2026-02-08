@@ -5,12 +5,11 @@ Tests that the Query Analyzer Service meets performance targets
 for various operations and load conditions.
 """
 
-import pytest
-import time
 import statistics
-import asyncio
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import pytest
 from conftest import assert_processing_time
 
 
@@ -304,8 +303,9 @@ class TestColdStartPerformance:
         query = sample_queries["simple"][0]
         
         # Create a new service instance to simulate cold start
-        from analyzer_app.core.analyzer import QueryAnalyzerService
         from unittest.mock import patch
+
+        from analyzer_app.core.analyzer import QueryAnalyzerService
         
         with patch('app.core.analyzer.Epic1QueryAnalyzer') as mock_epic1:
             mock_analyzer = analyzer_service.analyzer  # Use existing mock
@@ -363,8 +363,9 @@ class TestResourceUsagePerformance:
 
     def test_memory_efficient_processing(self, client, sample_queries):
         """Test that processing remains efficient under memory pressure."""
-        import psutil
         import os
+
+        import psutil
         
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss
@@ -402,8 +403,9 @@ class TestResourceUsagePerformance:
 
     def test_cpu_efficient_processing(self, client, sample_queries):
         """Test CPU efficiency during processing."""
-        import psutil
         import threading
+
+        import psutil
         
         # Monitor CPU usage during processing
         cpu_usage = []
@@ -486,7 +488,7 @@ class TestPerformanceRegression:
         
         # Store results for future regression testing
         # In a real scenario, these would be stored in a performance tracking system
-        print(f"\nPerformance Baseline Results:")
+        print("\nPerformance Baseline Results:")
         for test_name, metrics in results.items():
             print(f"  {test_name}:")
             print(f"    API Time: {metrics['avg_api_time']:.3f}s avg, {metrics['max_api_time']:.3f}s max")
@@ -544,6 +546,6 @@ class TestPerformanceRegression:
         assert p95_processing < performance_targets["max_response_time"] * 2
         assert p99_processing < performance_targets["max_response_time"] * 4
         
-        print(f"\nPerformance Percentiles:")
+        print("\nPerformance Percentiles:")
         print(f"  API Response Time: P50={p50_response:.3f}s, P90={p90_response:.3f}s, P95={p95_response:.3f}s, P99={p99_response:.3f}s")
         print(f"  Processing Time: P50={p50_processing:.3f}s, P90={p90_processing:.3f}s, P95={p95_processing:.3f}s, P99={p99_processing:.3f}s")

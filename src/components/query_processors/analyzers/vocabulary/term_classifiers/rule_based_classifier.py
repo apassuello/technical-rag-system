@@ -5,12 +5,11 @@ Implements pattern and dictionary-based technical term classification with
 categorized vocabulary and complexity weighting.
 """
 
-import re
 import logging
-from typing import Dict, List, Any, Set
-from pathlib import Path
+import re
+from typing import Any, Dict, List
 
-from ..base import TermClassifier, TermClassificationResult
+from ..base import TermClassificationResult, TermClassifier
 
 logger = logging.getLogger(__name__)
 

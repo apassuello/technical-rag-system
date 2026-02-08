@@ -12,10 +12,9 @@ Architecture Reference:
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from pathlib import Path
-
+from typing import Any, Dict, List, Tuple
 
 # --- Data Classes ---
 
@@ -230,7 +229,7 @@ class ProcessingPipeline(ABC):
     """
     
     @abstractmethod
-    def process_document(self, file_path: Path) -> List['Document']:
+    def process_document(self, file_path: Path) -> List['Document']:  # noqa: F821
         """
         Process a document through the complete pipeline.
         

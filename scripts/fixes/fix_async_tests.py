@@ -6,6 +6,7 @@ Converts async def test_... methods to sync methods that use asyncio.run().
 
 import re
 import sys
+from pathlib import Path
 
 def fix_async_tests(file_path):
     """Fix async test methods in the given file."""
@@ -89,5 +90,6 @@ def fix_async_tests(file_path):
     print(f"Fixed async test methods in {file_path}")
 
 if __name__ == '__main__':
-    file_path = '/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/tests/epic1/ml_infrastructure/integration/test_model_manager.py'
+    project_root = Path(__file__).resolve().parents[2]
+    file_path = str(project_root / 'tests/epic1/ml_infrastructure/integration/test_model_manager.py')
     fix_async_tests(file_path)

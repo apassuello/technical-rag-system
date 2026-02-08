@@ -12,23 +12,19 @@ Architecture Notes:
 - Compatible with existing QueryProcessor infrastructure
 """
 
-import time
 import logging
-from typing import Dict, Any, Optional, List
-from pathlib import Path
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from .base_analyzer import BaseQueryAnalyzer
 from ..base import QueryAnalysis
-from .components import (
-    FeatureExtractor,
-    ComplexityClassifier,
-    ModelRecommender
-)
+from .base_analyzer import BaseQueryAnalyzer
+from .components import ComplexityClassifier, FeatureExtractor, ModelRecommender
 
 logger = logging.getLogger(__name__)
 

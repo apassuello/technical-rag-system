@@ -6,8 +6,8 @@ This script validates that the service can be imported and basic
 functionality works correctly.
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add project root and service directory to path
@@ -71,7 +71,7 @@ def test_configuration():
         from retriever_app.core.config import get_settings
         settings = get_settings()
         
-        print(f"✅ Configuration loaded:")
+        print("✅ Configuration loaded:")
         print(f"   - Service name: {settings.service.name}")
         print(f"   - Service port: {settings.service.port}")
         print(f"   - Retriever config type: {settings.retriever_config.get('vector_index', {}).get('type', 'unknown')}")
@@ -90,7 +90,7 @@ def test_schemas():
     
     try:
         from retriever_app.schemas.requests import RetrievalRequest
-        from retriever_app.schemas.responses import RetrievalResponse, DocumentResult
+        from retriever_app.schemas.responses import DocumentResult, RetrievalResponse
         
         # Test valid request
         request = RetrievalRequest(
@@ -148,7 +148,7 @@ def test_service_creation():
         }
         
         service = RetrieverService(config=config)
-        print(f"✅ RetrieverService created successfully")
+        print("✅ RetrieverService created successfully")
         print(f"   - Initialized: {service._initialized}")
         print(f"   - Config keys: {list(service.config.keys())}")
         
@@ -167,7 +167,7 @@ def test_fastapi_app():
         from retriever_app.main import create_app
         
         app = create_app()
-        print(f"✅ FastAPI app created successfully")
+        print("✅ FastAPI app created successfully")
         print(f"   - Title: {app.title}")
         print(f"   - Version: {app.version}")
         print(f"   - Routes: {len(app.routes)} routes")

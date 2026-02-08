@@ -11,11 +11,11 @@ Architecture Notes:
 - Extensible for multiple domains
 """
 
-import logging
-from typing import Set, Dict, List, Optional
-from pathlib import Path
 import json
+import logging
 import re
+from pathlib import Path
+from typing import Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 

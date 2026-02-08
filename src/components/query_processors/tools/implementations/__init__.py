@@ -1,7 +1,7 @@
 """
 Concrete tool implementations for RAG system.
 
-This package provides production-ready tool implementations that extend
+This package provides robust tool implementations that extend
 the BaseTool interface. Each tool is designed to be safe, reliable, and
 useful for LLM-powered query processing.
 
@@ -35,9 +35,8 @@ Usage:
 """
 
 from .calculator_tool import CalculatorTool
-from .document_search_tool import DocumentSearchTool
 from .code_analyzer_tool import CodeAnalyzerTool
-
+from .document_search_tool import DocumentSearchTool
 
 __all__ = [
     "CalculatorTool",

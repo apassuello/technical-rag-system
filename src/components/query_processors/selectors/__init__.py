@@ -10,7 +10,7 @@ Available Selectors:
 - DiversitySelector: Focus on document diversity over pure relevance (future)
 """
 
-from ..base import ContextSelector, ContextSelection
+from ..base import ContextSelection, ContextSelector
 from .base_selector import BaseContextSelector
 from .mmr_selector import MMRSelector
 from .token_limit_selector import TokenLimitSelector

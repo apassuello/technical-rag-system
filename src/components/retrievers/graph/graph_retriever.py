@@ -8,10 +8,9 @@ shortest path, random walk, and subgraph expansion strategies.
 
 import logging
 import time
-import random
-from typing import List, Dict, Any, Optional, Set, Tuple
-from dataclasses import dataclass
 from collections import defaultdict
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Set
 
 try:
     import networkx as nx
@@ -20,7 +19,8 @@ except ImportError:
     nx = None
     np = None
 
-from src.core.interfaces import Document, RetrievalResult, Embedder
+from src.core.interfaces import Embedder, RetrievalResult
+
 from .config.graph_config import GraphRetrievalConfig
 from .document_graph_builder import DocumentGraphBuilder
 

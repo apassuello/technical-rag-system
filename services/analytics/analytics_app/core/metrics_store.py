@@ -13,18 +13,15 @@ Features:
 - Optional persistence to external systems
 """
 
-import asyncio
-import time
-from typing import Dict, Any, List, Optional, Tuple
-from datetime import datetime, timedelta
-from dataclasses import dataclass, field
-from collections import defaultdict, deque
 import statistics
-import logging
-import json
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from threading import Lock
+from typing import Any, Dict, List, Optional
 
 import structlog
+
 from .config import get_settings
 
 logger = structlog.get_logger(__name__)

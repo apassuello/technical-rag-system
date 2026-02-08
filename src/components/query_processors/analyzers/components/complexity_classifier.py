@@ -13,8 +13,8 @@ Architecture Notes:
 """
 
 import logging
-from typing import Dict, Any, Optional, Tuple
 from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

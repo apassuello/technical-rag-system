@@ -18,12 +18,12 @@ Epic 1 Integration:
 - Enables 40%+ cost reduction through intelligent query routing
 """
 
-import os
-import time
 import json
 import logging
-from typing import Dict, Any, Optional, Iterator, List
+import os
+import time
 from decimal import Decimal
+from typing import Any, Dict, Iterator, Optional
 
 try:
     from mistralai import Mistral
@@ -39,7 +39,12 @@ except ImportError:
     REQUESTS_AVAILABLE = False
 
 try:
-    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+    from tenacity import (
+        retry,
+        retry_if_exception_type,
+        stop_after_attempt,
+        wait_exponential,
+    )
     TENACITY_AVAILABLE = True
 except ImportError:
     TENACITY_AVAILABLE = False
@@ -58,8 +63,13 @@ except ImportError:
     def retry_if_exception_type(*args, **kwargs):
         return None
 
-from .base_adapter import BaseLLMAdapter, RateLimitError, AuthenticationError, ModelNotFoundError
 from ..base import GenerationParams, LLMError
+from .base_adapter import (
+    AuthenticationError,
+    BaseLLMAdapter,
+    ModelNotFoundError,
+    RateLimitError,
+)
 
 logger = logging.getLogger(__name__)
 

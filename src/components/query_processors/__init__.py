@@ -60,25 +60,23 @@ Configuration Example:
           format_citations: true
 """
 
+# Sub-component implementations
+from .analyzers import NLPAnalyzer, RuleBasedAnalyzer
+from .assemblers import RichAssembler, StandardAssembler
 from .base import (
-    # Core interfaces
-    QueryProcessor,
-    QueryAnalyzer, 
+    ContextSelection,
     ContextSelector,
-    ResponseAssembler,
-    
     # Data structures
     QueryAnalysis,
-    ContextSelection,
+    QueryAnalyzer,
+    # Core interfaces
+    QueryProcessor,
     QueryProcessorConfig,
-    
+    QueryProcessorMetrics,
+    ResponseAssembler,
     # Utilities
     validate_config,
-    QueryProcessorMetrics
 )
-
-# Main implementation
-from .modular_query_processor import ModularQueryProcessor
 
 # Epic 1: Domain-Aware Query Processor
 from .domain_aware_query_processor import DomainAwareQueryProcessor
@@ -86,10 +84,9 @@ from .domain_aware_query_processor import DomainAwareQueryProcessor
 # Epic 5: Intelligent Query Processor (Phase 2 Block 3)
 from .intelligent_query_processor import IntelligentQueryProcessor
 
-# Sub-component implementations
-from .analyzers import NLPAnalyzer, RuleBasedAnalyzer
+# Main implementation
+from .modular_query_processor import ModularQueryProcessor
 from .selectors import MMRSelector, TokenLimitSelector
-from .assemblers import StandardAssembler, RichAssembler
 
 __all__ = [
     # Interfaces

@@ -6,16 +6,13 @@ query complexity, and performance requirements.
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 
-from .prompt_templates import (
-    QueryType, 
-    PromptTemplate, 
-    TechnicalPromptTemplates
-)
+from .prompt_templates import PromptTemplate, QueryType, TechnicalPromptTemplates
 
 
 class ContextQuality(Enum):

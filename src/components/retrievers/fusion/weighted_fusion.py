@@ -6,7 +6,7 @@ as an alternative to RRF for improved modularity and flexibility.
 """
 
 import logging
-from typing import List, Dict, Any, Tuple
+from typing import Any, Dict, List, Tuple
 
 from .base import FusionStrategy
 

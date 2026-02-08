@@ -6,10 +6,10 @@ using spaCy for natural language processing and custom patterns for technical te
 """
 
 import logging
-import time
-from typing import List, Dict, Any, Optional, Set, Tuple
 import re
+import time
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 try:
     import spacy
@@ -24,6 +24,7 @@ except ImportError:
     SPACY_AVAILABLE = False
 
 from src.core.interfaces import Document
+
 from .config.graph_config import EntityExtractionConfig
 
 logger = logging.getLogger(__name__)

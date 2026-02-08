@@ -6,9 +6,8 @@ This script validates that the service files exist and have the correct structur
 without requiring all dependencies to be installed.
 """
 
-import sys
-import os
 from pathlib import Path
+
 
 def test_file_structure():
     """Test that all required files exist."""

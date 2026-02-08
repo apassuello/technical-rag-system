@@ -6,14 +6,14 @@ for validation and YAML for storage. It supports multiple environments,
 configuration inheritance, and ComponentFactory validation.
 """
 
-from typing import Dict, Any, Optional, List
-import yaml
-import time
 import hashlib
-from pathlib import Path
-from pydantic import BaseModel, Field, field_validator, ConfigDict, model_validator
-from collections import OrderedDict
 import os
+from collections import OrderedDict
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import yaml
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ComponentConfig(BaseModel):
@@ -256,10 +256,9 @@ class ConfigManager:
                 try:
                     import json
                     current[final_key] = json.loads(value)
-                except (json.JSONDecodeError, ValueError, TypeError) as e:
+                except (json.JSONDecodeError, ValueError, TypeError):
                     # If not JSON, treat as string
                     # Convert 'true'/'false' to boolean
-                    logger.debug(f"Value '{value}' is not valid JSON, treating as string: {e}")
                     if value.lower() == 'true':
                         current[final_key] = True
                     elif value.lower() == 'false':
@@ -376,7 +375,7 @@ class ConfigManager:
             Cache key string
         """
         key_material = f"{file_path}:{self.env}"
-        return hashlib.md5(key_material.encode()).hexdigest()[:16]
+        return hashlib.md5(key_material.encode(), usedforsecurity=False).hexdigest()[:16]
     
     def _is_cache_valid(self, file_path: Path, cache_key: str) -> bool:
         """Check if cached configuration is still valid.

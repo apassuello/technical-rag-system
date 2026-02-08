@@ -5,18 +5,19 @@ This module provides concrete base functionality for response assembly
 components, implementing common patterns for Answer object creation and metadata handling.
 """
 
-import time
 import logging
-from typing import Dict, Any, List, Optional
-from pathlib import Path
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from ..base import ResponseAssembler, ContextSelection, QueryAnalysis
 from src.core.interfaces import Answer, Document
+
+from ..base import ContextSelection, QueryAnalysis, ResponseAssembler
 
 logger = logging.getLogger(__name__)
 

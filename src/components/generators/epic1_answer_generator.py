@@ -19,19 +19,20 @@ Epic 1 Integration:
 - Maintains full backward compatibility with single-model configurations
 """
 
-import time
 import logging
-from typing import List, Dict, Any, Optional, Iterator, TYPE_CHECKING
+import time
 from decimal import Decimal
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+from src.core.interfaces import Answer, Document
 
 # Import base classes
 from .answer_generator import AnswerGenerator
 from .base import GenerationError
-from src.core.interfaces import Document, Answer
+from .llm_adapters.cost_tracker import get_cost_tracker, record_llm_usage
 
 # Import Epic 1 components
 from .routing import AdaptiveRouter, RoutingDecision
-from .llm_adapters.cost_tracker import get_cost_tracker, record_llm_usage
 
 # Import query analyzer (with conditional import for backward compatibility)
 try:
@@ -42,7 +43,7 @@ except ImportError:
     Epic1QueryAnalyzer = None
 
 if TYPE_CHECKING:
-    from src.core.platform_orchestrator import PlatformOrchestrator
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -1009,7 +1010,6 @@ class Epic1AnswerGenerator(AnswerGenerator):
             else:
                 # Create new routing decision for cheapest model
                 from .routing.adaptive_router import RoutingDecision
-                from .routing.routing_strategies import ModelOption
                 
                 degraded_decision = RoutingDecision(
                     selected_model=cheapest_model,
@@ -1166,7 +1166,11 @@ class Epic1AnswerGenerator(AnswerGenerator):
         """
         # Import adapter errors for type checking
         try:
-            from .llm_adapters.base_adapter import AuthenticationError, ModelNotFoundError, RateLimitError
+            from .llm_adapters.base_adapter import (
+                AuthenticationError,
+                ModelNotFoundError,
+                RateLimitError,
+            )
         except ImportError:
             # Fallback if imports aren't available
             AuthenticationError = type('AuthenticationError', (Exception,), {})
@@ -1357,8 +1361,9 @@ class Epic1AnswerGenerator(AnswerGenerator):
         Returns:
             List of basic fallback ModelOption objects
         """
-        from .routing.routing_strategies import ModelOption
         from decimal import Decimal
+
+        from .routing.routing_strategies import ModelOption
         
         fallback_models = []
         

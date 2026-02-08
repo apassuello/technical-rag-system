@@ -21,19 +21,19 @@ Usage:
     >>> print(f"Answer: {result.final_answer}")
 """
 
-import time
 import logging
-from typing import Dict, Any, Optional, List
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Dict, List, Optional
 
 from ..base_agent import BaseAgent
 from ..models import (
+    AgentResult,
     ExecutionPlan,
     ExecutionResult,
     ExecutionStrategy,
-    SubTask,
     ReasoningStep,
-    AgentResult,
+    SubTask,
 )
 
 logger = logging.getLogger(__name__)

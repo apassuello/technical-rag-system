@@ -18,12 +18,11 @@ Usage:
 import logging
 import warnings
 
+from src.shared_utils.metrics import CalibrationQueryMetrics
+
 # Import from shared utilities for backward compatibility
-from src.shared_utils.metrics import (
-    MetricsCollector as _MetricsCollector,
-    QueryMetrics as _QueryMetrics,
-    CalibrationQueryMetrics
-)
+from src.shared_utils.metrics import MetricsCollector as _MetricsCollector
+from src.shared_utils.metrics import QueryMetrics as _QueryMetrics
 
 logger = logging.getLogger(__name__)
 

@@ -171,7 +171,7 @@ typing-extensions>=4.4.0
             "total_files": file_count,
             "total_size_mb": round(size_mb, 2),
             "deployment_date": "2025-07-03",
-            "system_status": "85% production ready (confidence bug fixed)"
+            "system_status": "85% validated (confidence bug fixed)"
         },
         "files_included": {
             "essential_files": essential_files,

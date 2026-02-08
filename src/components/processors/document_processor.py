@@ -13,27 +13,29 @@ Architecture Notes:
 - Includes comprehensive error handling and metrics
 """
 
-import time
 import logging
-from pathlib import Path
-from typing import List, Dict, Any, Optional
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.interfaces import DocumentProcessor as DocumentProcessorInterface, Document, HealthStatus
-
 # Forward declaration to avoid circular import
 from typing import TYPE_CHECKING
+
+from src.core.interfaces import Document, HealthStatus
+from src.core.interfaces import DocumentProcessor as DocumentProcessorInterface
+
 if TYPE_CHECKING:
     from src.core.platform_orchestrator import PlatformOrchestrator
-from .base import ProcessingPipeline, ConfigurableComponent, ValidationResult
-from .pipeline import DocumentProcessingPipeline
 from .adapters import PyMuPDFAdapter
+from .base import ConfigurableComponent, ValidationResult
 from .chunkers import SentenceBoundaryChunker
 from .cleaners import TechnicalContentCleaner
+from .pipeline import DocumentProcessingPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -411,7 +413,7 @@ class ModularDocumentProcessor(DocumentProcessorInterface, ConfigurableComponent
                     "performance_metrics": component_metrics.performance_metrics,
                     "timestamp": component_metrics.timestamp
                 }
-            except Exception as e:
+            except Exception:
                 # Fallback if platform service fails
                 pass
         

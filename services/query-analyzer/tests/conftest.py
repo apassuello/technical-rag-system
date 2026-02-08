@@ -2,25 +2,25 @@
 Pytest fixtures and configuration for Query Analyzer Service tests.
 """
 
-import pytest
 import asyncio
-from typing import Dict, Any, AsyncGenerator
-from unittest.mock import Mock, MagicMock, patch
-from fastapi.testclient import TestClient
-import httpx
-import tempfile
-import yaml
-from pathlib import Path
 
 # Import service components
 import sys
+import tempfile
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import httpx
+import pytest
+import yaml
+from fastapi.testclient import TestClient
+
 service_root = Path(__file__).parent.parent
 sys.path.insert(0, str(service_root))
 
-from analyzer_app.main import create_app, get_analyzer_service
 from analyzer_app.core.analyzer import QueryAnalyzerService
-from analyzer_app.core.config import ServiceSettings, AnalyzerConfig, get_settings
-from analyzer_app.schemas.responses import AnalyzeResponse
+from analyzer_app.core.config import AnalyzerConfig, ServiceSettings
+from analyzer_app.main import create_app, get_analyzer_service
 
 
 @pytest.fixture(scope="session")

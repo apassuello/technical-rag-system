@@ -9,12 +9,12 @@ Simplified from reranking/performance_optimizer.py for integration with
 the enhanced neural reranker in the rerankers/ component.
 """
 
-import logging
-import time
 import hashlib
-from typing import List, Dict, Any, Optional, Tuple
-from collections import OrderedDict
+import logging
 import threading
+import time
+from collections import OrderedDict
+from typing import Any, Dict, List, Optional
 
 from src.core.interfaces import Document
 
@@ -293,12 +293,12 @@ class PerformanceOptimizer:
                 doc_ids.append(str(doc.id))
             else:
                 # Fallback to content hash
-                doc_hash = hashlib.md5(doc.content.encode()).hexdigest()[:8]
+                doc_hash = hashlib.md5(doc.content.encode(), usedforsecurity=False).hexdigest()[:8]
                 doc_ids.append(doc_hash)
         
         content += "|" + ",".join(doc_ids)
         
-        return hashlib.md5(content.encode()).hexdigest()
+        return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()
     
     def get_cached_scores(
         self,

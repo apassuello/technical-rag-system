@@ -20,20 +20,26 @@ Integration with Epic 1:
 - Follows established Epic 1 architectural patterns
 """
 
-import time
 import logging
-from typing import Dict, Any, List, Optional, Union
-from pathlib import Path
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, Optional, Union
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from .modular_query_processor import ModularQueryProcessor
-from .domain_relevance_filter import DomainRelevanceFilter, DomainRelevanceResult
+from src.core.interfaces import (
+    Answer,
+    AnswerGenerator,
+    QueryOptions,
+    Retriever,
+)
+
 from .base import QueryAnalysis, QueryProcessorConfig
-from src.core.interfaces import Answer, QueryOptions, Document, Retriever, AnswerGenerator
+from .domain_relevance_filter import DomainRelevanceFilter
+from .modular_query_processor import ModularQueryProcessor
 
 logger = logging.getLogger(__name__)
 

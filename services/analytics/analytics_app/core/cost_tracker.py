@@ -12,13 +12,12 @@ Epic 1 Integration:
 - Preserves $0.001 precision and budget enforcement
 """
 
-import sys
-import os
-from pathlib import Path
-from typing import Dict, Any, Optional, List
-from decimal import Decimal
 import logging
-from datetime import datetime, timedelta
+import sys
+from datetime import datetime
+from decimal import Decimal
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 # Add src path for Epic 1 imports - Docker structure
 src_path = Path("/app/src")  # Direct path in Docker container
@@ -28,11 +27,11 @@ if str(src_path) not in sys.path:
 try:
     # Import Epic 1 CostTracker directly
     from src.components.generators.llm_adapters.cost_tracker import (
+        CostSummary,
         CostTracker,
         UsageRecord,
-        CostSummary,
         get_cost_tracker,
-        record_llm_usage
+        record_llm_usage,
     )
 except ImportError as e:
     logging.warning(f"Could not import Epic 1 CostTracker: {e}")
@@ -65,7 +64,8 @@ except ImportError as e:
         pass
 
 import structlog
-from .config import get_settings, get_cost_tracker_config
+
+from .config import get_cost_tracker_config, get_settings
 
 logger = structlog.get_logger(__name__)
 

@@ -6,22 +6,23 @@ orchestrates parameter optimization, metrics collection, and system calibration.
 """
 
 import logging
-import time
 import tempfile
-from typing import Dict, Any, List, Optional, Callable
-from pathlib import Path
-import yaml
+import time
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
-from .parameter_registry import ParameterRegistry, Parameter
+import yaml
+
+from src.core.platform_orchestrator import PlatformOrchestrator
+
 from .metrics_collector import MetricsCollector, QueryMetrics
 from .optimization_engine import (
     OptimizationEngine,
-    OptimizationStrategy,
     OptimizationResult,
+    OptimizationStrategy,
 )
-from src.core.platform_orchestrator import PlatformOrchestrator
-from src.core.interfaces import Document
+from .parameter_registry import ParameterRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -490,8 +491,10 @@ class CalibrationManager:
             else:
                 logger.warning(f"Parameter {param_name} not found in registry")
 
-        # Write temporary config file
-        temp_file = Path(tempfile.mktemp(suffix=".yaml"))
+        # Write temporary config file (NamedTemporaryFile avoids mktemp race condition)
+        tmp = tempfile.NamedTemporaryFile(suffix=".yaml", delete=False)
+        temp_file = Path(tmp.name)
+        tmp.close()
         with open(temp_file, "w") as f:
             yaml.dump(config, f, indent=2)
 

@@ -5,17 +5,16 @@ Tests request and response models for validation, serialization,
 and error handling.
 """
 
-import pytest
-from typing import Dict, Any
-from pydantic import ValidationError
 
+import pytest
 from analyzer_app.schemas.requests import AnalyzeRequest, StatusRequest
 from analyzer_app.schemas.responses import (
     AnalyzeResponse,
-    StatusResponse,
+    ErrorResponse,
     HealthResponse,
-    ErrorResponse
+    StatusResponse,
 )
+from pydantic import ValidationError
 
 
 class TestAnalyzeRequest:

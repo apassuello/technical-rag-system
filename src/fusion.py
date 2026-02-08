@@ -3,8 +3,8 @@ Reciprocal Rank Fusion for combining dense and sparse retrieval results.
 Implements the RRF algorithm with configurable weighting.
 """
 
-from typing import List, Tuple, Dict
 from collections import defaultdict
+from typing import Dict, List, Tuple
 
 
 def reciprocal_rank_fusion(

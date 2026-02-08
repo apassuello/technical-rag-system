@@ -5,15 +5,16 @@ Implements the optimization engine component from calibration-system-spec.md
 for finding optimal parameter values using various search strategies.
 """
 
+import json
 import logging
 import time
-from typing import Dict, Any, List, Optional, Tuple, Callable, Iterator
 from dataclasses import dataclass
 from enum import Enum
-import numpy as np
 from itertools import product
-import json
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -411,14 +412,14 @@ class OptimizationEngine:
         result = self.best_result
         
         summary = [
-            f"Optimization Results Summary",
-            f"=" * 40,
+            "Optimization Results Summary",
+            "=" * 40,
             f"Best Score: {result.best_score:.4f}",
             f"Total Evaluations: {result.total_evaluations}",
             f"Optimization Time: {result.optimization_time:.2f}s",
             f"Evaluations/Second: {result.total_evaluations/result.optimization_time:.2f}",
-            f"",
-            f"Best Parameters:"
+            "",
+            "Best Parameters:"
         ]
         
         for param, value in result.best_parameters.items():
@@ -426,8 +427,8 @@ class OptimizationEngine:
         
         if result.convergence_info:
             summary.extend([
-                f"",
-                f"Convergence Info:",
+                "",
+                "Convergence Info:",
                 f"  Strategy: {result.convergence_info.get('strategy', 'unknown')}"
             ])
             

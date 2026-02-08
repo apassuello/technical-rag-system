@@ -5,9 +5,10 @@ This module defines Pydantic models for all API response payloads
 with comprehensive structure and documentation.
 """
 
-from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class DocumentResult(BaseModel):

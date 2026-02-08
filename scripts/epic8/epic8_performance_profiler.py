@@ -380,7 +380,7 @@ asyncio.run(measure_startup())
 
 def main():
     """Main execution function."""
-    project_root = Path("/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag")
+    project_root = Path(__file__).resolve().parents[2]
     
     profiler = Epic8PerformanceProfiler(project_root)
     report = profiler.generate_epic8_performance_report()

@@ -17,10 +17,10 @@ Usage:
     >>> print(f"Type: {analysis.query_type}, Complexity: {analysis.complexity}")
 """
 
-from .query_analyzer import QueryAnalyzer
-from .query_decomposer import QueryDecomposer
 from .execution_planner import ExecutionPlanner
 from .plan_executor import PlanExecutor
+from .query_analyzer import QueryAnalyzer
+from .query_decomposer import QueryDecomposer
 
 __all__ = [
     "QueryAnalyzer",

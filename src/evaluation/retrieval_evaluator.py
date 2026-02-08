@@ -12,20 +12,21 @@ Implements proper RAG evaluation metrics focused on retrieval quality:
 This replaces the inadequate 0.8000 "quality score" with meaningful metrics.
 """
 
+import logging
 import sys
 import time
-import logging
-from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional
-import numpy as np
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List
+
+import numpy as np
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Document
+from src.core.platform_orchestrator import PlatformOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -315,7 +316,7 @@ class RetrievalQualityEvaluator:
         """Print a comprehensive evaluation report."""
         
         logger.info(f"\n{'='*80}")
-        logger.info(f"RETRIEVAL QUALITY EVALUATION REPORT")
+        logger.info("RETRIEVAL QUALITY EVALUATION REPORT")
         logger.info(f"Configuration: {results.config_name}")
         logger.info(f"{'='*80}")
         
@@ -328,7 +329,7 @@ class RetrievalQualityEvaluator:
         logger.info(f"Avg Response Time:    {results.avg_response_time:.3f}s")
         
         # Performance assessment
-        logger.info(f"\n🎯 PERFORMANCE ASSESSMENT")
+        logger.info("\n🎯 PERFORMANCE ASSESSMENT")
         logger.info("-" * 60)
         
         # Context Precision assessment
@@ -364,7 +365,7 @@ class RetrievalQualityEvaluator:
             mrr_status = "POOR ❌"
         logger.info(f"Ranking Quality:   {mrr_status}")
         
-        logger.info(f"\n📈 DETAILED QUERY RESULTS")
+        logger.info("\n📈 DETAILED QUERY RESULTS")
         logger.info("-" * 60)
         for result in results.query_results[:5]:  # Show first 5 queries
             logger.info(f"Query: {result.query[:50]}...")

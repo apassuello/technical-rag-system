@@ -31,13 +31,12 @@ Usage:
     >>> print(result.content)  # "4"
 """
 
-from typing import Dict, List, Optional
 import logging
 import threading
+from typing import Dict, List, Optional
 
 from .base_tool import BaseTool
 from .models import ToolResult
-
 
 logger = logging.getLogger(__name__)
 

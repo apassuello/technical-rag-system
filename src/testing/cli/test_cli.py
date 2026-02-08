@@ -18,10 +18,10 @@ import argparse
 import asyncio
 import sys
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict
 
-from src.testing.core.test_orchestrator import TestOrchestrator
 from src.testing.core.test_discovery import TestDiscovery
+from src.testing.core.test_orchestrator import TestOrchestrator
 from src.testing.reporting.report_manager import ReportManager
 from src.testing.utils.logging_config import setup_cli_logging
 

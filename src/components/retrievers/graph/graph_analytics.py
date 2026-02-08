@@ -6,12 +6,12 @@ metrics collection, performance monitoring, and optional visualization
 of graph structures and retrieval patterns.
 """
 
+import json
 import logging
 import time
-from typing import List, Dict, Any, Optional, Set, Tuple
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from collections import defaultdict, Counter
-import json
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     import networkx as nx
@@ -21,8 +21,8 @@ except ImportError:
     np = None
 
 try:
-    import plotly.graph_objects as go
     import plotly.express as px
+    import plotly.graph_objects as go
     from plotly.subplots import make_subplots
     PLOTLY_AVAILABLE = True
 except ImportError:

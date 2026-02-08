@@ -7,17 +7,15 @@ in microservices architecture with comprehensive error handling.
 """
 
 import asyncio
-import time
-import logging
-from typing import Dict, Any, Optional, List, Tuple
-from pathlib import Path
-from decimal import Decimal
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import structlog
-from prometheus_client import Counter, Histogram, Gauge
 from circuitbreaker import circuit
+from prometheus_client import Counter, Gauge, Histogram
 
 # Add main project to path to import Epic 2 components
 # From services/retriever/app/core/retriever.py go up 5 levels to project root
@@ -27,10 +25,10 @@ if src_path.exists():
     sys.path.insert(0, str(project_root))  # Add project root to path
 
 # Import existing Epic 2 components
-from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.components.embedders.modular_embedder import ModularEmbedder
-from src.core.interfaces import Document, RetrievalResult
+from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.core.component_factory import ComponentFactory
+from src.core.interfaces import Document, RetrievalResult
 
 logger = structlog.get_logger(__name__)
 
