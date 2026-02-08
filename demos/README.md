@@ -95,7 +95,7 @@ python demos/performance_demo.py
 ## Prerequisites
 
 ### System Requirements
-- Python 3.11+ in conda environment `rag-portfolio`
+- Python 3.11+ in conda environment `technical-rag-system`
 - PyTorch with Metal/MPS support (Apple Silicon)
 - All project dependencies installed
 

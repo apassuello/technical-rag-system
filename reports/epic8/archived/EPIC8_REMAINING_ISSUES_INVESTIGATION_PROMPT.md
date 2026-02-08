@@ -146,10 +146,10 @@ services/
 ### **Test Investigation Commands**
 ```bash
 # Run all integration tests with detailed output
-PYTHONPATH="/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/src:/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag" python -m pytest tests/epic8/integration/ -v --tb=long
+PYTHONPATH="/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/src:/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag" python -m pytest tests/epic8/integration/ -v --tb=long
 
 # Run specific failing test category
-PYTHONPATH="/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/src:/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag" python -m pytest tests/epic8/integration/test_api_gateway_integration.py::TestAPIGatewayCompletePipelineIntegration -v --tb=long
+PYTHONPATH="/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/src:/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag" python -m pytest tests/epic8/integration/test_api_gateway_integration.py::TestAPIGatewayCompletePipelineIntegration -v --tb=long
 
 # Check service health (if services are running)
 for port in 8081 8082 8083 8084 8085 8086; do
@@ -188,7 +188,7 @@ python -c "import redis; r = redis.Redis(host='localhost', port=6379); print('Re
 
 ## Working Directory
 ```
-/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag
+/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag
 ```
 
 ## Git Branch

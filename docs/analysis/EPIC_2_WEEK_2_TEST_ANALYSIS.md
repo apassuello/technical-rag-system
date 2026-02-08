@@ -19,7 +19,7 @@ Epic 2 Week 2 graph construction implementation has been thoroughly tested and v
 
 ### Test Environment Setup
 - **Platform**: Apple Silicon Mac M4-Pro with MPS acceleration
-- **Python**: 3.12.10 in conda environment `rag-portfolio`
+- **Python**: 3.12.10 in conda environment `technical-rag-system`
 - **Key Dependencies**: NetworkX 3.0+, spaCy 3.7+, sentence-transformers
 - **Model**: Ollama llama3.2:3b for answer generation
 - **Architecture**: 100% modular compliance

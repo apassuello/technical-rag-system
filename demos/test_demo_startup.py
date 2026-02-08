@@ -30,14 +30,14 @@ def test_imports():
         return False
 
     try:
-        from demo.components.rag_engine import RAGEngine
+        from demos.components_epic2.rag_engine import RAGEngine
         print("✅ RAGEngine imported")
     except ImportError as e:
         print(f"❌ Failed to import RAGEngine: {e}")
         return False
 
     try:
-        from demo.components.metrics_collector import MetricsCollector
+        from demos.components_epic2.metrics_collector import MetricsCollector
         print("✅ MetricsCollector imported")
     except ImportError as e:
         print(f"❌ Failed to import MetricsCollector: {e}")
@@ -51,7 +51,7 @@ def test_config_loading():
     print("\nTesting config loading...")
 
     try:
-        from demo.components.rag_engine import RAGEngine
+        from demos.components_epic2.rag_engine import RAGEngine
 
         engine = RAGEngine()
         print("✅ RAGEngine instantiated")
@@ -71,7 +71,7 @@ def test_component_initialization():
     print("\nTesting component initialization...")
 
     try:
-        from demo.components.rag_engine import RAGEngine
+        from demos.components_epic2.rag_engine import RAGEngine
 
         engine = RAGEngine()
         print("✅ RAGEngine created")

@@ -16,7 +16,7 @@ import json
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from demo.components.rag_engine import RAGEngine
+from demos.components_epic2.rag_engine import RAGEngine
 
 # Page config
 st.set_page_config(

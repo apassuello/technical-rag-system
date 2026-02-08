@@ -268,7 +268,7 @@ wc -l services/*/*_app/main.py
 
 | Issue | Solution |
 |-------|----------|
-| **Import errors** | Run from project root: `/home/user/rag-portfolio/project-1-technical-rag` |
+| **Import errors** | Run from project root: `/home/user/technical-rag-system/project-1-technical-rag` |
 | **Config not found** | Use test config: `python demo.py config/test.yaml` |
 | **Missing dependencies** | Install: `pip install -r requirements.txt` |
 | **No Ollama** | Use mock adapter or configure API keys |

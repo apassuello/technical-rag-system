@@ -97,7 +97,7 @@ Check off as you remember:
 
 **Simple Query Test** (should use Ollama - free/local):
 ```bash
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 
 python << 'EOF'
 from src.core.platform_orchestrator import PlatformOrchestrator
@@ -308,7 +308,7 @@ echo "  Epic 1 & 2: Intelligent Multi-Model RAG System"
 echo "═══════════════════════════════════════════════════════"
 echo ""
 
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 
 echo "1️⃣  EPIC 1: Query Complexity Analysis"
 echo "   Testing with simple and complex queries..."

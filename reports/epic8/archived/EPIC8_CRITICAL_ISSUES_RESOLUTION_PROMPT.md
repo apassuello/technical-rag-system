@@ -95,7 +95,7 @@ tests/epic8/
 ### **Integration Tests**: ✅ **MAJOR SERVICE INTEGRATION WORKING**
 ```bash
 # Integration tests with infrastructure and interface fixes applied
-PYTHONPATH="/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/src:/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag" python -m pytest tests/epic8/integration/ -v --tb=short
+PYTHONPATH="/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/src:/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag" python -m pytest tests/epic8/integration/ -v --tb=short
 # Result: 58.6% success rate (27/65 passed, 17 skipped) - +44.8% improvement, major services operational
 ```
 
@@ -110,7 +110,7 @@ cd services/cache && python -m pytest tests/ -v
 ### **Performance Tests**: ✅ **INFRASTRUCTURE OPERATIONAL**
 ```bash
 # Performance test infrastructure ready but needs service deployment for full validation
-PYTHONPATH="/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/src:/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag" python -m pytest tests/epic8/performance/ -v --tb=short --timeout=600
+PYTHONPATH="/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/src:/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag" python -m pytest tests/epic8/performance/ -v --tb=short --timeout=600
 # Result: Infrastructure fixed (timeouts resolved), but full testing requires service integration
 ```
 
@@ -146,7 +146,7 @@ You are working with the **Epic 8 Cloud-Native Multi-Model RAG Platform** which 
 
 ## Working Directory
 ```
-/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag
+/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag
 ```
 
 ## Git Branch

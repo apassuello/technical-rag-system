@@ -351,9 +351,9 @@ class APIGatewaySettings(BaseSettings):
 ```
 
 **Files Updated**:
-- `/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services/api-gateway/gateway_app/core/config.py`
-- `/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services/analytics/analytics_app/core/config.py`
-- `/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services/retriever/retriever_app/core/config.py`
+- `/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/services/api-gateway/gateway_app/core/config.py`
+- `/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/services/analytics/analytics_app/core/config.py`
+- `/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/services/retriever/retriever_app/core/config.py`
 
 **Results Achieved**:
 - ✅ **100% Pydantic v2 compliance**: All config files now use modern patterns

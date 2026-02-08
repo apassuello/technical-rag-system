@@ -363,7 +363,7 @@ curl http://localhost:8082/api/v1/status
 ## 📚 DOCUMENTATION
 
 **Complete Integration Guide Available At:**
-- **Location**: `/home/user/rag-portfolio/docs/EPIC1_QUERY_ANALYZER_INTEGRATION_GUIDE.md`
+- **Location**: `/home/user/technical-rag-system/docs/EPIC1_QUERY_ANALYZER_INTEGRATION_GUIDE.md`
 - **Size**: 1,400 lines
 - **Sections**: 16 major sections covering all aspects
 - **Code Examples**: 40+ complete, working examples
@@ -402,4 +402,4 @@ curl http://localhost:8082/api/v1/status
 
 ---
 
-**For detailed implementation guidance, see:** `/home/user/rag-portfolio/docs/EPIC1_QUERY_ANALYZER_INTEGRATION_GUIDE.md`
+**For detailed implementation guidance, see:** `/home/user/technical-rag-system/docs/EPIC1_QUERY_ANALYZER_INTEGRATION_GUIDE.md`

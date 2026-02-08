@@ -23,11 +23,11 @@
 ### Prerequisites
 ```bash
 # Create Phase 1 working branch
-cd /home/user/rag-portfolio
+cd /home/user/technical-rag-system
 git checkout -b claude/epic5-phase1-tools
 
 # Install dependencies
-conda activate rag-portfolio
+conda activate technical-rag-system
 pip install anthropic>=0.8.0
 pip install openai>=1.0.0  # Already installed, but ensure latest
 

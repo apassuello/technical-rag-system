@@ -1132,7 +1132,7 @@ async def test_query_analyzer_service_integration():
 ### Environment Variables
 ```bash
 # Project root for imports (for containerized deployment)
-PROJECT_ROOT=/home/user/rag-portfolio/project-1-technical-rag
+PROJECT_ROOT=/home/user/technical-rag-system/project-1-technical-rag
 
 # Service configuration
 QUERY_ANALYZER_CONFIG_FILE=config.yaml

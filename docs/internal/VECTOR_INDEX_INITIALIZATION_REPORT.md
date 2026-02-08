@@ -58,7 +58,7 @@ Successfully created comprehensive vector index management infrastructure for th
 
 ### 1. Index Building Script
 
-**File**: `/home/user/rag-portfolio/project-1-technical-rag/scripts/build_indices.py`
+**File**: `/home/user/technical-rag-system/project-1-technical-rag/scripts/build_indices.py`
 **Size**: 15 KB
 **Status**: ✅ COMPLETE
 **Permissions**: Executable
@@ -102,7 +102,7 @@ python scripts/build_indices.py --config config/custom.yaml
 
 ### 2. Index Verification Script
 
-**File**: `/home/user/rag-portfolio/project-1-technical-rag/scripts/verify_indices.py`
+**File**: `/home/user/technical-rag-system/project-1-technical-rag/scripts/verify_indices.py`
 **Size**: 15 KB
 **Status**: ✅ COMPLETE
 **Permissions**: Executable
@@ -140,7 +140,7 @@ python scripts/verify_indices.py --verbose
 
 ### 3. Status Checker
 
-**File**: `/home/user/rag-portfolio/project-1-technical-rag/scripts/check_indices_status.py`
+**File**: `/home/user/technical-rag-system/project-1-technical-rag/scripts/check_indices_status.py`
 **Size**: 3.4 KB
 **Status**: ✅ COMPLETE
 **Permissions**: Executable
@@ -173,7 +173,7 @@ python scripts/check_indices_status.py --indices-dir /path/to/indices
 
 ### Index Configuration File
 
-**File**: `/home/user/rag-portfolio/project-1-technical-rag/config/indices.yaml`
+**File**: `/home/user/technical-rag-system/project-1-technical-rag/config/indices.yaml`
 **Status**: ✅ COMPLETE
 
 **Sections**:
@@ -219,7 +219,7 @@ build:
 
 ### 1. Complete Management Guide
 
-**File**: `/home/user/rag-portfolio/project-1-technical-rag/docs/INDEX_MANAGEMENT_GUIDE.md`
+**File**: `/home/user/technical-rag-system/project-1-technical-rag/docs/INDEX_MANAGEMENT_GUIDE.md`
 **Size**: ~25 KB
 **Status**: ✅ COMPLETE
 
@@ -247,7 +247,7 @@ build:
 
 ### 2. Quick Start Guide
 
-**File**: `/home/user/rag-portfolio/project-1-technical-rag/VECTOR_INDEX_QUICK_START.md`
+**File**: `/home/user/technical-rag-system/project-1-technical-rag/VECTOR_INDEX_QUICK_START.md`
 **Status**: ✅ COMPLETE
 
 **Contents**:

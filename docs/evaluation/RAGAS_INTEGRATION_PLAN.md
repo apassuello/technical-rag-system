@@ -1826,7 +1826,7 @@ The integration transforms dormant evaluation capabilities into **active system 
 **Approval Required**: Technical review and implementation authorization
 
 **References**:
-- `/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/scripts/evaluation/ragas_evaluation.py`
-- `/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/src/evaluation/retrieval_evaluator.py`
-- `/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/RAGAS_TECHNICAL_SPECIFICATIONS.md`
-- `/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/docs/epics/epic-7-evaluation-framework.md`
+- `/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/scripts/evaluation/ragas_evaluation.py`
+- `/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/src/evaluation/retrieval_evaluator.py`
+- `/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/RAGAS_TECHNICAL_SPECIFICATIONS.md`
+- `/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/docs/epics/epic-7-evaluation-framework.md`

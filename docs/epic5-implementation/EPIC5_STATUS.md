@@ -368,7 +368,7 @@ Actual comprehensive test coverage demonstrates thorough quality assurance.
 
 1. **Install LangChain Dependencies**:
    ```bash
-   cd /home/user/rag-portfolio/project-1-technical-rag
+   cd /home/user/technical-rag-system/project-1-technical-rag
    pip install langchain langchain-openai langchain-anthropic
    ```
 

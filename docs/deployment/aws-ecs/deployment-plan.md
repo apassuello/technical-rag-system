@@ -1336,7 +1336,7 @@ graph TD
 
 ```bash
 # Navigate to project directory
-cd /path/to/rag-portfolio/project-1-technical-rag
+cd /path/to/technical-rag-system/project-1-technical-rag
 
 # Source infrastructure IDs
 source infrastructure-ids.sh

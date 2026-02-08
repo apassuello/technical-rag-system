@@ -12,7 +12,7 @@ The **Retriever Service is already correctly integrating ModularUnifiedRetriever
 
 ### Component Interface
 
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/src/components/retrievers/modular_unified_retriever.py`
+**Location**: `/home/user/technical-rag-system/project-1-technical-rag/src/components/retrievers/modular_unified_retriever.py`
 
 **Constructor Signature**:
 ```python
@@ -95,7 +95,7 @@ def debug_retrieval(query: str, k: int = 5) -> Dict[str, Any]
 
 ### Current Location & Status
 
-**File**: `/home/user/rag-portfolio/project-1-technical-rag/services/retriever/retriever_app/core/retriever.py`
+**File**: `/home/user/technical-rag-system/project-1-technical-rag/services/retriever/retriever_app/core/retriever.py`
 
 **Assessment**: ✅ **CORRECTLY IMPLEMENTED** - Follows established patterns from successful services
 
@@ -865,7 +865,7 @@ config = {
 
 ### Test Cases from Unit Tests
 
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/tests/epic8/unit/test_retriever_service.py`
+**Location**: `/home/user/technical-rag-system/project-1-technical-rag/tests/epic8/unit/test_retriever_service.py`
 
 ```python
 # Test service initialization

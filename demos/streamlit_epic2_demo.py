@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 
 # Import system integration
 try:
-    from demo.utils.system_integration import get_system_manager
-    from demo.utils.analytics_dashboard import analytics_dashboard
+    from demos.utils_epic2.system_integration import get_system_manager
+    from demos.utils_epic2.analytics_dashboard import analytics_dashboard
     system_manager = get_system_manager()
 except ImportError as e:
     st.error(f"Failed to import system integration: {e}")

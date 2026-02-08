@@ -510,7 +510,7 @@ Infrastructure Layer:
 #### Development Environment
 ```bash
 # Base setup for all projects
-conda create -n rag-portfolio python=3.10
+conda create -n technical-rag-system python=3.10
 pip install torch transformers langchain sentence-transformers
 pip install faiss-cpu streamlit gradio fastapi
 pip install ragas wandb pytest pre-commit
@@ -535,7 +535,7 @@ Each project builds on previous learnings while introducing new challenges.
 
 #### GitHub Organization
 ```
-rag-portfolio/
+technical-rag-system/
 ├── 01-technical-docs-rag/
 │   ├── README.md (with demo GIF)
 │   ├── docs/ (architecture, usage)

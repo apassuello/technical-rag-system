@@ -10,7 +10,7 @@ November 17, 2025
 ## What Was Implemented
 
 ### 1. Core Adapter (`anthropic_adapter.py`)
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/src/components/generators/llm_adapters/anthropic_adapter.py`
+**Location**: `/home/user/technical-rag-system/project-1-technical-rag/src/components/generators/llm_adapters/anthropic_adapter.py`
 
 **Features**:
 - ✅ Full integration with Anthropic Claude API (v0.73.0)
@@ -40,7 +40,7 @@ November 17, 2025
 | claude-3-haiku-20240307 | $0.25/1M | $1.25/1M | 200K tokens |
 
 ### 2. Unit Tests with Mocked API
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/tests/epic5/phase1/unit/test_anthropic_adapter.py`
+**Location**: `/home/user/technical-rag-system/project-1-technical-rag/tests/epic5/phase1/unit/test_anthropic_adapter.py`
 
 **Test Classes** (7 total):
 1. `TestAnthropicAdapterInitialization` - Adapter setup and configuration
@@ -64,7 +64,7 @@ November 17, 2025
 - ✅ Empty prompt validation
 
 ### 3. Integration Tests with Real API
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/tests/epic5/phase1/integration/test_anthropic_with_tools.py`
+**Location**: `/home/user/technical-rag-system/project-1-technical-rag/tests/epic5/phase1/integration/test_anthropic_with_tools.py`
 
 **Test Classes** (6 total):
 1. `TestAnthropicAdapterBasicIntegration` - Real API generation
@@ -91,7 +91,7 @@ pytest tests/epic5/phase1/integration/test_anthropic_with_tools.py -v -m "not re
 ```
 
 ### 4. Registry Integration
-**Updated**: `/home/user/rag-portfolio/project-1-technical-rag/src/components/generators/llm_adapters/__init__.py`
+**Updated**: `/home/user/technical-rag-system/project-1-technical-rag/src/components/generators/llm_adapters/__init__.py`
 
 **Changes**:
 - ✅ Added `AnthropicAdapter` to imports
@@ -328,7 +328,7 @@ The adapter works seamlessly with Block 1's tool infrastructure:
 
 Run the verification script:
 ```bash
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 python verify_anthropic_adapter.py
 ```
 

@@ -316,7 +316,7 @@ Average Tests per Class:      6.3 tests
 
 **Attempted Test Run**:
 ```bash
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 pytest tests/epic5/phase1/unit/ -v --tb=short
 ```
 
@@ -418,7 +418,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Option B: Use conda environment (if available)
-conda activate rag-portfolio
+conda activate technical-rag-system
 pip install -r requirements.txt
 
 # Option C: Install pytest in system Python

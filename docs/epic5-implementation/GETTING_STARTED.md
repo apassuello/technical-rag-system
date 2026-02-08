@@ -29,10 +29,10 @@
 
 ```bash
 # Navigate to project
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 
 # Activate conda environment
-conda activate rag-portfolio
+conda activate technical-rag-system
 
 # Install Phase 1 dependencies
 pip install anthropic>=0.8.0
@@ -92,7 +92,7 @@ OpenAI v1.3.5
 
 ```bash
 # Check current status
-cd /home/user/rag-portfolio
+cd /home/user/technical-rag-system
 git status
 
 # Create Phase 1 branch from claude/add-rag-tools-01EnL4wwgeHH7d1RJq8HAWMm

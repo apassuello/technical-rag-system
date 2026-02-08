@@ -359,7 +359,7 @@ Replica Distribution:
 #### 1. Environment Setup
 ```bash
 # Navigate to project directory
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 
 # Install Python dependencies
 pip install -r requirements.txt
@@ -648,7 +648,7 @@ cd scripts/deployment
 **Issue**: Import errors
 ```bash
 # Solution: Run from project root
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 python demos/capability_showcase.py
 ```
 

@@ -543,7 +543,7 @@ export ECR_REGISTRY=$(aws sts get-caller-identity --query Account --output text)
 
 **Build and Push Images**:
 ```bash
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 
 # Build all services
 ./scripts/deployment/build-services.sh build
@@ -1069,7 +1069,7 @@ aws ce get-cost-and-usage \
 - **Community**: https://kubernetes.io/community/
 
 ### Epic 8 Resources
-- **GitHub Issues**: https://github.com/yourusername/rag-portfolio/issues
+- **GitHub Issues**: https://github.com/yourusername/technical-rag-system/issues
 - **Documentation**: `/docs` directory in repository
 - **Demo Videos**: Link to recordings
 - **Team Contact**: team@yourdomain.com

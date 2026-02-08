@@ -754,7 +754,7 @@ if not check_ollama_available():
 
 #### 1. Install Dependencies
 ```bash
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 pip install -r requirements.txt
 
 # Additional test dependencies

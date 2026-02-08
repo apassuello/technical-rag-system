@@ -425,7 +425,7 @@ services:
 
 **Build All Services**:
 ```bash
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 
 # Build all Docker images (this takes a while)
 ./docker-setup.sh

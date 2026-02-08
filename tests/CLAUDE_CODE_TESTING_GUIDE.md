@@ -67,7 +67,7 @@ python tests/diagnostic/run_all_diagnostics.py
 ### Step 1: Execute Test Suite
 ```bash
 # Navigate to project directory
-cd /Users/apa/ml_projects/rag-portfolio/project-1-technical-rag
+cd /Users/apa/ml_projects/technical-rag-system/project-1-technical-rag
 
 # Run complete comprehensive test suite
 python tests/run_comprehensive_tests.py
@@ -127,7 +127,7 @@ claude code
 Then in Claude Code session:
 ```
 Please read and analyze the comprehensive test results file:
-/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/comprehensive_test_results_20250708_163830.json
+/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/comprehensive_test_results_20250708_163830.json
 
 Focus on:
 1. Overall system performance and quality metrics
@@ -146,7 +146,7 @@ Focus on:
 
 ```
 Please read and analyze the integration test results:
-/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/comprehensive_integration_test_20250708_163720.json
+/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/comprehensive_integration_test_20250708_163720.json
 
 Examine the document processing pipeline data:
 1. full_data_capture.chunks - All processed document chunks
@@ -296,7 +296,7 @@ For each answer, validate:
 
 ```
 Please read and analyze the component-specific test results:
-/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/component_specific_test_20250708_163649.json
+/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/component_specific_test_20250708_163649.json
 
 Examine each component's performance:
 1. document_processor.processing_results - Document processing analysis

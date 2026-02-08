@@ -142,7 +142,7 @@ tests/epic8/unit/
 
 ### Service Implementation
 ```
-/home/user/rag-portfolio/project-1-technical-rag/
+/home/user/technical-rag-system/project-1-technical-rag/
 services/retriever/retriever_app/core/retriever.py
 
 Key sections:

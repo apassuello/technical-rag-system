@@ -38,7 +38,7 @@ streamlit run demos/streamlit_epic2_demo.py
 
 ### Required (Minimum for Any Demo)
 - [ ] Python 3.11+ installed
-- [ ] In project directory: `/home/user/rag-portfolio/project-1-technical-rag`
+- [ ] In project directory: `/home/user/technical-rag-system/project-1-technical-rag`
 - [ ] Dependencies installed: `pip install -r requirements.txt`
 - [ ] Test configuration available: `config/test.yaml`
 
@@ -55,7 +55,7 @@ streamlit run demos/streamlit_epic2_demo.py
 ### 1. Environment Setup (One-Time)
 ```bash
 # Navigate to project
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 
 # Install dependencies
 pip install -r requirements.txt
@@ -175,7 +175,7 @@ curl http://localhost:8080/api/v1/status
 ### Issue: Import Errors
 ```bash
 # Solution: Ensure you're in project root
-pwd  # Should show: /home/user/rag-portfolio/project-1-technical-rag
+pwd  # Should show: /home/user/technical-rag-system/project-1-technical-rag
 ```
 
 ### Issue: Config Not Found

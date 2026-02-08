@@ -349,7 +349,7 @@ async def _initialize_clients(self):
 
 ### 1. Run Unit Tests
 ```bash
-cd /home/user/rag-portfolio/project-1-technical-rag/services/api-gateway
+cd /home/user/technical-rag-system/project-1-technical-rag/services/api-gateway
 python -m pytest tests/unit/ -v --tb=short
 ```
 

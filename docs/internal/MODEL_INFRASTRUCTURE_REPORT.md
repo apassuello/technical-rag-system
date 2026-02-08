@@ -44,7 +44,7 @@ Created production-ready model management infrastructure for the RAG Portfolio S
 
 ### 1. download_models.py (17 KB)
 
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/scripts/download_models.py`
+**Location**: `/home/user/technical-rag-system/project-1-technical-rag/scripts/download_models.py`
 
 **Features**:
 - ✅ Automated download of all required models
@@ -89,7 +89,7 @@ Proceed with download? (y/n):
 
 ### 2. verify_models.py (14 KB)
 
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/scripts/verify_models.py`
+**Location**: `/home/user/technical-rag-system/project-1-technical-rag/scripts/verify_models.py`
 
 **Features**:
 - ✅ Comprehensive model validation
@@ -138,7 +138,7 @@ Cache directory: /root/.cache/huggingface
 
 ### 1. config/models.yaml (6.1 KB)
 
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/config/models.yaml`
+**Location**: `/home/user/technical-rag-system/project-1-technical-rag/config/models.yaml`
 
 **Purpose**: Centralized model configuration with comprehensive metadata
 
@@ -169,7 +169,7 @@ sentence_transformers:
 
 ### 2. .dockerignore (Updated)
 
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/.dockerignore`
+**Location**: `/home/user/technical-rag-system/project-1-technical-rag/.dockerignore`
 
 **Purpose**: Prevent large model files from being copied into Docker images
 
@@ -231,7 +231,7 @@ query-analyzer:
 
 ### README_MODELS.md (Comprehensive Guide)
 
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/scripts/README_MODELS.md`
+**Location**: `/home/user/technical-rag-system/project-1-technical-rag/scripts/README_MODELS.md`
 
 **Sections**:
 1. **Overview** - System introduction and model inventory

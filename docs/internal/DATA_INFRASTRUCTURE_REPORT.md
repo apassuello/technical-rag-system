@@ -499,27 +499,27 @@ The data infrastructure is fully operational with:
 ## Appendix: File Locations
 
 ### Scripts
-- `/home/user/rag-portfolio/project-1-technical-rag/scripts/data_analysis.py`
-- `/home/user/rag-portfolio/project-1-technical-rag/scripts/process_documents.py`
-- `/home/user/rag-portfolio/project-1-technical-rag/scripts/validate_data.py`
-- `/home/user/rag-portfolio/project-1-technical-rag/scripts/create_manifest.py`
-- `/home/user/rag-portfolio/project-1-technical-rag/scripts/init_data.py`
+- `/home/user/technical-rag-system/project-1-technical-rag/scripts/data_analysis.py`
+- `/home/user/technical-rag-system/project-1-technical-rag/scripts/process_documents.py`
+- `/home/user/technical-rag-system/project-1-technical-rag/scripts/validate_data.py`
+- `/home/user/technical-rag-system/project-1-technical-rag/scripts/create_manifest.py`
+- `/home/user/technical-rag-system/project-1-technical-rag/scripts/init_data.py`
 
 ### Data Directories
-- `/home/user/rag-portfolio/project-1-technical-rag/data/raw/` - 22 PDFs (source)
-- `/home/user/rag-portfolio/project-1-technical-rag/data/processed/` - Validated documents
-- `/home/user/rag-portfolio/project-1-technical-rag/data/samples/` - 4 sample documents
-- `/home/user/rag-portfolio/project-1-technical-rag/data/metadata/` - Manifests and catalogs
+- `/home/user/technical-rag-system/project-1-technical-rag/data/raw/` - 22 PDFs (source)
+- `/home/user/technical-rag-system/project-1-technical-rag/data/processed/` - Validated documents
+- `/home/user/technical-rag-system/project-1-technical-rag/data/samples/` - 4 sample documents
+- `/home/user/technical-rag-system/project-1-technical-rag/data/metadata/` - Manifests and catalogs
 
 ### Documentation
-- `/home/user/rag-portfolio/project-1-technical-rag/data/README.md`
-- `/home/user/rag-portfolio/project-1-technical-rag/data/raw/README.md`
-- `/home/user/rag-portfolio/project-1-technical-rag/data/processed/README.md`
-- `/home/user/rag-portfolio/project-1-technical-rag/data/samples/README.md`
+- `/home/user/technical-rag-system/project-1-technical-rag/data/README.md`
+- `/home/user/technical-rag-system/project-1-technical-rag/data/raw/README.md`
+- `/home/user/technical-rag-system/project-1-technical-rag/data/processed/README.md`
+- `/home/user/technical-rag-system/project-1-technical-rag/data/samples/README.md`
 
 ### Manifests
-- `/home/user/rag-portfolio/project-1-technical-rag/data/metadata/data_inventory.json`
-- `/home/user/rag-portfolio/project-1-technical-rag/data/metadata/data_manifest.json`
+- `/home/user/technical-rag-system/project-1-technical-rag/data/metadata/data_inventory.json`
+- `/home/user/technical-rag-system/project-1-technical-rag/data/metadata/data_manifest.json`
 
 ---
 

@@ -66,7 +66,7 @@ When starting the next session, review these evidence files to understand the cu
 ```bash
 # Query Analyzer (currently working with workaround)
 cd services/query-analyzer
-PYTHONPATH=/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag:/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/services/query-analyzer python -m uvicorn app.main:app --host 0.0.0.0 --port 8082 --reload
+PYTHONPATH=/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag:/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/services/query-analyzer python -m uvicorn app.main:app --host 0.0.0.0 --port 8082 --reload
 
 # Test execution (after services fixed)
 ./run_tests.sh epic8 unit

@@ -13,8 +13,8 @@ import time
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from demo.components.rag_engine import RAGEngine
-from demo.components.metrics_collector import MetricsCollector
+from demos.components_epic2.rag_engine import RAGEngine
+from demos.components_epic2.metrics_collector import MetricsCollector
 
 # Page config
 st.set_page_config(
@@ -178,7 +178,7 @@ def main():
                 )
 
                 # Convert to QueryResult format for compatibility
-                from demo.components.rag_engine import QueryResult
+                from demos.components_epic2.rag_engine import QueryResult
                 result = QueryResult(
                     query=query_text,
                     answer=result_dict.get('answer'),

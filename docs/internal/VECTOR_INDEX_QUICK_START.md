@@ -21,7 +21,7 @@ Expected output if indices don't exist:
 ================================================================================
 VECTOR INDEX STATUS CHECK
 ================================================================================
-Checking: /home/user/rag-portfolio/project-1-technical-rag/data/indices
+Checking: /home/user/technical-rag-system/project-1-technical-rag/data/indices
 
 ❌ Indices directory does not exist
 

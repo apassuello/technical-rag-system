@@ -7,10 +7,10 @@ I have successfully implemented the Docker architecture solution for Epic 8 serv
 ## ✅ What Was Implemented
 
 ### 1. **Enhanced Configuration Files**
-- **`/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/docker-setup.sh`** - Comprehensive management script with pre-flight checks, build automation, and deployment management
-- **`/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/validate-docker-setup.sh`** - Architecture validation script  
-- **`/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/DOCKER_DEPLOYMENT_GUIDE.md`** - Complete deployment documentation
-- **`/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag/DOCKER_QUICK_REFERENCE.md`** - Quick reference for daily operations
+- **`/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/docker-setup.sh`** - Comprehensive management script with pre-flight checks, build automation, and deployment management
+- **`/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/validate-docker-setup.sh`** - Architecture validation script  
+- **`/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/DOCKER_DEPLOYMENT_GUIDE.md`** - Complete deployment documentation
+- **`/Users/apa/ml_projects/technical-rag-system/project-1-technical-rag/DOCKER_QUICK_REFERENCE.md`** - Quick reference for daily operations
 
 ### 2. **Architecture Fixes Applied**
 ✅ **Build Context**: All services correctly use project root (`.`) as build context  
@@ -28,7 +28,7 @@ I have successfully implemented the Docker architecture solution for Epic 8 serv
 
 ### Step 1: Validate Architecture
 ```bash
-cd /Users/apa/ml_projects/rag-portfolio/project-1-technical-rag
+cd /Users/apa/ml_projects/technical-rag-system/project-1-technical-rag
 ./validate-docker-setup.sh
 ```
 **Expected Result**: All validation checks pass ✅ (confirmed working)
@@ -105,7 +105,7 @@ COPY --chown=appuser:appuser services/SERVICE/app/ ./app/  # ✅ Service code
 ### Required Commands (User Must Execute)
 ```bash
 # Navigate to project directory
-cd /Users/apa/ml_projects/rag-portfolio/project-1-technical-rag
+cd /Users/apa/ml_projects/technical-rag-system/project-1-technical-rag
 
 # 1. Validate setup
 ./validate-docker-setup.sh

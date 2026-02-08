@@ -136,7 +136,7 @@ cached_response = UnifiedQueryResponse(
 
 **Diagnostic Command**:
 ```bash
-cd /home/user/rag-portfolio/project-1-technical-rag/services/api-gateway
+cd /home/user/technical-rag-system/project-1-technical-rag/services/api-gateway
 python -c "
 from gateway_app.main import app
 from fastapi.testclient import TestClient

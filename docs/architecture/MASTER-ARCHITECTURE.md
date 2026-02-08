@@ -194,7 +194,7 @@ component:
 ### 4.1 Project Structure
 
 ```
-rag-portfolio/
+technical-rag-system/
 ├── src/
 │   ├── core/              # Core interfaces and orchestrator
 │   ├── components/        # Component implementations

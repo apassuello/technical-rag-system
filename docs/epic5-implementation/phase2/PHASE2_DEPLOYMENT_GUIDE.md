@@ -93,7 +93,7 @@ opentelemetry-sdk>=1.15.0
 
 ```bash
 git clone <repository-url>
-cd rag-portfolio/project-1-technical-rag
+cd technical-rag-system/project-1-technical-rag
 ```
 
 ### Step 2: Create Virtual Environment

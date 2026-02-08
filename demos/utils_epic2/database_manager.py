@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class DatabaseManager:
     """Manages database operations for Epic 2 demo persistence"""
     
-    def __init__(self, database_url: str = "sqlite:///demo/epic2_demo.db", echo: bool = False):
+    def __init__(self, database_url: str = "sqlite:///demos/epic2_demo.db", echo: bool = False):
         """
         Initialize database manager
         
@@ -538,7 +538,7 @@ class DatabaseManager:
 # Global database manager instance
 _db_manager = None
 
-def get_database_manager(database_url: str = "sqlite:///demo/epic2_demo.db") -> DatabaseManager:
+def get_database_manager(database_url: str = "sqlite:///demos/epic2_demo.db") -> DatabaseManager:
     """Get global database manager instance"""
     global _db_manager
     if _db_manager is None:

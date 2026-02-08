@@ -79,7 +79,7 @@ Transform Phase 1 tools into a sophisticated agent system with:
 **Installation**:
 ```bash
 # Activate environment
-conda activate rag-portfolio
+conda activate technical-rag-system
 
 # Install LangChain core packages
 pip install langchain>=0.1.0

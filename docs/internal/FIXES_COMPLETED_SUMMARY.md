@@ -44,12 +44,12 @@ All paths verified to correctly resolve to project root:
 ```python
 ✅ tests/epic1/integration/test_epic1_end_to_end.py
    Expected parents: 4
-   Resolves to: /home/user/rag-portfolio/project-1-technical-rag
+   Resolves to: /home/user/technical-rag-system/project-1-technical-rag
    Matches project root: True
 
 ✅ tests/integration/test_integration.py
    Expected parents: 3
-   Resolves to: /home/user/rag-portfolio/project-1-technical-rag
+   Resolves to: /home/user/technical-rag-system/project-1-technical-rag
    Matches project root: True
 ```
 

@@ -168,7 +168,7 @@ pip install --no-binary :all: cffi cryptography
 ### Priority 2: Fix Python Environment (HIGH)
 ```bash
 # Recommended: Create virtual environment
-cd /home/user/rag-portfolio/project-1-technical-rag
+cd /home/user/technical-rag-system/project-1-technical-rag
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt

@@ -143,14 +143,14 @@ System design and technical specifications:
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/rag-portfolio.git
-cd rag-portfolio/project-1-technical-rag
+git clone https://github.com/yourusername/technical-rag-system.git
+cd technical-rag-system/project-1-technical-rag
 ```
 
 ### 2. Create Virtual Environment
 ```bash
-conda create -n rag-portfolio python=3.11
-conda activate rag-portfolio
+conda create -n technical-rag-system python=3.11
+conda activate technical-rag-system
 ```
 
 ### 3. Install Dependencies
