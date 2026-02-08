@@ -8,9 +8,11 @@ and can be instantiated without errors.
 
 import sys
 import os
+from pathlib import Path
 
-# Add project root to path
-sys.path.insert(0, '/home/user/rag-portfolio/project-1-technical-rag')
+# Add project root to path - resolve from script location
+script_dir = Path(__file__).parent.parent  # scripts -> project root
+sys.path.insert(0, str(script_dir))
 
 def verify_imports():
     """Verify all necessary imports work."""

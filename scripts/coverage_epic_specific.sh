@@ -15,10 +15,10 @@ export PYTHONPATH="$PWD"
 
 # Activate conda environment if available
 if command -v conda &> /dev/null; then
-    if conda info --envs | grep -q "rag-portfolio"; then
-        echo "🔄 Activating rag-portfolio environment..."
+    if conda info --envs | grep -q "technical-rag-system"; then
+        echo "🔄 Activating technical-rag-system environment..."
         source $(conda info --base)/etc/profile.d/conda.sh
-        conda activate rag-portfolio
+        conda activate technical-rag-system
     fi
 fi
 

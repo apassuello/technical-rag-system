@@ -29,9 +29,11 @@ import sys
 from typing import Dict, List, Any
 from decimal import Decimal
 import concurrent.futures
+from pathlib import Path
 
-# Add project root to path
-sys.path.insert(0, '/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag')
+# Add project root to path - resolve from script location
+script_dir = Path(__file__).parent.parent.parent  # epic1_validation/scripts -> project root
+sys.path.insert(0, str(script_dir))
 
 from src.components.generators.routing import AdaptiveRouter
 from src.components.generators.routing.routing_strategies import ModelOption

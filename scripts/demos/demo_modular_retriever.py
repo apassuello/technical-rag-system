@@ -10,7 +10,7 @@ from pathlib import Path
 # Add project paths
 project_root = Path(__file__).parent.parent.parent  # Go up to project-1-technical-rag
 sys.path.append(str(project_root))
-sys.path.append(str(project_root.parent))  # Add rag-portfolio root for shared_utils
+sys.path.append(str(project_root.parent))  # Add parent directory for shared_utils
 
 from src.core.component_factory import ComponentFactory
 from src.core.interfaces import Document

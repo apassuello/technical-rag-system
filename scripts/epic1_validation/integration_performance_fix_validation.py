@@ -13,9 +13,11 @@ Solution: Production mode configuration with cached availability
 import time
 import sys
 from typing import Dict, Any
+from pathlib import Path
 
-# Add project root to path
-sys.path.insert(0, '/Users/apa/ml_projects/rag-portfolio/project-1-technical-rag')
+# Add project root to path - resolve from script location
+script_dir = Path(__file__).parent.parent.parent  # epic1_validation/scripts -> project root
+sys.path.insert(0, str(script_dir))
 
 from src.components.generators.epic1_answer_generator import Epic1AnswerGenerator
 from src.core.interfaces import Document
