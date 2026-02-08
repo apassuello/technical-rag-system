@@ -124,9 +124,15 @@ comprehensive_test_results_*.json
 epic2_portfolio_assessment_*.txt
 *.log
 
-# Session records
-.claude/sessions/handoff-*.md
-.claude/sessions/session-*.md
+# Claude session artifacts (entire directory)
+.claude/
+
+# LanceDB runtime data
+lancedb/
+
+# MLflow experiment data (generated at runtime)
+mlruns/
+mlartifacts/
 
 # Validation results
 validation_results/
