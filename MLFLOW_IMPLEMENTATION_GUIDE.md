@@ -27,7 +27,7 @@ pip install mlflow>=2.9.0
 
 ### 5.2: Add MLflow to train_epic1_complete.py
 
-**Location**: `/home/user/rag-portfolio/project-1-technical-rag/scripts/epic1_training/train_epic1_complete.py`
+**Location**: `scripts/epic1_training/train_epic1_complete.py` (use pathlib to resolve from script location)
 
 **Add imports at top** (after line 50):
 ```python
@@ -404,7 +404,7 @@ With MLflow UI running and experiments visible:
 
 ### 8.3: Add to Root README
 
-**Update /home/user/rag-portfolio/README.md** (in Project 1 section):
+**Update README.md in project root** (in Project 1 section):
 
 ```markdown
 ### Project 1: Technical Documentation RAG System
