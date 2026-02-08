@@ -1,13 +1,13 @@
 # Technical Documentation RAG System
 
 [![Tests](https://img.shields.io/badge/tests-2555%20functions-brightgreen.svg)](./tests/)
-[![Code Quality](https://img.shields.io/badge/type%20hints-93.9%25-brightgreen.svg)](./src/)
+[![Code Quality](https://img.shields.io/badge/type%20hints-86.6%25-brightgreen.svg)](./src/)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
-[![K8s Tests](https://github.com/apassuello/rag-portfolio/actions/workflows/k8s-testing.yml/badge.svg)](https://github.com/apassuello/rag-portfolio/actions/workflows/k8s-testing.yml)
-[![Helm Tests](https://github.com/apassuello/rag-portfolio/actions/workflows/helm-testing.yml/badge.svg)](https://github.com/apassuello/rag-portfolio/actions/workflows/helm-testing.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![K8s Tests](https://github.com/apassuello/technical-rag-system/actions/workflows/k8s-testing.yml/badge.svg)](https://github.com/apassuello/technical-rag-system/actions/workflows/k8s-testing.yml)
+[![Helm Tests](https://github.com/apassuello/technical-rag-system/actions/workflows/helm-testing.yml/badge.svg)](https://github.com/apassuello/technical-rag-system/actions/workflows/helm-testing.yml)
 
-A production-grade Retrieval-Augmented Generation (RAG) system for technical documentation with multi-model routing, hybrid retrieval, and comprehensive K8s deployment infrastructure. Demonstrates ML engineering discipline from embedded systems background with 93.9% type hint coverage and 241K lines of test code.
+A comprehensive Retrieval-Augmented Generation (RAG) system for technical documentation with multi-model routing, hybrid retrieval, and K8s deployment infrastructure. Demonstrates ML engineering discipline from embedded systems background with 86.6% type hint coverage and 120K+ lines of test code.
 
 **🚀 [Try Live Demo on HuggingFace Spaces](https://huggingface.co/spaces/ArthyP/enhanced-rag-demo)** | *Earlier version - current code adds Epic 1 & 2 enhancements*
 
@@ -292,7 +292,7 @@ epic2_orchestrator = PlatformOrchestrator("config/epic2_graph_calibrated.yaml")
 full_orchestrator = PlatformOrchestrator("config/epic1_epic2_combined.yaml")
 # - 99.5% query classification + 48.7% MRR improvement
 # - Multi-model intelligence + advanced retrieval
-# - Production-ready with comprehensive monitoring
+# - Well-tested with comprehensive monitoring
 ```
 
 ## 📁 Configuration
@@ -452,7 +452,7 @@ python test_runner.py epic8 all    # Epic 8: Cloud-native services
 #### **Test Coverage Achievements**
 | Component | Coverage | Tests | Status |
 |-----------|----------|-------|--------|
-| **Epic 1 Multi-Model** | 80-99% | 296 tests | ✅ Production Ready |
+| **Epic 1 Multi-Model** | 80-99% | 296 tests | ✅ Well-Tested |
 | **Epic 2 Calibration** | 97.4% | 112/115 passing | ✅ Comprehensive |
 | **Retrieval Systems** | 75-90% | All components | ✅ Complete |
 | **Training Pipeline** | 99.5% | Accuracy validated | ✅ Validated |
@@ -462,7 +462,7 @@ python test_runner.py epic8 all    # Epic 8: Cloud-native services
 - **Total Test Lines**: 8,000+ comprehensive test lines  
 - **Test Cases**: 200+ scenarios across all priority areas
 - **Overall Pass Rate**: 95%+ across all test suites
-- **Epic 1 ML Components**: 80-99% coverage (production-ready)
+- **Epic 1 ML Components**: 80-99% coverage (well-tested)
 - **Epic 2 Systems**: 97.4% success rate (comprehensive validation)
 - **Performance Validation**: 7.5M+ params/sec processing verified
 
@@ -678,7 +678,7 @@ This RAG system demonstrates:
 **Swiss Tech Market Positioning**:
 - **Quality Focus**: Swiss engineering standards with comprehensive validation
 - **Precision Engineering**: $0.001 cost tracking and 99.5% classification accuracy
-- **Reliability**: 100% fallback success ensuring production-grade system availability
+- **Reliability**: 100% fallback success ensuring robust system availability
 
 **Competitive Interview Assets**:
 - **Concrete Achievements**: 99.5% accuracy, 48.7% MRR improvement, <25ms routing
@@ -700,4 +700,4 @@ This RAG system demonstrates:
 **Local Development**: `pip install -r requirements.txt`, `ollama pull llama3.2:3b`, `streamlit run app.py`  
 **Epic 2 Features**: Validated 48.7% MRR improvement with graph-enhanced fusion  
 
-**Production Ready**: ✅ 100% modular architecture, ✅ HF Spaces optimized, ✅ Comprehensive validation
+**Status**: ✅ 100% modular architecture, ✅ HF Spaces optimized, ✅ Comprehensive validation
