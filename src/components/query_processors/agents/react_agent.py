@@ -46,7 +46,11 @@ from typing import Any, Dict, List, Optional
 try:
     from langchain.agents import AgentExecutor, create_react_agent
 except ImportError:
-    from langchain_community.agents import AgentExecutor, create_react_agent
+    try:
+        from langchain_community.agents import AgentExecutor, create_react_agent
+    except ImportError:
+        AgentExecutor = None  # type: ignore[assignment,misc]
+        create_react_agent = None  # type: ignore[assignment,misc]
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import PromptTemplate
 

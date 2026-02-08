@@ -32,11 +32,15 @@ from typing import Any, Dict, List, Optional, Type
 from pydantic import BaseModel, Field, create_model
 
 try:
-    from langchain.callbacks.manager import CallbackManagerForToolRun
-    from langchain.tools import BaseTool as LangChainBaseTool
+    from langchain_core.callbacks.manager import CallbackManagerForToolRun
+    from langchain_core.tools import BaseTool as LangChainBaseTool
 except ImportError:
-    from langchain_community.callbacks.manager import CallbackManagerForToolRun
-    from langchain_community.tools import BaseTool as LangChainBaseTool
+    try:
+        from langchain.callbacks.manager import CallbackManagerForToolRun
+        from langchain.tools import BaseTool as LangChainBaseTool
+    except ImportError:
+        CallbackManagerForToolRun = None  # type: ignore[assignment,misc]
+        LangChainBaseTool = None  # type: ignore[assignment,misc]
 
 # Relative imports to avoid torch dependency
 from ...query_processors.tools.base_tool import BaseTool as Phase1BaseTool
