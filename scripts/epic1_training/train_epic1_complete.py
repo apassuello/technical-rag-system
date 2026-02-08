@@ -310,81 +310,81 @@ class Epic1CompleteTrainer:
                 # Training loop
                 best_val_loss = float('inf')
                 patience_counter = 0
-            
-            for epoch in range(epochs):
-                # Training phase
-                model.train()
-                train_loss = 0
-                for batch in train_loader:
-                    features = batch['features']
-                    scores = batch['score']
-                    
-                    optimizer.zero_grad()
-                    predictions = model(features)
-                    loss = criterion(predictions, scores)
-                    loss.backward()
-                    optimizer.step()
-                    
-                    train_loss += loss.item()
-                
-                avg_train_loss = train_loss / len(train_loader)
-                
-                # Validation phase
-                model.eval()
-                val_loss = 0
-                val_predictions = []
-                val_targets = []
-                
-                with torch.no_grad():
-                    for batch in val_loader:
+
+                for epoch in range(epochs):
+                    # Training phase
+                    model.train()
+                    train_loss = 0
+                    for batch in train_loader:
                         features = batch['features']
                         scores = batch['score']
-                        
+                    
+                        optimizer.zero_grad()
                         predictions = model(features)
                         loss = criterion(predictions, scores)
+                        loss.backward()
+                        optimizer.step()
+                    
+                        train_loss += loss.item()
+                
+                    avg_train_loss = train_loss / len(train_loader)
+                
+                    # Validation phase
+                    model.eval()
+                    val_loss = 0
+                    val_predictions = []
+                    val_targets = []
+                
+                    with torch.no_grad():
+                        for batch in val_loader:
+                            features = batch['features']
+                            scores = batch['score']
                         
-                        val_loss += loss.item()
-                        val_predictions.extend(predictions.cpu().numpy())
-                        val_targets.extend(scores.cpu().numpy())
+                            predictions = model(features)
+                            loss = criterion(predictions, scores)
+                        
+                            val_loss += loss.item()
+                            val_predictions.extend(predictions.cpu().numpy())
+                            val_targets.extend(scores.cpu().numpy())
                 
-                avg_val_loss = val_loss / len(val_loader)
-                val_mae = mean_absolute_error(val_targets, val_predictions)
+                    avg_val_loss = val_loss / len(val_loader)
+                    val_mae = mean_absolute_error(val_targets, val_predictions)
                 
-                scheduler.step(avg_val_loss)
+                    scheduler.step(avg_val_loss)
 
-                # Log metrics to MLflow
-                if MLFLOW_AVAILABLE:
-                    mlflow_logger.log_metrics({
-                        "train_loss": avg_train_loss,
-                        "val_loss": avg_val_loss,
-                        "val_mae": val_mae,
-                        "learning_rate": optimizer.param_groups[0]['lr']
-                    }, step=epoch)
+                    # Log metrics to MLflow
+                    if MLFLOW_AVAILABLE:
+                        mlflow_logger.log_metrics({
+                            "train_loss": avg_train_loss,
+                            "val_loss": avg_val_loss,
+                            "val_mae": val_mae,
+                            "learning_rate": optimizer.param_groups[0]['lr']
+                        }, step=epoch)
 
-                if epoch % 5 == 0:
-                    logger.info(f"  Epoch {epoch}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}, Val MAE={val_mae:.4f}")
+                    if epoch % 5 == 0:
+                        logger.info(f"  Epoch {epoch}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}, Val MAE={val_mae:.4f}")
 
-                # Early stopping
-                if avg_val_loss < best_val_loss:
-                    best_val_loss = avg_val_loss
-                    patience_counter = 0
+                    # Early stopping
+                    if avg_val_loss < best_val_loss:
+                        best_val_loss = avg_val_loss
+                        patience_counter = 0
                     
-                    # Save best model
-                    model_path = self.output_dir / f"{view_name}_model.pth"
-                    torch.save({
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict(),
-                        'epoch': epoch,
-                        'val_loss': avg_val_loss,
-                        'val_mae': val_mae,
-                        'view_name': view_name
-                    }, model_path)
+                        # Save best model
+                        model_path = self.output_dir / f"{view_name}_model.pth"
+                        torch.save({
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'epoch': epoch,
+                            'val_loss': avg_val_loss,
+                            'val_mae': val_mae,
+                            'view_name': view_name
+                        }, model_path)
                     
-                else:
-                    patience_counter += 1
-                    if patience_counter >= patience:
-                        logger.info(f"  Early stopping at epoch {epoch}")
-                        break
+                    else:
+                        patience_counter += 1
+                        if patience_counter >= patience:
+                            logger.info(f"  Early stopping at epoch {epoch}")
+                            break
             
                 # Load best model
                 checkpoint = torch.load(self.output_dir / f"{view_name}_model.pth")
