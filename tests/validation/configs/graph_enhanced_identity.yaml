@@ -1,0 +1,63 @@
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 1024
+    chunk_overlap: 128
+
+embedder:
+  type: "modular"
+  config:
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        device: "mps"
+        normalize_embeddings: true
+    batch_processor:
+      type: "dynamic"
+      config:
+        initial_batch_size: 64
+    cache:
+      type: "memory"
+      config:
+        max_entries: 1000
+
+retriever:
+  type: "modular_unified"
+  config:
+    vector_index:
+      type: "faiss"
+      config:
+        index_type: "IndexFlatIP"
+        normalize_embeddings: true
+    sparse:
+      type: "bm25"
+      config:
+        k1: 1.2
+        b: 0.75
+        lowercase: true
+        filter_stop_words: true
+    fusion:
+      type: "graph_enhanced_rrf"
+      config:
+        base_fusion:
+          k: 60
+          weights:
+            dense: 0.7
+            sparse: 0.3
+        graph_enhancement:
+          enabled: true
+          graph_weight: 0.1
+    reranker:
+      type: "identity"
+      config:
+        enabled: false
+
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    llm_client:
+      type: "ollama"
+      config:
+        model_name: "llama3.2:3b"
+        base_url: "http://localhost:11434"

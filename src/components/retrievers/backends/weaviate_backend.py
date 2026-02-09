@@ -17,7 +17,10 @@ import numpy as np
 try:
     import weaviate
     from weaviate import Client
-    from weaviate.exceptions import WeaviateException
+    try:
+        from weaviate.exceptions import WeaviateBaseError as WeaviateException  # v4
+    except ImportError:
+        from weaviate.exceptions import WeaviateException  # v3
     WEAVIATE_AVAILABLE = True
 except ImportError:
     WEAVIATE_AVAILABLE = False

@@ -1,35 +1,77 @@
-# Comprehensive Testing Guide - **PRODUCTION READY ✅**
+# Testing Guide
 
-## 🏆 **Phase 2 Test Coverage Achievement Summary**
+## Current Test Infrastructure (February 2026)
 
-**Date**: August 24, 2025  
-**Status**: **COMPREHENSIVE TEST COVERAGE COMPLETE - 95%+ SUCCESS RATES ACHIEVED**  
-**Overall Achievement**: **8,000+ Test Lines, 200+ Test Cases, All Priority Systems Tested**
+The project uses plain `pytest` with custom markers for test categorization. Three test tiers provide different levels of validation with different dependency requirements.
 
-### **Executive Summary - World-Class Test Implementation**
+### Quick Reference
 
-The RAG Portfolio Project has achieved **enterprise-grade test coverage** with comprehensive validation across all system components. This represents a **complete implementation** of Phase 2 test priorities with Swiss engineering quality standards.
+```bash
+# CI-safe validation (no Ollama, no Docker) — ~17s
+pytest tests/validation/ -m "validation and not requires_ollama and not requires_weaviate" -v
 
-#### **Key Achievements**
-- **🎯 All 4 Major Priorities Completed**: Epic 1 Stabilization, Epic 2 Calibration, Retrieval Systems, Training Infrastructure
-- **📊 Outstanding Success Rates**: 95%+ pass rates across all test suites  
-- **⚡ Performance Validation**: 7.5M+ parameters/sec processing verified
-- **🔧 Production Readiness**: All systems ready for Swiss tech market deployment
+# Full validation + integration (requires Ollama) — ~2min
+pytest tests/integration/ tests/validation/ -v --tb=short
 
-#### **Phase 2 Results by Priority**
+# Unit regression — ~50s
+pytest tests/unit/ -q --tb=no
 
-| Priority | System | Before | After | Tests | Status |
-|----------|--------|--------|-------|-------|---------|
-| **P1** | **Epic 1 Stabilization** | 74.5% | **80.0%** | 296 tests | ✅ **STABLE** |
-| **P2** | **Epic 2 Calibration** | 0% | **97.4%** | 112/115 | ✅ **COMPREHENSIVE** |
-| **P4** | **Retrieval Systems** | 35% | **75-90%** | All components | ✅ **COMPLETE** |
-| **P5** | **Training Pipeline** | 0% | **99.5%** | Accuracy validated | ✅ **VALIDATED** |
+# All tests with coverage — ~3min
+pytest tests/unit/ tests/integration/ tests/validation/ --cov=src --cov-report=term-missing --tb=short
 
-#### **Test Infrastructure Excellence**
-- **Total Test Lines**: 8,000+ comprehensive test implementation  
-- **Test Files Created**: 20+ new test suites across all system priorities
-- **Coverage Scripts**: Enhanced with Epic 1/2/8 comprehensive analysis
-- **Evidence Documentation**: 1,800+ test execution results documented
+# Adapter wiring only (no external deps) — ~3s
+pytest tests/validation/test_adapter_wiring.py -v
+
+# Config pipeline matrix only (requires Ollama) — ~90s
+pytest tests/validation/test_config_pipelines.py -v
+```
+
+### Current Test Counts (February 9, 2026)
+
+| Suite | Total | Passed | Xfailed | Skipped | Time |
+|-------|-------|--------|---------|---------|------|
+| Integration + Validation | 139 | 131 | 4 | 4 | ~2min |
+| CI-safe (no Ollama/Weaviate) | 57 | 55 | 2 | 0 | ~17s |
+| Unit regression | 1109 | 1092 | 0 | 10 | ~50s |
+
+### Test Tiers
+
+| Tier | Marker | Dependencies | What it tests |
+|------|--------|-------------|---------------|
+| **Tier 0** | `validation` only | ML models (sentence-transformers) | Query analyzers, fusion strategies, rerankers, adapter wiring |
+| **Tier 1** | `requires_ml, requires_ollama` | + Ollama (llama3.2:3b) | Config pipelines (12 fusion x reranker configs), generators, processors |
+| **Tier 2** | `requires_weaviate` | + Docker (Weaviate) | Weaviate vector backend (currently xfail due to v3/v4 API mismatch) |
+
+### Fusion x Reranker Matrix (12 configs, all tested)
+
+|  | identity | semantic | neural |
+|---|---|---|---|
+| **rrf** | basic_local | rrf_semantic | rrf_neural |
+| **weighted** | weighted_identity | weighted_semantic | weighted_neural |
+| **score_aware** | score_aware_identity | score_aware_semantic | epic2_score_aware |
+| **graph_enhanced** | graph_enhanced_identity | epic2_graph_enhanced | graph_enhanced_neural |
+
+### Pytest Markers
+
+Key markers registered in `pytest.ini`:
+
+- `validation` — Validation tests checking retrieval and answer quality
+- `requires_ml` — Requires ML dependencies (torch, transformers, sentence-transformers)
+- `requires_ollama` — Requires Ollama service running on localhost:11434
+- `requires_weaviate` — Requires Weaviate Docker container on localhost:8180
+- `unit`, `component`, `integration` — Standard test layers
+
+### Known Issues (documented as xfail)
+
+1. ModelRecommender.recommend() returns dict, but epic1_query_analyzer accesses .model attribute
+2. DomainAwareQueryProcessor.process_query() calls super().process_query() but parent only has process()
+3. WeaviateBackend uses weaviate-client v3 API; v4 is installed (needs backend migration)
+
+---
+
+## Legacy Test Runner (August 2025)
+
+The sections below document the legacy `test_runner.py` infrastructure from August 2025. These commands may no longer work. Use the pytest commands above instead.
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -622,11 +664,11 @@ python scripts/generate_coverage_dashboard.py coverage.json -o dashboard.html
 open reports/coverage/dashboard.html
 ```
 
-### Coverage Achievements - Production Ready ✅
+### Coverage Achievements (August 2025)
 
 | Component Type | Target Coverage | **ACHIEVED STATUS** | Achievement |
 |----------------|----------------|---------------------|-------------|
-| **Epic 1 Multi-Model** | 80% | **80-99% ACHIEVED** ✅ | Production Ready |
+| **Epic 1 Multi-Model** | 80% | **80-99% ACHIEVED** ✅ | Stable |
 | **Epic 2 Calibration** | 75% | **97.4% ACHIEVED** ✅ | Comprehensive |  
 | **Core Modules** | 85% | **85%+ ACHIEVED** ✅ | Robust Infrastructure |
 | **Retrieval Systems** | 75% | **75-90% ACHIEVED** ✅ | Complete Coverage |

@@ -101,6 +101,26 @@ class MockTransformerModel:
         self._loaded = True
         self._memory_usage_mb = self.config.memory_mb
     
+    def eval(self) -> 'MockTransformerModel':
+        """Simulate PyTorch model.eval() for quantization compatibility."""
+        # Mock models are always in eval mode
+        return self
+
+    def named_children(self):
+        """Simulate PyTorch nn.Module.named_children() for quantization compatibility."""
+        # Return empty iterator - mock models don't have child modules
+        return iter([])
+
+    def modules(self):
+        """Simulate PyTorch nn.Module.modules() for quantization compatibility."""
+        # Return iterator with just self - mock models don't have child modules
+        return iter([self])
+
+    def parameters(self):
+        """Simulate PyTorch nn.Module.parameters() for quantization compatibility."""
+        # Return empty iterator - mock models don't have trainable parameters
+        return iter([])
+
     def unload(self) -> None:
         """Simulate model unloading."""
         if self._lock:
@@ -190,6 +210,25 @@ class MockTransformerModel:
             'last_accessed': self._last_accessed,
             'load_time': time.time() - self._load_start_time if self._load_start_time else None
         }
+
+    def __getstate__(self) -> Dict[str, Any]:
+        """Prepare object for pickling by removing non-picklable RLock."""
+        state = self.__dict__.copy()
+        # Remove the lock (not picklable)
+        state['_lock'] = None
+        # Remove weakref set (not picklable)
+        state['_instances'] = None
+        return state
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        """Restore object from pickle by recreating RLock."""
+        self.__dict__.update(state)
+        # Recreate lock if needed
+        if self.config.thread_safe:
+            self._lock = threading.RLock()
+        # Recreate weakref set
+        self._instances = weakref.WeakSet()
+        self._instances.add(self)
 
 
 class MockModelFactory:

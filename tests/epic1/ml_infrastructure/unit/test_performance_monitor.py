@@ -16,6 +16,7 @@ from fixtures.base_test import (
     MLInfrastructureTestBase,
     PerformanceTestMixin,
     ConcurrencyTestMixin,
+    MemoryTestMixin,
 )
 from fixtures.test_data import TestDataGenerator, PerformanceTestData
 
@@ -293,16 +294,16 @@ class TestPerformanceMonitor(
 
                 if stats:
                     # Check basic statistics
-                    if "mean" in stats:
+                    if hasattr(stats, "avg_time_ms"):
                         expected_mean = sum(test_latencies) / len(test_latencies)
-                        self.assertAlmostEqual(stats["mean"], expected_mean, places=1)
+                        self.assertAlmostEqual(stats.avg_time_ms, expected_mean, places=1)
 
-                    if "p95" in stats:
+                    if hasattr(stats, "p95_time_ms"):
                         # P95 should be near the higher end
-                        self.assertGreaterEqual(stats["p95"], 40.0)
+                        self.assertGreaterEqual(stats.p95_time_ms, 40.0)
 
-                    if "count" in stats:
-                        self.assertEqual(stats["count"], len(test_latencies))
+                    if hasattr(stats, "count"):
+                        self.assertEqual(stats.count, len(test_latencies))
 
     def test_record_throughput(self):
         """Test recording throughput measurements."""
@@ -762,7 +763,7 @@ class TestPerformanceAlert(MLInfrastructureTestBase):
 
 
 # Performance tests for the monitor itself
-class TestPerformanceMonitorPerformance(MLInfrastructureTestBase, PerformanceTestMixin):
+class TestPerformanceMonitorPerformance(MLInfrastructureTestBase, PerformanceTestMixin, MemoryTestMixin):
     """Test PerformanceMonitor's own performance characteristics."""
 
     def test_monitoring_overhead(self):

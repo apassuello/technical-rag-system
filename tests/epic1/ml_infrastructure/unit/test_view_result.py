@@ -710,8 +710,9 @@ class TestViewFrameworkIntegration(MLInfrastructureTestBase):
             self.assertEqual(analysis.num_views, len(view_results))
         
         if hasattr(analysis, 'total_latency_ms'):
-            expected_latency = sum(data['latency_ms'] for data in view_data)
-            self.assertEqual(analysis.total_latency_ms, expected_latency)
+            # Compute expected latency from the actual ViewResult objects created, not from view_data
+            expected_latency = sum(result.latency_ms for result in view_results.values())
+            self.assertAlmostEqual(analysis.total_latency_ms, expected_latency, places=1)
     
     def test_empty_view_results_handling(self):
         """Test handling of empty view results."""
