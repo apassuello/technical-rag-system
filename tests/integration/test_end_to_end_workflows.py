@@ -14,48 +14,18 @@ from pathlib import Path
 
 from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Document, Answer
-
-# --- Shared test content ---
-# Substantial paragraphs so that embeddings are meaningful and BM25 has tokens to match.
-RISCV_OVERVIEW = (
-    "RISC-V is an open standard instruction set architecture based on "
-    "established reduced instruction set computer principles. Unlike most "
-    "other ISA designs, RISC-V is provided under royalty-free open-source "
-    "licenses. RISC-V was originally designed in 2010 at the University of "
-    "California, Berkeley. The project was led by Krste Asanovic and David "
-    "Patterson. The RISC-V foundation was established to maintain the "
-    "standard and promote adoption across the semiconductor industry."
-)
-
-RISCV_EXTENSIONS = (
-    "RISC-V supports a modular set of extensions. The base integer ISA is "
-    "named RV32I for 32-bit and RV64I for 64-bit address spaces. Standard "
-    "extensions include M for integer multiplication and division, A for "
-    "atomic instructions, F for single-precision floating-point, D for "
-    "double-precision floating-point, and C for compressed instructions. "
-    "The vector extension V enables SIMD-style parallel data processing. "
-    "Custom extensions can be added for domain-specific acceleration in "
-    "areas such as machine learning, cryptography, and signal processing."
-)
-
-RISCV_APPLICATIONS = (
-    "RISC-V processors are used in embedded systems, high-performance "
-    "computing, and edge devices. Western Digital has deployed over one "
-    "billion RISC-V cores in storage controllers. SiFive produces RISC-V "
-    "cores for commercial applications. In the automotive sector, RISC-V "
-    "is being adopted for safety-critical ADAS systems. The architecture "
-    "is also popular in academic research and teaching, where its open "
-    "nature allows students to study and modify the processor design."
+from tests.validation.golden_corpus import (
+    RISCV_OVERVIEW,
+    RISCV_EXTENSIONS,
+    RISCV_APPLICATIONS,
 )
 
 
+@pytest.mark.integration
+@pytest.mark.requires_ml
+@pytest.mark.requires_ollama
 class TestEndToEndWorkflows:
     """Test complete end-to-end workflows for the RAG system."""
-
-    @pytest.fixture
-    def test_config_path(self):
-        """Get path to test configuration."""
-        return Path(__file__).parent.parent.parent / "config" / "test.yaml"
 
     @pytest.fixture
     def test_document(self):
@@ -64,11 +34,6 @@ class TestEndToEndWorkflows:
         if not test_pdf.exists():
             pytest.skip("Integration test PDF not found")
         return test_pdf
-
-    @pytest.fixture
-    def orchestrator(self, test_config_path):
-        """Create platform orchestrator for testing."""
-        return PlatformOrchestrator(test_config_path)
 
     @pytest.fixture
     def indexed_orchestrator(self, orchestrator, create_test_documents):
@@ -103,8 +68,12 @@ class TestEndToEndWorkflows:
         assert answer.text, "Answer should not be empty"
         assert len(answer.text) > 10, "Answer should be substantial"
         assert answer.sources, "Retrieval should find indexed content"
-        assert 0 <= answer.confidence <= 1
+        assert answer.confidence > 0.1, "In-domain query should have meaningful confidence"
         assert isinstance(answer.metadata, dict)
+        assert any(
+            "RISC-V" in s.content or "instruction set" in s.content
+            for s in answer.sources
+        ), "Sources should contain query-relevant content"
 
     def test_multi_document_workflow(self, indexed_orchestrator):
         """Test querying across multiple indexed documents."""
@@ -113,6 +82,9 @@ class TestEndToEndWorkflows:
         assert isinstance(answer, Answer)
         assert answer.text
         assert answer.sources, "Should retrieve from indexed content"
+        assert any(
+            "extension" in s.content.lower() for s in answer.sources
+        ), "Sources should match the extensions query"
 
     # -- Error handling --
 
@@ -144,23 +116,21 @@ class TestEndToEndWorkflows:
         processing_time = time.perf_counter() - start
 
         assert chunk_count > 0
-        assert processing_time > 0
+        assert processing_time < 60, "Document processing should complete within 60s"
 
         start = time.perf_counter()
         answer = orchestrator.process_query("What is RISC-V?")
         query_time = time.perf_counter() - start
 
         assert isinstance(answer, Answer)
-        assert query_time > 0
+        assert query_time < 60, "Query processing should complete within 60s"
 
 
+@pytest.mark.integration
+@pytest.mark.requires_ml
+@pytest.mark.requires_ollama
 class TestArchitectureCompatibility:
     """Test the unified retriever architecture produces meaningful answers."""
-
-    @pytest.fixture
-    def orchestrator(self):
-        config_path = Path(__file__).parent.parent.parent / "config" / "test.yaml"
-        return PlatformOrchestrator(config_path)
 
     def test_unified_architecture_workflow(self, orchestrator, create_test_documents):
         """Test index → query → answer with unified retriever."""
@@ -186,14 +156,13 @@ class TestArchitectureCompatibility:
             assert answer.text
             assert answer.sources, "Each query should retrieve indexed content"
 
+        assert answer1.text != answer2.text, "Different queries should produce different answers"
 
+
+@pytest.mark.integration
+@pytest.mark.requires_ml
 class TestErrorRecoveryScenarios:
     """Test error handling and recovery scenarios."""
-
-    @pytest.fixture
-    def orchestrator(self):
-        config_path = Path(__file__).parent.parent.parent / "config" / "test.yaml"
-        return PlatformOrchestrator(config_path)
 
     def test_invalid_document_recovery(self, orchestrator):
         """Test that processing an empty PDF returns 0 and system stays healthy."""
@@ -228,7 +197,7 @@ class TestErrorRecoveryScenarios:
         health = orchestrator.get_system_health()
         assert health["status"] == "healthy"
 
-    def test_concurrent_request_handling(self, orchestrator, create_test_documents):
+    def test_sequential_multi_query(self, orchestrator, create_test_documents):
         """Test handling multiple sequential queries on indexed content."""
         docs = create_test_documents(RISCV_OVERVIEW, RISCV_EXTENSIONS, RISCV_APPLICATIONS)
         orchestrator.index_documents(docs)

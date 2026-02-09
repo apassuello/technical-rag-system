@@ -1,1 +1,0 @@
-"""System-level validation and integration tests."""

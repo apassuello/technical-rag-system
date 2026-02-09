@@ -27,6 +27,21 @@ pip install plotly>=5.17.0
 pip install dash>=2.14.0
 ```
 
+### Weaviate Client Compatibility (February 2026)
+
+The `weaviate_backend.py` module was written for weaviate-client **v3** and uses
+`weaviate.Client`, `weaviate.TimeoutConfig`, and `WeaviateException` — all of which
+were renamed or removed in weaviate-client **v4**.
+
+If you have v4 installed (`pip show weaviate-client` shows 4.x), the backend will
+fail at connection time with `module weaviate has no attribute TimeoutConfig`. The
+import-level fix for `WeaviateException -> WeaviateBaseError` has been applied, but
+the `_connect()` method still needs migration to the v4 client API
+(`weaviate.connect_to_local()`, removed `TimeoutConfig`, etc.).
+
+Until `weaviate_backend.py` is fully migrated, Weaviate integration tests are marked
+`xfail`. FAISS remains the default and fully functional vector backend.
+
 ## Quick Start (5 Minutes)
 
 ### 1. Start Weaviate Server

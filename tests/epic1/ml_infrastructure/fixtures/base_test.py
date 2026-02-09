@@ -266,9 +266,13 @@ class MemoryTestMixin:
     
     def take_memory_snapshot(self, label: str = '') -> Dict[str, Any]:
         """Take a snapshot of current memory state."""
+        # Initialize _memory_snapshots if not already done (for MRO issues in multiple inheritance)
+        if not hasattr(self, '_memory_snapshots'):
+            self._memory_snapshots = []
+
         if not hasattr(self, 'mock_memory_system'):
             return {}
-        
+
         snapshot = {
             'label': label,
             'timestamp': time.time(),
@@ -276,7 +280,7 @@ class MemoryTestMixin:
             'allocations': self.mock_memory_system.get_total_allocations(),
             'allocation_count': self.mock_memory_system.get_allocation_count()
         }
-        
+
         self._memory_snapshots.append(snapshot)
         return snapshot
     
