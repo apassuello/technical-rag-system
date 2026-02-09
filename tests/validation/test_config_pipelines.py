@@ -17,9 +17,18 @@ pytestmark = [pytest.mark.validation, pytest.mark.requires_ml, pytest.mark.requi
 CONFIGS_DIR = Path(__file__).parent / "configs"
 
 PIPELINE_CONFIGS = [
-    pytest.param("basic_local.yaml", id="basic-adaptive-modular"),
-    pytest.param("epic2_score_aware_local.yaml", id="epic2-score-aware-neural"),
-    pytest.param("epic2_graph_enhanced_local.yaml", id="epic2-graph-semantic"),
+    pytest.param("basic_local.yaml", id="rrf-identity"),
+    pytest.param("epic2_score_aware_local.yaml", id="score_aware-neural"),
+    pytest.param("epic2_graph_enhanced_local.yaml", id="graph_enhanced-semantic"),
+    pytest.param("rrf_semantic.yaml", id="rrf-semantic"),
+    pytest.param("rrf_neural.yaml", id="rrf-neural"),
+    pytest.param("weighted_identity.yaml", id="weighted-identity"),
+    pytest.param("weighted_semantic.yaml", id="weighted-semantic"),
+    pytest.param("weighted_neural.yaml", id="weighted-neural"),
+    pytest.param("score_aware_identity.yaml", id="score_aware-identity"),
+    pytest.param("score_aware_semantic.yaml", id="score_aware-semantic"),
+    pytest.param("graph_enhanced_identity.yaml", id="graph_enhanced-identity"),
+    pytest.param("graph_enhanced_neural.yaml", id="graph_enhanced-neural"),
 ]
 
 
@@ -76,6 +85,48 @@ class TestConfigPipelineEndToEnd:
     def test_pipeline_health(self, pipeline):
         """System should report healthy after query."""
         orch, config_name = pipeline
+        orch.process_query("What is RISC-V?")
+        health = orch.get_system_health()
+        assert health["status"] == "healthy", f"{config_name}: unhealthy after query"
+
+
+CI_SAFE_CONFIGS = [
+    pytest.param("mock_generator_local.yaml", id="mock-rrf-identity"),
+]
+
+
+@pytest.fixture(params=CI_SAFE_CONFIGS)
+def ci_pipeline(request):
+    """Boot PlatformOrchestrator with mock generator — no Ollama needed."""
+    config_path = CONFIGS_DIR / request.param
+    orch = PlatformOrchestrator(config_path)
+
+    docs = [
+        Document(content=text, metadata={"source": f"golden_{i}", "type": "test"})
+        for i, text in enumerate(ON_TOPIC_TEXTS)
+    ]
+    count = orch.index_documents(docs)
+    assert count == 3, f"Expected 3 docs indexed, got {count}"
+    return orch, request.param
+
+
+class TestCISafePipeline:
+    """Pipeline tests that run without Ollama (mock generator)."""
+
+    pytestmark = [pytest.mark.validation, pytest.mark.requires_ml]
+
+    def test_pipeline_produces_answer(self, ci_pipeline):
+        """Mock pipeline should produce a non-empty Answer."""
+        orch, config_name = ci_pipeline
+        answer = orch.process_query("What is RISC-V?")
+
+        assert isinstance(answer, Answer), f"{config_name}: didn't return Answer"
+        assert len(answer.text) > 20, f"{config_name}: answer too short"
+        assert answer.sources, f"{config_name}: no sources"
+
+    def test_pipeline_health(self, ci_pipeline):
+        """System should report healthy after query."""
+        orch, config_name = ci_pipeline
         orch.process_query("What is RISC-V?")
         health = orch.get_system_health()
         assert health["status"] == "healthy", f"{config_name}: unhealthy after query"
