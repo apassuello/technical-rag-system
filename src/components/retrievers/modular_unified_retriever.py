@@ -513,7 +513,7 @@ class ModularUnifiedRetriever(Retriever):
         self.vector_index.add_documents(documents)
 
         # Index in sparse retriever
-        self.sparse_retriever.index_documents(documents)
+        self.sparse_retriever.add_documents(documents)
 
         logger.info(f"Indexed {len(documents)} documents in all sub-components")
 

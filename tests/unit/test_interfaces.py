@@ -119,23 +119,26 @@ class TestRetrievalResult:
             )
     
     def test_retrieval_result_score_validation(self):
-        """Test score validation."""
+        """Test score validation for BM25 and semantic scores."""
         doc = Document(content="Test", metadata={})
-        
-        # Score too high
-        with pytest.raises(ValueError, match="Score must be between 0 and 1"):
-            RetrievalResult(document=doc, score=1.5, retrieval_method="test")
-        
-        # Score too low
-        with pytest.raises(ValueError, match="Score must be between 0 and 1"):
+
+        # High scores are valid (BM25 can be >1 for high term frequency)
+        result_bm25 = RetrievalResult(document=doc, score=15.0, retrieval_method="bm25")
+        assert result_bm25.score == 15.0
+
+        # Negative scores are invalid
+        with pytest.raises(ValueError, match="Score must be a non-negative number"):
             RetrievalResult(document=doc, score=-0.1, retrieval_method="test")
-        
-        # Valid boundary scores
-        result1 = RetrievalResult(document=doc, score=0.0, retrieval_method="test")
-        assert result1.score == 0.0
-        
-        result2 = RetrievalResult(document=doc, score=1.0, retrieval_method="test")
-        assert result2.score == 1.0
+
+        # Valid boundary and typical scores
+        result_zero = RetrievalResult(document=doc, score=0.0, retrieval_method="test")
+        assert result_zero.score == 0.0
+
+        result_semantic = RetrievalResult(document=doc, score=0.85, retrieval_method="semantic")
+        assert result_semantic.score == 0.85
+
+        result_one = RetrievalResult(document=doc, score=1.0, retrieval_method="test")
+        assert result_one.score == 1.0
 
 
 class TestAnswer:

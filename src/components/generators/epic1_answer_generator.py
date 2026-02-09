@@ -221,21 +221,28 @@ class Epic1AnswerGenerator(AnswerGenerator):
                 budget_constraints = self._check_budget_constraints()
                 if budget_constraints:
                     query_metadata.update(budget_constraints)
-                    
+
                     # Apply budget enforcement if needed
                     if budget_constraints.get('force_degradation'):
-                        # Force degradation to cheaper model before routing
+                        # Force degradation to cheaper model INSTEAD of routing
                         routing_decision = self._apply_budget_degradation(None)
                         if routing_decision:
                             self._switch_to_selected_model(routing_decision.selected_model)
-                            logger.warning("Applied budget degradation before routing")
-                
-                # Route query to optimal model (uses cached availability, no preemptive testing)
-                routing_decision = self.adaptive_router.route_query(
-                    query=query,
-                    query_metadata=query_metadata,
-                    context_documents=context
-                )
+                            logger.warning("Applied budget degradation - skipping normal routing")
+                    else:
+                        # Normal routing when budget constraint exists but not forcing degradation
+                        routing_decision = self.adaptive_router.route_query(
+                            query=query,
+                            query_metadata=query_metadata,
+                            context_documents=context
+                        )
+                else:
+                    # Normal routing when no budget constraints
+                    routing_decision = self.adaptive_router.route_query(
+                        query=query,
+                        query_metadata=query_metadata,
+                        context_documents=context
+                    )
                 
                 routing_time = (time.time() - routing_start) * 1000
                 self._routing_time_total += routing_time

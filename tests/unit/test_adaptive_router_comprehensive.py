@@ -43,15 +43,16 @@ class TestAdaptiveRouterCoreRouting:
         """Set up test fixtures."""
         # Create mock Epic1QueryAnalyzer
         self.mock_query_analyzer = MagicMock()
-        
-        # Create router with all features enabled for comprehensive testing
+
+        # Create router with cost tracking but disable real availability testing
+        # Availability testing and fallback are tested separately with proper mocking
         self.router = AdaptiveRouter(
             query_analyzer=self.mock_query_analyzer,
             default_strategy="balanced",
             enable_cost_tracking=True,
-            enable_availability_testing=True,
-            fallback_on_failure=True,
-            availability_check_mode="per_request"
+            enable_availability_testing=False,  # Disable for unit tests
+            fallback_on_failure=False,  # Disable fallback for unit tests (no network calls)
+            availability_check_mode="startup"  # Use startup mode to avoid per-request checks
         )
     
     def test_route_simple_query_to_local_model(self):

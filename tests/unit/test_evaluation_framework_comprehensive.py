@@ -160,19 +160,19 @@ class TestViewEvaluatorMetricsCalculation:
             'targets': np.array([2, 1, 0, 2, 1, 1])  # complex, medium, simple, complex, medium, medium
         }
         
-    @patch('sklearn.metrics.accuracy_score')
-    @patch('sklearn.metrics.precision_recall_fscore_support')
-    @patch('sklearn.metrics.mean_squared_error')
-    @patch('sklearn.metrics.mean_absolute_error')
-    @patch('sklearn.metrics.r2_score')
-    @patch('sklearn.metrics.confusion_matrix')
-    @patch('sklearn.metrics.classification_report')
+    @patch('src.training.evaluation_framework.accuracy_score')
+    @patch('src.training.evaluation_framework.precision_recall_fscore_support')
+    @patch('src.training.evaluation_framework.mean_squared_error')
+    @patch('src.training.evaluation_framework.mean_absolute_error')
+    @patch('src.training.evaluation_framework.r2_score')
+    @patch('src.training.evaluation_framework.confusion_matrix')
+    @patch('src.training.evaluation_framework.classification_report')
     def test_comprehensive_evaluation(self, mock_report, mock_cm, mock_r2, mock_mae, mock_mse,
                                     mock_prf, mock_accuracy):
         """Test comprehensive evaluation with all metrics."""
         # Mock return values
         mock_accuracy.return_value = 0.83
-        mock_prf.return_value = (np.array([0.8, 0.85, 0.82]), np.array([0.78, 0.88, 0.80]), 
+        mock_prf.return_value = (np.array([0.8, 0.85, 0.82]), np.array([0.78, 0.88, 0.80]),
                                 np.array([0.79, 0.86, 0.81]), None)
         mock_mse.return_value = 0.05
         mock_mae.return_value = 0.03
@@ -586,6 +586,9 @@ class TestEnsembleEvaluatorComprehensiveEvaluation:
         mock_metrics = Mock()
         mock_metrics.accuracy = 0.8
         mock_metrics.macro_f1 = 0.75
+        mock_metrics.weighted_f1 = 0.76
+        mock_metrics.mse = 0.05
+        mock_metrics.r2 = 0.7
         mock_view_evaluator.evaluate.return_value = mock_metrics
         mock_view_evaluator_class.return_value = mock_view_evaluator
         
@@ -792,9 +795,9 @@ class TestEnsembleEvaluatorVisualization:
         # Should not crash with incomplete data
         try:
             self.evaluator.plot_ensemble_comparison(incomplete_report)
-        except Exception as e:
+        except (KeyError, IndexError) as e:
             # If it fails, should be due to expected data structure issues
-            assert "key" in str(e).lower() or "index" in str(e).lower()
+            assert isinstance(e, (KeyError, IndexError))
 
 
 class TestEvaluationFrameworkIntegration:

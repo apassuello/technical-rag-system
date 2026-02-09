@@ -33,10 +33,10 @@ class TestSystemAnalyticsServiceImpl:
             success_rate=0.95,
             error_count=2
         )
-        
+
         analytics_service.track_component_performance(component, metrics)
-        
-        component_name = "MockComponent"
+
+        component_name = "NewComponent"  # Use instance name, not class name
         assert component_name in analytics_service.component_metrics
         stored_metrics = analytics_service.component_metrics[component_name]
         assert stored_metrics["response_time"] == 0.15
@@ -46,16 +46,16 @@ class TestSystemAnalyticsServiceImpl:
     def test_track_component_performance_existing_component(self, analytics_service):
         """Test tracking performance for an existing component updates metrics."""
         component = MockComponent("ExistingComponent")
-        
+
         # Initial metrics
         initial_metrics = create_performance_metrics(response_time=0.1, error_count=1)
         analytics_service.track_component_performance(component, initial_metrics)
-        
+
         # Updated metrics
         updated_metrics = create_performance_metrics(response_time=0.2, error_count=2)
         analytics_service.track_component_performance(component, updated_metrics)
-        
-        component_name = "MockComponent"
+
+        component_name = "ExistingComponent"  # Use instance name, not class name
         stored_metrics = analytics_service.component_metrics[component_name]
         assert stored_metrics["response_time"] == 0.2
         assert stored_metrics["error_count"] == 2
@@ -63,7 +63,7 @@ class TestSystemAnalyticsServiceImpl:
     def test_track_component_performance_history(self, analytics_service):
         """Test performance history tracking."""
         component = MockComponent("HistoryComponent")
-        
+
         # Track multiple performance data points
         for i in range(3):
             metrics = create_performance_metrics(
@@ -73,15 +73,15 @@ class TestSystemAnalyticsServiceImpl:
             )
             analytics_service.track_component_performance(component, metrics)
             time.sleep(0.01)  # Ensure different timestamps
-        
-        component_name = "MockComponent"
+
+        component_name = "HistoryComponent"  # Use instance name, not class name
         assert component_name in analytics_service.performance_history
         history = analytics_service.performance_history[component_name]
         assert len(history) >= 1  # At least the latest should be stored
-        
+
         # Verify metrics evolution if history is maintained
         if len(history) > 1:
-            assert history[-1]["response_time"] > history[0]["response_time"]
+            assert history[-1]["metrics"]["response_time"] > history[0]["metrics"]["response_time"]
 
     def test_collect_system_metrics(self, analytics_service):
         """Test system-wide metrics collection."""
@@ -177,10 +177,10 @@ class TestSystemAnalyticsServiceImpl:
             error_count=5
         )
         analytics_service.track_component_performance(component, metrics)
-        
-        component_name = "MockComponent"
+
+        component_name = "SpecificComponent"  # Use instance name, not class name
         component_analytics = analytics_service.get_component_analytics(component_name)
-        
+
         assert isinstance(component_analytics, dict)
         assert "current_metrics" in component_analytics
         assert "performance_history" in component_analytics
@@ -234,7 +234,7 @@ class TestSystemAnalyticsServiceImpl:
     def test_calculate_performance_score(self, analytics_service):
         """Test performance score calculation."""
         component = MockComponent("ScoredComponent")
-        
+
         # High performance metrics
         good_metrics = create_performance_metrics(
             response_time=0.05,
@@ -242,9 +242,9 @@ class TestSystemAnalyticsServiceImpl:
             error_count=0
         )
         analytics_service.track_component_performance(component, good_metrics)
-        
-        score = analytics_service.calculate_performance_score("MockComponent")
-        
+
+        score = analytics_service.calculate_performance_score("ScoredComponent")  # Use instance name, not class name
+
         assert isinstance(score, (int, float))
         assert 0 <= score <= 100  # Assuming 0-100 scoring
 

@@ -92,20 +92,23 @@ def invalid_config_file(temp_config_dir):
 def mock_component_factory():
     """Mock ComponentFactory with all required components."""
     with patch('src.core.platform_orchestrator.ComponentFactory') as mock_factory:
-        # Create mock components
+        # Create mock components with unique names to avoid health service collisions
         mock_processor = Mock()
+        mock_processor.name = "document_processor"  # Unique name for health service tracking
         mock_processor.process.return_value = [
             Document(content="Test content", metadata={"id": "1", "source": "test.pdf"})
         ]
         mock_processor.health_check.return_value = {"healthy": True}
         mock_processor.get_configuration.return_value = {"chunk_size": 1000}
-        
+
         mock_embedder = Mock()
+        mock_embedder.name = "embedder"  # Unique name for health service tracking
         mock_embedder.embed.return_value = [[0.1] * 384]
         mock_embedder.health_check.return_value = {"healthy": True}
         mock_embedder.get_configuration.return_value = {"model": "test-model"}
-        
+
         mock_retriever = Mock()
+        mock_retriever.name = "retriever"  # Unique name for health service tracking
         mock_retriever.retrieve.return_value = [
             RetrievalResult(
                 document=Document(content="Retrieved content", metadata={"id": "2"}),
@@ -117,8 +120,9 @@ def mock_component_factory():
         mock_retriever.clear.return_value = None
         mock_retriever.health_check.return_value = {"healthy": True}
         mock_retriever.get_configuration.return_value = {"dense_weight": 0.7}
-        
+
         mock_generator = Mock()
+        mock_generator.name = "answer_generator"  # Unique name for health service tracking
         mock_generator.generate.return_value = Answer(
             text="Test answer",
             sources=[],
@@ -127,19 +131,29 @@ def mock_component_factory():
         )
         mock_generator.health_check.return_value = {"healthy": True}
         mock_generator.get_configuration.return_value = {"model": "test-generator"}
-        
+
+        mock_query_processor = MagicMock()
+        mock_query_processor.name = "query_processor"  # Unique name for health service tracking
+        mock_query_processor.health_check.return_value = {"healthy": True}
+        mock_query_processor.get_configuration.return_value = {"type": "modular"}
+
         # Configure factory to return mocks
         mock_factory.create_processor.return_value = mock_processor
         mock_factory.create_embedder.return_value = mock_embedder
         mock_factory.create_retriever.return_value = mock_retriever
         mock_factory.create_generator.return_value = mock_generator
-        
+        mock_factory.create_query_processor.return_value = mock_query_processor
+
+        # Mock validate_configuration to return empty list (no errors)
+        mock_factory.validate_configuration.return_value = []
+
         # Store references for assertions
         mock_factory.mock_processor = mock_processor
         mock_factory.mock_embedder = mock_embedder
         mock_factory.mock_retriever = mock_retriever
         mock_factory.mock_generator = mock_generator
-        
+        mock_factory.mock_query_processor = mock_query_processor
+
         yield mock_factory
 
 
@@ -186,26 +200,52 @@ def sample_retrieval_results(sample_documents):
 
 @pytest.fixture
 def health_service():
-    """Create ComponentHealthServiceImpl instance."""
-    return ComponentHealthServiceImpl()
+    """Create ComponentHealthServiceImpl instance with proper cleanup."""
+    service = ComponentHealthServiceImpl()
+    yield service
+    # Explicit cleanup to ensure no state leakage between tests
+    service.monitored_components.clear()
+    service.health_history.clear()
+    service.failure_counts.clear()
+    service.last_health_checks.clear()
 
 
 @pytest.fixture
 def analytics_service():
-    """Create SystemAnalyticsServiceImpl instance."""
-    return SystemAnalyticsServiceImpl()
+    """Create SystemAnalyticsServiceImpl instance with proper cleanup."""
+    service = SystemAnalyticsServiceImpl()
+    yield service
+    # Explicit cleanup to ensure no state leakage between tests
+    service.component_metrics.clear()
+    service.system_metrics_history.clear()
+    service.performance_tracking.clear()
+    service.performance_history.clear()
+    service.query_analytics.clear()
 
 
 @pytest.fixture
 def ab_testing_service():
-    """Create ABTestingServiceImpl instance."""
-    return ABTestingServiceImpl()
+    """Create ABTestingServiceImpl instance with proper cleanup."""
+    service = ABTestingServiceImpl()
+    yield service
+    # Explicit cleanup to ensure no state leakage between tests
+    service.experiments.clear()
+    service.assignments.clear()
+    service.results.clear()
+    service.active_experiments.clear()
 
 
 @pytest.fixture
 def backend_management_service():
-    """Create BackendManagementServiceImpl instance."""
-    return BackendManagementServiceImpl()
+    """Create BackendManagementServiceImpl instance with proper cleanup."""
+    service = BackendManagementServiceImpl()
+    yield service
+    # Explicit cleanup to ensure no state leakage between tests
+    service.registered_backends.clear()
+    service.backend_status.clear()
+    service.backend_health.clear()
+    service.component_backends.clear()
+    service.migration_history.clear()
 
 
 @pytest.fixture

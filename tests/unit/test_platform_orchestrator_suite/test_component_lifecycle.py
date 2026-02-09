@@ -128,21 +128,21 @@ class TestPlatformOrchestratorLifecycle:
     def test_health_service_integration(self, valid_config_file, mock_component_factory):
         """Test health service integration with components."""
         orchestrator = PlatformOrchestrator(valid_config_file)
-        
+
         # Verify components were registered with health service
         health_service = orchestrator.health_service
-        
-        # Check that components are being monitored
-        assert len(health_service.monitored_components) == 4  # All main components
-        
+
+        # Check that components are being monitored (now includes query_processor, so 5 total)
+        assert len(health_service.monitored_components) == 5  # All main components + query_processor
+
         # Test system health summary
         health_summary = orchestrator.get_system_health()
-        
+
         assert isinstance(health_summary, dict)
         assert "initialized" in health_summary
         assert health_summary["initialized"] is True
         assert "components" in health_summary
-        assert len(health_summary["components"]) == 4
+        assert len(health_summary["components"]) == 5  # Updated to 5 components
 
     def test_analytics_service_integration(self, valid_config_file, mock_component_factory):
         """Test analytics service integration."""
@@ -238,20 +238,26 @@ class TestPlatformOrchestratorLifecycle:
     def test_reload_config(self, valid_config_file, mock_component_factory):
         """Test configuration reloading."""
         orchestrator = PlatformOrchestrator(valid_config_file)
-        
-        # Mock config manager reload
-        with patch.object(orchestrator.config_manager, 'reload') as mock_reload:
-            orchestrator.reload_config()
-            mock_reload.assert_called_once()
+
+        # Test reload_config method (it reinitializes the system)
+        # The method doesn't call config_manager.reload() - it recreates ConfigManager
+        # Just verify it doesn't raise an error and reinitializes successfully
+        orchestrator.reload_config()
+
+        # Verify system was reinitialized
+        assert orchestrator._initialized is True
+        assert len(orchestrator._components) == 5  # All components re-created
 
     def test_validate_configuration(self, valid_config_file, mock_component_factory):
         """Test configuration validation."""
         orchestrator = PlatformOrchestrator(valid_config_file)
-        
+
         validation_errors = orchestrator.validate_configuration()
-        
+
         # Should return list of validation errors (empty for valid config)
         assert isinstance(validation_errors, list)
+        # With our mock factory returning [], we should get no errors
+        assert len(validation_errors) == 0
 
     def test_architecture_type_detection(self, valid_config_file, mock_component_factory):
         """Test architecture type detection and reporting."""
@@ -286,19 +292,23 @@ class TestPlatformOrchestratorLifecycle:
     def test_component_performance_tracking(self, valid_config_file, mock_component_factory):
         """Test component performance tracking integration."""
         orchestrator = PlatformOrchestrator(valid_config_file)
-        
+
         # Track performance for a component
         metrics = {
             "response_time": 0.15,
             "success_rate": 0.98,
             "error_count": 1
         }
-        
-        orchestrator.track_component_performance("document_processor", metrics)
-        
+
+        # Get the component instance (not just name)
+        component = orchestrator.get_component("document_processor")
+
+        # Call the correct signature: track_component_performance(component, operation, metrics)
+        orchestrator.track_component_performance(component, "document_processing", metrics)
+
         # Verify tracking was recorded in analytics service
         analytics = orchestrator.analytics_service
-        assert "MockComponent" in analytics.component_metrics or len(analytics.component_metrics) > 0
+        assert len(analytics.performance_history) > 0 or "Mock" in str(analytics.component_metrics)
 
     def test_concurrent_initialization(self, temp_config_dir):
         """Test concurrent orchestrator initialization."""
@@ -365,18 +375,18 @@ class TestPlatformOrchestratorLifecycle:
     def test_orchestrator_state_consistency(self, valid_config_file, mock_component_factory):
         """Test orchestrator maintains consistent state."""
         orchestrator = PlatformOrchestrator(valid_config_file)
-        
-        # Verify internal state consistency
-        assert len(orchestrator._components) == 4
+
+        # Verify internal state consistency (now includes query_processor, so 5 total)
+        assert len(orchestrator._components) == 5
         assert orchestrator._initialized is True
-        
+
         # All services should be initialized
         assert orchestrator.health_service is not None
         assert orchestrator.analytics_service is not None
         assert orchestrator.ab_testing_service is not None
         assert orchestrator.configuration_service is not None
         assert orchestrator.backend_management_service is not None
-        
+
         # Config references should be consistent
         assert orchestrator.config_path is not None
         assert orchestrator.config_manager is not None

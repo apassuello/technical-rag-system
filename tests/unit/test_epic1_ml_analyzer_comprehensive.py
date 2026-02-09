@@ -270,88 +270,66 @@ class TestEpic1MLAnalyzerQueryClassification:
 
 class TestEpic1MLAnalyzerMultiViewAnalysis:
     """Test multi-view analysis system - 5 specialized ML views."""
-    
-    @pytest.fixture
-    def mock_analyzer(self):
-        """Create analyzer with mocked views for testing."""
-        analyzer = Epic1MLAnalyzer()
-        
-        # Mock the trained model predictions to test multi-view logic
-        with mock.patch.object(analyzer, '_get_trained_model_predictions') as mock_pred:
-            mock_pred.return_value = {
-                'complexity_score': 0.65,
-                'complexity_level': 'medium',
-                'view_scores': {
-                    'technical': 0.7,
-                    'linguistic': 0.6,
-                    'task': 0.65,
-                    'semantic': 0.6,
-                    'computational': 0.5
-                },
-                'fusion_method': 'weighted_average',
-                'confidence': 0.85,
-                'metadata': {
-                    'model_version': 'epic1_v1.0',
-                    'meta_classification': {}
-                }
-            }
-            yield analyzer
 
-    def test_technical_view_analysis(self, mock_analyzer):
+    def test_technical_view_analysis(self):
         """Test technical complexity view analysis."""
-        result = mock_analyzer._analyze_query("How to implement GraphQL API with authentication?")
-        
+        analyzer = Epic1MLAnalyzer()
+        result = analyzer._analyze_query("How to implement GraphQL API with authentication?")
+
         # Should extract technical information
         assert 'analyzer' in result.metadata
         assert result.metadata['analyzer'] == 'Epic1MLAnalyzer'
-        
-        # Check technical analysis components
-        if 'view_breakdown' in result.metadata:
-            assert 'technical' in result.metadata['view_breakdown']
 
-    def test_semantic_view_analysis(self, mock_analyzer):
+        # Check that result has valid structure
+        assert result.complexity_score is not None
+        assert result.confidence >= 0.0
+
+    def test_semantic_view_analysis(self):
         """Test semantic complexity view analysis."""
-        result = mock_analyzer._analyze_query("What are the semantic relationships between microservices?")
-        
+        analyzer = Epic1MLAnalyzer()
+        result = analyzer._analyze_query("What are the semantic relationships between microservices?")
+
         # Should handle semantic analysis
         assert result.complexity_score is not None
         assert result.confidence >= 0.3
         
-    def test_task_view_analysis(self, mock_analyzer):
-        """Test task complexity view (Bloom's taxonomy) analysis."""  
-        result = mock_analyzer._analyze_query("Analyze the performance implications of different caching strategies")
-        
+    def test_task_view_analysis(self):
+        """Test task complexity view (Bloom's taxonomy) analysis."""
+        analyzer = Epic1MLAnalyzer()
+        result = analyzer._analyze_query("Analyze the performance implications of different caching strategies")
+
         # Should categorize task type
         assert result.intent_category is not None
-        
-    def test_linguistic_view_analysis(self, mock_analyzer):
+
+    def test_linguistic_view_analysis(self):
         """Test linguistic complexity view analysis."""
-        result = mock_analyzer._analyze_query("The comprehensive implementation methodology requires sophisticated algorithms")
-        
+        analyzer = Epic1MLAnalyzer()
+        result = analyzer._analyze_query("The comprehensive implementation methodology requires sophisticated algorithms")
+
         # Should handle complex linguistic structures
         assert result.complexity_score is not None
-        
-    def test_computational_view_analysis(self, mock_analyzer):
+
+    def test_computational_view_analysis(self):
         """Test computational complexity view analysis."""
-        result = mock_analyzer._analyze_query("Calculate the Big O complexity of this sorting algorithm")
-        
+        analyzer = Epic1MLAnalyzer()
+        result = analyzer._analyze_query("Calculate the Big O complexity of this sorting algorithm")
+
         # Should detect computational patterns
         assert result.complexity_score is not None
 
-    def test_integrated_multi_view_decision(self, mock_analyzer):
+    def test_integrated_multi_view_decision(self):
         """Test that multi-view analysis produces integrated decision."""
-        result = mock_analyzer._analyze_query("Design a distributed system with high availability and consistency")
-        
+        analyzer = Epic1MLAnalyzer()
+        result = analyzer._analyze_query("Design a distributed system with high availability and consistency")
+
         # Should combine all view results
         assert result.complexity_score is not None
         assert result.complexity_level is not None
         assert result.confidence is not None
-        
+
         # Should have comprehensive metadata
         assert 'analyzer' in result.metadata
-        if 'view_breakdown' in result.metadata:
-            # Should have multiple views contributing
-            assert len(result.metadata.get('view_breakdown', {})) >= 0
+        assert result.metadata['analyzer'] == 'Epic1MLAnalyzer'
 
 
 class TestEpic1MLAnalyzerFeatureExtraction:
@@ -704,19 +682,20 @@ class TestEpic1MLAnalyzerEdgeCases:
     def test_model_unavailable_fallback(self):
         """Test fallback behavior when ML models are unavailable."""
         analyzer = Epic1MLAnalyzer()
-        
-        # Ensure no trained models
+
+        # Ensure no trained models (they should already be None/empty on init)
         analyzer.trained_view_models = None
-        analyzer.trained_meta_classifier = None
-        
+        if hasattr(analyzer, 'trained_meta_classifier'):
+            analyzer.trained_meta_classifier = None
+
         query = "Fallback test query"
         result = analyzer._analyze_query(query)
-        
+
         # Should still return valid result
         assert isinstance(result, QueryAnalysis)
         assert result.complexity_score is not None
         assert result.confidence >= 0.0  # Should have some confidence
-        
+
         # Should indicate fallback mode
         assert result.metadata.get('analyzer') == 'Epic1MLAnalyzer'
 
@@ -728,20 +707,23 @@ class TestEpic1MLAnalyzerAsyncFunctionality:
     async def test_async_analyze_method(self):
         """Test the async analyze method."""
         analyzer = Epic1MLAnalyzer()
-        
+
         query = "Async analysis test query"
-        result = await analyzer.analyze(query, mode='hybrid')
-        
+        result = await analyzer.analyze_async(query, mode='hybrid')
+
         # Should return AnalysisResult for async mode
         assert hasattr(result, 'query')
         assert hasattr(result, 'final_score')
         assert hasattr(result, 'confidence')
-        
-    @pytest.mark.asyncio 
+
+    @pytest.mark.asyncio
     async def test_trained_model_analysis(self):
         """Test analysis with trained models (mocked)."""
         analyzer = Epic1MLAnalyzer()
-        
+
+        # Set up analyzer to think it has trained models
+        analyzer.trained_view_models = {'technical': 'mock_model', 'linguistic': 'mock_model'}
+
         # Mock trained models
         with mock.patch.object(analyzer, '_get_trained_model_predictions') as mock_pred:
             mock_pred.return_value = {
@@ -750,23 +732,23 @@ class TestEpic1MLAnalyzerAsyncFunctionality:
                 'fusion_method': 'neural_fusion',
                 'confidence': 0.9
             }
-            
-            result = await analyzer.analyze("Test query", mode='ml')
-            
+
+            result = await analyzer.analyze_async("Test query", mode='ml')
+
             # Should use trained models
             assert hasattr(result, 'final_score')
             assert result.confidence > 0.8
-            
+
     @pytest.mark.asyncio
     async def test_fallback_analysis_mode(self):
         """Test fallback to Epic 1 infrastructure."""
         analyzer = Epic1MLAnalyzer()
-        
+
         # Force fallback by clearing trained models
         analyzer.trained_view_models = {}
-        
-        result = await analyzer.analyze("Fallback test", mode='algorithmic')
-        
+
+        result = await analyzer.analyze_async("Fallback test", mode='algorithmic')
+
         # Should complete successfully
         assert hasattr(result, 'final_score')
         assert hasattr(result, 'confidence')

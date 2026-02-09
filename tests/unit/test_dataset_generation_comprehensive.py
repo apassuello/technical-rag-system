@@ -747,7 +747,7 @@ class TestDatasetSavingAndPersistence:
     def test_filename_generation(self):
         """Test timestamp-based filename generation."""
         with patch('pathlib.Path.mkdir'):
-            with patch('datetime.datetime') as mock_datetime:
+            with patch('src.training.dataset_generation_framework.datetime') as mock_datetime:
                 mock_datetime.now.return_value.strftime.return_value = "20240101_120000"
                 
                 with patch('builtins.open', mock_open()) as mock_file:
@@ -925,7 +925,11 @@ class TestDatasetGenerationErrorHandling:
         """Test handling of filesystem errors."""
         with patch('pathlib.Path.mkdir', side_effect=PermissionError("Permission denied")):
             with pytest.raises(PermissionError):
-                ClaudeDatasetGenerator(self.config)
+                # Create config which will trigger mkdir in __post_init__
+                config = DatasetGenerationConfig(
+                    total_samples=10,
+                    batch_size=5
+                )
                 
     def test_json_serialization_error_handling(self):
         """Test handling of JSON serialization errors."""

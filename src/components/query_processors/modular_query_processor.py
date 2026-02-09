@@ -318,8 +318,9 @@ class ModularQueryProcessor(QueryProcessor):
     
     def __init__(
         self,
-        retriever: Retriever,
-        generator: AnswerGenerator,
+        config_or_retriever: Union[Dict[str, Any], QueryProcessorConfig, Retriever],
+        retriever_or_generator: Union[Retriever, AnswerGenerator],
+        generator_or_analyzer: Optional[Union[AnswerGenerator, QueryAnalyzer]] = None,
         analyzer: Optional[QueryAnalyzer] = None,
         selector: Optional[ContextSelector] = None,
         assembler: Optional[ResponseAssembler] = None,
@@ -327,24 +328,37 @@ class ModularQueryProcessor(QueryProcessor):
     ):
         """
         Initialize modular query processor with dependencies and configuration.
-        
+
+        Supports two calling conventions:
+        1. ModularQueryProcessor(config, retriever, generator) - config first
+        2. ModularQueryProcessor(retriever, generator, config=config) - standard
+
         Args:
-            retriever: Document retriever instance
-            generator: Answer generator instance
+            config_or_retriever: Config dict/object OR retriever instance
+            retriever_or_generator: Retriever OR generator instance
+            generator_or_analyzer: Generator OR analyzer instance (optional)
             analyzer: Query analyzer (will create default if None)
             selector: Context selector (will create default if None)
             assembler: Response assembler (will create default if None)
             config: Configuration dictionary or QueryProcessorConfig
         """
-        # Store required dependencies
-        self._retriever = retriever
-        self._generator = generator
-        
-        # Parse configuration
-        if isinstance(config, QueryProcessorConfig):
-            self._config = config
+        # Detect calling convention
+        if isinstance(config_or_retriever, (dict, QueryProcessorConfig)):
+            # Convention 1: config first
+            actual_config = config_or_retriever
+            self._retriever = retriever_or_generator
+            self._generator = generator_or_analyzer
         else:
-            config_dict = config or {}
+            # Convention 2: retriever first (standard)
+            self._retriever = config_or_retriever
+            self._generator = retriever_or_generator
+            actual_config = config if config is not None else generator_or_analyzer if isinstance(generator_or_analyzer, (dict, QueryProcessorConfig)) else None
+
+        # Parse configuration
+        if isinstance(actual_config, QueryProcessorConfig):
+            self._config = actual_config
+        else:
+            config_dict = actual_config or {}
             self._config = self._create_config_from_dict(config_dict)
         
         # Validate configuration
@@ -771,17 +785,55 @@ class ModularQueryProcessor(QueryProcessor):
         }
     
     def _create_config_from_dict(self, config_dict: Dict[str, Any]) -> QueryProcessorConfig:
-        """Create QueryProcessorConfig from dictionary."""
+        """Create QueryProcessorConfig from dictionary.
+
+        Supports both flat and nested config formats:
+        - Flat: {"analyzer_type": "epic1_ml", "analyzer_config": {...}}
+        - Nested: {"analyzer": {"type": "epic1_ml", "config": {...}}}
+        """
+        # Handle nested format (from tests)
+        if 'analyzer' in config_dict and isinstance(config_dict['analyzer'], dict):
+            analyzer_type = config_dict['analyzer'].get('type', 'nlp')
+            analyzer_config = config_dict['analyzer'].get('config', {})
+        else:
+            analyzer_type = config_dict.get('analyzer_type', 'nlp')
+            analyzer_config = config_dict.get('analyzer_config', {})
+
+        if 'selector' in config_dict and isinstance(config_dict['selector'], dict):
+            selector_type = config_dict['selector'].get('type', 'mmr')
+            selector_config = config_dict['selector'].get('config', {})
+        else:
+            selector_type = config_dict.get('selector_type', 'mmr')
+            selector_config = config_dict.get('selector_config', {})
+
+        if 'assembler' in config_dict and isinstance(config_dict['assembler'], dict):
+            assembler_type = config_dict['assembler'].get('type', 'rich')
+            assembler_config = config_dict['assembler'].get('config', {})
+        else:
+            assembler_type = config_dict.get('assembler_type', 'rich')
+            assembler_config = config_dict.get('assembler_config', {})
+
+        # Handle workflow config (nested or flat)
+        if 'workflow' in config_dict and isinstance(config_dict['workflow'], dict):
+            workflow = config_dict['workflow']
+            default_k = workflow.get('retrieval_k', workflow.get('generation_k', 5))
+            max_tokens = workflow.get('max_tokens', 2048)
+            enable_fallback = workflow.get('fallback_enabled', True)
+        else:
+            default_k = config_dict.get('default_k', 5)
+            max_tokens = config_dict.get('max_tokens', 2048)
+            enable_fallback = config_dict.get('enable_fallback', True)
+
         return QueryProcessorConfig(
-            analyzer_type=config_dict.get('analyzer_type', 'nlp'),
-            analyzer_config=config_dict.get('analyzer_config', {}),
-            selector_type=config_dict.get('selector_type', 'mmr'),
-            selector_config=config_dict.get('selector_config', {}),
-            assembler_type=config_dict.get('assembler_type', 'rich'),
-            assembler_config=config_dict.get('assembler_config', {}),
-            default_k=config_dict.get('default_k', 5),
-            max_tokens=config_dict.get('max_tokens', 2048),
-            enable_fallback=config_dict.get('enable_fallback', True),
+            analyzer_type=analyzer_type,
+            analyzer_config=analyzer_config,
+            selector_type=selector_type,
+            selector_config=selector_config,
+            assembler_type=assembler_type,
+            assembler_config=assembler_config,
+            default_k=default_k,
+            max_tokens=max_tokens,
+            enable_fallback=enable_fallback,
             timeout_seconds=config_dict.get('timeout_seconds', 30.0)
         )
     

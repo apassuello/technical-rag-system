@@ -223,8 +223,12 @@ class TestGraphQueryNodeMatching:
     def test_no_matches_found(self):
         """Test when no matches are found."""
         query = "quantum computing"
+
+        # Mock embedder for fuzzy matching fallback
+        self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3])]
+
         matches = self.retriever._find_query_nodes(query, self.mock_graph)
-        
+
         # Should fall back to fuzzy matching (mocked)
         assert isinstance(matches, list)
         
@@ -560,10 +564,11 @@ class TestRetrievalResultConversion:
         retrieval_results = self.retriever._convert_to_retrieval_results(
             graph_results, query
         )
-        
-        # Should aggregate scores for same document
+
+        # Should aggregate scores for same document and normalize to [0, 1] range
         doc1_result = next(r for r in retrieval_results if r.document.metadata["id"] == "doc1")
-        assert doc1_result.score == 0.8 + 0.6  # Sum of scores
+        # Sum is 0.8 + 0.6 = 1.4, normalized to 1.0 (1.4 / 1.4)
+        assert doc1_result.score == 1.0
         
     def test_result_limiting(self):
         """Test that results are limited to max_graph_results."""
@@ -762,29 +767,35 @@ class TestGraphRetrieverStatistics:
     def test_algorithm_usage_tracking(self):
         """Test algorithm usage tracking."""
         query = "CPU"
-        
+
+        # Mock embedder to avoid fuzzy matching failures
+        self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3])]
+
         # Use different algorithms
         self.retriever.retrieve(query, algorithm="shortest_path")
         self.retriever.retrieve("memory", algorithm="random_walk")
-        
+
         stats = self.retriever.get_statistics()
-        
+
         assert "shortest_path" in stats["algorithm_usage_percentages"]
         assert "random_walk" in stats["algorithm_usage_percentages"]
         
     def test_average_search_time_calculation(self):
         """Test average search time calculation."""
         query = "CPU"
-        
+
         # Clear cache to ensure actual processing
         self.retriever.cache_enabled = False
-        
+
+        # Mock embedder to avoid fuzzy matching failures
+        self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3])]
+
         # Perform multiple retrievals
         self.retriever.retrieve(query)
         self.retriever.retrieve("memory")
-        
+
         stats = self.retriever.get_statistics()
-        
+
         assert stats["avg_search_time"] > 0
         assert stats["queries_processed"] == 2
         
@@ -955,11 +966,14 @@ class TestGraphRetrieverPerformance:
         mock_graph = nx.DiGraph()
         mock_graph.add_node("test", text="test", documents=["doc1"])
         self.mock_graph_builder.get_graph.return_value = mock_graph
-        
+
+        # Mock embedder to avoid fuzzy matching failures
+        self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3])]
+
         # Fill cache beyond limit
         for i in range(1005):  # Beyond 1000 limit
             self.retriever.retrieve(f"query_{i}")
-            
+
         # Cache should be limited
         assert len(self.retriever.query_cache) <= 1000
         

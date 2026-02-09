@@ -974,15 +974,29 @@ class ComponentFactory:
                 # Remove config from kwargs if it exists to avoid duplicate
                 kwargs.pop('config', None)
 
-                # Create processor with correct arguments
-                return cls._create_with_tracking(
-                    processor_class,
-                    f"query_processor_{processor_type}",
-                    retriever=retriever,
-                    generator=generator,
-                    config=config,
-                    **kwargs  # Any remaining kwargs
-                )
+                # Create processor with correct arguments (positional, not keyword)
+                # ModularQueryProcessor accepts: (retriever, generator, config=config)
+                start_time = time.time()
+                try:
+                    component = processor_class(retriever, generator, config=config, **kwargs)
+                    creation_time = time.time() - start_time
+
+                    # Enhanced logging with component details
+                    component_name = component.__class__.__name__
+                    component_module = component.__class__.__module__
+                    logger.info(f"🏭 ComponentFactory created: {component_name} "
+                               f"(type=query_processor_{processor_type}, module={component_module}, "
+                               f"time={creation_time:.3f}s)")
+
+                    cls._track_performance(f"query_processor_{processor_type}", creation_time)
+                    return component
+                except Exception as e:
+                    creation_time = time.time() - start_time
+                    cls._track_performance(f"query_processor_{processor_type}_failed", creation_time)
+                    raise TypeError(
+                        f"Failed to create query processor '{processor_type}': {e}. "
+                        f"Check constructor arguments"
+                    ) from e
             # Special handling for DomainAwareQueryProcessor (Epic 1)
             elif processor_type == 'domain_aware' or processor_type == 'epic1_domain_aware':
                 # DomainAwareQueryProcessor extends ModularQueryProcessor

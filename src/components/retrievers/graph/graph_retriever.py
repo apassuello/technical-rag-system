@@ -539,6 +539,13 @@ class GraphRetriever:
                 document_details[doc_id]["node_types"].append(result.node_type)
                 document_details[doc_id]["algorithms"].append(result.metadata.get("algorithm", "unknown"))
         
+        # Normalize scores to [0, 1] range if any score exceeds 1.0
+        max_score = max(document_scores.values()) if document_scores else 0.0
+        if max_score > 1.0:
+            # Normalize all scores to [0, 1] range
+            for doc_id in document_scores:
+                document_scores[doc_id] = document_scores[doc_id] / max_score
+
         # Create retrieval results
         for doc_id, score in sorted(document_scores.items(), key=lambda x: x[1], reverse=True):
             # Create a placeholder document (in practice, retrieve from document store)
@@ -552,7 +559,7 @@ class GraphRetriever:
                     "graph_algorithms": document_details[doc_id]["algorithms"]
                 }
             )
-            
+
             retrieval_result = RetrievalResult(
                 document=document,
                 score=float(score),

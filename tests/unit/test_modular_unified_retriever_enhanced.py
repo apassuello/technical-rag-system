@@ -141,23 +141,35 @@ class TestModularUnifiedRetrieverAdvancedConfiguration:
     def test_invalid_sub_component_configurations(self):
         """Test handling of invalid sub-component configurations."""
         # Invalid vector index type
-        invalid_config = self.advanced_config.copy()
-        invalid_config["vector_index"]["type"] = "invalid_index"
-        
+        invalid_config = {
+            "vector_index": {"type": "invalid_index"},
+            "sparse": self.advanced_config["sparse"].copy(),
+            "fusion": self.advanced_config["fusion"].copy(),
+            "reranker": self.advanced_config["reranker"].copy()
+        }
+
         with pytest.raises(ValueError, match="Unknown vector index type"):
             ModularUnifiedRetriever(invalid_config, self.mock_embedder)
-            
+
         # Invalid sparse retriever type
-        invalid_config = self.advanced_config.copy()
-        invalid_config["sparse"]["type"] = "invalid_sparse"
-        
+        invalid_config = {
+            "vector_index": self.advanced_config["vector_index"].copy(),
+            "sparse": {"type": "invalid_sparse"},
+            "fusion": self.advanced_config["fusion"].copy(),
+            "reranker": self.advanced_config["reranker"].copy()
+        }
+
         with pytest.raises(ValueError, match="Unknown sparse retriever type"):
             ModularUnifiedRetriever(invalid_config, self.mock_embedder)
-            
+
         # Invalid fusion strategy type
-        invalid_config = self.advanced_config.copy()
-        invalid_config["fusion"]["type"] = "invalid_fusion"
-        
+        invalid_config = {
+            "vector_index": self.advanced_config["vector_index"].copy(),
+            "sparse": self.advanced_config["sparse"].copy(),
+            "fusion": {"type": "invalid_fusion"},
+            "reranker": self.advanced_config["reranker"].copy()
+        }
+
         with pytest.raises(ValueError, match="Unknown fusion strategy type"):
             ModularUnifiedRetriever(invalid_config, self.mock_embedder)
             
@@ -197,11 +209,12 @@ class TestModularUnifiedRetrieverAdvancedConfiguration:
 
 class TestModularUnifiedRetrieverRetrievalPipeline:
     """Test the complete retrieval pipeline with all sub-components."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.mock_embedder = Mock(spec=Embedder)
-        self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3, 0.4])]
+        # Return embeddings based on number of texts
+        self.mock_embedder.embed.side_effect = lambda texts: [np.array([0.1, 0.2, 0.3, 0.4]) for _ in texts]
         
         self.config = {
             "vector_index": {"type": "faiss", "config": {}},
@@ -253,63 +266,68 @@ class TestModularUnifiedRetrieverRetrievalPipeline:
         """Test retrieval pipeline with composite filtering enabled."""
         self.retriever.composite_filtering_enabled = True
         self.retriever.max_candidates_multiplier = 1.5
-        
+
         with patch.object(self.retriever.vector_index, 'search') as mock_dense:
             with patch.object(self.retriever.sparse_retriever, 'search') as mock_sparse:
                 with patch.object(self.retriever.fusion_strategy, 'fuse_results') as mock_fusion:
-                    
+
                     mock_dense.return_value = [(0, 0.9), (1, 0.7)]
                     mock_sparse.return_value = [(1, 0.8), (2, 0.6)]
                     mock_fusion.return_value = [(0, 0.85), (1, 0.75)]
-                    
+
                     results = self.retriever.retrieve("test query", k=2)
-                    
+
                     # Should call dense/sparse with increased candidate count
                     mock_dense.assert_called_once()
                     mock_sparse.assert_called_once()
-                    
+
                     # Verify candidate multiplier effect
-                    dense_call_args = mock_dense.call_args
-                    sparse_call_args = mock_sparse.call_args
-                    
                     # k=2, multiplier=1.5, so should request 3 candidates
-                    assert dense_call_args[1]['k'] == 3
-                    assert sparse_call_args[0][1] == 3  # k parameter
+                    assert mock_dense.call_args.kwargs['k'] == 3
+                    # Sparse retriever search signature: search(query, k=5), so k is keyword arg
+                    assert mock_sparse.call_args.kwargs['k'] == 3
                     
     def test_retrieval_statistics_tracking(self):
         """Test that retrieval statistics are properly tracked."""
         initial_stats = self.retriever.retrieval_stats.copy()
-        
-        with patch.object(self.retriever, '_execute_retrieval_pipeline') as mock_pipeline:
-            mock_pipeline.return_value = []
-            
-            # Execute multiple retrievals
-            self.retriever.retrieve("query1", k=5)
-            self.retriever.retrieve("query2", k=3)
-            
-            # Verify statistics were updated
-            assert self.retriever.retrieval_stats["total_retrievals"] == initial_stats["total_retrievals"] + 2
-            assert self.retriever.retrieval_stats["total_time"] > initial_stats["total_time"]
+
+        # Mock the sub-component searches to return valid results (not empty)
+        with patch.object(self.retriever.vector_index, 'search') as mock_vector:
+            with patch.object(self.retriever.sparse_retriever, 'search') as mock_sparse:
+                with patch.object(self.retriever.fusion_strategy, 'fuse_results') as mock_fusion:
+
+                    # Return valid results so retrieval completes successfully
+                    mock_vector.return_value = [(0, 0.9)]
+                    mock_sparse.return_value = [(0, 0.8)]
+                    mock_fusion.return_value = [(0, 0.85)]
+
+                    # Execute multiple retrievals
+                    self.retriever.retrieve("query1", k=5)
+                    self.retriever.retrieve("query2", k=3)
+
+                    # Verify statistics were updated
+                    assert self.retriever.retrieval_stats["total_retrievals"] == initial_stats["total_retrievals"] + 2
+                    assert self.retriever.retrieval_stats["total_time"] > initial_stats["total_time"]
             
     def test_retrieval_input_validation(self):
         """Test input validation in retrieval method."""
-        # Test negative k
-        with pytest.raises(ValueError, match="k must be positive"):
+        # Test negative k - note that retrieve() wraps exceptions in RuntimeError
+        with pytest.raises(RuntimeError, match="k must be positive"):
             self.retriever.retrieve("test query", k=0)
-            
-        with pytest.raises(ValueError, match="k must be positive"):
+
+        with pytest.raises(RuntimeError, match="k must be positive"):
             self.retriever.retrieve("test query", k=-1)
-            
+
         # Test empty query
-        with pytest.raises(ValueError, match="Query cannot be empty"):
+        with pytest.raises(RuntimeError, match="Query cannot be empty"):
             self.retriever.retrieve("", k=5)
-            
-        with pytest.raises(ValueError, match="Query cannot be empty"):
+
+        with pytest.raises(RuntimeError, match="Query cannot be empty"):
             self.retriever.retrieve("   ", k=5)
-            
+
         # Test retrieval without documents
         empty_retriever = ModularUnifiedRetriever(self.config, self.mock_embedder)
-        
+
         with pytest.raises(RuntimeError, match="No documents have been indexed"):
             empty_retriever.retrieve("test query", k=5)
             
@@ -485,49 +503,64 @@ class TestModularUnifiedRetrieverHealthAndMonitoring:
         
     def test_health_status_all_healthy(self):
         """Test health status when all components are healthy."""
-        # Mock healthy sub-components
-        with patch.object(self.retriever.vector_index, 'get_health_status') as mock_vector_health:
-            with patch.object(self.retriever.sparse_retriever, 'get_health_status') as mock_sparse_health:
-                
-                mock_vector_health.return_value = HealthStatus.HEALTHY
-                mock_sparse_health.return_value = HealthStatus.HEALTHY
-                
-                status = self.retriever.get_health_status()
-                
-                assert status == HealthStatus.HEALTHY
+        # Get health status - it should return HEALTHY when all sub-components are properly initialized
+        status = self.retriever.get_health_status()
+
+        # Verify the health status object has expected structure
+        assert isinstance(status, HealthStatus)
+        assert status.is_healthy is True
+        assert status.component_name == "ModularUnifiedRetriever"
                 
     def test_health_status_degraded_component(self):
         """Test health status when one component is degraded."""
-        with patch.object(self.retriever.vector_index, 'get_health_status') as mock_vector_health:
-            with patch.object(self.retriever.sparse_retriever, 'get_health_status') as mock_sparse_health:
-                
-                mock_vector_health.return_value = HealthStatus.DEGRADED
-                mock_sparse_health.return_value = HealthStatus.HEALTHY
-                
-                status = self.retriever.get_health_status()
-                
-                assert status == HealthStatus.DEGRADED
+        # Simulate degraded state by patching hasattr to return False for one component
+        original_hasattr = hasattr
+
+        def mock_hasattr(obj, name):
+            # Make vector_index appear to not have get_index_info
+            if obj is self.retriever.vector_index and name == "get_index_info":
+                return False
+            return original_hasattr(obj, name)
+
+        with patch('builtins.hasattr', side_effect=mock_hasattr):
+            status = self.retriever.get_health_status()
+
+            # Verify the health status reflects the degraded component
+            assert isinstance(status, HealthStatus)
+            assert status.is_healthy is False
+            assert len(status.issues) > 0
+            assert any("Vector index" in issue for issue in status.issues)
                 
     def test_health_status_unhealthy_component(self):
         """Test health status when one component is unhealthy."""
-        with patch.object(self.retriever.vector_index, 'get_health_status') as mock_vector_health:
-            with patch.object(self.retriever.sparse_retriever, 'get_health_status') as mock_sparse_health:
-                
-                mock_vector_health.return_value = HealthStatus.UNHEALTHY
-                mock_sparse_health.return_value = HealthStatus.HEALTHY
-                
-                status = self.retriever.get_health_status()
-                
-                assert status == HealthStatus.UNHEALTHY
+        # Simulate unhealthy state by patching hasattr to return False for multiple components
+        original_hasattr = hasattr
+
+        def mock_hasattr(obj, name):
+            # Make multiple components appear unhealthy
+            if obj is self.retriever.vector_index and name == "get_index_info":
+                return False
+            if obj is self.retriever.sparse_retriever and name == "get_stats":
+                return False
+            return original_hasattr(obj, name)
+
+        with patch('builtins.hasattr', side_effect=mock_hasattr):
+            status = self.retriever.get_health_status()
+
+            # Verify the health status reflects unhealthy components
+            assert isinstance(status, HealthStatus)
+            assert status.is_healthy is False
+            assert len(status.issues) >= 2  # At least 2 issues
                 
     def test_get_retriever_info(self):
         """Test comprehensive retriever information retrieval."""
-        # Add some test data first
+        # Add some test data first with proper mock
+        self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3])]
         test_documents = [
             Document(content="Test document", metadata={"id": "test"})
         ]
         self.retriever.index_documents(test_documents)
-        
+
         # Execute some retrievals to populate statistics
         self.retriever.retrieval_stats = {
             "total_retrievals": 10,
@@ -535,20 +568,23 @@ class TestModularUnifiedRetrieverHealthAndMonitoring:
             "avg_time": 0.5,
             "last_retrieval_time": 0.4
         }
-        
+
         info = self.retriever.get_retriever_info()
-        
-        # Verify basic information
-        assert "type" in info
-        assert "document_count" in info
-        assert "statistics" in info
+
+        # Verify basic information (using actual structure from get_retriever_info)
+        assert "component_type" in info
+        assert info["component_type"] == "modular_unified_retriever"
+        assert "indexed_documents" in info
+        assert info["indexed_documents"] == 1
+        assert "retrieval_stats" in info
+        assert "configuration" in info
         assert "sub_components" in info
-        assert "active_backend" in info
-        
+        assert "backend_management" in info
+
         # Verify statistics
-        assert info["statistics"]["total_retrievals"] == 10
-        assert info["statistics"]["avg_time"] == 0.5
-        
+        assert info["retrieval_stats"]["total_retrievals"] == 10
+        assert info["retrieval_stats"]["avg_time"] == 0.5
+
         # Verify sub-component information
         sub_components = info["sub_components"]
         assert "vector_index" in sub_components
@@ -559,11 +595,13 @@ class TestModularUnifiedRetrieverHealthAndMonitoring:
     def test_backend_management_info(self):
         """Test backend management information."""
         info = self.retriever.get_retriever_info()
-        
-        assert info["active_backend"] == "faiss"
-        assert "faiss" in info.get("available_backends", [])
-        assert "weaviate" in info.get("available_backends", [])
-        assert info.get("backend_switch_count", 0) == 0
+
+        # Backend management info is nested under "backend_management"
+        backend_info = info["backend_management"]
+        assert backend_info["active_backend"] == "faiss"
+        assert "faiss" in backend_info["available_backends"]
+        assert "weaviate" in backend_info["available_backends"]
+        assert backend_info["switch_count"] == 0
         
     def test_performance_statistics_calculation(self):
         """Test calculation of performance statistics."""
@@ -574,10 +612,11 @@ class TestModularUnifiedRetrieverHealthAndMonitoring:
             "avg_time": 0.5,
             "last_retrieval_time": 0.3
         }
-        
+
         info = self.retriever.get_retriever_info()
-        stats = info["statistics"]
-        
+        # Statistics are stored under "retrieval_stats" not "statistics"
+        stats = info["retrieval_stats"]
+
         assert stats["total_retrievals"] == 50
         assert stats["total_time"] == 25.0
         assert stats["avg_time"] == 0.5
@@ -586,26 +625,26 @@ class TestModularUnifiedRetrieverHealthAndMonitoring:
     def test_sub_component_detailed_info(self):
         """Test detailed sub-component information retrieval."""
         # Mock sub-component info methods
-        with patch.object(self.retriever.vector_index, 'get_index_info') as mock_vector_info:
-            with patch.object(self.retriever.sparse_retriever, 'get_retriever_info') as mock_sparse_info:
-                with patch.object(self.retriever.fusion_strategy, 'get_strategy_info') as mock_fusion_info:
-                    with patch.object(self.retriever.reranker, 'get_reranker_info') as mock_rerank_info:
-                        
-                        # Configure mock returns
-                        mock_vector_info.return_value = {"type": "faiss", "dimension": 384}
-                        mock_sparse_info.return_value = {"type": "bm25", "k1": 1.2}
-                        mock_fusion_info.return_value = {"algorithm": "rrf", "k": 60}
-                        mock_rerank_info.return_value = {"type": "identity", "enabled": True}
-                        
+        with patch.object(self.retriever.vector_index, 'get_component_info') as mock_vector_info:
+            with patch.object(self.retriever.sparse_retriever, 'get_component_info') as mock_sparse_info:
+                with patch.object(self.retriever.fusion_strategy, 'get_component_info') as mock_fusion_info:
+                    with patch.object(self.retriever.reranker, 'get_component_info') as mock_rerank_info:
+
+                        # Configure mock returns matching actual component_info structure
+                        mock_vector_info.return_value = {"type": "vector_index", "class": "FAISSIndex"}
+                        mock_sparse_info.return_value = {"type": "sparse_retriever", "class": "BM25Retriever"}
+                        mock_fusion_info.return_value = {"type": "fusion_strategy", "algorithm": "rrf"}
+                        mock_rerank_info.return_value = {"type": "reranker", "class": "IdentityReranker"}
+
                         info = self.retriever.get_retriever_info()
-                        
+
                         # Verify detailed information was collected
                         sub_components = info["sub_components"]
-                        
-                        assert sub_components["vector_index"]["type"] == "faiss"
-                        assert sub_components["sparse_retriever"]["type"] == "bm25"
-                        assert sub_components["fusion_strategy"]["algorithm"] == "rrf"
-                        assert sub_components["reranker"]["type"] == "identity"
+
+                        assert sub_components["vector_index"]["type"] == "vector_index"
+                        assert sub_components["sparse_retriever"]["type"] == "sparse_retriever"
+                        assert sub_components["fusion_strategy"]["type"] == "fusion_strategy"
+                        assert sub_components["reranker"]["type"] == "reranker"
 
 
 class TestModularUnifiedRetrieverErrorHandling:
@@ -724,35 +763,38 @@ class TestModularUnifiedRetrieverErrorHandling:
                             
     def test_concurrent_access_safety(self):
         """Test thread safety and concurrent access."""
-        import threading
         import concurrent.futures
-        
-        self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3])]
-        
+
+        # Mock embedder to return list of embeddings properly
+        self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3]) for _ in range(10)]
+
         # Add documents
         test_docs = [
             Document(content=f"Document {i}", metadata={"id": f"doc{i}"})
             for i in range(10)
         ]
         self.retriever.index_documents(test_docs)
-        
+
         # Mock sub-components for concurrent testing
-        with patch.object(self.retriever, '_execute_retrieval_pipeline') as mock_pipeline:
-            mock_pipeline.return_value = [
-                RetrievalResult(document=test_docs[0], score=0.9, retrieval_method="test")
-            ]
-            
-            def retrieval_task(query_id):
-                return self.retriever.retrieve(f"query {query_id}", k=5)
-            
-            # Execute concurrent retrievals
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                futures = [executor.submit(retrieval_task, i) for i in range(10)]
-                results = [future.result() for future in concurrent.futures.as_completed(futures)]
-                
-                # All retrievals should complete successfully
-                assert len(results) == 10
-                assert all(isinstance(r, list) for r in results)
+        with patch.object(self.retriever.vector_index, 'search') as mock_vector:
+            with patch.object(self.retriever.sparse_retriever, 'search') as mock_sparse:
+                with patch.object(self.retriever.fusion_strategy, 'fuse_results') as mock_fusion:
+
+                    mock_vector.return_value = [(0, 0.9), (1, 0.8)]
+                    mock_sparse.return_value = [(0, 0.85), (2, 0.7)]
+                    mock_fusion.return_value = [(0, 0.9), (1, 0.8)]
+
+                    def retrieval_task(query_id):
+                        return self.retriever.retrieve(f"query {query_id}", k=5)
+
+                    # Execute concurrent retrievals
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                        futures = [executor.submit(retrieval_task, i) for i in range(10)]
+                        results = [future.result() for future in concurrent.futures.as_completed(futures)]
+
+                        # All retrievals should complete successfully
+                        assert len(results) == 10
+                        assert all(isinstance(r, list) for r in results)
 
 
 class TestModularUnifiedRetrieverPerformanceOptimization:
@@ -823,33 +865,36 @@ class TestModularUnifiedRetrieverPerformanceOptimization:
             for i in range(5)
         ]
         self.retriever.index_documents(test_docs)
-        
-        # Mock retrieval pipeline for performance testing
-        with patch.object(self.retriever, '_execute_retrieval_pipeline') as mock_pipeline:
-            mock_pipeline.return_value = [
-                RetrievalResult(document=test_docs[0], score=0.9, retrieval_method="test")
-            ]
-            
-            # Execute many retrievals
-            start_time = time.time()
-            for i in range(100):
-                results = self.retriever.retrieve(f"query {i}", k=3)
-            elapsed_time = time.time() - start_time
-            
-            # Should handle high frequency efficiently
-            assert elapsed_time < 5.0  # 5 second limit for 100 retrievals
-            
-            # Verify statistics tracking
-            assert self.retriever.retrieval_stats["total_retrievals"] == 100
+
+        # Mock sub-components for performance testing
+        with patch.object(self.retriever.vector_index, 'search') as mock_vector:
+            with patch.object(self.retriever.sparse_retriever, 'search') as mock_sparse:
+                with patch.object(self.retriever.fusion_strategy, 'fuse_results') as mock_fusion:
+
+                    mock_vector.return_value = [(0, 0.9), (1, 0.8)]
+                    mock_sparse.return_value = [(0, 0.85), (2, 0.7)]
+                    mock_fusion.return_value = [(0, 0.9)]
+
+                    # Execute many retrievals
+                    start_time = time.time()
+                    for i in range(100):
+                        results = self.retriever.retrieve(f"query {i}", k=3)
+                    elapsed_time = time.time() - start_time
+
+                    # Should handle high frequency efficiently
+                    assert elapsed_time < 5.0  # 5 second limit for 100 retrievals
+
+                    # Verify statistics tracking
+                    assert self.retriever.retrieval_stats["total_retrievals"] == 100
             
     def test_memory_usage_optimization(self):
         """Test memory usage optimization features."""
         # Test with memory-conscious configuration
         memory_config = self.perf_config.copy()
         memory_config["composite_filtering"]["max_candidates"] = 5  # Very limited
-        
+
         memory_retriever = ModularUnifiedRetriever(memory_config, self.mock_embedder)
-        
+
         # Add documents
         self.mock_embedder.embed.return_value = [np.array([0.1, 0.2, 0.3])] * 3
         test_docs = [
@@ -857,23 +902,21 @@ class TestModularUnifiedRetrieverPerformanceOptimization:
             for i in range(3)
         ]
         memory_retriever.index_documents(test_docs)
-        
+
         # Test retrieval with limited candidates
         with patch.object(memory_retriever.vector_index, 'search') as mock_vector:
             with patch.object(memory_retriever.sparse_retriever, 'search') as mock_sparse:
-                
+
                 mock_vector.return_value = [(0, 0.9), (1, 0.8)]
                 mock_sparse.return_value = [(1, 0.85), (2, 0.7)]
-                
+
                 results = memory_retriever.retrieve("test query", k=10)
-                
+
                 # Should limit candidates based on configuration
-                vector_call_k = mock_vector.call_args[1]['k']
-                sparse_call_k = mock_sparse.call_args[0][1]
-                
                 # max_candidates=5, so should request 5 candidates
-                assert vector_call_k == 5
-                assert sparse_call_k == 5
+                assert mock_vector.call_args.kwargs['k'] == 5
+                # Sparse retriever uses keyword argument k
+                assert mock_sparse.call_args.kwargs['k'] == 5
                 
     def test_caching_and_memoization_patterns(self):
         """Test caching and memoization for performance."""

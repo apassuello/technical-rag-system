@@ -345,7 +345,7 @@ class ViewEvaluator:
                 analysis['weaknesses'].append(f"Model tends to overpredict complexity (bias=+{bias:.3f})")
             else:
                 analysis['weaknesses'].append(f"Model tends to underpredict complexity (bias={bias:.3f})")
-            analysis['recommendations'].append("Consider adjusting training data distribution or loss function")
+            analysis['recommendations'].append("Address prediction bias by adjusting training data distribution or loss function")
         
         return analysis
 

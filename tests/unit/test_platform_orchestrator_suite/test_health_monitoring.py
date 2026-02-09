@@ -48,14 +48,15 @@ class TestComponentHealthServiceImpl:
 
     def test_check_component_health_missing_methods(self, health_service):
         """Test health check detects missing required methods."""
-        # Create component without required methods
-        component = Mock()
+        # Create component with spec to restrict available methods
+        # Mock with spec=[] means it has NO attributes except those we explicitly add
+        component = Mock(spec=['get_configuration'])
         component.__class__.__name__ = "TestComponent"
-        del component.health_check  # Remove health_check method
-        
+        component.get_configuration.return_value = {}  # Valid config to avoid other issues
+
         with patch.object(health_service, '_get_required_methods', return_value=['missing_method']):
             health_status = health_service.check_component_health(component)
-        
+
         assert_health_status(health_status, expected_healthy=False)
         assert any("Missing required methods" in issue for issue in health_status.issues)
 
@@ -74,27 +75,28 @@ class TestComponentHealthServiceImpl:
     def test_health_check_rate_limiting(self, health_service):
         """Test health checks are rate limited correctly."""
         component = MockComponent("RateLimitedComponent")
-        
+
         # First health check
         health_status1 = health_service.check_component_health(component)
-        
+
         # Add to history to simulate rate limiting
-        health_service.health_history["MockComponent"] = [health_status1]
-        health_service.last_health_checks["MockComponent"] = time.time()
-        
+        component_name = component.name  # Use instance name
+        health_service.health_history[component_name] = [health_status1]
+        health_service.last_health_checks[component_name] = time.time()
+
         # Immediate second check should use cached result
         health_status2 = health_service.check_component_health(component)
-        
+
         assert health_status2 == health_status1
         assert health_status2.last_check == health_status1.last_check
 
     def test_monitor_component_health(self, health_service):
         """Test component monitoring registration and tracking."""
         component = MockComponent("MonitoredComponent")
-        
+
         health_service.monitor_component_health(component)
-        
-        component_name = "MockComponent"
+
+        component_name = component.name  # Use instance name, not class name
         assert component_name in health_service.monitored_components
         assert health_service.monitored_components[component_name] == component
         assert health_service.failure_counts[component_name] == 0
@@ -154,17 +156,18 @@ class TestComponentHealthServiceImpl:
     def test_failure_count_tracking(self, health_service):
         """Test failure count tracking for components."""
         component = MockComponent("FailingComponent", healthy=False)
-        
+
         # Monitor component
         health_service.monitor_component_health(component)
-        
+
         # Initial failure count should be 0
-        assert health_service.failure_counts["MockComponent"] == 0
-        
+        component_name = component.name  # Use instance name
+        assert health_service.failure_counts[component_name] == 0
+
         # Check health multiple times to increment failure count
         for i in range(3):
             health_service.check_component_health(component)
-        
+
         # Note: The actual failure count increment logic would need to be
         # implemented in the real health service based on health check results
 
@@ -253,16 +256,16 @@ class TestComponentHealthServiceImpl:
     def test_health_service_state_consistency(self, health_service):
         """Test health service maintains consistent state."""
         component = MockComponent("ConsistentComponent")
-        
+
         # Monitor component
         health_service.monitor_component_health(component)
-        
+
         # Verify state consistency
-        component_name = "MockComponent"
+        component_name = component.name  # Use instance name
         assert component_name in health_service.monitored_components
         assert component_name in health_service.failure_counts
         assert health_service.monitored_components[component_name] == component
-        
+
         # Check health and verify state updates
         health_status = health_service.check_component_health(component)
         assert component_name in health_service.last_health_checks

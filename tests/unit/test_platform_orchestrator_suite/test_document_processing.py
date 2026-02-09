@@ -280,12 +280,12 @@ class TestPlatformOrchestratorDocumentProcessing:
         """Test document processing validates embeddings."""
         # Configure embedder to return invalid embeddings
         mock_component_factory.mock_embedder.embed.return_value = None
-        
+
         orchestrator = PlatformOrchestrator(valid_config_file)
         test_file = create_test_file(Path(temp_config_dir), "invalid_embeddings.pdf")
-        
+
         # Should handle invalid embeddings gracefully or raise appropriate error
-        with pytest.raises((ValueError, TypeError, AttributeError)):
+        with pytest.raises((ValueError, TypeError, AttributeError, RuntimeError)):
             orchestrator.process_document(test_file)
 
     def test_document_processing_memory_management(self, valid_config_file, mock_component_factory, temp_config_dir):

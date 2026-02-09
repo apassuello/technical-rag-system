@@ -341,7 +341,7 @@ class TestPlatformOrchestratorQueryProcessing:
         large_results = [
             RetrievalResult(
                 document=Document(content="x" * 1000, metadata={"id": f"doc_{i}"}),
-                score=0.8 - i * 0.1,
+                score=max(0.0, 0.8 - i * 0.01),  # Ensure non-negative scores
                 retrieval_method="hybrid"
             )
             for i in range(100)

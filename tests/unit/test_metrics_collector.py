@@ -144,7 +144,9 @@ class TestMetricsCollector:
             mock_logger.debug.assert_called_once()
         
         # Verify returned metrics structure
-        assert isinstance(metrics, QueryMetrics)
+        # QueryMetrics is an alias for CalibrationQueryMetrics
+        from src.shared_utils.metrics import CalibrationQueryMetrics
+        assert isinstance(metrics, (QueryMetrics, CalibrationQueryMetrics))
         assert metrics.query_id == query_id
         assert metrics.query_text == query_text
         
@@ -676,8 +678,8 @@ class TestMetricsCollector:
     def test_export_metrics_error_handling(self):
         """Test export metrics error handling."""
         invalid_path = Path("/invalid/directory/metrics.json")
-        
-        with patch('src.components.calibration.metrics_collector.logger') as mock_logger:
+
+        with patch('src.shared_utils.metrics.calibration_collector.logger') as mock_logger:
             self.collector.export_metrics(invalid_path)
             mock_logger.error.assert_called_once()
     
@@ -761,8 +763,8 @@ class TestMetricsCollector:
                 "RISC-V is an open-source instruction set architecture...",
                 0.89,
                 1.23,
-                [{"source": "risc-v-spec.pdf", "relevance": 0.92}],
-                {"model_name": "llama3.2:3b", "temperature": 0.3}
+                citations=[{"source": "risc-v-spec.pdf", "relevance": 0.92}],
+                model_info={"model_name": "llama3.2:3b", "temperature": 0.3}
             )
             
             expected = {

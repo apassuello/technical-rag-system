@@ -156,15 +156,25 @@ class TestConfigurationServiceImpl:
             "embedder": {
                 "type": "imported_embedder",
                 "config": {"imported_model": "imported-model"}
+            },
+            "retriever": {
+                "type": "imported_retriever",
+                "config": {"retriever_param": "retriever_value"}
+            },
+            "answer_generator": {
+                "type": "imported_generator",
+                "config": {"generator_param": "generator_value"}
             }
         }
-        
+
         configuration_service.import_configuration(imported_config)
-        
+
         # Verify imported configuration is active
         current_config = configuration_service.get_system_configuration()
         assert current_config["document_processor"]["type"] == "imported_processor"
         assert current_config["embedder"]["type"] == "imported_embedder"
+        assert current_config["retriever"]["type"] == "imported_retriever"
+        assert current_config["answer_generator"]["type"] == "imported_generator"
 
     def test_import_configuration_validation(self, configuration_service):
         """Test importing configuration with validation."""
@@ -201,19 +211,21 @@ class TestConfigurationServiceImpl:
 
     def test_configuration_diff(self, configuration_service):
         """Test configuration difference calculation."""
+        import copy
+
         # Get original configuration
         original_config = configuration_service.get_system_configuration()
-        
-        # Create modified configuration
-        modified_config = original_config.copy()
+
+        # Create modified configuration - must use deepcopy to create independent nested structures
+        modified_config = copy.deepcopy(original_config)
         modified_config["document_processor"]["config"]["chunk_size"] = 3000
         modified_config["embedder"]["config"]["model"] = "different-model"
-        
+
         # Calculate diff
         diff = configuration_service.calculate_configuration_diff(
             original_config, modified_config
         )
-        
+
         assert isinstance(diff, dict)
         assert "added" in diff
         assert "modified" in diff

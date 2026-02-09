@@ -37,7 +37,7 @@ class ComponentConfig(BaseModel):
 
 class PipelineConfig(BaseModel):
     """Complete pipeline configuration.
-    
+
     Defines all components needed for a functional RAG pipeline.
     Supports both legacy (Phase 1) and unified (Phase 2) architectures.
     Includes ComponentFactory validation for Phase 3.
@@ -47,6 +47,8 @@ class PipelineConfig(BaseModel):
     vector_store: Optional[ComponentConfig] = None  # Optional in Phase 2 unified architecture
     retriever: ComponentConfig
     answer_generator: ComponentConfig
+    query_processor: Optional[ComponentConfig] = None  # Epic 1/2 modular query processor
+    global_settings: Optional[Dict[str, Any]] = None  # Global configuration settings
     
     # Optional global settings
     global_settings: Dict[str, Any] = Field(default_factory=dict)

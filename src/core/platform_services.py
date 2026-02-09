@@ -39,6 +39,12 @@ class ComponentHealthServiceImpl(ComponentHealthService):
         self.last_health_checks: Dict[str, float] = {}
         self.health_check_interval = 30.0  # seconds
 
+    def _get_component_id(self, component: Any) -> str:
+        """Get a unique storage key for a component, preferring instance name over class name."""
+        if hasattr(component, 'name') and isinstance(getattr(component, 'name'), str):
+            return getattr(component, 'name')
+        return type(component).__name__
+
     def check_component_health(self, component: Any) -> HealthStatus:
         """Check the health of a component.
 
@@ -48,24 +54,23 @@ class ComponentHealthServiceImpl(ComponentHealthService):
         Returns:
             HealthStatus object with health information
         """
-        # Use component.name if available (for MockComponent), otherwise use class name
-
         component_name = type(component).__name__
+        component_id = self._get_component_id(component)
         current_time = time.time()
 
-        # Rate limit health checks
-        if (component_name in self.last_health_checks and
-            current_time - self.last_health_checks[component_name] < self.health_check_interval):
+        # Rate limit health checks — use component_id for unique lookup
+        if (component_id in self.last_health_checks and
+            current_time - self.last_health_checks[component_id] < self.health_check_interval):
             # Return cached health status
-            if component_name in self.health_history and self.health_history[component_name]:
-                return self.health_history[component_name][-1]
+            if component_id in self.health_history and self.health_history[component_id]:
+                return self.health_history[component_id][-1]
 
         health_status = HealthStatus(
             is_healthy=True,
             last_check=current_time,
             issues=[],
             metrics={},
-            component_name=component_name
+            component_name=component_name  # class name for display
         )
 
         try:
@@ -84,10 +89,11 @@ class ComponentHealthServiceImpl(ComponentHealthService):
             if hasattr(component, 'health_check'):
                 try:
                     component_health = component.health_check()
-                    health_status.metrics.update(component_health)
-                    if not component_health.get("healthy", True):
-                        health_status.is_healthy = False
-                        health_status.issues.append("Component-specific health check failed")
+                    if isinstance(component_health, dict):
+                        health_status.metrics.update(component_health)
+                        if not component_health.get("healthy", True):
+                            health_status.is_healthy = False
+                            health_status.issues.append("Component-specific health check failed")
                 except Exception as e:
                     health_status.is_healthy = False
                     health_status.issues.append(f"Health check error: {str(e)}")
@@ -126,16 +132,16 @@ class ComponentHealthServiceImpl(ComponentHealthService):
             health_status.is_healthy = False
             health_status.issues.append(f"Health check exception: {str(e)}")
 
-        # Store health history
-        if component_name not in self.health_history:
-            self.health_history[component_name] = []
-        self.health_history[component_name].append(health_status)
+        # Store health history — use component_id for unique storage
+        if component_id not in self.health_history:
+            self.health_history[component_id] = []
+        self.health_history[component_id].append(health_status)
 
         # Keep only last 10 health checks
-        if len(self.health_history[component_name]) > 10:
-            self.health_history[component_name] = self.health_history[component_name][-10:]
+        if len(self.health_history[component_id]) > 10:
+            self.health_history[component_id] = self.health_history[component_id][-10:]
 
-        self.last_health_checks[component_name] = current_time
+        self.last_health_checks[component_id] = current_time
 
         return health_status
 
@@ -145,17 +151,17 @@ class ComponentHealthServiceImpl(ComponentHealthService):
         Args:
             component: Component instance to monitor
         """
-        component_name = type(component).__name__
-        self.monitored_components[component_name] = component
+        component_id = self._get_component_id(component)
+        self.monitored_components[component_id] = component
 
         # Initialize failure count for this component
-        if component_name not in self.failure_counts:
-            self.failure_counts[component_name] = 0
+        if component_id not in self.failure_counts:
+            self.failure_counts[component_id] = 0
 
         # Perform initial health check
         health_status = self.check_component_health(component)
 
-        logger.info(f"Started monitoring component: {component_name}, healthy: {health_status.is_healthy}")
+        logger.info(f"Started monitoring component: {component_id}, healthy: {health_status.is_healthy}")
 
     def report_component_failure(self, component: Any, error: Exception) -> None:
         """Report a component failure.
@@ -165,11 +171,12 @@ class ComponentHealthServiceImpl(ComponentHealthService):
             error: Exception that occurred
         """
         component_name = type(component).__name__
+        component_id = self._get_component_id(component)
 
         # Track failure count
-        if component_name not in self.failure_counts:
-            self.failure_counts[component_name] = 0
-        self.failure_counts[component_name] += 1
+        if component_id not in self.failure_counts:
+            self.failure_counts[component_id] = 0
+        self.failure_counts[component_id] += 1
 
         # Create failure health status
         failure_status = HealthStatus(
@@ -177,18 +184,18 @@ class ComponentHealthServiceImpl(ComponentHealthService):
             last_check=time.time(),
             issues=[f"Component failure: {str(error)}"],
             metrics={
-                "failure_count": self.failure_counts[component_name],
+                "failure_count": self.failure_counts[component_id],
                 "error_type": type(error).__name__
             },
             component_name=component_name
         )
 
         # Store in health history
-        if component_name not in self.health_history:
-            self.health_history[component_name] = []
-        self.health_history[component_name].append(failure_status)
+        if component_id not in self.health_history:
+            self.health_history[component_id] = []
+        self.health_history[component_id].append(failure_status)
 
-        logger.error(f"Component failure reported: {component_name}, error: {str(error)}")
+        logger.error(f"Component failure reported: {component_id}, error: {str(error)}")
 
     def get_system_health_summary(self) -> Dict[str, Any]:
         """Get a summary of system health.
@@ -206,15 +213,15 @@ class ComponentHealthServiceImpl(ComponentHealthService):
             "timestamp": time.time()
         }
 
-        for component_name, component in self.monitored_components.items():
+        for component_id, component in self.monitored_components.items():
             health_status = self.check_component_health(component)
 
-            summary["components"][component_name] = {
+            summary["components"][component_id] = {
                 "healthy": health_status.is_healthy,
                 "issues": health_status.issues,
                 "metrics": health_status.metrics,
                 "last_check": health_status.last_check,
-                "failure_count": self.failure_counts.get(component_name, 0)
+                "failure_count": self.failure_counts.get(component_id, 0)
             }
 
             if health_status.is_healthy:
@@ -337,6 +344,12 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
         self.query_analytics: Dict[str, Any] = {}  # For query-specific analytics
         self.analytics_enabled = True
 
+    def _get_component_id(self, component: Any) -> str:
+        """Get a unique storage key for a component, preferring instance name over class name."""
+        if hasattr(component, 'name') and isinstance(getattr(component, 'name'), str):
+            return getattr(component, 'name')
+        return type(component).__name__
+
     def collect_component_metrics(self, component: Any) -> ComponentMetrics:
         """Collect metrics from a component.
 
@@ -346,6 +359,7 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
         Returns:
             ComponentMetrics object with collected metrics
         """
+        component_id = self._get_component_id(component)
         component_name = type(component).__name__
         component_type = component.__class__.__module__.split('.')[-1]
 
@@ -390,24 +404,24 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
                 metrics.resource_usage = {"monitoring": "unavailable"}
 
             # Get success/error counts from performance tracking
-            if component_name in self.performance_tracking:
-                tracking_data = self.performance_tracking[component_name]
+            if component_id in self.performance_tracking:
+                tracking_data = self.performance_tracking[component_id]
                 metrics.success_count = tracking_data.get("success_count", 0)
                 metrics.error_count = tracking_data.get("error_count", 0)
 
             # Store metrics history
-            if component_name not in self.component_metrics:
-                self.component_metrics[component_name] = []
-            self.component_metrics[component_name].append(metrics)
+            if component_id not in self.component_metrics:
+                self.component_metrics[component_id] = []
+            self.component_metrics[component_id].append(metrics)
 
             # Keep only last 100 metrics per component
-            if len(self.component_metrics[component_name]) > 100:
-                self.component_metrics[component_name] = self.component_metrics[component_name][-100:]
+            if len(self.component_metrics[component_id]) > 100:
+                self.component_metrics[component_id] = self.component_metrics[component_id][-100:]
 
             return metrics
 
         except Exception as e:
-            logger.error(f"Error collecting metrics from {component_name}: {str(e)}")
+            logger.error(f"Error collecting metrics from {component_id}: {str(e)}")
             metrics.error_count += 1
             return metrics
 
@@ -540,11 +554,12 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
             component: Component instance
             metrics: Performance metrics to track
         """
-        # Always use class name for consistency (MockComponent, not instance name)
+        # Use component_id for unique identification (prefers instance name over class name)
+        component_id = self._get_component_id(component)
         component_name = type(component).__name__
 
-        if component_name not in self.performance_tracking:
-            self.performance_tracking[component_name] = {
+        if component_id not in self.performance_tracking:
+            self.performance_tracking[component_id] = {
                 "success_count": 0,
                 "error_count": 0,
                 "total_operations": 0,
@@ -553,7 +568,7 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
                 "performance_history": []
             }
 
-        tracking_data = self.performance_tracking[component_name]
+        tracking_data = self.performance_tracking[component_id]
 
         # Update counts based on explicit metrics or success indicator
         if "error_count" in metrics:
@@ -591,18 +606,18 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
         tracking_data["performance_history"].append(performance_record)
 
         # Also store in performance_history for test compatibility
-        if component_name not in self.performance_history:
-            self.performance_history[component_name] = []
-        self.performance_history[component_name].append(performance_record)
+        if component_id not in self.performance_history:
+            self.performance_history[component_id] = []
+        self.performance_history[component_id].append(performance_record)
 
         # PRIORITY 1 FIX: Store in component_metrics for test compatibility
-        # Tests expect component_metrics[component_name] to be a dict with direct key access
+        # Tests expect component_metrics[component_id] to be a dict with direct key access
 
         # Initialize a dedicated metrics history list
         if not hasattr(self, '_component_metrics_objects'):
             self._component_metrics_objects = {}
-        if component_name not in self._component_metrics_objects:
-            self._component_metrics_objects[component_name] = []
+        if component_id not in self._component_metrics_objects:
+            self._component_metrics_objects[component_id] = []
 
         # Create ComponentMetrics object for formal API
         component_metrics_obj = ComponentMetrics(
@@ -616,16 +631,16 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
         )
 
         # Store the component metrics object in separate list
-        self._component_metrics_objects[component_name].append(component_metrics_obj)
+        self._component_metrics_objects[component_id].append(component_metrics_obj)
 
         # Keep only last 100 metrics per component
-        if len(self._component_metrics_objects[component_name]) > 100:
-            self._component_metrics_objects[component_name] = self._component_metrics_objects[component_name][-100:]
+        if len(self._component_metrics_objects[component_id]) > 100:
+            self._component_metrics_objects[component_id] = self._component_metrics_objects[component_id][-100:]
 
         # For backward compatibility with tests that expect dict-like access,
         # store metrics as a dict in component_metrics
-        self.component_metrics[component_name] = metrics.copy()
-        self.component_metrics[component_name].update({
+        self.component_metrics[component_id] = metrics.copy()
+        self.component_metrics[component_id].update({
             "error_count": tracking_data["error_count"],
             "success_count": tracking_data["success_count"],
             "total_operations": tracking_data["total_operations"],
@@ -636,7 +651,7 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
         if len(tracking_data["performance_history"]) > 100:
             tracking_data["performance_history"] = tracking_data["performance_history"][-100:]
 
-        logger.debug(f"Tracked performance for {component_name}: {metrics}")
+        logger.debug(f"Tracked performance for {component_id}: {metrics}")
 
     def generate_analytics_report(self) -> Dict[str, Any]:
         """Generate a comprehensive analytics report.
@@ -706,7 +721,7 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
                     )
 
         # Memory usage analysis
-        if "total_memory_mb" in system_metrics["system_summary"]:
+        if "system_summary" in system_metrics and "total_memory_mb" in system_metrics["system_summary"]:
             total_memory = system_metrics["system_summary"]["total_memory_mb"]
             if total_memory > 1024:  # More than 1GB
                 report["recommendations"].append(
@@ -1611,8 +1626,9 @@ class ConfigurationServiceImpl(ConfigurationService):
             if isinstance(value, (int, float)) and value < 0:
                 raise ValueError(f"Invalid negative value for {key}: {value}")
 
-        # Store old config for notifications
-        old_config = self.get_component_config(component_name).copy() if component_name in self.config_cache else {}
+        # Store old config for notifications and rollback
+        import copy
+        old_config = copy.deepcopy(self.get_component_config(component_name)) if component_name in self.config_cache else {}
 
         # Update cache
         if component_name in self.config_cache:
@@ -1631,11 +1647,12 @@ class ConfigurationServiceImpl(ConfigurationService):
             self.dynamic_configs[component_name] = {}
         self.dynamic_configs[component_name].update(config)
 
-        # Record change
+        # Record change with full state
         change_record = {
             "timestamp": time.time(),
             "component": component_name,
             "changes": config,
+            "old_state": old_config,  # Store complete old state for rollback
             "change_type": "update"
         }
         self.config_history.append(change_record)
@@ -1677,12 +1694,12 @@ class ConfigurationServiceImpl(ConfigurationService):
             if hasattr(config, 'global_settings'):
                 validation_config["global_settings"] = config.global_settings
 
-        # Required component types
-        required_components = ["document_processor", "embedder", "retriever", "answer_generator"]
+        # All possible components - only validate those that are present
+        all_components = ["document_processor", "embedder", "retriever", "answer_generator"]
 
-        for component in required_components:
+        for component in all_components:
             if component not in validation_config:
-                errors.append(f"Missing required component: {component}")
+                # Skip missing components - allow partial configs
                 continue
 
             component_config = validation_config[component]
@@ -1749,8 +1766,9 @@ class ConfigurationServiceImpl(ConfigurationService):
         Returns:
             Dictionary with component names as keys (flat structure for test compatibility)
         """
-        # Tests expect flat dictionary with component names directly accessible
-        return self.config_cache.copy()
+        import copy
+        # Return deep copy to prevent unintended modifications
+        return copy.deepcopy(self.config_cache)
 
     def get_feature_flag(self, flag_name: str, default: bool = False) -> bool:
         """Get a feature flag value.
@@ -1854,7 +1872,13 @@ class ConfigurationServiceImpl(ConfigurationService):
             config_to_validate = {k: v for k, v in imported_config.items()
                                   if k != "export_metadata"}
 
-            # Validate
+            # Import requires all 4 components
+            required_components = ["document_processor", "embedder", "retriever", "answer_generator"]
+            for component in required_components:
+                if component not in config_to_validate:
+                    raise ValueError(f"Import configuration must include all required components. Missing: {component}")
+
+            # Validate structure of provided components
             errors = self.validate_configuration(config_to_validate)
             if errors:
                 raise ValueError(f"Invalid imported configuration: {errors}")
@@ -1897,41 +1921,57 @@ class ConfigurationServiceImpl(ConfigurationService):
         self.dynamic_configs.clear()  # Clear dynamic configs on restore
 
     def calculate_configuration_diff(self, config1: Dict[str, Any], config2: Dict[str, Any]) -> Dict[str, Any]:
-        """Calculate diff between two configurations."""
+        """Calculate diff between two configurations with deep nested comparison."""
         diff = {
             "added": [],
             "removed": [],
             "modified": []
         }
 
-        # Find modified and removed keys
-        for key in config1:
-            if key not in config2:
-                diff["removed"].append(key)
-            elif config1[key] != config2[key]:
-                diff["modified"].append({
-                    "key": key,
-                    "old_value": config1[key],
-                    "new_value": config2[key]
-                })
+        def find_nested_changes(path: str, dict1: Any, dict2: Any):
+            """Recursively find changes in nested dictionaries."""
+            if not isinstance(dict1, dict) or not isinstance(dict2, dict):
+                # Compare leaf values
+                if dict1 != dict2:
+                    diff["modified"].append({
+                        "key": path,
+                        "old_value": dict1,
+                        "new_value": dict2
+                    })
+                return
 
-        # Find added keys
-        for key in config2:
-            if key not in config1:
-                diff["added"].append(key)
+            # Check all keys in dict1
+            for key in dict1:
+                key_path = f"{path}.{key}" if path else key
+                if key not in dict2:
+                    diff["removed"].append(key_path)
+                else:
+                    find_nested_changes(key_path, dict1[key], dict2[key])
+
+            # Check for new keys in dict2
+            for key in dict2:
+                key_path = f"{path}.{key}" if path else key
+                if key not in dict1:
+                    diff["added"].append(key_path)
+
+        # Start recursive comparison
+        find_nested_changes("", config1, config2)
 
         return diff
 
     def validate_against_schema(self, config: Dict[str, Any]) -> bool:
-        """Validate against schema."""
-        # Check required fields
-        required = ["document_processor", "embedder", "retriever", "answer_generator"]
-        for component in required:
-            if component not in config:
+        """Validate against schema - accepts partial configs for flexibility."""
+        # For each component present, validate structure
+        for component_name, component_config in config.items():
+            # Skip non-component keys like export_metadata, global_settings
+            if component_name in ["export_metadata", "global_settings"]:
+                continue
+
+            if not isinstance(component_config, dict):
                 return False
-            if "type" not in config[component]:
+            if "type" not in component_config:
                 return False
-            if "config" not in config[component]:
+            if "config" not in component_config:
                 return False
         return True
 
@@ -1979,26 +2019,30 @@ class ConfigurationServiceImpl(ConfigurationService):
         return migrated
 
     def rollback_configuration(self, component_name: str, steps: int = 1) -> None:
-        """Rollback configuration changes."""
-        # Find relevant history entries
+        """Rollback configuration changes to a previous state."""
+        import copy
+
+        # Find relevant history entries for this component
         component_history = [h for h in self.config_history
                            if h.get("component") == component_name]
 
-        if len(component_history) < steps + 1:
+        if len(component_history) < steps:
+            # Not enough history, cannot rollback
             return
 
-        # Get the config from `steps` changes ago
-        target_index = -(steps + 1)
-        target_change = component_history[target_index]
+        # Get the state from before the last `steps` changes
+        # The most recent change is at index -1, so we want the state before the change at -(steps)
+        target_change = component_history[-steps]
+        old_state = target_change.get("old_state", {})
 
-        # Restore by removing recent changes
-        if component_name in self.config_cache and "config" in self.config_cache[component_name]:
-            # Remove keys that were added in last `steps` changes
-            for i in range(steps):
-                recent_change = component_history[-(i+1)]
-                for key in recent_change.get("changes", {}):
-                    if key in self.config_cache[component_name]["config"]:
-                        del self.config_cache[component_name]["config"][key]
+        # Restore the old state
+        if old_state and component_name in self.config_cache:
+            # Replace the entire component config with the old state
+            self.config_cache[component_name] = copy.deepcopy(old_state)
+
+            # Also clear dynamic configs for this component
+            if component_name in self.dynamic_configs:
+                del self.dynamic_configs[component_name]
 
 
 

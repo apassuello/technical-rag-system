@@ -94,14 +94,20 @@ class FusionStrategy(ABC):
         # Check if inputs are RetrievalResult objects
         uses_retrieval_results = False
         document_map = {}
+        doc_id_map = {}  # Map document content to unique index
 
         if dense_results and hasattr(dense_results[0], 'document'):
             uses_retrieval_results = True
             # Convert RetrievalResult to tuples for fusion
             dense_tuples = []
-            for i, result in enumerate(dense_results):
-                dense_tuples.append((i, result.score))
-                document_map[i] = result.document
+            for result in dense_results:
+                # Use document content or ID as unique identifier
+                doc_id = id(result.document) if result.document else None
+                if doc_id not in doc_id_map:
+                    doc_id_map[doc_id] = len(doc_id_map)
+                    document_map[doc_id_map[doc_id]] = result.document
+                idx = doc_id_map[doc_id]
+                dense_tuples.append((idx, result.score))
         else:
             dense_tuples = dense_results
 
@@ -109,11 +115,14 @@ class FusionStrategy(ABC):
             uses_retrieval_results = True
             # Convert RetrievalResult to tuples for fusion
             sparse_tuples = []
-            offset = len(dense_results) if dense_results else 0
-            for i, result in enumerate(sparse_results):
-                idx = offset + i
+            for result in sparse_results:
+                # Use document content or ID as unique identifier
+                doc_id = id(result.document) if result.document else None
+                if doc_id not in doc_id_map:
+                    doc_id_map[doc_id] = len(doc_id_map)
+                    document_map[doc_id_map[doc_id]] = result.document
+                idx = doc_id_map[doc_id]
                 sparse_tuples.append((idx, result.score))
-                document_map[idx] = result.document
         else:
             sparse_tuples = sparse_results
 

@@ -319,7 +319,15 @@ class PlatformOrchestrator:
             embedder = self._components['embedder']
             texts = [doc.content for doc in documents]
             embeddings = embedder.embed(texts)
-            
+
+            # Validate embeddings
+            if embeddings is None:
+                raise ValueError("Embedder returned None instead of embeddings")
+            if not isinstance(embeddings, list):
+                raise TypeError(f"Embeddings must be a list, got {type(embeddings)}")
+            if len(embeddings) != len(documents):
+                raise ValueError(f"Embedding count ({len(embeddings)}) does not match document count ({len(documents)})")
+
             # Add embeddings to documents
             for doc, embedding in zip(documents, embeddings):
                 doc.embedding = embedding
@@ -374,7 +382,7 @@ class PlatformOrchestrator:
             except Exception as e:
                 logger.error(f"Failed to process {file_path}: {str(e)}")
                 failed_files.append(str(file_path))
-                results[str(file_path)] = 0
+                # Don't include failed files in results dictionary
         
         if failed_files:
             logger.warning(f"Failed to process {len(failed_files)} files: {failed_files}")
@@ -488,16 +496,18 @@ class PlatformOrchestrator:
             
             if not results:
                 logger.warning(f"No relevant documents found for query: {query}")
-                return Answer(
-                    text="No relevant information found for your query.",
-                    sources=[],
-                    confidence=0.0,
-                    metadata={
-                        "query": query,
-                        "retrieved_docs": 0,
-                        "orchestrator": "PlatformOrchestrator"
-                    }
-                )
+                # Still call generator with empty context to allow it to handle the case
+                generator = self._components['answer_generator']
+                answer = generator.generate(query, [])
+                # Ensure metadata includes retrieval info
+                if answer.metadata is None:
+                    answer.metadata = {}
+                answer.metadata.update({
+                    "query": query,
+                    "retrieved_docs": 0,
+                    "orchestrator": "PlatformOrchestrator"
+                })
+                return answer
             
             logger.debug(f"Retrieved {len(results)} relevant documents")
             
@@ -523,7 +533,22 @@ class PlatformOrchestrator:
         except Exception as e:
             logger.error(f"Failed to process query: {str(e)}")
             raise RuntimeError(f"Query processing failed: {str(e)}") from e
-    
+
+    def _get_ab_testing_context(self) -> Optional[Dict[str, Any]]:
+        """
+        Get A/B testing context for the current request.
+
+        This method can be overridden or mocked in tests to provide
+        request-specific A/B testing context (user_id, session_id, etc.).
+
+        Returns:
+            Dictionary with A/B testing context or None if not available
+        """
+        # Default implementation returns None
+        # In production, this would extract context from request headers,
+        # session data, or other sources
+        return None
+
     def get_system_health(self) -> Dict[str, Any]:
         """
         Get system health information.
