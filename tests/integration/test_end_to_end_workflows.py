@@ -49,13 +49,11 @@ RISCV_APPLICATIONS = (
 )
 
 
+@pytest.mark.integration
+@pytest.mark.requires_ml
+@pytest.mark.requires_ollama
 class TestEndToEndWorkflows:
     """Test complete end-to-end workflows for the RAG system."""
-
-    @pytest.fixture
-    def test_config_path(self):
-        """Get path to test configuration."""
-        return Path(__file__).parent.parent.parent / "config" / "test.yaml"
 
     @pytest.fixture
     def test_document(self):
@@ -64,11 +62,6 @@ class TestEndToEndWorkflows:
         if not test_pdf.exists():
             pytest.skip("Integration test PDF not found")
         return test_pdf
-
-    @pytest.fixture
-    def orchestrator(self, test_config_path):
-        """Create platform orchestrator for testing."""
-        return PlatformOrchestrator(test_config_path)
 
     @pytest.fixture
     def indexed_orchestrator(self, orchestrator, create_test_documents):
@@ -154,13 +147,11 @@ class TestEndToEndWorkflows:
         assert query_time > 0
 
 
+@pytest.mark.integration
+@pytest.mark.requires_ml
+@pytest.mark.requires_ollama
 class TestArchitectureCompatibility:
     """Test the unified retriever architecture produces meaningful answers."""
-
-    @pytest.fixture
-    def orchestrator(self):
-        config_path = Path(__file__).parent.parent.parent / "config" / "test.yaml"
-        return PlatformOrchestrator(config_path)
 
     def test_unified_architecture_workflow(self, orchestrator, create_test_documents):
         """Test index → query → answer with unified retriever."""
@@ -187,13 +178,10 @@ class TestArchitectureCompatibility:
             assert answer.sources, "Each query should retrieve indexed content"
 
 
+@pytest.mark.integration
+@pytest.mark.requires_ml
 class TestErrorRecoveryScenarios:
     """Test error handling and recovery scenarios."""
-
-    @pytest.fixture
-    def orchestrator(self):
-        config_path = Path(__file__).parent.parent.parent / "config" / "test.yaml"
-        return PlatformOrchestrator(config_path)
 
     def test_invalid_document_recovery(self, orchestrator):
         """Test that processing an empty PDF returns 0 and system stays healthy."""

@@ -8,7 +8,7 @@ and access to project modules.
 import sys
 import pytest
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List
 
 # Store original sys.path to restore between tests
 _original_sys_path = None
@@ -80,6 +80,15 @@ def project_root():
 
 
 @pytest.fixture
+def orchestrator():
+    """Create PlatformOrchestrator with test config."""
+    from src.core.platform_orchestrator import PlatformOrchestrator
+
+    config_path = Path(__file__).resolve().parents[2] / "config" / "test.yaml"
+    return PlatformOrchestrator(config_path)
+
+
+@pytest.fixture
 def create_test_documents():
     """Create Document objects directly, bypassing PDF file processing.
 
@@ -98,35 +107,6 @@ def create_test_documents():
         ]
 
     return _create
-
-
-@pytest.fixture(scope="session")
-def integration_test_data():
-    """Provide common test data for integration tests."""
-    return {
-        'test_documents': [
-            {'content': 'Integration test document 1', 'metadata': {'source': 'integration1.txt'}},
-            {'content': 'Integration test document 2', 'metadata': {'source': 'integration2.txt'}},
-            {'content': 'Complex integration test document with more content', 'metadata': {'source': 'integration3.txt'}}
-        ],
-        'test_queries': [
-            "What is the main topic of the documents?",
-            "How does component X integrate with component Y?",
-            "End-to-end workflow test query"
-        ],
-        'test_configs': {
-            'basic_pipeline': {
-                'processor': 'modular',
-                'embedder': 'sentence_transformer', 
-                'retriever': 'modular_unified',
-                'generator': 'adaptive_modular'
-            },
-            'epic1_pipeline': {
-                'processor': 'epic1_domain_aware',
-                'generator': 'epic1_multi_model'
-            }
-        }
-    }
 
 
 # Configure pytest markers for integration tests
