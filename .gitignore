@@ -68,6 +68,7 @@ logs/
 # Data files (exclude large PDFs from git)
 *.pdf
 !data/test/riscv-base-instructions.pdf
+!tests/integration/fixtures/*.pdf
 
 # Model files
 models/
