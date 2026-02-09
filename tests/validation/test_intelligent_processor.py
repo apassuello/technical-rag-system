@@ -20,11 +20,11 @@ pytestmark = [pytest.mark.validation, pytest.mark.requires_ml, pytest.mark.requi
 def intelligent_processor(indexed_orchestrator):
     """Create IntelligentQueryProcessor with RAG components, no agent."""
     retriever = indexed_orchestrator.get_component("retriever")
-    generator = indexed_orchestrator.get_component("generator")
+    generator = indexed_orchestrator.get_component("answer_generator")
 
-    # Create a minimal query analyzer
-    from src.core.component_factory import ComponentFactory
-    analyzer = ComponentFactory.create_query_analyzer("rule_based")
+    # Use the Epic 5 QueryAnalyzer that returns the correct QueryAnalysis type
+    from src.components.query_processors.agents.planning.query_analyzer import QueryAnalyzer
+    analyzer = QueryAnalyzer()
 
     # The processor needs an agent, but we test the RAG path by setting
     # a high complexity threshold so all queries go through RAG

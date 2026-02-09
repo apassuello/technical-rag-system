@@ -32,6 +32,7 @@ class TestDomainFiltering:
     """Verify domain filtering routes queries correctly."""
 
     @pytest.mark.xfail(
+        strict=True,
         reason="SPEC-P1 latent bug: process_query() calls super().process_query() "
                "but parent only defines process(). In-domain path hits AttributeError.",
         raises=AttributeError,
@@ -43,6 +44,7 @@ class TestDomainFiltering:
         assert len(answer.text) > 50, "In-domain answer should be substantive"
 
     @pytest.mark.xfail(
+        strict=True,
         reason="SPEC-P1 latent bug: process_query() calls super().process_query() "
                "but parent only defines process(). In-domain path hits AttributeError.",
         raises=AttributeError,

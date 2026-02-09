@@ -38,7 +38,10 @@ def epic1_generator():
             },
             "routing": {
                 "enabled": True,
-                "strategies": ["cost_optimized"],
+                "default_strategy": "cost_optimized",
+                "strategies": {
+                    "cost_optimized": {},
+                },
             },
             "cost_tracking": {"enabled": True, "daily_budget": 10.0},
         },
