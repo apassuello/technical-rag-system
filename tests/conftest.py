@@ -8,6 +8,8 @@ enabling imports from src/ and proper test discovery.
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add project root and src to Python path for all tests
 PROJECT_ROOT = Path(__file__).parent.parent
 SRC_PATH = PROJECT_ROOT / "src"
@@ -19,6 +21,17 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 print(f"✓ Root conftest.py: Added {PROJECT_ROOT} and {SRC_PATH} to sys.path")
+
+
+@pytest.fixture(autouse=True)
+def _clear_component_factory_cache():
+    """Prevent cached Mock components from leaking between tests."""
+    yield
+    try:
+        from src.core.component_factory import ComponentFactory
+        ComponentFactory.clear_cache()
+    except ImportError:
+        pass
 
 
 def pytest_sessionfinish(session, exitstatus):
