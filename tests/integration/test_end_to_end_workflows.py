@@ -14,38 +14,10 @@ from pathlib import Path
 
 from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Document, Answer
-
-# --- Shared test content ---
-# Substantial paragraphs so that embeddings are meaningful and BM25 has tokens to match.
-RISCV_OVERVIEW = (
-    "RISC-V is an open standard instruction set architecture based on "
-    "established reduced instruction set computer principles. Unlike most "
-    "other ISA designs, RISC-V is provided under royalty-free open-source "
-    "licenses. RISC-V was originally designed in 2010 at the University of "
-    "California, Berkeley. The project was led by Krste Asanovic and David "
-    "Patterson. The RISC-V foundation was established to maintain the "
-    "standard and promote adoption across the semiconductor industry."
-)
-
-RISCV_EXTENSIONS = (
-    "RISC-V supports a modular set of extensions. The base integer ISA is "
-    "named RV32I for 32-bit and RV64I for 64-bit address spaces. Standard "
-    "extensions include M for integer multiplication and division, A for "
-    "atomic instructions, F for single-precision floating-point, D for "
-    "double-precision floating-point, and C for compressed instructions. "
-    "The vector extension V enables SIMD-style parallel data processing. "
-    "Custom extensions can be added for domain-specific acceleration in "
-    "areas such as machine learning, cryptography, and signal processing."
-)
-
-RISCV_APPLICATIONS = (
-    "RISC-V processors are used in embedded systems, high-performance "
-    "computing, and edge devices. Western Digital has deployed over one "
-    "billion RISC-V cores in storage controllers. SiFive produces RISC-V "
-    "cores for commercial applications. In the automotive sector, RISC-V "
-    "is being adopted for safety-critical ADAS systems. The architecture "
-    "is also popular in academic research and teaching, where its open "
-    "nature allows students to study and modify the processor design."
+from tests.validation.golden_corpus import (
+    RISCV_OVERVIEW,
+    RISCV_EXTENSIONS,
+    RISCV_APPLICATIONS,
 )
 
 
