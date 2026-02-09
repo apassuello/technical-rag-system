@@ -96,8 +96,12 @@ class TestEndToEndWorkflows:
         assert answer.text, "Answer should not be empty"
         assert len(answer.text) > 10, "Answer should be substantial"
         assert answer.sources, "Retrieval should find indexed content"
-        assert 0 <= answer.confidence <= 1
+        assert answer.confidence > 0.1, "In-domain query should have meaningful confidence"
         assert isinstance(answer.metadata, dict)
+        assert any(
+            "RISC-V" in s.content or "instruction set" in s.content
+            for s in answer.sources
+        ), "Sources should contain query-relevant content"
 
     def test_multi_document_workflow(self, indexed_orchestrator):
         """Test querying across multiple indexed documents."""
@@ -106,6 +110,9 @@ class TestEndToEndWorkflows:
         assert isinstance(answer, Answer)
         assert answer.text
         assert answer.sources, "Should retrieve from indexed content"
+        assert any(
+            "extension" in s.content.lower() for s in answer.sources
+        ), "Sources should match the extensions query"
 
     # -- Error handling --
 
@@ -137,14 +144,14 @@ class TestEndToEndWorkflows:
         processing_time = time.perf_counter() - start
 
         assert chunk_count > 0
-        assert processing_time > 0
+        assert processing_time < 60, "Document processing should complete within 60s"
 
         start = time.perf_counter()
         answer = orchestrator.process_query("What is RISC-V?")
         query_time = time.perf_counter() - start
 
         assert isinstance(answer, Answer)
-        assert query_time > 0
+        assert query_time < 60, "Query processing should complete within 60s"
 
 
 @pytest.mark.integration
@@ -176,6 +183,8 @@ class TestArchitectureCompatibility:
             assert isinstance(answer, Answer)
             assert answer.text
             assert answer.sources, "Each query should retrieve indexed content"
+
+        assert answer1.text != answer2.text, "Different queries should produce different answers"
 
 
 @pytest.mark.integration
@@ -216,7 +225,7 @@ class TestErrorRecoveryScenarios:
         health = orchestrator.get_system_health()
         assert health["status"] == "healthy"
 
-    def test_concurrent_request_handling(self, orchestrator, create_test_documents):
+    def test_sequential_multi_query(self, orchestrator, create_test_documents):
         """Test handling multiple sequential queries on indexed content."""
         docs = create_test_documents(RISCV_OVERVIEW, RISCV_EXTENSIONS, RISCV_APPLICATIONS)
         orchestrator.index_documents(docs)
