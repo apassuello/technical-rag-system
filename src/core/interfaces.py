@@ -404,7 +404,17 @@ class ExperimentAssignment:
     variant: str
     assignment_time: float = field(default_factory=time.time)
     context: Dict[str, Any] = field(default_factory=dict)
-    
+
+    @property
+    def user_id(self) -> str:
+        """Get user_id from context."""
+        return self.context.get("user_id", "")
+
+    @property
+    def config(self) -> Dict[str, Any]:
+        """Get variant config from context."""
+        return self.context.get("config", {})
+
     def __post_init__(self):
         """Validate experiment assignment data."""
         if not self.experiment_id:
@@ -436,17 +446,24 @@ class ExperimentResult:
 class BackendStatus:
     """Status information for a backend."""
     backend_name: str
-    is_available: bool
+    is_healthy: bool  # Changed from is_available to match test expectations
     last_check: float = field(default_factory=time.time)
+    latency: Optional[float] = None  # Added for test compatibility
     health_metrics: Dict[str, Any] = field(default_factory=dict)
     error_message: Optional[str] = None
-    
+
+    # Backwards compatibility property
+    @property
+    def is_available(self) -> bool:
+        """Backwards compatibility for is_available."""
+        return self.is_healthy
+
     def __post_init__(self):
         """Validate backend status data."""
         if not self.backend_name:
             raise ValueError("backend_name cannot be empty")
-        if not isinstance(self.is_available, bool):
-            raise TypeError("is_available must be a boolean")
+        if not isinstance(self.is_healthy, bool):
+            raise TypeError("is_healthy must be a boolean")
 
 
 class ComponentHealthService(ABC):

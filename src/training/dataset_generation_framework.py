@@ -112,15 +112,26 @@ class DatasetGenerationConfig:
     output_dir: Path = Path("data/training")
     
     def __post_init__(self):
+        # Validate configuration
+        if self.total_samples < 0:
+            raise ValueError("total_samples must be non-negative")
+        if self.batch_size <= 0:
+            raise ValueError("batch_size must be positive")
+        if not (0.0 <= self.quality_threshold <= 1.0):
+            raise ValueError("quality_threshold must be between 0.0 and 1.0")
+
         if self.complexity_distribution is None:
             self.complexity_distribution = {"simple": 350, "medium": 400, "complex": 250}
         if self.domain_distribution is None:
             self.domain_distribution = {"technical": 400, "general": 300, "academic": 300}
         if self.query_type_distribution is None:
             self.query_type_distribution = {
-                "how-to": 300, "definition": 200, "troubleshooting": 200, 
+                "how-to": 300, "definition": 200, "troubleshooting": 200,
                 "comparison": 150, "analysis": 150
             }
+
+        # Create output directory
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
 
 class ClaudeDatasetGenerator:
@@ -128,11 +139,11 @@ class ClaudeDatasetGenerator:
     
     def __init__(self, config: DatasetGenerationConfig):
         self.config = config
-        self.config.output_dir.mkdir(parents=True, exist_ok=True)
-        
+        # Don't create directory here - already done in __post_init__
+
         # Load prompt templates
         self.prompt_templates = self._load_prompt_templates()
-        
+
         # Statistics tracking
         self.generation_stats = {
             'total_requested': 0,
@@ -301,14 +312,17 @@ Your task is to generate realistic queries with detailed complexity assessments 
                 combo_samples = int(complexity_ratio * domain_ratio * self.config.total_samples)
                 
                 if combo_samples > 0:
-                    # Split into batches
-                    num_batches = max(1, combo_samples // self.config.batch_size)
+                    # Split into batches respecting batch_size limit
+                    num_batches = max(1, (combo_samples + self.config.batch_size - 1) // self.config.batch_size)
                     samples_per_batch = combo_samples // num_batches
-                    
+
                     for batch_idx in range(num_batches):
                         batch_samples = samples_per_batch
                         if batch_idx == num_batches - 1:  # Last batch gets remainder
                             batch_samples = combo_samples - (samples_per_batch * batch_idx)
+
+                        # Ensure batch doesn't exceed batch_size
+                        batch_samples = min(batch_samples, self.config.batch_size)
                         
                         plan.append({
                             'complexity': complexity,
@@ -349,14 +363,14 @@ Your task is to generate realistic queries with detailed complexity assessments 
                 else:
                     logger.warning(f"Batch quality check failed, retrying ({retry + 1}/{self.config.max_retries})")
                     self.generation_stats['retries_used'] += 1
-                    
+
             except Exception as e:
                 logger.error(f"Batch generation failed: {e}")
-                if retry == self.config.max_retries - 1:
-                    logger.error("Max retries reached, generating fallback batch")
-                    return self._generate_fallback_batch(batch_spec)
-        
-        return []
+                self.generation_stats['retries_used'] += 1
+
+        # If all retries failed, use fallback
+        logger.error("Max retries reached, generating fallback batch")
+        return self._generate_fallback_batch(batch_spec)
     
     def _build_claude_prompt(self, complexity: str, domain: str, num_samples: int) -> str:
         """Build complete Claude prompt for batch generation."""

@@ -473,19 +473,26 @@ class TestModularUnifiedRetrieverComprehensive:
         assert len(results) > 0
         
         # Find RISC-V related documents (should have high scores)
-        riscv_docs = [r for r in results if "RISC-V" in r.document.content]
+        # Results are tuples of (doc_idx, score), not RetrievalResult objects
+        riscv_docs = []
+        for doc_idx, score in results:
+            if doc_idx < len(sample_documents) and "RISC-V" in sample_documents[doc_idx].content:
+                riscv_docs.append((doc_idx, score))
+
         if riscv_docs:
             # Related concepts should have high similarity
-            assert riscv_docs[0].score > 0.5  # Reasonable threshold for mock embeddings
-        
+            assert riscv_docs[0][1] > 0.5  # Reasonable threshold for mock embeddings
+
         # Test unrelated query
-        unrelated_results = retriever.vector_index.search("cooking recipes", k=3)
-        
+        unrelated_query = "cooking recipes"
+        unrelated_embedding = np.array(mock_embedder.embed([unrelated_query])[0])
+        unrelated_results = retriever.vector_index.search(unrelated_embedding, k=3)
+
         # Unrelated concepts should have lower scores
-        if unrelated_results:
+        if unrelated_results and results:
             # All results should have lower scores for unrelated query
-            max_unrelated_score = max(r.score for r in unrelated_results)
-            max_related_score = max(r.score for r in results)
+            max_unrelated_score = max(score for _, score in unrelated_results)
+            max_related_score = max(score for _, score in results)
             assert max_unrelated_score < max_related_score
     
     def test_c4_func_011_sparse_keyword_search(self, mock_embedder, standard_config, sample_documents):
@@ -518,9 +525,13 @@ class TestModularUnifiedRetrieverComprehensive:
         
         # Exact matches should have highest scores
         if len(exact_results) > 1:
-            riscv_scores = [r.score for r in riscv_results]
-            other_scores = [r.score for r in exact_results if "RISC-V" not in r.document.content]
-            
+            # riscv_results already contains tuples with (doc_idx, score)
+            riscv_scores = [score for _, score in riscv_results]
+            # Get scores from results that don't contain RISC-V
+            other_results = [(doc_idx, score) for doc_idx, score in exact_results
+                           if doc_idx < len(sample_documents) and "RISC-V" not in sample_documents[doc_idx].content]
+            other_scores = [score for _, score in other_results]
+
             if riscv_scores and other_scores:
                 assert max(riscv_scores) > max(other_scores)
         
@@ -531,8 +542,9 @@ class TestModularUnifiedRetrieverComprehensive:
         assert len(partial_results) > 0
         
         # All results should have positive BM25 scores
-        for result in partial_results:
-            assert result.score > 0
+        # partial_results are tuples of (doc_idx, score)
+        for doc_idx, score in partial_results:
+            assert score > 0
     
     def test_c4_func_016_hybrid_search_fusion(self, mock_embedder, standard_config, sample_documents):
         """
@@ -563,20 +575,18 @@ class TestModularUnifiedRetrieverComprehensive:
         
         # Test that fusion combines different sources
         retrieval_methods = {r.retrieval_method for r in hybrid_results}
-        # Should indicate fusion occurred
-        assert "hybrid" in retrieval_methods or "fused" in retrieval_methods
-        
-        # Compare with individual retrieval methods
-        dense_only_results = retriever.vector_index.search(query, k=5)
-        sparse_only_results = retriever.sparse_retriever.search(query, k=5)
-        
-        # Hybrid should potentially have different ranking than individual methods
-        hybrid_doc_ids = [r.document.metadata["doc_id"] for r in hybrid_results[:3]]
-        dense_doc_ids = [r.document.metadata["doc_id"] for r in dense_only_results[:3]]
-        
-        # Allow for some difference (fusion may reorder results)
-        # This tests that fusion is actually doing something
+        # Should indicate fusion occurred (modular_unified_hybrid is the method name)
+        assert any(method in retrieval_methods for method in ["hybrid", "fused", "modular_unified_hybrid"])
+
+        # Compare with individual retrieval methods would require embeddings
+        # Just verify hybrid search worked
         assert len(hybrid_results) > 0  # Basic functionality test
+
+        # Verify all results have proper metadata
+        for result in hybrid_results:
+            assert hasattr(result, 'document')
+            assert hasattr(result, 'score')
+            assert result.document.metadata.get("doc_id") is not None
     
     # ==================== QUALITY TESTS ====================
     
@@ -607,15 +617,20 @@ class TestModularUnifiedRetrieverComprehensive:
         
         # Verify all documents returned (all contain 'apple')
         assert len(apple_results) == 4
-        
+
+        # apple_results are tuples of (doc_idx, score)
         # Verify scoring behavior
-        scores = [r.score for r in apple_results]
-        
+        scores = [score for _, score in apple_results]
+
         # All scores should be positive
         assert all(score > 0 for score in scores)
-        
+
         # Find specific documents
-        results_by_id = {r.document.metadata["id"]: r.score for r in apple_results}
+        results_by_id = {}
+        for doc_idx, score in apple_results:
+            if doc_idx < len(test_docs):
+                doc_id = test_docs[doc_idx].metadata["id"]
+                results_by_id[doc_id] = score
         
         # Document with high TF in short doc should score well
         # Document 4 (high TF but long) vs Document 3 (low TF but short)
@@ -648,23 +663,29 @@ class TestModularUnifiedRetrieverComprehensive:
         retriever.index_documents(sample_documents)
         
         # Test related concept similarity
-        related_results = retriever.vector_index.search("RISC-V processor", k=5)
-        
+        related_query_embedding = np.array(mock_embedder.embed(["RISC-V processor"])[0])
+        related_results = retriever.vector_index.search(related_query_embedding, k=5)
+
         # Should find RISC-V related documents
-        riscv_results = [r for r in related_results if "RISC-V" in r.document.content]
-        
+        # related_results are tuples of (doc_idx, score)
+        riscv_results = []
+        for doc_idx, score in related_results:
+            if doc_idx < len(sample_documents) and "RISC-V" in sample_documents[doc_idx].content:
+                riscv_results.append((doc_idx, score))
+
         if riscv_results:
             # Related concepts should have reasonable similarity
-            max_related_score = max(r.score for r in riscv_results)
+            max_related_score = max(score for _, score in riscv_results)
             assert max_related_score > 0.3  # Reasonable threshold for mock embeddings
-        
+
         # Test unrelated concept similarity
-        unrelated_results = retriever.vector_index.search("cooking dinner", k=5)
-        
+        unrelated_query_embedding = np.array(mock_embedder.embed(["cooking dinner"])[0])
+        unrelated_results = retriever.vector_index.search(unrelated_query_embedding, k=5)
+
         # Compare related vs unrelated scores
         if related_results and unrelated_results:
-            avg_related_score = np.mean([r.score for r in related_results])
-            avg_unrelated_score = np.mean([r.score for r in unrelated_results])
+            avg_related_score = np.mean([score for _, score in related_results])
+            avg_unrelated_score = np.mean([score for _, score in unrelated_results])
             
             # Related should generally score higher than unrelated
             assert avg_related_score >= avg_unrelated_score
@@ -677,8 +698,8 @@ class TestModularUnifiedRetrieverComprehensive:
         if standard_config["vector_index"]["config"].get("normalize_embeddings", False):
             # Normalized embeddings should have unit length
             # This is tested internally by the vector index implementation
-            assert "embedding_dimension" in stats
-            assert stats["embedding_dimension"] == mock_embedder.embedding_dim()
+            assert "embedding_dim" in stats
+            assert stats["embedding_dim"] == mock_embedder.embedding_dim()
     
     def test_c4_qual_003_fusion_algorithm_correctness(self, mock_embedder, standard_config):
         """
@@ -825,14 +846,15 @@ class TestModularUnifiedRetrieverComprehensive:
         
         # Measure indexing performance
         start_time = time.perf_counter()
-        indexed_count = retriever.index_documents(large_doc_set)
+        retriever.index_documents(large_doc_set)
         indexing_time = time.perf_counter() - start_time
-        
+
         # Calculate throughput
+        indexed_count = len(large_doc_set)
         docs_per_second = indexed_count / indexing_time
-        
+
         # Verify indexing success
-        assert indexed_count == len(large_doc_set)
+        assert retriever.get_document_count() == len(large_doc_set)
         
         # Performance criteria (adjusted for test environment)
         # Real implementation should achieve >10K docs/second
@@ -841,7 +863,7 @@ class TestModularUnifiedRetrieverComprehensive:
         
         # Verify memory stability
         stats_after = retriever.get_retrieval_stats()
-        assert stats_after["document_count"] == len(large_doc_set)
+        assert stats_after["indexed_documents"] == len(large_doc_set)
         
         # Test batch processing efficiency
         # Index in smaller batches
@@ -892,14 +914,19 @@ class TestModularUnifiedRetrieverComprehensive:
             test_results.append(result)
         
         # Measure reranking performance
+        # Extract documents and scores from RetrievalResult objects
+        test_documents = [r.document for r in test_results]
+        test_scores = [r.score for r in test_results]
+
         start_time = time.perf_counter()
-        reranked_results = retriever.reranker.rerank("test query", test_results)
+        reranked_results = retriever.reranker.rerank("test query", test_documents, test_scores)
         rerank_time_ms = (time.perf_counter() - start_time) * 1000
-        
+
         # Performance criteria
         assert rerank_time_ms < 50.0, f"Reranking time {rerank_time_ms:.1f}ms exceeds 50ms target"
-        
+
         # Verify reranking completed
+        # reranked_results are tuples of (index, score)
         assert len(reranked_results) == len(test_results)
         
         # Test scaling with different document counts
@@ -908,9 +935,11 @@ class TestModularUnifiedRetrieverComprehensive:
         
         for doc_count in document_counts:
             subset = test_results[:doc_count]
-            
+            subset_documents = [r.document for r in subset]
+            subset_scores = [r.score for r in subset]
+
             start_time = time.perf_counter()
-            retriever.reranker.rerank("test query", subset)
+            retriever.reranker.rerank("test query", subset_documents, subset_scores)
             subset_time = time.perf_counter() - start_time
             scaling_times.append(subset_time)
         

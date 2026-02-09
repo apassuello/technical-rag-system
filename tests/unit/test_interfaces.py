@@ -478,12 +478,12 @@ class TestBackendStatus:
         """Test basic BackendStatus creation."""
         status = BackendStatus(
             backend_name="openai_api",
-            is_available=True,
+            is_healthy=True,
             health_metrics={"response_time": 0.8, "rate_limit_remaining": 1000},
             error_message=None
         )
         assert status.backend_name == "openai_api"
-        assert status.is_available is True
+        assert status.is_healthy is True
         assert status.health_metrics["response_time"] == 0.8
         assert status.error_message is None
         assert isinstance(status.last_check, float)
@@ -492,21 +492,21 @@ class TestBackendStatus:
         """Test BackendStatus with error condition."""
         status = BackendStatus(
             backend_name="ollama_local",
-            is_available=False,
+            is_healthy=False,
             error_message="Connection refused"
         )
-        assert status.is_available is False
+        assert status.is_healthy is False
         assert status.error_message == "Connection refused"
     
     def test_backend_status_empty_backend_name_raises_error(self):
         """Test that empty backend_name raises ValueError."""
         with pytest.raises(ValueError, match="backend_name cannot be empty"):
-            BackendStatus(backend_name="", is_available=True)
+            BackendStatus(backend_name="", is_healthy=True)
     
-    def test_backend_status_invalid_is_available_type_raises_error(self):
-        """Test that non-boolean is_available raises TypeError."""
-        with pytest.raises(TypeError, match="is_available must be a boolean"):
-            BackendStatus(backend_name="test", is_available="not_boolean")
+    def test_backend_status_invalid_is_healthy_type_raises_error(self):
+        """Test that non-boolean is_healthy raises TypeError."""
+        with pytest.raises(TypeError, match="is_healthy must be a boolean"):
+            BackendStatus(backend_name="test", is_healthy="not_boolean")
 
 
 # ==============================================================================
@@ -940,7 +940,7 @@ class TestBackendManagementService:
             def get_backend_status(self, backend_name):
                 return BackendStatus(
                     backend_name=backend_name,
-                    is_available=backend_name in self.backends
+                    is_healthy=backend_name in self.backends
                 )
             
             def migrate_component_data(self, component, from_backend, to_backend):

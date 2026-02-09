@@ -169,14 +169,17 @@ class ModelRecommender:
                 - cost_multipliers: Adjust cost estimates
         """
         self.config = config or {}
-        
+
         # Load routing strategy
         strategy_name = self.config.get('strategy', 'balanced')
         try:
-            self.strategy = RoutingStrategy(strategy_name)
+            self._strategy_enum = RoutingStrategy(strategy_name)
         except ValueError:
             logger.warning(f"Unknown strategy {strategy_name}, using balanced")
-            self.strategy = RoutingStrategy.BALANCED
+            self._strategy_enum = RoutingStrategy.BALANCED
+
+        # Expose strategy as string for test compatibility
+        self.strategy = self._strategy_enum.value
         
         # Load model mappings
         self.model_mappings = self._load_model_mappings()
@@ -190,7 +193,7 @@ class ModelRecommender:
         # Cost adjustment factors
         self.cost_multipliers = self.config.get('cost_multipliers', {})
         
-        logger.info(f"Initialized ModelRecommender with strategy: {self.strategy.value}")
+        logger.info(f"Initialized ModelRecommender with strategy: {self.strategy}")
     
     def _load_model_mappings(self) -> Dict[str, ModelConfig]:
         """
@@ -214,23 +217,34 @@ class ModelRecommender:
         return mappings
     
     def recommend(
-        self, 
-        classification: Dict[str, Any],
+        self,
+        complexity_level_or_dict,
+        complexity_score_or_features=None,
+        confidence: Optional[float] = None,
         features: Optional[Dict[str, Any]] = None
-    ) -> ModelRecommendation:
+    ) -> Dict[str, Any]:
         """
-        Recommend model based on classification and strategy.
-        
-        Args:
-            classification: Classification result from ComplexityClassifier
-            features: Optional feature dictionary for advanced routing
-            
+        Recommend model based on complexity level and scores.
+
+        Supports two calling conventions:
+            1. recommend('simple', 0.2, 0.9) — positional args
+            2. recommend({'level': 'simple', 'score': 0.2, 'confidence': 0.9}, features) — dict
+
         Returns:
-            ModelRecommendation with model selection and metadata
+            Dictionary with model recommendation details
         """
-        level = classification.get('level', 'medium')
-        complexity_score = classification.get('score', 0.5)
-        classification_confidence = classification.get('confidence', 0.8)
+        if isinstance(complexity_level_or_dict, dict):
+            # Old dict-based API
+            classification = complexity_level_or_dict
+            level = classification.get('level', classification.get('complexity_level', 'medium'))
+            complexity_score = classification.get('score', classification.get('complexity_score', 0.5))
+            classification_confidence = classification.get('confidence', 0.5)
+            features = complexity_score_or_features  # second arg is features in old API
+        else:
+            # New positional API
+            level = complexity_level_or_dict
+            complexity_score = complexity_score_or_features if complexity_score_or_features is not None else 0.5
+            classification_confidence = confidence if confidence is not None else 0.5
         
         # Get base model for complexity level
         model_config = self._get_model_for_level(level)
@@ -255,24 +269,26 @@ class ModelRecommender:
         reasoning = self._generate_reasoning(
             level,
             model_config,
-            self.strategy,
+            self._strategy_enum,
             complexity_score
         )
         
         # Build full model identifier
         full_model = f"{model_config.provider}:{model_config.model}"
-        
-        return ModelRecommendation(
-            model=full_model,
-            provider=model_config.provider,
-            model_name=model_config.model,
-            complexity_level=level,
-            confidence=routing_confidence,
-            cost_estimate=cost_estimate,
-            latency_estimate=latency_estimate,
-            fallback_chain=fallback_chain,
-            reasoning=reasoning
-        )
+
+        # Return dictionary for test compatibility
+        return {
+            'model': full_model,
+            'provider': model_config.provider,
+            'model_name': model_config.model,
+            'complexity_level': level,
+            'confidence': routing_confidence,
+            'cost_estimate': cost_estimate,
+            'latency_estimate': latency_estimate,
+            'fallback_models': fallback_chain,
+            'strategy_used': self.strategy,
+            'reasoning': reasoning
+        }
     
     def _get_model_for_level(self, level: str) -> ModelConfig:
         """
@@ -304,8 +320,8 @@ class ModelRecommender:
             Adjusted ModelConfig based on strategy
         """
         # Check for strategy overrides
-        if self.strategy in self.STRATEGY_OVERRIDES:
-            overrides = self.STRATEGY_OVERRIDES[self.strategy]
+        if self._strategy_enum in self.STRATEGY_OVERRIDES:
+            overrides = self.STRATEGY_OVERRIDES[self._strategy_enum]
             if level in overrides:
                 # Parse override model string
                 model_str = overrides[level]
@@ -321,12 +337,12 @@ class ModelRecommender:
                 )
         
         # Additional strategy-specific logic
-        if self.strategy == RoutingStrategy.COST_OPTIMIZED:
+        if self._strategy_enum == RoutingStrategy.COST_OPTIMIZED:
             # Consider downgrading if features suggest simpler query
             if features and features.get('composite_features', {}).get('is_simple_lookup'):
                 return self._get_model_for_level('simple')
         
-        elif self.strategy == RoutingStrategy.QUALITY_FIRST:
+        elif self._strategy_enum == RoutingStrategy.QUALITY_FIRST:
             # Consider upgrading if features suggest complexity
             if features and features.get('composite_features', {}).get('requires_deep_understanding'):
                 return self._get_model_for_level('complex')
@@ -354,15 +370,15 @@ class ModelRecommender:
         # Adjust based on strategy alignment
         strategy_adjustment = 0.0
         
-        if self.strategy == RoutingStrategy.BALANCED:
+        if self._strategy_enum == RoutingStrategy.BALANCED:
             # Balanced strategy has high confidence in middle ranges
             if 0.3 < complexity_score < 0.7:
                 strategy_adjustment = 0.05
-        elif self.strategy == RoutingStrategy.COST_OPTIMIZED:
+        elif self._strategy_enum == RoutingStrategy.COST_OPTIMIZED:
             # Cost strategy has high confidence for simple queries
             if complexity_score < 0.4:
                 strategy_adjustment = 0.08
-        elif self.strategy == RoutingStrategy.QUALITY_FIRST:
+        elif self._strategy_enum == RoutingStrategy.QUALITY_FIRST:
             # Quality strategy has high confidence for complex queries
             if complexity_score > 0.6:
                 strategy_adjustment = 0.08
@@ -602,17 +618,18 @@ class ModelRecommender:
         # Temporarily update strategy if different from default
         original_strategy = self.strategy
         try:
-            if strategy != self.strategy.value:
+            if strategy != self.strategy:
                 try:
-                    self.strategy = RoutingStrategy(strategy)
+                    self._strategy_enum = RoutingStrategy(strategy)
+                    self.strategy = self._strategy_enum.value
                 except ValueError:
-                    logger.warning(f"Unknown strategy {strategy}, using {original_strategy.value}")
+                    logger.warning(f"Unknown strategy {strategy}, using {original_strategy}")
             
             # Get full recommendation
             recommendation = self.recommend(classification, features)
             
             # Return just the model identifier
-            return recommendation.model
+            return recommendation['model']
             
         finally:
             # Restore original strategy
@@ -621,7 +638,7 @@ class ModelRecommender:
     def get_statistics(self) -> Dict[str, Any]:
         """Get recommender configuration statistics."""
         return {
-            'strategy': self.strategy.value,
+            'strategy': self.strategy,
             'model_mappings': {
                 level: f"{config.provider}:{config.model}"
                 for level, config in self.model_mappings.items()

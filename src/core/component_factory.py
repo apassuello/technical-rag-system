@@ -88,6 +88,7 @@ class ComponentFactory:
     }
     
     _QUERY_PROCESSORS: Dict[str, str] = {
+        "basic": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",  # Alias for basic usage
         "modular": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",
         "modular_query_processor": "src.components.query_processors.modular_query_processor.ModularQueryProcessor",  # Alias for compatibility
         "domain_aware": "src.components.query_processors.domain_aware_query_processor.DomainAwareQueryProcessor",  # Epic 1 Phase 1 Domain-Aware Processor
@@ -937,7 +938,7 @@ class ComponentFactory:
             logger.debug(f"Creating {processor_type} query processor with args: {kwargs}")
             
             # Special handling for ModularQueryProcessor
-            if processor_type == 'modular' or processor_type == 'modular_query_processor':
+            if processor_type == 'modular' or processor_type == 'modular_query_processor' or processor_type == 'basic':
                 # ModularQueryProcessor needs retriever and generator instances
                 from src.components.query_processors.base import QueryProcessorConfig
 
@@ -981,6 +982,52 @@ class ComponentFactory:
                     generator=generator,
                     config=config,
                     **kwargs  # Any remaining kwargs
+                )
+            # Special handling for DomainAwareQueryProcessor (Epic 1)
+            elif processor_type == 'domain_aware' or processor_type == 'epic1_domain_aware':
+                # DomainAwareQueryProcessor extends ModularQueryProcessor
+                from src.components.query_processors.base import QueryProcessorConfig
+
+                # Get or create required dependencies
+                retriever = kwargs.pop('retriever', None)
+                generator = kwargs.pop('generator', None)
+
+                if retriever is None:
+                    embedder = cls.create_embedder('sentence_transformer')
+                    retriever = cls.create_retriever('modular_unified', embedder=embedder)
+
+                if generator is None:
+                    generator = cls.create_generator('adaptive_modular')
+
+                # Build config from kwargs (DomainAwareQueryProcessor accepts same config as ModularQueryProcessor)
+                analyzer_type = kwargs.pop('analyzer_type', 'rule_based')
+                config_dict = {
+                    'analyzer_type': analyzer_type,
+                    'analyzer_config': kwargs.pop('analyzer_config', {}),
+                    'selector_type': kwargs.pop('selector_type', 'token_limit'),
+                    'selector_config': kwargs.pop('selector_config', {}),
+                    'assembler_type': kwargs.pop('assembler_type', 'standard'),
+                    'assembler_config': kwargs.pop('assembler_config', {}),
+                    'domain_filter': kwargs.pop('domain_filter', {})
+                }
+
+                # Remove legacy parameters
+                legacy_params = ['default_k', 'min_confidence', 'enable_performance_monitoring']
+                for param in legacy_params:
+                    kwargs.pop(param, None)
+
+                # Remove config from kwargs if it exists
+                kwargs.pop('config', None)
+
+                # Create processor with correct arguments
+                # DomainAwareQueryProcessor accepts: retriever, generator, analyzer, selector, assembler, config, enable_domain_filtering
+                return cls._create_with_tracking(
+                    processor_class,
+                    f"query_processor_{processor_type}",
+                    retriever=retriever,
+                    generator=generator,
+                    config=config_dict,
+                    **kwargs  # Any remaining kwargs (e.g., enable_domain_filtering)
                 )
             # Special handling for IntelligentQueryProcessor (Epic 5 Phase 2 Block 3)
             elif processor_type == 'intelligent' or processor_type == 'epic5_intelligent':

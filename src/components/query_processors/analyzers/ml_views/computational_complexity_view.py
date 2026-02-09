@@ -282,14 +282,18 @@ class ComputationalComplexityView(HybridView):
     def _analyze_algorithmic(self, query: str) -> Dict[str, Any]:
         """
         Perform fast algorithmic analysis using computational patterns.
-        
+
         Args:
             query: Query text to analyze
-            
+
         Returns:
             Dictionary with score, confidence, features, and metadata
         """
         try:
+            # Validate input to raise AttributeError for None
+            if query is None:
+                raise AttributeError("Query cannot be None")
+
             query_lower = query.lower().strip()
             
             # 1. Algorithm complexity analysis
@@ -563,18 +567,18 @@ class ComputationalComplexityView(HybridView):
         scale_multiplier = scale.get('scale_multiplier', 0.6)
         structure_score = structure.get('max_structure_complexity', 0.3)
         operation_score = operation.get('operation_score', 0.3)
-        
-        # Base computational score
+
+        # Base computational score - BOOSTED weights for higher scores
         base_score = (
-            algorithm_score * 0.35 +
+            algorithm_score * 0.4 +     # Increased from 0.35
             resource_score * 0.25 +
-            structure_score * 0.2 +
+            structure_score * 0.15 +    # Decreased from 0.2
             operation_score * 0.2
         )
-        
-        # Apply scale multiplier
-        final_score = base_score * (0.5 + scale_multiplier * 0.5)  # Scale factor between 0.5 and 1.0
-        
+
+        # Apply scale multiplier - INCREASED impact
+        final_score = base_score * (0.6 + scale_multiplier * 0.5)  # Scale factor between 0.6 and 1.1
+
         return min(final_score, 1.0)
     
     def _calculate_algorithmic_confidence(

@@ -295,20 +295,89 @@ class FAISSIndex(VectorIndex):
     def get_memory_usage(self) -> Dict[str, Any]:
         """
         Get memory usage statistics.
-        
+
         Returns:
             Dictionary with memory usage information
         """
         if self.index is None or self.embedding_dim is None:
             return {"total_bytes": 0, "per_document_bytes": 0}
-        
+
         # Estimate memory usage
         vectors_bytes = self.index.ntotal * self.embedding_dim * 4  # float32
         metadata_bytes = len(self.documents) * 1024  # Rough estimate for document metadata
-        
+
         return {
             "total_bytes": vectors_bytes + metadata_bytes,
             "vectors_bytes": vectors_bytes,
             "metadata_bytes": metadata_bytes,
             "per_document_bytes": (vectors_bytes + metadata_bytes) / max(1, len(self.documents))
         }
+
+    def get_health_status(self) -> Dict[str, Any]:
+        """
+        Get health status of the FAISS index.
+
+        Returns:
+            Dictionary with health status information
+        """
+        is_healthy = True
+        issues = []
+
+        if self.index is None:
+            is_healthy = False
+            issues.append("Index not initialized")
+
+        if self.embedding_dim is None:
+            is_healthy = False
+            issues.append("Embedding dimension not set")
+
+        if not self.is_trained():
+            is_healthy = False
+            issues.append("Index not trained")
+
+        return {
+            "is_healthy": is_healthy,
+            "issues": issues,
+            "metrics": {
+                "document_count": len(self.documents),
+                "index_trained": self.is_trained(),
+                "embedding_dim": self.embedding_dim,
+                "index_type": self.index_type
+            }
+        }
+
+    def get_component_info(self) -> Dict[str, Any]:
+        """
+        Get component information for logging and debugging.
+
+        Returns:
+            Dictionary with component details
+        """
+        return {
+            "type": "vector_index",
+            "class": self.__class__.__name__,
+            "module": self.__class__.__module__,
+            **self.get_index_info()
+        }
+
+    def get_capabilities(self) -> List[str]:
+        """
+        Get list of capabilities this index provides.
+
+        Returns:
+            List of capability strings
+        """
+        capabilities = [
+            "dense_search",
+            "similarity_search",
+            "configurable_metrics"
+        ]
+
+        if self.index_type == "IndexIVFFlat":
+            capabilities.append("approximate_search")
+        elif self.index_type == "IndexHNSWFlat":
+            capabilities.append("hnsw_search")
+        else:
+            capabilities.append("exact_search")
+
+        return capabilities

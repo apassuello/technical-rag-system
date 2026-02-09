@@ -213,9 +213,14 @@ def mock_config_manager():
     """Mock ConfigManager for configuration service testing."""
     mock_manager = Mock()
     mock_manager.config.document_processor.type = "hybrid_pdf"
-    mock_manager.config.document_processor.config = {"chunk_size": 1000}
+    mock_manager.config.document_processor.config = {"chunk_size": 1000, "overlap": 100}
     mock_manager.config.embedder.type = "sentence_transformer"
     mock_manager.config.embedder.config = {"model": "test-model"}
+    mock_manager.config.retriever.type = "unified"
+    mock_manager.config.retriever.config = {"dense_weight": 0.7}
+    mock_manager.config.answer_generator.type = "ollama"
+    mock_manager.config.answer_generator.config = {"model": "test-generator"}
+    mock_manager.config.global_settings = {"environment": "development"}
     mock_manager.reload.return_value = None
     return mock_manager
 

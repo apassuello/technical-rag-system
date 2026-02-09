@@ -135,7 +135,7 @@ class NeuralReranker(Reranker):
         self._error_count = 0
         self._last_performance_check = time.time()
         
-        # Initialize immediately if enabled (remove lazy initialization)
+        # Initialize immediately if enabled and requested
         initialize_immediately = config.get("initialize_immediately", True)
         if self.enabled and initialize_immediately:
             try:
@@ -145,8 +145,10 @@ class NeuralReranker(Reranker):
                 logger.warning("Disabling neural reranker and falling back to identity mode")
                 self.enabled = False
                 self._initialized = True  # Mark as initialized even when disabled
-        else:
-            self._initialized = True  # Mark as initialized when disabled
+        elif not self.enabled:
+            # If disabled, mark as initialized to prevent further initialization attempts
+            self._initialized = True
+        # If enabled but initialize_immediately=False, leave _initialized=False for lazy init
         
         logger.info(f"Enhanced NeuralReranker initialized with {len(self.models_config)} models, "
                    f"enabled={self.enabled}, initialized={self._initialized}")

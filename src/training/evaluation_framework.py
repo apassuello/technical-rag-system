@@ -72,17 +72,21 @@ class ViewEvaluator:
     ) -> EvaluationMetrics:
         """
         Comprehensive evaluation of model predictions.
-        
+
         Args:
             predictions: Dictionary containing predictions and targets
             compute_detailed_metrics: Whether to compute detailed metrics
-            
+
         Returns:
             EvaluationMetrics object with all computed metrics
         """
         score_preds = predictions['score_predictions']
         class_preds = predictions['class_predictions']
         targets = predictions['targets']
+
+        # Validate array shapes
+        if len(class_preds) != len(targets):
+            raise ValueError(f"Mismatched array length: predictions ({len(class_preds)}) vs targets ({len(targets)})")
         
         # Convert targets to scores (for regression metrics)
         target_scores = self._class_to_score(targets)
@@ -106,11 +110,22 @@ class ViewEvaluator:
         cm = confusion_matrix(targets, class_preds)
         
         # Classification report
-        report = classification_report(
-            targets, class_preds,
-            target_names=self.class_names,
-            output_dict=True
-        )
+        # Only use target_names if all classes are present in targets
+        unique_classes = np.unique(targets)
+        if len(unique_classes) == len(self.class_names):
+            report = classification_report(
+                targets, class_preds,
+                target_names=self.class_names,
+                output_dict=True
+            )
+        else:
+            # Use subset of class names for present classes
+            present_class_names = [self.class_names[i] for i in sorted(unique_classes)]
+            report = classification_report(
+                targets, class_preds,
+                target_names=present_class_names,
+                output_dict=True
+            )
         
         metrics = EvaluationMetrics(
             accuracy=accuracy,
@@ -323,9 +338,9 @@ class ViewEvaluator:
         score_preds = predictions['score_predictions']
         targets = predictions['targets']
         target_scores = self._class_to_score(targets)
-        
+
         bias = np.mean(score_preds - target_scores)
-        if abs(bias) > 0.1:
+        if abs(bias) > 0.05:  # Lower threshold for better bias detection
             if bias > 0:
                 analysis['weaknesses'].append(f"Model tends to overpredict complexity (bias=+{bias:.3f})")
             else:
@@ -573,54 +588,64 @@ class EnsembleEvaluator:
         save_path: Optional[Path] = None
     ) -> None:
         """Plot comparison of ensemble vs individual view performance."""
-        
+
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-        
+
+        # Flatten axes for easier indexing if needed
+        if isinstance(axes, np.ndarray):
+            axes_flat = axes.flatten() if axes.ndim > 1 else axes
+        else:
+            axes_flat = [axes]
+
         # Accuracy comparison
         view_names = list(ensemble_report['individual_view_performance'].keys())
-        accuracies = [ensemble_report['individual_view_performance'][name]['accuracy'] 
+        accuracies = [ensemble_report['individual_view_performance'][name]['accuracy']
                      for name in view_names]
         accuracies.append(ensemble_report['ensemble_performance']['accuracy'])
         names = view_names + ['Ensemble']
-        
-        axes[0, 0].bar(names, accuracies, color='skyblue', alpha=0.7)
-        axes[0, 0].axhline(y=0.85, color='red', linestyle='--', label='Target (85%)')
-        axes[0, 0].set_title('Accuracy Comparison')
-        axes[0, 0].set_ylabel('Accuracy')
-        axes[0, 0].tick_params(axis='x', rotation=45)
-        axes[0, 0].legend()
-        axes[0, 0].grid(True, alpha=0.3)
-        
+
+        ax0 = axes[0, 0] if isinstance(axes, np.ndarray) else axes
+        ax0.bar(names, accuracies, color='skyblue', alpha=0.7)
+        ax0.axhline(y=0.85, color='red', linestyle='--', label='Target (85%)')
+        ax0.set_title('Accuracy Comparison')
+        ax0.set_ylabel('Accuracy')
+        ax0.tick_params(axis='x', rotation=45)
+        ax0.legend()
+        ax0.grid(True, alpha=0.3)
+
         # F1 scores comparison
-        f1_scores = [ensemble_report['individual_view_performance'][name]['macro_f1'] 
+        f1_scores = [ensemble_report['individual_view_performance'][name]['macro_f1']
                     for name in view_names]
         f1_scores.append(ensemble_report['ensemble_performance']['macro_f1'])
-        
-        axes[0, 1].bar(names, f1_scores, color='lightgreen', alpha=0.7)
-        axes[0, 1].set_title('Macro F1-Score Comparison')
-        axes[0, 1].set_ylabel('Macro F1-Score')
-        axes[0, 1].tick_params(axis='x', rotation=45)
-        axes[0, 1].grid(True, alpha=0.3)
-        
+
+        ax1 = axes[0, 1] if isinstance(axes, np.ndarray) else axes
+        ax1.bar(names, f1_scores, color='lightgreen', alpha=0.7)
+        ax1.set_title('Macro F1-Score Comparison')
+        ax1.set_ylabel('Macro F1-Score')
+        ax1.tick_params(axis='x', rotation=45)
+        ax1.grid(True, alpha=0.3)
+
         # View contributions
+        ax2 = axes[1, 0] if isinstance(axes, np.ndarray) else axes
         if 'correlation_with_ensemble' in ensemble_report['view_contributions']:
             correlations = ensemble_report['view_contributions']['correlation_with_ensemble']
-            axes[1, 0].bar(correlations.keys(), correlations.values(), color='orange', alpha=0.7)
-            axes[1, 0].set_title('View Correlation with Ensemble')
-            axes[1, 0].set_ylabel('Correlation Coefficient')
-            axes[1, 0].tick_params(axis='x', rotation=45)
-            axes[1, 0].grid(True, alpha=0.3)
-        
+            ax2.bar(correlations.keys(), correlations.values(), color='orange', alpha=0.7)
+            ax2.set_title('View Correlation with Ensemble')
+            ax2.set_ylabel('Correlation Coefficient')
+            ax2.tick_params(axis='x', rotation=45)
+            ax2.grid(True, alpha=0.3)
+
         # R² comparison
-        r2_scores = [ensemble_report['individual_view_performance'][name]['r2'] 
+        r2_scores = [ensemble_report['individual_view_performance'][name]['r2']
                     for name in view_names]
         r2_scores.append(ensemble_report['ensemble_performance']['r2'])
-        
-        axes[1, 1].bar(names, r2_scores, color='lightcoral', alpha=0.7)
-        axes[1, 1].set_title('R² Score Comparison')
-        axes[1, 1].set_ylabel('R² Score')
-        axes[1, 1].tick_params(axis='x', rotation=45)
-        axes[1, 1].grid(True, alpha=0.3)
+
+        ax3 = axes[1, 1] if isinstance(axes, np.ndarray) else axes
+        ax3.bar(names, r2_scores, color='lightcoral', alpha=0.7)
+        ax3.set_title('R² Score Comparison')
+        ax3.set_ylabel('R² Score')
+        ax3.tick_params(axis='x', rotation=45)
+        ax3.grid(True, alpha=0.3)
         
         plt.tight_layout()
         

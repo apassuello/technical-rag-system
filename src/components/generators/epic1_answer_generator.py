@@ -1148,7 +1148,31 @@ class Epic1AnswerGenerator(AnswerGenerator):
             analyzer_type = query_analyzer_config.get('type')
             if analyzer_type and analyzer_type not in ['epic1', 'rule_based', 'simple']:
                 raise ValueError(f"Invalid query analyzer type: {analyzer_type}. Must be one of: epic1, rule_based, simple")
-    
+
+    def _record_cost_usage(self, provider: str, model: str,
+                          input_tokens: int, output_tokens: int,
+                          cost: Decimal) -> None:
+        """
+        Record cost usage for a model.
+
+        Wrapper method for cost tracker to maintain test compatibility.
+
+        Args:
+            provider: LLM provider name
+            model: Model name
+            input_tokens: Number of input tokens
+            output_tokens: Number of output tokens
+            cost: Cost in USD
+        """
+        if self.cost_tracker:
+            self.cost_tracker.record_usage(
+                provider=provider,
+                model=model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cost_usd=cost
+            )
+
     def _is_model_failure(self, error: Exception) -> bool:
         """
         Detect actual model failures that should trigger fallback handling.

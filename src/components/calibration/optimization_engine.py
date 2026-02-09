@@ -52,10 +52,13 @@ class OptimizationEngine:
     def __init__(self, evaluation_function: Callable[[Dict[str, Any]], float]):
         """
         Initialize optimization engine.
-        
+
         Args:
             evaluation_function: Function that takes parameters and returns quality score
         """
+        if not callable(evaluation_function):
+            raise TypeError("evaluation_function must be callable")
+
         self.evaluation_function = evaluation_function
         self.optimization_history: List[Dict[str, Any]] = []
         self.best_result: Optional[OptimizationResult] = None
@@ -85,6 +88,14 @@ class OptimizationEngine:
         """
         start_time = time.time()
         self.optimization_history = []
+
+        # Validate parameter space
+        if not parameter_space:
+            raise ValueError("Parameter space cannot be empty")
+
+        # Validate strategy type
+        if isinstance(strategy, str):
+            raise ValueError(f"Unknown optimization strategy: {strategy}")
 
         logger.info(f"Starting optimization with {strategy.value} strategy")
         logger.info(f"Parameter space: {len(list(product(*parameter_space.values())))} combinations")

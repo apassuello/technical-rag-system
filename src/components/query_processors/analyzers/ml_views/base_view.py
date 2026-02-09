@@ -68,14 +68,14 @@ class BaseView(ABC):
         logger.debug(f"Model manager set for view '{self.view_name}'")
     
     @abstractmethod
-    async def analyze(self, query: str, mode: str = 'auto') -> ViewResult:
+    def analyze(self, query: str, mode: str = 'auto') -> ViewResult:
         """
         Analyze query complexity from this view's perspective.
-        
+
         Args:
             query: Query text to analyze
             mode: Analysis mode ('algorithmic', 'ml', 'hybrid', 'auto')
-            
+
         Returns:
             ViewResult with complexity analysis
         """
@@ -388,14 +388,33 @@ class HybridView(BaseView):
         # Override in subclasses
         pass
     
-    async def analyze(self, query: str, mode: str = 'auto') -> ViewResult:
+    def analyze(self, query: str, mode: str = 'auto') -> ViewResult:
         """
-        Analyze query using hybrid approach.
-        
+        Analyze query using hybrid approach (synchronous wrapper).
+
         Args:
             query: Query text to analyze
             mode: Analysis mode ('algorithmic', 'ml', 'hybrid', 'auto')
-            
+
+        Returns:
+            ViewResult with hybrid analysis
+        """
+        # For synchronous calls from tests, use direct synchronous path
+        if mode == 'algorithmic':
+            return self._analyze_algorithmic_sync(query)
+        elif mode == 'ml':
+            return self._analyze_ml_sync(query)
+        else:  # hybrid or auto
+            return self._analyze_hybrid_sync(query)
+
+    async def analyze_async(self, query: str, mode: str = 'auto') -> ViewResult:
+        """
+        Analyze query using hybrid approach (async version).
+
+        Args:
+            query: Query text to analyze
+            mode: Analysis mode ('algorithmic', 'ml', 'hybrid', 'auto')
+
         Returns:
             ViewResult with hybrid analysis
         """
@@ -406,27 +425,31 @@ class HybridView(BaseView):
         else:  # hybrid or auto
             return await self._analyze_hybrid(query)
     
-    async def _analyze_hybrid(self, query: str) -> ViewResult:
-        """Perform hybrid analysis combining both approaches."""
+    def _analyze_hybrid_sync(self, query: str) -> ViewResult:
+        """Perform hybrid analysis combining both approaches (synchronous)."""
         start_time = time.time()
-        
+
         try:
-            # Run both analyses
-            algorithmic_task = asyncio.create_task(self._get_algorithmic_result(query))
-            ml_task = asyncio.create_task(self._get_ml_result(query))
-            
-            # Wait for both to complete (or handle partial completion)
-            results = await asyncio.gather(algorithmic_task, ml_task, return_exceptions=True)
-            
-            algorithmic_result = results[0] if not isinstance(results[0], Exception) else None
-            ml_result = results[1] if not isinstance(results[1], Exception) else None
-            
+            # Run both analyses synchronously
+            algorithmic_result = None
+            ml_result = None
+
+            try:
+                algorithmic_result = self._analyze_algorithmic(query)
+            except Exception as e:
+                logger.warning(f"Algorithmic analysis failed for view '{self.view_name}': {e}")
+
+            try:
+                ml_result = self._analyze_ml(query)
+            except Exception as e:
+                logger.warning(f"ML analysis failed for view '{self.view_name}': {e}")
+
             # Combine results
             combined_result = self._combine_results(algorithmic_result, ml_result)
-            
+
             analysis_time_ms = (time.time() - start_time) * 1000
             self._record_analysis(analysis_time_ms, success=True)
-            
+
             return ViewResult(
                 view_name=self.view_name,
                 score=combined_result['score'],
@@ -436,21 +459,57 @@ class HybridView(BaseView):
                 features=combined_result.get('features', {}),
                 metadata=combined_result.get('metadata', {})
             )
-            
+
+        except Exception as e:
+            analysis_time_ms = (time.time() - start_time) * 1000
+            logger.error(f"Hybrid analysis failed for view '{self.view_name}': {e}")
+            return self.get_fallback_result(e, analysis_time_ms)
+
+    async def _analyze_hybrid(self, query: str) -> ViewResult:
+        """Perform hybrid analysis combining both approaches."""
+        start_time = time.time()
+
+        try:
+            # Run both analyses
+            algorithmic_task = asyncio.create_task(self._get_algorithmic_result(query))
+            ml_task = asyncio.create_task(self._get_ml_result(query))
+
+            # Wait for both to complete (or handle partial completion)
+            results = await asyncio.gather(algorithmic_task, ml_task, return_exceptions=True)
+
+            algorithmic_result = results[0] if not isinstance(results[0], Exception) else None
+            ml_result = results[1] if not isinstance(results[1], Exception) else None
+
+            # Combine results
+            combined_result = self._combine_results(algorithmic_result, ml_result)
+
+            analysis_time_ms = (time.time() - start_time) * 1000
+            self._record_analysis(analysis_time_ms, success=True)
+
+            return ViewResult(
+                view_name=self.view_name,
+                score=combined_result['score'],
+                confidence=combined_result['confidence'],
+                method=AnalysisMethod.HYBRID,
+                latency_ms=analysis_time_ms,
+                features=combined_result.get('features', {}),
+                metadata=combined_result.get('metadata', {})
+            )
+
         except Exception as e:
             analysis_time_ms = (time.time() - start_time) * 1000
             logger.error(f"Hybrid analysis failed for view '{self.view_name}': {e}")
             return self.get_fallback_result(e, analysis_time_ms)
     
-    async def _analyze_algorithmic_only(self, query: str) -> ViewResult:
-        """Analyze using only algorithmic approach."""
+    def _analyze_algorithmic_sync(self, query: str) -> ViewResult:
+        """Analyze using only algorithmic approach (synchronous)."""
+        start_time = time.time()
         try:
-            result, analysis_time_ms = await self._measure_analysis_time(
-                lambda: self._analyze_algorithmic(query)
-            )
-            
+            result = self._analyze_algorithmic(query)
+            analysis_time_ms = (time.time() - start_time) * 1000
+
             self._record_analysis(analysis_time_ms, success=True)
-            
+
             return ViewResult(
                 view_name=self.view_name,
                 score=result['score'],
@@ -460,28 +519,50 @@ class HybridView(BaseView):
                 features=result.get('features', {}),
                 metadata=result.get('metadata', {})
             )
-            
+
+        except Exception as e:
+            analysis_time_ms = (time.time() - start_time) * 1000
+            logger.error(f"Algorithmic analysis failed for view '{self.view_name}': {e}")
+            return self.get_fallback_result(e, analysis_time_ms)
+
+    async def _analyze_algorithmic_only(self, query: str) -> ViewResult:
+        """Analyze using only algorithmic approach."""
+        try:
+            result, analysis_time_ms = await self._measure_analysis_time(
+                lambda: self._analyze_algorithmic(query)
+            )
+
+            self._record_analysis(analysis_time_ms, success=True)
+
+            return ViewResult(
+                view_name=self.view_name,
+                score=result['score'],
+                confidence=result['confidence'],
+                method=AnalysisMethod.ALGORITHMIC,
+                latency_ms=analysis_time_ms,
+                features=result.get('features', {}),
+                metadata=result.get('metadata', {})
+            )
+
         except Exception as e:
             logger.error(f"Algorithmic analysis failed for view '{self.view_name}': {e}")
             return self.get_fallback_result(e)
     
-    async def _analyze_ml_only(self, query: str) -> ViewResult:
-        """Analyze using only ML approach."""
-        # Ensure model is loaded
-        if not self._ml_model and self.model_manager:
-            self._ml_model = await self.model_manager.load_model(self.ml_model_name)
-        
+    def _analyze_ml_sync(self, query: str) -> ViewResult:
+        """Analyze using only ML approach (synchronous)."""
+        start_time = time.time()
+
+        # For sync mode, skip model loading and try to use cached model
         if not self._ml_model:
             logger.warning(f"ML model '{self.ml_model_name}' not available, falling back to algorithmic")
-            return await self._analyze_algorithmic_only(query)
-        
+            return self._analyze_algorithmic_sync(query)
+
         try:
-            result, analysis_time_ms = await self._measure_analysis_time(
-                lambda: self._analyze_ml(query)
-            )
-            
+            result = self._analyze_ml(query)
+            analysis_time_ms = (time.time() - start_time) * 1000
+
             self._record_analysis(analysis_time_ms, success=True)
-            
+
             return ViewResult(
                 view_name=self.view_name,
                 score=result['score'],
@@ -491,7 +572,39 @@ class HybridView(BaseView):
                 features=result.get('features', {}),
                 metadata=result.get('metadata', {})
             )
-            
+
+        except Exception as e:
+            analysis_time_ms = (time.time() - start_time) * 1000
+            logger.warning(f"ML analysis failed for view '{self.view_name}', using algorithmic fallback: {e}")
+            return self._analyze_algorithmic_sync(query)
+
+    async def _analyze_ml_only(self, query: str) -> ViewResult:
+        """Analyze using only ML approach."""
+        # Ensure model is loaded
+        if not self._ml_model and self.model_manager:
+            self._ml_model = await self.model_manager.load_model(self.ml_model_name)
+
+        if not self._ml_model:
+            logger.warning(f"ML model '{self.ml_model_name}' not available, falling back to algorithmic")
+            return await self._analyze_algorithmic_only(query)
+
+        try:
+            result, analysis_time_ms = await self._measure_analysis_time(
+                lambda: self._analyze_ml(query)
+            )
+
+            self._record_analysis(analysis_time_ms, success=True)
+
+            return ViewResult(
+                view_name=self.view_name,
+                score=result['score'],
+                confidence=result['confidence'],
+                method=AnalysisMethod.ML,
+                latency_ms=analysis_time_ms,
+                features=result.get('features', {}),
+                metadata=result.get('metadata', {})
+            )
+
         except Exception as e:
             logger.warning(f"ML analysis failed for view '{self.view_name}', using algorithmic fallback: {e}")
             return await self._analyze_algorithmic_only(query)

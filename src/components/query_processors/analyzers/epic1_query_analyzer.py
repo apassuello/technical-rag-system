@@ -85,7 +85,7 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
         
         logger.info(
             f"Initialized Epic1QueryAnalyzer with strategy: "
-            f"{self.model_recommender.strategy.value}"
+            f"{self.model_recommender.strategy}"
         )
     
     def _analyze_query(self, query: str) -> QueryAnalysis:
@@ -250,17 +250,17 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
             'complexity_score': complexity_score,
             'complexity_confidence': confidence,
             'complexity_breakdown': breakdown,
-            'recommended_model': recommendation.model,
-            'model_provider': recommendation.provider,
-            'model_name': recommendation.model_name,
-            'routing_confidence': recommendation.confidence,
-            'cost_estimate': recommendation.cost_estimate,
-            'latency_estimate': recommendation.latency_estimate,
-            'fallback_chain': recommendation.fallback_chain,
-            'routing_strategy': self.model_recommender.strategy.value,
+            'recommended_model': recommendation['model'],
+            'model_provider': recommendation['provider'],
+            'model_name': recommendation['model_name'],
+            'routing_confidence': recommendation['confidence'],
+            'cost_estimate': recommendation['cost_estimate'],
+            'latency_estimate': recommendation['latency_estimate'],
+            'fallback_chain': recommendation.get('fallback_models', []),
+            'routing_strategy': self.model_recommender.strategy,
             'feature_summary': self.feature_extractor.get_summary(features),
             'classification_reasoning': reasoning,
-            'recommendation_reasoning': recommendation.reasoning,
+            'recommendation_reasoning': recommendation.get('reasoning', ''),
             'analysis_time_ms': phase_times['total'] * 1000,
             'phase_times_ms': {
                 k: v * 1000 for k, v in phase_times.items()

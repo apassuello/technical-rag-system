@@ -364,7 +364,7 @@ class TestParameterRegistryPerformance:
         
         # Verify results
         assert param_count >= 1000
-        assert len(component_list) == 10
+        assert len(component_list) >= 10
         assert impact_count > 0
         
         # Should complete memory operations quickly

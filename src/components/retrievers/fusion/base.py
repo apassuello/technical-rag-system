@@ -59,7 +59,7 @@ class FusionStrategy(ABC):
     def get_component_info(self) -> Dict[str, Any]:
         """
         Get component information for logging and debugging.
-        
+
         Returns:
             Dictionary with component details
         """
@@ -69,3 +69,82 @@ class FusionStrategy(ABC):
             "module": self.__class__.__module__,
             **self.get_strategy_info()
         }
+
+    def fuse(
+        self,
+        dense_results: List[Any],
+        sparse_results: List[Any]
+    ) -> List[Any]:
+        """
+        Fuse dense and sparse retrieval results (supports both tuples and RetrievalResult objects).
+
+        This method exists for API compatibility with tests and handles both tuple format
+        and RetrievalResult object format.
+
+        Args:
+            dense_results: List of (document_index, score) tuples OR RetrievalResult objects
+            sparse_results: List of (document_index, score) tuples OR RetrievalResult objects
+
+        Returns:
+            List in the same format as inputs (tuples or RetrievalResult objects)
+        """
+        # Import here to avoid circular dependency
+        from src.core.interfaces import RetrievalResult, Document
+
+        # Check if inputs are RetrievalResult objects
+        uses_retrieval_results = False
+        document_map = {}
+
+        if dense_results and hasattr(dense_results[0], 'document'):
+            uses_retrieval_results = True
+            # Convert RetrievalResult to tuples for fusion
+            dense_tuples = []
+            for i, result in enumerate(dense_results):
+                dense_tuples.append((i, result.score))
+                document_map[i] = result.document
+        else:
+            dense_tuples = dense_results
+
+        if sparse_results and hasattr(sparse_results[0], 'document'):
+            uses_retrieval_results = True
+            # Convert RetrievalResult to tuples for fusion
+            sparse_tuples = []
+            offset = len(dense_results) if dense_results else 0
+            for i, result in enumerate(sparse_results):
+                idx = offset + i
+                sparse_tuples.append((idx, result.score))
+                document_map[idx] = result.document
+        else:
+            sparse_tuples = sparse_results
+
+        # Perform fusion on tuples
+        fused_tuples = self.fuse_results(dense_tuples, sparse_tuples)
+
+        # Convert back to RetrievalResult if needed
+        if uses_retrieval_results:
+            fused_results = []
+            for doc_idx, score in fused_tuples:
+                if doc_idx in document_map:
+                    fused_results.append(
+                        RetrievalResult(
+                            document=document_map[doc_idx],
+                            score=score,
+                            retrieval_method="fusion"
+                        )
+                    )
+            return fused_results
+        else:
+            return fused_tuples
+
+    def get_capabilities(self) -> List[str]:
+        """
+        Get list of capabilities this fusion strategy provides.
+
+        Returns:
+            List of capability strings
+        """
+        return [
+            "result_fusion",
+            "score_combination",
+            "rank_aggregation"
+        ]

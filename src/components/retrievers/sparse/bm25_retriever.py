@@ -493,10 +493,10 @@ class BM25Retriever(SparseRetriever):
     def get_term_frequencies(self, query: str) -> Dict[str, int]:
         """
         Get term frequencies for a query (useful for analysis).
-        
+
         Args:
             query: Query string
-            
+
         Returns:
             Dictionary mapping terms to frequencies
         """
@@ -505,3 +505,54 @@ class BM25Retriever(SparseRetriever):
         for token in query_tokens:
             term_freqs[token] = term_freqs.get(token, 0) + 1
         return term_freqs
+
+    def add_documents(self, documents: List[Document]) -> None:
+        """
+        Add documents to the BM25 index (alias for index_documents).
+
+        This method exists for API compatibility with tests.
+
+        Args:
+            documents: List of documents to add
+        """
+        self.index_documents(documents)
+
+    def get_retriever_info(self) -> Dict[str, Any]:
+        """
+        Get detailed retriever information (alias for get_stats).
+
+        This method exists for API compatibility with tests.
+
+        Returns:
+            Dictionary with retriever information
+        """
+        return self.get_stats()
+
+    def get_component_info(self) -> Dict[str, Any]:
+        """
+        Get component information for logging and debugging.
+
+        Returns:
+            Dictionary with component details
+        """
+        return {
+            "type": "sparse_retriever",
+            "class": self.__class__.__name__,
+            "module": self.__class__.__module__,
+            **self.get_stats()
+        }
+
+    def get_capabilities(self) -> List[str]:
+        """
+        Get list of capabilities this retriever provides.
+
+        Returns:
+            List of capability strings
+        """
+        return [
+            "keyword_search",
+            "bm25_scoring",
+            "technical_term_preservation",
+            "configurable_stopwords",
+            "deferred_indexing"
+        ]

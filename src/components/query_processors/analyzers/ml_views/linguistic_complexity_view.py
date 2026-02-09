@@ -26,6 +26,7 @@ import numpy as np
 project_root = Path(__file__).parent.parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
+from ..ml_models.model_manager import ModelManager
 from ..utils.syntactic_parser import SyntacticParser
 from .base_view import HybridView
 
@@ -347,13 +348,13 @@ class LinguisticComplexityView(HybridView):
     
     def _calculate_pattern_score(self, pattern_matches: Dict[str, int]) -> float:
         """Calculate score from pattern matches."""
-        # Weight pattern matches by complexity level
+        # Weight pattern matches by complexity level - with safe defaults
         weighted_score = (
-            pattern_matches['high'] * 1.0 +
-            pattern_matches['medium'] * 0.6 +
-            pattern_matches['basic'] * 0.2
+            pattern_matches.get('high', 0) * 1.0 +
+            pattern_matches.get('medium', 0) * 0.6 +
+            pattern_matches.get('basic', 0) * 0.2
         )
-        
+
         # Normalize by total patterns (arbitrary cap at 5 for normalization)
         return min(weighted_score / 5.0, 1.0)
     

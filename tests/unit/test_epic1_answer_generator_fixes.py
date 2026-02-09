@@ -14,8 +14,8 @@ from pathlib import Path
 
 # Import Epic1 components
 from src.components.generators.epic1_answer_generator import Epic1AnswerGenerator
-from src.components.generators.base import Answer, GenerationError
-from src.core.interfaces import Document
+from src.components.generators.base import GenerationError
+from src.core.interfaces import Answer, Document
 
 # Import routing components for mocking
 from src.components.generators.routing.routing_strategies import ModelOption

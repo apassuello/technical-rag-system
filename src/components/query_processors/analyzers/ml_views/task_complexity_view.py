@@ -26,6 +26,7 @@ import numpy as np
 project_root = Path(__file__).parent.parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
+from ..ml_models.model_manager import ModelManager
 from .base_view import HybridView
 
 logger = logging.getLogger(__name__)
@@ -352,30 +353,42 @@ class TaskComplexityView(HybridView):
     def _classify_blooms_taxonomy(self, query: str) -> Dict[str, Any]:
         """Classify query according to Bloom's taxonomy."""
         level_scores = {}
-        
+
         for level, data in self.blooms_taxonomy.items():
             score = 0.0
-            
-            # Check verbs
+
+            # Check verbs - match whole words
             for verb in data['verbs']:
-                if verb in query:
+                # Use word boundary matching to avoid partial matches
+                if f" {verb} " in f" {query} " or query.startswith(verb + " ") or query.endswith(" " + verb):
                     score += 1.0
-            
-            # Check patterns
+
+            # Check patterns with higher weight for pattern matches
             for pattern in data.get('compiled_patterns', []):
                 matches = len(pattern.findall(query))
-                score += matches * 0.5
-            
+                score += matches * 1.5  # Increased from 0.5 to 1.5 for pattern importance
+
             level_scores[level] = score
-        
-        # Find primary level
-        if level_scores:
-            primary_level = max(level_scores.items(), key=lambda x: x[1])[0]
+
+        # Find primary level - if tied, prefer lower complexity (earlier in taxonomy)
+        if level_scores and max(level_scores.values()) > 0:
+            max_score = max(level_scores.values())
+            # Define taxonomy order (lowest to highest)
+            taxonomy_order = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create']
+            # Find all levels with max score
+            max_levels = [level for level, score in level_scores.items() if score == max_score]
+            # Pick the first one in taxonomy order
+            for level in taxonomy_order:
+                if level in max_levels:
+                    primary_level = level
+                    break
+            else:
+                primary_level = max_levels[0]  # Fallback
             primary_score = self.blooms_taxonomy[primary_level]['complexity']
         else:
             primary_level = 'understand'  # Default
             primary_score = 0.3
-        
+
         return {
             'level_scores': level_scores,
             'primary_level': primary_level,

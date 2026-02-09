@@ -210,8 +210,9 @@ class PerformanceMonitor:
         
         # Thread safety
         self._lock = threading.RLock()
-        
+
         # Background cleanup
+        self._stop_event = threading.Event()
         self._cleanup_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="perf-monitor-cleanup")
         self._start_cleanup_task()
         
@@ -221,14 +222,20 @@ class PerformanceMonitor:
     def _start_cleanup_task(self) -> None:
         """Start background task for metrics cleanup."""
         def cleanup_worker():
-            while True:
-                try:
-                    time.sleep(3600)  # Run every hour
-                    self._cleanup_old_metrics()
-                except Exception as e:
-                    logger.error(f"Metrics cleanup failed: {e}")
-        
+            while not self._stop_event.is_set():
+                self._stop_event.wait(3600)  # Wait 1 hour or until stopped
+                if not self._stop_event.is_set():
+                    try:
+                        self._cleanup_old_metrics()
+                    except Exception as e:
+                        logger.error(f"Metrics cleanup failed: {e}")
+
         self._cleanup_executor.submit(cleanup_worker)
+
+    def shutdown(self) -> None:
+        """Shut down the background cleanup task and executor."""
+        self._stop_event.set()
+        self._cleanup_executor.shutdown(wait=False)
     
     def _cleanup_old_metrics(self) -> None:
         """Clean up old metrics beyond retention period."""

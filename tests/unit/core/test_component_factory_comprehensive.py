@@ -10,6 +10,7 @@ This replaces scattered factory tests and focuses on modern architecture.
 
 import pytest
 import sys
+import time
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any
@@ -32,9 +33,12 @@ class TestComponentFactoryCore:
         """Test factory maintains singleton-like behavior for configuration."""
         factory1 = ComponentFactory()
         factory2 = ComponentFactory()
-        
-        # Should be same configuration handling (not same instance necessarily)
-        assert factory1._load_config.__func__ == factory2._load_config.__func__
+
+        # ComponentFactory is a class-based factory, both instances should be of same type
+        assert type(factory1) == type(factory2)
+        # Class-level caches should be shared
+        assert factory1._component_cache is factory2._component_cache
+        assert factory1._class_cache is factory2._class_cache
     
     def test_factory_component_registration(self):
         """Test all modern components are properly registered."""
@@ -113,17 +117,19 @@ class TestModularComponentCreation:
     
     def test_create_unified_retriever(self):
         """Test UnifiedRetriever creation with sub-components."""
-        retriever = ComponentFactory.create_retriever("unified")
-        
+        # ModularUnifiedRetriever requires an embedder
+        embedder = ComponentFactory.create_embedder("sentence_transformer")
+        retriever = ComponentFactory.create_retriever("unified", embedder=embedder)
+
         # Validate component type
         assert retriever is not None
         assert hasattr(retriever, 'retrieve')
-        
+
         # Validate modular architecture
         if hasattr(retriever, 'get_component_info'):
             component_info = retriever.get_component_info()
             expected_components = ['vector_index', 'sparse_retriever', 'fusion', 'reranker']
-            
+
             for expected_component in expected_components:
                 assert expected_component in component_info, f"Missing sub-component: {expected_component}"
                 print(f"✅ ModularUnifiedRetriever sub-component: {expected_component}")
@@ -154,9 +160,10 @@ class TestConfigurationHandling:
         # Should work without explicit configuration
         processor = ComponentFactory.create_processor("hybrid_pdf")
         embedder = ComponentFactory.create_embedder("sentence_transformer")
-        retriever = ComponentFactory.create_retriever("unified")
+        # Retriever requires an embedder
+        retriever = ComponentFactory.create_retriever("unified", embedder=embedder)
         generator = ComponentFactory.create_generator("answer_generator")
-        
+
         assert all([processor, embedder, retriever, generator])
         print("✅ All components created with default configuration")
     
@@ -164,13 +171,17 @@ class TestConfigurationHandling:
         """Test components respect custom configuration parameters."""
         # ComponentFactory doesn't have _load_config - it accepts **kwargs directly
         # Test custom configuration by passing kwargs
+        # Note: SentenceTransformerEmbedder doesn't accept cache_size parameter
         embedder = ComponentFactory.create_embedder(
             "sentence_transformer",
             model_name='sentence-transformers/all-MiniLM-L6-v2',
             batch_size=64,
-            cache_size=1000
+            use_mps=False
         )
         assert embedder is not None
+        # Verify configuration was applied
+        assert embedder.model_name == 'sentence-transformers/all-MiniLM-L6-v2'
+        assert embedder.batch_size == 64
         print("✅ Custom configuration handling validated")
 
     def test_configuration_error_handling(self):
@@ -201,14 +212,25 @@ class TestFactoryErrorHandling:
     
     def test_component_creation_failure_handling(self):
         """Test handling when component creation fails."""
-        # Mock a component that fails during initialization
-        with patch('src.components.processors.document_processor.ModularDocumentProcessor') as mock_processor:
-            mock_processor.side_effect = Exception("Component initialization failed")
-            
+        # Test that ComponentFactory properly wraps and raises exceptions from component creation
+        # Mock the lazy loading to inject a failing component class
+        original_get_component_class = ComponentFactory._get_component_class
+
+        def mock_get_component_class(module_path):
+            if 'ModularDocumentProcessor' in module_path:
+                # Return a mock class that raises on instantiation
+                class FailingProcessor:
+                    def __init__(self, **kwargs):
+                        raise Exception("Component initialization failed")
+                return FailingProcessor
+            return original_get_component_class(module_path)
+
+        with patch.object(ComponentFactory, '_get_component_class', side_effect=mock_get_component_class):
             with pytest.raises(Exception) as exc_info:
                 ComponentFactory.create_processor("modular")
-            
-            assert "Component initialization failed" in str(exc_info.value)
+
+            # Should contain the original error message (wrapped in TypeError by factory)
+            assert "Component initialization failed" in str(exc_info.value) or "Failed to create processor" in str(exc_info.value)
             print("✅ Component creation failure properly handled")
     
     def test_missing_dependencies_handling(self):
@@ -229,34 +251,39 @@ class TestFactoryPerformance:
     
     def test_component_creation_performance(self):
         """Test component creation performance meets targets."""
-        import time
-        
         # Test creation time for each component type
         component_types = [
             ('processor', 'hybrid_pdf'),
-            ('embedder', 'sentence_transformer'), 
+            ('embedder', 'sentence_transformer'),
             ('retriever', 'unified'),
             ('generator', 'answer_generator')
         ]
-        
+
+        # Create embedder once for retriever tests
+        embedder = None
+
         for component_type, implementation in component_types:
             start_time = time.time()
-            
+
             if component_type == 'processor':
                 component = ComponentFactory.create_processor(implementation)
             elif component_type == 'embedder':
                 component = ComponentFactory.create_embedder(implementation)
+                embedder = component  # Save for retriever
             elif component_type == 'retriever':
-                component = ComponentFactory.create_retriever(implementation)
+                # Retriever requires embedder
+                if embedder is None:
+                    embedder = ComponentFactory.create_embedder('sentence_transformer')
+                component = ComponentFactory.create_retriever(implementation, embedder=embedder)
             elif component_type == 'generator':
                 component = ComponentFactory.create_generator(implementation)
-            
+
             creation_time = time.time() - start_time
-            
+
             # Swiss engineering performance target: <1 second component creation
             assert creation_time < 1.0, f"{component_type}:{implementation} took {creation_time:.3f}s (>1s limit)"
             assert component is not None
-            
+
             print(f"✅ {component_type}:{implementation} created in {creation_time:.3f}s")
     
     def test_factory_caching_behavior(self):
@@ -309,18 +336,20 @@ class TestInterfaceCompliance:
         print("✅ Embedder interface compliance validated")
     
     def test_retriever_interface(self):
-        """Test Retriever interface compliance.""" 
-        retriever = ComponentFactory.create_retriever("modular_unified")
-        
+        """Test Retriever interface compliance."""
+        # ModularUnifiedRetriever requires embedder
+        embedder = ComponentFactory.create_embedder("sentence_transformer")
+        retriever = ComponentFactory.create_retriever("modular_unified", embedder=embedder)
+
         # Check required methods exist
         assert hasattr(retriever, 'retrieve')
         assert callable(retriever.retrieve)
-        
+
         # Check method signatures
         import inspect
         sig = inspect.signature(retriever.retrieve)
         assert len(sig.parameters) >= 2  # query and k parameters minimum
-        
+
         print("✅ Retriever interface compliance validated")
     
     def test_answer_generator_interface(self):

@@ -19,3 +19,11 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 print(f"✓ Root conftest.py: Added {PROJECT_ROOT} and {SRC_PATH} to sys.path")
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Shut down lingering ThreadPoolExecutor threads to prevent pytest from hanging."""
+    import concurrent.futures.thread as _thread
+
+    for t in list(_thread._threads_queues):
+        _thread._threads_queues[t] = None

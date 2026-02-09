@@ -477,11 +477,22 @@ class ModularUnifiedRetriever(Retriever):
         """
         Index documents in all sub-components.
 
+        This method automatically generates embeddings for documents that don't have them.
+
         Args:
             documents: List of documents to index
         """
         if not documents:
             raise ValueError("Cannot index empty document list")
+
+        # Auto-generate embeddings for documents that don't have them
+        docs_without_embeddings = [doc for doc in documents if doc.embedding is None]
+        if docs_without_embeddings:
+            logger.debug(f"Generating embeddings for {len(docs_without_embeddings)} documents")
+            texts = [doc.content for doc in docs_without_embeddings]
+            embeddings = self.embedder.embed(texts)
+            for doc, embedding in zip(docs_without_embeddings, embeddings):
+                doc.embedding = embedding
 
         # Store documents (extend existing instead of replacing)
         if not hasattr(self, "documents") or self.documents is None:
@@ -501,7 +512,7 @@ class ModularUnifiedRetriever(Retriever):
         # Add documents to vector index
         self.vector_index.add_documents(documents)
 
-        # Index in sparse retriever (this needs fixing too)
+        # Index in sparse retriever
         self.sparse_retriever.index_documents(documents)
 
         logger.info(f"Indexed {len(documents)} documents in all sub-components")
@@ -991,3 +1002,26 @@ class ModularUnifiedRetriever(Retriever):
         except Exception as e:
             logger.warning(f"Error calculating semantic alignment: {e}")
             return 0.0  # Conservative fallback
+
+    def get_retriever_info(self) -> Dict[str, Any]:
+        """
+        Get detailed information about the retriever and its sub-components.
+
+        This method provides comprehensive information for testing and debugging.
+
+        Returns:
+            Dictionary with retriever information
+        """
+        return {
+            "component_type": "modular_unified_retriever",
+            "indexed_documents": len(self.documents),
+            "retrieval_stats": self.retrieval_stats.copy(),
+            "configuration": self.get_configuration(),
+            "sub_components": self.get_component_info(),
+            "backend_management": {
+                "active_backend": self.active_backend_name,
+                "available_backends": self.available_backends,
+                "switch_count": self.backend_switch_count
+            },
+            "performance": self.get_sub_component_performance()
+        }

@@ -116,6 +116,7 @@ class GraphRetriever:
             cache_key = f"{query}_{k}_{algorithm}"
             if self.cache_enabled and cache_key in self.query_cache:
                 self.stats["cache_hits"] += 1
+                self.stats["queries_processed"] += 1
                 return self.query_cache[cache_key]
             
             self.stats["cache_misses"] += 1

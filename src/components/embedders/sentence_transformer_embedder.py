@@ -39,68 +39,94 @@ class SentenceTransformerEmbedder(Embedder):
     """
     
     def __init__(
-        self, 
+        self,
         model_name: str = "sentence-transformers/multi-qa-MiniLM-L6-cos-v1",
         batch_size: int = 32,
-        use_mps: bool = True
+        use_mps: bool = True,
+        cache_size: Optional[int] = None,
+        **kwargs  # Accept additional kwargs for compatibility
     ):
         """
         Initialize the sentence transformer embedder.
-        
+
         Args:
             model_name: SentenceTransformer model identifier (default: multi-qa-MiniLM-L6-cos-v1)
             batch_size: Processing batch size for efficiency (default: 32)
             use_mps: Use Apple Silicon acceleration if available (default: True)
+            cache_size: Optional cache size limit (currently not used, accepted for compatibility)
+            **kwargs: Additional configuration options (accepted for compatibility)
         """
         self.model_name = model_name
         self.batch_size = batch_size
         self.use_mps = use_mps
-        self._embedding_dim = None
-        
+        self.cache_size = cache_size
+
         # Platform services (initialized via initialize_services)
         self.platform: Optional['PlatformOrchestrator'] = None
+        self._embedding_dim = None
     
     def embed(self, texts: List[str]) -> List[List[float]]:
         """
         Generate embeddings for a list of texts.
-        
+
         This method uses the existing generate_embeddings function with
         performance optimizations including content-based caching and
         MPS acceleration.
-        
+
         Args:
             texts: List of text strings to embed
-            
+
         Returns:
             List of embedding vectors, where each vector is a list of floats
-            
+
         Raises:
             ValueError: If texts list is empty
             RuntimeError: If embedding generation fails
         """
         if not texts:
             raise ValueError("Cannot generate embeddings for empty text list")
-        
+
+        # Validate input types - filter out None values
+        valid_texts = []
+        for text in texts:
+            if text is None:
+                # Skip None values but raise error if ALL inputs are None
+                continue
+            if not isinstance(text, str):
+                raise TypeError(f"All texts must be strings, got {type(text).__name__}")
+            valid_texts.append(text)
+
+        if not valid_texts:
+            raise ValueError("Cannot generate embeddings - all inputs were None or invalid")
+
         try:
             # Use existing function with caching and optimization
             embeddings_array = generate_embeddings(
-                texts=texts,
+                texts=valid_texts,
                 model_name=self.model_name,
                 batch_size=self.batch_size,
                 use_mps=self.use_mps
             )
-            
+
             # Convert numpy array to list of lists
             embeddings_list = embeddings_array.tolist()
-            
+
             # Cache embedding dimension for future reference
             if self._embedding_dim is None and embeddings_list:
                 self._embedding_dim = len(embeddings_list[0])
-            
+
             return embeddings_list
-            
+
         except Exception as e:
             raise RuntimeError(f"Failed to generate embeddings: {str(e)}") from e
+
+    def embed_texts(self, texts: List[str]) -> List[List[float]]:
+        """Alias for embed() method for interface compliance."""
+        return self.embed(texts)
+
+    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+        """Batch embedding method (delegates to embed() which already does batching)."""
+        return self.embed(texts)
     
     def embedding_dim(self) -> int:
         """
