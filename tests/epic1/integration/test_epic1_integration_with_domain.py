@@ -94,27 +94,30 @@ class TestEpic1IntegrationWithDomain:
             return False, "", str(e)
     
     @pytest.fixture(scope="class")
-    def project_root(self, project_root):
+    def project_root(self):
         """Get project root path."""
-        return project_root
-    
+        return Path(__file__).parent.parent.parent.parent
+
     def test_epic1_analyzer_availability(self, project_root):
         """Test that Epic1MLAnalyzer can be imported and created."""
         self.project_root = project_root
-        
-        # Test import
-        cmd = f"cd {project_root} && python -c 'from src.components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer; print(\"Epic1MLAnalyzer import successful\")'"
+
+        # Test import - use list format to avoid shell injection, cwd already set
+        cmd = [
+            "python", "-c",
+            "from src.components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer; print('Epic1MLAnalyzer import successful')"
+        ]
         success, stdout, stderr = self.run_subprocess_test(cmd, "Testing Epic1MLAnalyzer import")
-        
+
         assert success, f"Failed to import Epic1MLAnalyzer: {stderr}"
         assert "Epic1MLAnalyzer import successful" in stdout
-        
+
         logger.info("✅ Epic1MLAnalyzer is available")
     
     def test_epic1_analyzer_creation(self, project_root):
         """Test Epic1MLAnalyzer creation with basic config."""
         self.project_root = project_root
-        
+
         test_script = '''
 import sys
 from pathlib import Path
@@ -124,25 +127,26 @@ from src.components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLA
 
 try:
     analyzer = Epic1MLAnalyzer(config={
-        'memory_budget_gb': 0.5,
-        'parallel_execution': False,
-        'enable_performance_monitoring': False
+        "memory_budget_gb": 0.5,
+        "parallel_execution": False,
+        "enable_performance_monitoring": False
     })
-    print(f"✅ Created analyzer with {len(analyzer.views)} views")
+    print(f"Created analyzer with {len(analyzer.views)} views")
     analyzer.shutdown()
-    print("✅ Shutdown completed")
+    print("Shutdown completed")
 except Exception as e:
-    print(f"❌ Error: {e}")
+    print(f"Error: {e}")
     raise
 '''
-        
-        cmd = f"cd {project_root} && python -c \"{test_script.strip()}\""
+
+        # Use list format to avoid shell injection, cwd already set
+        cmd = ["python", "-c", test_script.strip()]
         success, stdout, stderr = self.run_subprocess_test(cmd, "Testing Epic1MLAnalyzer creation", timeout=60)
-        
+
         assert success, f"Failed to create Epic1MLAnalyzer: {stderr}"
         assert "Created analyzer with" in stdout
         assert "Shutdown completed" in stdout
-        
+
         logger.info("✅ Epic1MLAnalyzer creation test passed")
     
     @pytest.mark.asyncio
@@ -208,12 +212,16 @@ except Exception as e:
         ]
         
         for component in components_to_test:
-            cmd = f"cd {project_root} && python -c 'import {component}; print(f\"✅ {component} imported successfully\")'"
+            # Use list format to avoid shell injection, cwd already set
+            cmd = [
+                "python", "-c",
+                f"import {component}; print('{component} imported successfully')"
+            ]
             success, stdout, stderr = self.run_subprocess_test(cmd, f"Testing {component} import")
-            
+
             assert success, f"Failed to import {component}: {stderr}"
             assert "imported successfully" in stdout
-            
+
             logger.info(f"✅ {component} is available")
         
         logger.info("✅ All Epic1 integration components are available")

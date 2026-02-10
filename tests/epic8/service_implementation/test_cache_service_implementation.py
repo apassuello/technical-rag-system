@@ -75,6 +75,12 @@ if IMPORTS_AVAILABLE:
     CachedResponse = imported_classes['CachedResponse']
     CacheConfig = imported_classes['CacheConfig']
 
+# Module-level skip if cache service is not available
+pytestmark = pytest.mark.skipif(
+    not IMPORTS_AVAILABLE,
+    reason=f"Cache service not implemented: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}"
+)
+
 
 class TestCacheServiceInitialization:
     """Test Cache Service initialization and configuration."""

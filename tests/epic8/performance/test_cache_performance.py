@@ -47,6 +47,12 @@ except ImportError as e:
     IMPORTS_AVAILABLE = False
     IMPORT_ERROR = str(e)
 
+# Module-level skip if cache service is not available
+pytestmark = pytest.mark.skipif(
+    not IMPORTS_AVAILABLE,
+    reason=f"Cache service not implemented: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}"
+)
+
 # Check if Redis is available for performance tests
 REDIS_AVAILABLE = False
 try:

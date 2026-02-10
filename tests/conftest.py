@@ -40,3 +40,14 @@ def pytest_sessionfinish(session, exitstatus):
 
     for t in list(_thread._threads_queues):
         _thread._threads_queues[t] = None
+
+
+def pytest_configure(config):
+    """Register custom markers programmatically."""
+    # Epic 8 Docker service marker
+    config.addinivalue_line(
+        "markers", "integration: mark test as integration test with real dependencies"
+    )
+    config.addinivalue_line(
+        "markers", "requires_docker: mark test as requiring Docker services (Epic 8 microservices)"
+    )
