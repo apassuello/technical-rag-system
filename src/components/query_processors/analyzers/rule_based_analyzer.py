@@ -234,10 +234,18 @@ class RuleBasedAnalyzer(BaseQueryAnalyzer):
         intent_category = rule_features.get('intent_category', self._determine_intent_category(query, all_features))
         suggested_k = self._suggest_retrieval_k(query, all_features)
         confidence = self._calculate_confidence(all_features)
-        
+
+        if complexity_score < 0.33:
+            complexity_level = 'simple'
+        elif complexity_score < 0.67:
+            complexity_level = 'medium'
+        else:
+            complexity_level = 'complex'
+
         return QueryAnalysis(
             query=query,
             complexity_score=complexity_score,
+            complexity_level=complexity_level,
             technical_terms=rule_features.get('technical_terms', []),
             entities=rule_features.get('entities', []),
             intent_category=intent_category,

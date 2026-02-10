@@ -151,7 +151,7 @@ class DomainAwareQueryProcessor(ModularQueryProcessor):
             
             # Continue with normal ModularQueryProcessor workflow
             self.processed_queries += 1
-            answer = super().process_query(query, options)
+            answer = super().process(query, options)
             
             # Enhance answer metadata with domain information
             if domain_result:

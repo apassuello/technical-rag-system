@@ -253,11 +253,16 @@ class PlatformOrchestrator:
                 else:
                     qp_type = qp_config.type
                     qp_config_dict = qp_config.config
-                
-                self._components['query_processor'] = ComponentFactory.create_query_processor(
-                    qp_type,
-                    **qp_config_dict
-                )
+
+                if qp_type in ('intelligent', 'epic5_intelligent'):
+                    self._components['query_processor'] = self._initialize_intelligent_processor(
+                        qp_config_dict
+                    )
+                else:
+                    self._components['query_processor'] = ComponentFactory.create_query_processor(
+                        qp_type,
+                        **qp_config_dict
+                    )
                 logger.debug(f"Query processor initialized: {qp_type}")
             else:
                 # For backward compatibility, create a default query processor with proper config
@@ -277,15 +282,153 @@ class PlatformOrchestrator:
             logger.error(f"Failed to initialize components: {str(e)}")
             raise RuntimeError(f"System initialization failed: {str(e)}") from e
     
+    def _initialize_intelligent_processor(self, qp_config_dict: Dict[str, Any]) -> Any:
+        """
+        Assemble and create an IntelligentQueryProcessor (Epic 5).
+
+        Builds the full agent stack: tools, memory, LLM, ReActAgent,
+        QueryAnalyzer, then passes them to the factory.
+
+        Args:
+            qp_config_dict: Configuration dict from the query_processor config section.
+                Expected keys: agent (dict), tools (list), memory (dict), processor (dict).
+
+        Returns:
+            Configured IntelligentQueryProcessor instance.
+        """
+        from src.components.query_processors.agents.models import (
+            AgentConfig,
+            ProcessorConfig,
+        )
+        from src.components.query_processors.agents.planning.query_analyzer import (
+            QueryAnalyzer,
+        )
+
+        retriever = self._components['retriever']
+        generator = self._components['answer_generator']
+
+        # --- Agent config ---
+        agent_cfg = qp_config_dict.get('agent', {})
+        llm_cfg = agent_cfg.get('llm', {})
+        exec_cfg = agent_cfg.get('executor', {})
+
+        agent_config = AgentConfig(
+            llm_provider=llm_cfg.get('provider', 'openai'),
+            llm_model=llm_cfg.get('model', 'gpt-4-turbo'),
+            temperature=llm_cfg.get('temperature', 0.7),
+            max_tokens=llm_cfg.get('max_tokens', 2048),
+            max_iterations=exec_cfg.get('max_iterations', 10),
+            max_execution_time=exec_cfg.get('max_execution_time', 300),
+            early_stopping=exec_cfg.get('early_stopping_method', 'force'),
+            verbose=exec_cfg.get('verbose', False),
+            use_technical_prompts=agent_cfg.get('use_technical_prompts', True),
+            include_few_shot=agent_cfg.get('include_few_shot', True),
+            agent_role=agent_cfg.get('agent_role', 'technical_docs'),
+        )
+
+        # --- LLM ---
+        llm = self._create_agent_llm(agent_config)
+
+        # --- Tools ---
+        tool_names = qp_config_dict.get('tools', ['calculator', 'code_analyzer', 'document_search'])
+        tools = []
+        for name in tool_names:
+            tool = ComponentFactory.create_tool(name)
+            # Inject retriever into document_search tool
+            if name == 'document_search' and hasattr(tool, 'set_retriever'):
+                tool.set_retriever(retriever)
+            tools.append(tool)
+
+        # --- Memory ---
+        mem_cfg = qp_config_dict.get('memory', {})
+        conv_cfg = mem_cfg.get('conversation', {})
+        conversation_memory = ComponentFactory.create_memory(
+            'conversation',
+            max_messages=conv_cfg.get('max_messages', 50),
+        )
+        working_memory = ComponentFactory.create_memory('working')
+
+        # --- ReActAgent ---
+        from src.components.query_processors.agents.react_agent import ReActAgent
+
+        agent = ReActAgent(
+            llm=llm,
+            tools=tools,
+            memory=conversation_memory,
+            config=agent_config,
+            working_memory=working_memory,
+        )
+
+        # --- QueryAnalyzer ---
+        query_analyzer = QueryAnalyzer()
+
+        # --- ProcessorConfig ---
+        proc_cfg = qp_config_dict.get('processor', {})
+        processor_config = ProcessorConfig(
+            use_agent_by_default=proc_cfg.get('use_agent_by_default', False),
+            complexity_threshold=proc_cfg.get('complexity_threshold', 0.7),
+            max_agent_cost=proc_cfg.get('max_agent_cost', 0.10),
+            enable_planning=proc_cfg.get('enable_planning', False),
+            enable_parallel_execution=proc_cfg.get('enable_parallel_execution', False),
+        )
+
+        logger.info(
+            f"Assembling IntelligentQueryProcessor: "
+            f"{len(tools)} tools, threshold={processor_config.complexity_threshold}"
+        )
+
+        return ComponentFactory.create_query_processor(
+            'intelligent',
+            retriever=retriever,
+            generator=generator,
+            agent=agent,
+            query_analyzer=query_analyzer,
+            config=processor_config,
+        )
+
+    @staticmethod
+    def _create_agent_llm(agent_config: Any) -> Any:
+        """
+        Create a LangChain LLM instance from AgentConfig.
+
+        Attempts to import the appropriate Chat model class.
+        Falls back to a no-op mock if neither provider library is installed.
+        """
+        if agent_config.llm_provider == 'openai':
+            try:
+                from langchain_openai import ChatOpenAI
+                return ChatOpenAI(
+                    model=agent_config.llm_model,
+                    temperature=agent_config.temperature,
+                    max_tokens=agent_config.max_tokens,
+                )
+            except ImportError:
+                logger.warning("langchain_openai not installed, agent LLM unavailable")
+        elif agent_config.llm_provider == 'anthropic':
+            try:
+                from langchain_anthropic import ChatAnthropic
+                return ChatAnthropic(
+                    model=agent_config.llm_model,
+                    temperature=agent_config.temperature,
+                    max_tokens=agent_config.max_tokens,
+                )
+            except ImportError:
+                logger.warning("langchain_anthropic not installed, agent LLM unavailable")
+
+        raise RuntimeError(
+            f"Cannot create LLM for provider '{agent_config.llm_provider}'. "
+            f"Install langchain_openai or langchain_anthropic."
+        )
+
     def process_document(self, file_path: Path) -> int:
         """
         Process and index a document.
-        
+
         This method orchestrates the document processing workflow:
         1. Process document into chunks
         2. Generate embeddings for chunks
         3. Store chunks and embeddings in vector store
-        
+
         Args:
             file_path: Path to document file
             

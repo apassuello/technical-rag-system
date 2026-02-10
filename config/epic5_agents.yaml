@@ -1,135 +1,71 @@
-# Epic 5 Phase 2: Agent Orchestration & Query Planning Configuration
-# This config defines agent settings, memory configuration, and planning strategies
-# NOTE: Phase 2 Block 1 complete (data models, base classes, memory)
-#       Blocks 2-4 pending (agents, planning, integration)
+# Epic 5: Agent-Based RAG — Query Processor Configuration
+# Merge into a full system config (e.g., basic.yaml) to enable agent routing.
+#
+# Usage:
+#   query_processor section goes under an existing config that already has
+#   document_processor, embedder, retriever, and answer_generator defined.
 
-# Agent Configuration (Block 2 - pending implementation)
-agent:
-  type: "react"  # ReAct agent (to be implemented in Block 2)
-  enabled: false  # Disabled until Block 2 implementation
+query_processor:
+  type: "intelligent"
+  config:
+    # --- Agent configuration ---
+    agent:
+      type: "react"
+      enabled: true
 
-  # LLM Configuration for Agent
-  llm:
-    provider: "openai"  # or "anthropic"
-    model: "gpt-4-turbo"
-    temperature: 0.7
-    max_tokens: 2048
+      llm:
+        provider: "openai"       # "openai" or "anthropic"
+        model: "gpt-4-turbo"
+        temperature: 0.7
+        max_tokens: 2048
 
-  # Agent Executor Settings
-  executor:
-    max_iterations: 10
-    max_execution_time: 300  # seconds
-    early_stopping_method: "force"
-    verbose: false
-    handle_parsing_errors: true
+      executor:
+        max_iterations: 10
+        max_execution_time: 300
+        early_stopping_method: "force"
+        verbose: false
+        handle_parsing_errors: true
 
-# Memory Configuration (Block 1 - implemented)
-memory:
-  # Conversation Memory
-  conversation:
-    type: "conversation_buffer"
-    max_messages: 50
-    max_token_limit: 2000
-    persist_to_file: false
-    file_path: "data/memory/conversation.json"
+      use_technical_prompts: true
+      include_few_shot: true
+      agent_role: "technical_docs"
 
-  # Working Memory
-  working:
-    type: "working_memory"
-    max_context_size: 10000
-    clear_on_completion: false
-    track_intermediate_results: true
+    # --- Tool configuration ---
+    tools:
+      - calculator
+      - code_analyzer
+      - document_search
 
-# Query Processor Configuration (Block 3 - pending)
-processor:
-  use_agent_by_default: false  # Use RAG by default until agents implemented
-  complexity_threshold: 0.7  # Use agent if complexity > threshold
-  max_agent_cost: 0.10  # Max cost per query (USD)
-  enable_planning: false  # Disabled until Block 2 planning system
-  enable_parallel_execution: false  # Disabled until implementation
-  fallback_to_rag_on_failure: true
+    # --- Memory configuration ---
+    memory:
+      conversation:
+        max_messages: 50
+      working: {}
 
-# Query Planning Configuration (Block 2 - pending)
-planning:
-  enabled: false  # Disabled until Block 2 implementation
+    # --- Routing logic ---
+    processor:
+      use_agent_by_default: false
+      complexity_threshold: 0.7
+      max_agent_cost: 0.10
+      enable_planning: false
+      enable_parallel_execution: false
+      fallback_to_rag_on_failure: true
 
-  # Query Analyzer
-  analyzer:
-    use_llm: false  # Use heuristics for speed
-    complexity_features:
-      - query_length
-      - question_count
-      - keyword_complexity
-      - estimated_tools_required
+    # --- Query Planning (disabled by default) ---
+    planning:
+      enabled: false
+      analyzer:
+        use_llm: false
+      decomposer:
+        use_llm: true
+        max_sub_tasks: 5
+      planner:
+        default_strategy: "direct"
+      executor:
+        max_parallel_tasks: 3
+        timeout_per_task: 60
 
-  # Query Decomposer
-  decomposer:
-    use_llm: true  # Use LLM for accurate decomposition
-    max_sub_tasks: 5
-    min_complexity_for_decomposition: 0.7
-
-  # Execution Planner
-  planner:
-    strategies:
-      - direct        # Simple queries
-      - sequential    # Multi-step sequential
-      - parallel      # Independent tasks
-      - hybrid        # Mixed sequential/parallel
-    default_strategy: "direct"
-    optimize_for: "latency"  # or "cost" or "quality"
-
-  # Plan Executor
-  executor:
-    parallel_execution: true
-    max_parallel_tasks: 3
-    timeout_per_task: 60
-
-# Integration Settings (Block 3 - implemented)
-integration:
-  # RAG Pipeline Integration
-  rag_pipeline:
-    enabled: true
-    fallback_on_agent_failure: true
-    use_agent_for_complex_queries: true  # Now implemented in Block 3
-
-  # Tool Integration
-  tools:
-    inherit_from_phase1: true  # Use Phase 1 tool configurations
-    enable_tool_selection: true  # Enabled with agent system
-
-# Intelligent Query Processor Configuration (Block 3 - implemented)
-intelligent_processor:
-  enabled: true  # Enable intelligent routing
-
-  # Routing Configuration
-  complexity_threshold: 0.7  # Use agent if complexity > 0.7
-  use_agent_by_default: false  # Use RAG by default unless complexity high
-
-  # Cost & Performance
-  max_agent_cost: 0.10  # Max cost per agent query (USD)
-  track_routing_decisions: true  # Log which path taken
-
-  # Planning Integration
-  use_planning: false  # Use query planning for complex queries (Block 2 pending)
-
-  # Fallback Behavior
-  fallback_to_rag_on_failure: true  # Fallback if agent fails
-
-  # Parallel Execution
-  enable_parallel_execution: false  # Parallel task execution (Block 2 pending)
-
-# Cost & Performance Budgets
-budgets:
-  max_cost_per_query_usd: 0.10
-  max_execution_time_seconds: 300
-  alert_threshold_cost_usd: 0.05
-  alert_threshold_time_seconds: 60
-
-# Logging & Debugging
-logging:
-  log_level: "INFO"
-  log_agent_decisions: true
-  log_tool_calls: true
-  log_reasoning_trace: true
-  log_performance_metrics: true
-  log_cost_breakdown: true
+    # --- Cost & Performance Budgets ---
+    budgets:
+      max_cost_per_query_usd: 0.10
+      max_execution_time_seconds: 300

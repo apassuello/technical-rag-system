@@ -87,6 +87,7 @@ if FASTAPI_AVAILABLE:
     client = DockerServiceClient()
 
 
+@pytest.mark.requires_docker
 class TestQueryAnalyzerAPIBasics:
     """Test basic API functionality and endpoints."""
 
@@ -153,6 +154,7 @@ class TestQueryAnalyzerAPIBasics:
             pytest.fail(f"OpenAPI schema test failed: {e}")
 
 
+@pytest.mark.requires_docker
 class TestQueryAnalyzerAnalyzeEndpoint:
     """Test the /api/v1/analyze endpoint according to Epic 8 API specs."""
 
@@ -314,6 +316,7 @@ class TestQueryAnalyzerAnalyzeEndpoint:
                 pytest.fail(f"Edge case test failed for {description}: {e}")
 
 
+@pytest.mark.requires_docker
 class TestQueryAnalyzerStatusEndpoint:
     """Test the /api/v1/status endpoint."""
 
@@ -376,6 +379,7 @@ class TestQueryAnalyzerStatusEndpoint:
             pytest.fail(f"Status with parameters test failed: {e}")
 
 
+@pytest.mark.requires_docker
 class TestQueryAnalyzerComponentsEndpoint:
     """Test the /api/v1/components endpoint."""
 
@@ -435,6 +439,7 @@ class TestQueryAnalyzerComponentsEndpoint:
             pytest.fail(f"Components endpoint test failed: {e}")
 
 
+@pytest.mark.requires_docker
 class TestQueryAnalyzerAPIErrorHandling:
     """Test API error handling and edge cases."""
 
@@ -543,6 +548,7 @@ class TestQueryAnalyzerAPIErrorHandling:
                 pytest.fail(f"Content type test failed for {description}: {e}")
 
 
+@pytest.mark.requires_docker
 class TestQueryAnalyzerAPIPerformance:
     """Test API performance characteristics."""
 

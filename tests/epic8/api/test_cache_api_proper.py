@@ -66,6 +66,19 @@ if FASTAPI_AVAILABLE:
 # Global client instance for all tests
 client = DockerServiceClient() if FASTAPI_AVAILABLE else None
 
+# Check if cache service is implemented
+import sys
+from pathlib import Path
+project_root = Path(__file__).resolve().parents[3]
+service_path = project_root / "services" / "cache"
+CACHE_SERVICE_EXISTS = service_path.exists()
+
+# Module-level skip if cache service is not available
+pytestmark = pytest.mark.skipif(
+    not CACHE_SERVICE_EXISTS,
+    reason=f"Cache service not implemented: {service_path} does not exist"
+)
+
 
 def generate_query_hash(query: str) -> str:
     """Generate hash for a query string."""

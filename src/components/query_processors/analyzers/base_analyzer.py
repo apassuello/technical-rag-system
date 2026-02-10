@@ -48,40 +48,42 @@ class BaseQueryAnalyzer(QueryAnalyzer):
         
         logger.debug(f"Initialized {self.__class__.__name__} with config: {self._config}")
     
-    def analyze(self, query: str) -> QueryAnalysis:
+    def analyze(self, query: str, mode: str = None) -> QueryAnalysis:
         """
         Analyze query with performance tracking and error handling.
-        
+
         Args:
             query: User query string
-            
+            mode: Optional analysis mode (subclass-specific, e.g., 'ml', 'hybrid', 'algorithmic')
+
         Returns:
             QueryAnalysis with extracted characteristics
-            
+
         Raises:
             ValueError: If query is empty or invalid
             RuntimeError: If analysis fails
         """
         if not query or not query.strip():
             raise ValueError("Query cannot be empty")
-        
+
         start_time = time.time()
-        
+
         try:
             # Perform actual analysis (implemented by subclasses)
+            # If subclass implements mode-aware analysis, pass mode
             result = self._analyze_query(query)
-            
+
             # Track performance
             analysis_time = time.time() - start_time
             self._update_performance_metrics(analysis_time, success=True)
-            
+
             logger.debug(f"Query analysis completed in {analysis_time*1000:.1f}ms")
             return result
-            
+
         except Exception as e:
             analysis_time = time.time() - start_time
             self._update_performance_metrics(analysis_time, success=False)
-            
+
             logger.error(f"Query analysis failed after {analysis_time*1000:.1f}ms: {e}")
             raise RuntimeError(f"Query analysis failed: {e}") from e
     

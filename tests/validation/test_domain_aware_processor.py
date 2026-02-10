@@ -31,24 +31,12 @@ def domain_processor(indexed_orchestrator):
 class TestDomainFiltering:
     """Verify domain filtering routes queries correctly."""
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="SPEC-P1 latent bug: process_query() calls super().process_query() "
-               "but parent only defines process(). In-domain path hits AttributeError.",
-        raises=AttributeError,
-    )
     def test_in_domain_query_produces_answer(self, domain_processor):
         """RISC-V queries should be processed and return answers."""
         answer = domain_processor.process_query("What is RISC-V?")
         assert isinstance(answer, Answer)
         assert len(answer.text) > 50, "In-domain answer should be substantive"
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="SPEC-P1 latent bug: process_query() calls super().process_query() "
-               "but parent only defines process(). In-domain path hits AttributeError.",
-        raises=AttributeError,
-    )
     def test_in_domain_answer_is_grounded(self, domain_processor):
         """In-domain answers should reference RISC-V content."""
         answer = domain_processor.process_query("What extensions does RISC-V support?")

@@ -20,6 +20,7 @@ Test Categories:
 import pytest
 import asyncio
 import time
+import warnings
 import threading
 import queue
 import statistics
@@ -148,13 +149,13 @@ class TestAPIGatewayResponseTimePerformance:
             
             # Quality flags based on CT-8.6.1 targets
             if avg_response_time > 2.0:
-                pytest.warns(UserWarning, f"Average response time {avg_response_time:.3f}s exceeds 2s target")
+                warnings.warn(f"Average response time {avg_response_time:.3f}s exceeds 2s target", UserWarning, stacklevel=2)
             
             if p95_response_time > 5.0:
-                pytest.warns(UserWarning, f"P95 response time {p95_response_time:.3f}s exceeds 5s target")
+                warnings.warn(f"P95 response time {p95_response_time:.3f}s exceeds 5s target", UserWarning, stacklevel=2)
             
             if std_response_time > 1.0:
-                pytest.warns(UserWarning, f"High response time variability: std={std_response_time:.3f}s")
+                warnings.warn(f"High response time variability: std={std_response_time:.3f}s", UserWarning, stacklevel=2)
             
             # Verify all responses succeeded
             assert all(r.fallback_used is False for r in responses), "No responses should use fallback"
@@ -206,10 +207,10 @@ class TestAPIGatewayResponseTimePerformance:
                 
                 # Quality flags
                 if per_query_time > 2.0:
-                    pytest.warns(UserWarning, f"Batch size {batch_size}: per-query time {per_query_time:.3f}s exceeds 2s")
+                    warnings.warn(f"Batch size {batch_size}: per-query time {per_query_time:.3f}s exceeds 2s", UserWarning, stacklevel=2)
                 
                 if response.successful_queries < batch_size * 0.95:  # <95% success
-                    pytest.warns(UserWarning, f"Batch size {batch_size}: success rate {response.successful_queries/batch_size:.2%}")
+                    warnings.warn(f"Batch size {batch_size}: success rate {response.successful_queries/batch_size:.2%}", UserWarning, stacklevel=2)
                 
                 print(f"Batch size {batch_size}: {batch_time:.3f}s total, {per_query_time:.3f}s per query")
                 
@@ -335,15 +336,15 @@ class TestAPIGatewayConcurrentRequestHandling:
                 
                 # Quality flags
                 if success_rate < 0.9:
-                    pytest.warns(UserWarning, f"Concurrency {concurrency}: success rate {success_rate:.2%} below 90%")
+                    warnings.warn(f"Concurrency {concurrency}: success rate {success_rate:.2%} below 90%", UserWarning, stacklevel=2)
                 
                 if throughput < 1.0:  # Less than 1 request per second
-                    pytest.warns(UserWarning, f"Concurrency {concurrency}: throughput {throughput:.2f} req/s below 1.0")
+                    warnings.warn(f"Concurrency {concurrency}: throughput {throughput:.2f} req/s below 1.0", UserWarning, stacklevel=2)
                 
                 # Performance metrics
                 avg_response_time = total_time / concurrency  # Average time per request
                 if avg_response_time > 5.0:
-                    pytest.warns(UserWarning, f"Concurrency {concurrency}: avg response time {avg_response_time:.3f}s exceeds 5s")
+                    warnings.warn(f"Concurrency {concurrency}: avg response time {avg_response_time:.3f}s exceeds 5s", UserWarning, stacklevel=2)
                 
                 print(f"Concurrency {concurrency}: {success_rate:.2%} success, {throughput:.1f} req/s, {avg_response_time:.3f}s avg")
                 
@@ -422,10 +423,10 @@ class TestAPIGatewayConcurrentRequestHandling:
             
             # Quality flags
             if success_rate < 0.95:
-                pytest.warns(UserWarning, f"Sustained load success rate {success_rate:.2%} below 95%")
+                warnings.warn(f"Sustained load success rate {success_rate:.2%} below 95%", UserWarning, stacklevel=2)
             
             if throughput < requests_per_second * 0.8:  # Less than 80% of target throughput
-                pytest.warns(UserWarning, f"Sustained load throughput {throughput:.2f} req/s below target")
+                warnings.warn(f"Sustained load throughput {throughput:.2f} req/s below target", UserWarning, stacklevel=2)
             
             print(f"\nSustained Load Performance ({duration}s):")
             print(f"  Completed: {completed_requests}/{total_requests} requests")
@@ -512,10 +513,10 @@ class TestAPIGatewayMemoryUsage:
             
             # Quality flags
             if memory_increase > 1000:  # >1GB increase
-                pytest.warns(UserWarning, f"Large memory increase: {memory_increase:.1f}MB")
+                warnings.warn(f"Large memory increase: {memory_increase:.1f}MB", UserWarning, stacklevel=2)
             
             if memory_trend > 500:  # >500MB trend increase
-                pytest.warns(UserWarning, f"Memory trend increase: {memory_trend:.1f}MB (potential leak)")
+                warnings.warn(f"Memory trend increase: {memory_trend:.1f}MB (potential leak)", UserWarning, stacklevel=2)
             
             print(f"\nMemory Usage Analysis:")
             print(f"  Initial: {initial_memory:.1f}MB")
@@ -619,7 +620,7 @@ class TestAPIGatewayTimeoutBehavior:
                     
                     # If it completes, validate it took expected time
                     if processing_time < delay * 0.8:  # Completed too fast, mock might not be working
-                        pytest.warns(UserWarning, f"{service} timeout test: completed too fast ({processing_time:.2f}s)")
+                        warnings.warn(f"{service} timeout test: completed too fast ({processing_time:.2f}s)", UserWarning, stacklevel=2)
                     
                     print(f"{service} timeout test: completed in {processing_time:.2f}s")
                     
@@ -679,7 +680,7 @@ class TestAPIGatewayCircuitBreakerPerformance:
             
             # Quality flag: Circuit breaker overhead should be minimal
             if overhead > 50:  # >50% overhead
-                pytest.warns(UserWarning, f"Circuit breaker overhead: {overhead:.1f}%")
+                warnings.warn(f"Circuit breaker overhead: {overhead:.1f}%", UserWarning, stacklevel=2)
             
             print(f"Circuit breaker performance: {overhead:.1f}% overhead ({avg_direct*1000:.2f}ms -> {avg_cb*1000:.2f}ms)")
         
@@ -755,7 +756,7 @@ class TestAPIGatewayCircuitBreakerPerformance:
         
         # Quality checks
         if avg_rejection > avg_success * 2:  # Rejection should be faster than success
-            pytest.warns(UserWarning, f"Circuit breaker rejection slow: {avg_rejection*1000:.2f}ms")
+            warnings.warn(f"Circuit breaker rejection slow: {avg_rejection*1000:.2f}ms", UserWarning, stacklevel=2)
         
         print(f"Circuit breaker state performance:")
         print(f"  Success: {avg_success*1000:.2f}ms")
@@ -848,10 +849,10 @@ class TestAPIGatewayBatchProcessingPerformance:
             
             # Quality checks
             if parallel_time > sequential_time:
-                pytest.warns(UserWarning, f"Batch {batch_size}: parallel slower than sequential")
+                warnings.warn(f"Batch {batch_size}: parallel slower than sequential", UserWarning, stacklevel=2)
             
             if speedup < 1.2 and batch_size > 5:  # Should have some speedup for larger batches
-                pytest.warns(UserWarning, f"Batch {batch_size}: low parallel speedup {speedup:.2f}x")
+                warnings.warn(f"Batch {batch_size}: low parallel speedup {speedup:.2f}x", UserWarning, stacklevel=2)
             
             print(f"Batch {batch_size}: seq={sequential_time:.2f}s, par={parallel_time:.2f}s, speedup={speedup:.2f}x")
         
@@ -863,7 +864,7 @@ class TestAPIGatewayBatchProcessingPerformance:
             large_batch_throughput = throughputs[-1]
             
             if large_batch_throughput < small_batch_throughput * 0.5:  # Significant degradation
-                pytest.warns(UserWarning, f"Batch throughput degradation: {small_batch_throughput:.1f} -> {large_batch_throughput:.1f} req/s")
+                warnings.warn(f"Batch throughput degradation: {small_batch_throughput:.1f} -> {large_batch_throughput:.1f} req/s", UserWarning, stacklevel=2)
         
         print(f"\nBatch Performance Scaling Results:")
         for result in performance_results:
@@ -920,7 +921,7 @@ class TestAPIGatewayBatchProcessingPerformance:
         
         # Quality checks
         if optimal_parallel and optimal_parallel < batch_size // 4:
-            pytest.warns(UserWarning, f"Low optimal parallelization: {optimal_parallel} for batch size {batch_size}")
+            warnings.warn(f"Low optimal parallelization: {optimal_parallel} for batch size {batch_size}", UserWarning, stacklevel=2)
         
         print(f"\nOptimal parallelization: {optimal_parallel} workers (efficiency: {max_efficiency:.2f})")
 

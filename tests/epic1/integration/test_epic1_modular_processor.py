@@ -147,10 +147,6 @@ class TestEpic1Integration:
         assert 'complexity_level' in epic1_data
         assert 'recommended_model' in epic1_data
     
-    @pytest.mark.xfail(
-        reason="ModelRecommender.recommend() returns dict but epic1_query_analyzer accesses .model attr → fallback always returns 'medium'",
-        strict=True,
-    )
     def test_epic1_metadata_flow(self):
         """Test Epic 1 metadata flows through the entire pipeline."""
         # Create processor with Epic 1 analyzer

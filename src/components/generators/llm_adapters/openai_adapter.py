@@ -802,11 +802,12 @@ class OpenAIAdapter(BaseLLMAdapter):
 
                     # Process each tool call (supports parallel calls)
                     for tool_call in tool_calls:
-                        tool_call_id = tool_call.id
-                        function_name = tool_call.function.name
+                        # tool_calls are dicts from _make_function_request, not objects
+                        tool_call_id = tool_call['id']
+                        function_name = tool_call['function']['name']
 
                         try:
-                            function_args = json.loads(tool_call.function.arguments)
+                            function_args = json.loads(tool_call['function']['arguments'])
                         except json.JSONDecodeError as e:
                             logger.error(f"Failed to parse function arguments: {e}")
                             function_args = {}

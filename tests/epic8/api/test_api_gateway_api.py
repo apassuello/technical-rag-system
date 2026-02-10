@@ -85,6 +85,7 @@ if IMPORTS_AVAILABLE:
 client = DockerServiceClient() if IMPORTS_AVAILABLE else None
 
 
+@pytest.mark.requires_docker
 class TestAPIGatewayRESTEndpoints:
     """Test REST endpoint functionality (CT-8.4.1)."""
 
@@ -518,6 +519,7 @@ class TestAPIGatewayRESTEndpoints:
         print("Health endpoints test passed")
 
 
+@pytest.mark.requires_docker
 class TestAPIGatewayRequestValidation:
     """Test request/response schema validation (CT-8.4.2)."""
 
@@ -651,6 +653,7 @@ class TestAPIGatewayRequestValidation:
         print("Response headers validation passed")
 
 
+@pytest.mark.requires_docker
 class TestAPIGatewayErrorHandling:
     """Test API error handling and error responses (CT-8.4.3)."""
 
@@ -753,6 +756,7 @@ class TestAPIGatewayErrorHandling:
         print("Not found endpoints test passed")
 
 
+@pytest.mark.requires_docker
 class TestAPIGatewayMetricsAndMonitoring:
     """Test metrics and monitoring endpoints."""
 
@@ -828,6 +832,7 @@ class TestAPIGatewayMetricsAndMonitoring:
         print("Cache admin endpoint test passed")
 
 
+@pytest.mark.requires_docker
 class TestAPIGatewayPerformance:
     """Test API performance characteristics."""
 

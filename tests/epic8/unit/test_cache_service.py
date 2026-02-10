@@ -93,6 +93,12 @@ if IMPORTS_AVAILABLE:
 # Clean up the setup function from global namespace
 del _setup_service_imports, imported_classes
 
+# Module-level skip if cache service is not available
+pytestmark = pytest.mark.skipif(
+    not IMPORTS_AVAILABLE,
+    reason=f"Cache service not implemented: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}"
+)
+
 
 class TestCacheServiceBasics:
     """Test basic cache service initialization and configuration."""

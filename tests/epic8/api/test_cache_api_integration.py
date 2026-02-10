@@ -14,14 +14,15 @@ from typing import Dict, Any
 # Import fixtures from integration conftest
 from .conftest_integration import cache_client, service_health_check, sample_cache_data, clear_cache
 
+# Mark entire module as requiring Docker services
+pytestmark = [pytest.mark.integration, pytest.mark.requires_docker]
+
 
 def generate_query_hash(query: str) -> str:
     """Generate hash for a query string."""
     return hashlib.sha256(query.encode()).hexdigest()
 
 
-@pytest.mark.integration
-@pytest.mark.asyncio
 class TestCacheAPIIntegration:
     """Integration tests for Cache Service API endpoints."""
     
@@ -161,8 +162,6 @@ class TestCacheAPIIntegration:
             assert result in [200, 201, 404]  # 404 if endpoint not implemented
 
 
-@pytest.mark.integration
-@pytest.mark.asyncio
 class TestCacheAPIPerformance:
     """Performance tests for Cache Service API."""
     

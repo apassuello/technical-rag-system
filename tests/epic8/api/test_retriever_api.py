@@ -81,6 +81,7 @@ if IMPORTS_AVAILABLE:
     client = DockerServiceClient()
 
 
+@pytest.mark.requires_docker
 class TestRetrieverAPIHealth:
     """Test health check and service info endpoints."""
 
@@ -225,6 +226,7 @@ class TestRetrieverAPIHealth:
             pytest.fail(f"Metrics endpoint test failed: {e}")
 
 
+@pytest.mark.requires_docker
 class TestRetrieverAPIDocumentRetrieval:
     """Test document retrieval API endpoints."""
 
@@ -370,6 +372,7 @@ class TestRetrieverAPIDocumentRetrieval:
                 pytest.fail(f"Edge case {i} test failed: {e}")
 
 
+@pytest.mark.requires_docker
 class TestRetrieverAPIBatchRetrieval:
     """Test batch document retrieval API endpoints."""
 
@@ -462,6 +465,7 @@ class TestRetrieverAPIBatchRetrieval:
                 pytest.fail(f"Invalid batch request {i} test failed: {e}")
 
 
+@pytest.mark.requires_docker
 class TestRetrieverAPIDocumentIndexing:
     """Test document indexing API endpoints."""
 
@@ -595,6 +599,7 @@ class TestRetrieverAPIDocumentIndexing:
             pytest.fail(f"Reindex test failed: {e}")
 
 
+@pytest.mark.requires_docker
 class TestRetrieverAPIStatus:
     """Test status and monitoring API endpoints."""
 
@@ -650,6 +655,7 @@ class TestRetrieverAPIStatus:
             pytest.fail(f"Status test failed: {e}")
 
 
+@pytest.mark.requires_docker
 class TestRetrieverAPIErrorHandling:
     """Test API error handling and edge cases."""
 
@@ -769,6 +775,7 @@ class TestRetrieverAPIErrorHandling:
             pytest.fail(f"CORS headers test failed: {e}")
 
 
+@pytest.mark.requires_docker
 class TestRetrieverAPIContentTypes:
     """Test API content type handling."""
 

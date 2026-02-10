@@ -20,6 +20,7 @@ Test Coverage:
 import pytest
 import asyncio
 import time
+import warnings
 import json
 import hashlib
 import uuid
@@ -46,6 +47,12 @@ try:
 except ImportError as e:
     IMPORTS_AVAILABLE = False
     IMPORT_ERROR = str(e)
+
+# Module-level skip if cache service is not available
+pytestmark = pytest.mark.skipif(
+    not IMPORTS_AVAILABLE,
+    reason=f"Cache service not implemented: {IMPORT_ERROR if not IMPORTS_AVAILABLE else ''}"
+)
 
 # Check if Redis is available for performance tests
 REDIS_AVAILABLE = False
@@ -223,11 +230,11 @@ class TestSubMillisecondOperations:
         
         # Quality flag: Should achieve high sub-millisecond rate
         if sub_ms_rate < 0.5:  # At least 50% should be sub-millisecond
-            pytest.warns(UserWarning, f"Sub-millisecond rate low: {sub_ms_rate:.1%} (target >50%)")
+            warnings.warn(f"Sub-millisecond rate low: {sub_ms_rate:.1%} (target >50%)", UserWarning, stacklevel=2)
         
         # Quality flag: P95 should be fast
         if p95_time > 0.01:  # 10ms
-            pytest.warns(UserWarning, f"P95 cache GET slow: {p95_time:.3f}s (target <10ms)")
+            warnings.warn(f"P95 cache GET slow: {p95_time:.3f}s (target <10ms)", UserWarning, stacklevel=2)
         
         print(f"Cache GET performance: avg={avg_time*1000:.2f}ms, median={median_time*1000:.2f}ms, p95={p95_time*1000:.2f}ms")
         print(f"Sub-millisecond operations: {sub_ms_rate:.1%} ({sub_ms_operations}/{len(retrieval_times)})")
@@ -278,11 +285,11 @@ class TestSubMillisecondOperations:
         
         # Quality flag: Should achieve good fast operation rate
         if fast_rate < 0.3:  # At least 30% should be <5ms
-            pytest.warns(UserWarning, f"Fast SET rate low: {fast_rate:.1%} (target >30%)")
+            warnings.warn(f"Fast SET rate low: {fast_rate:.1%} (target >30%)", UserWarning, stacklevel=2)
         
         # Quality flag: P95 should be reasonable
         if p95_time > 0.1:  # 100ms
-            pytest.warns(UserWarning, f"P95 cache SET slow: {p95_time:.3f}s")
+            warnings.warn(f"P95 cache SET slow: {p95_time:.3f}s", UserWarning, stacklevel=2)
         
         print(f"Cache SET performance: avg={avg_time*1000:.2f}ms, median={median_time*1000:.2f}ms, p95={p95_time*1000:.2f}ms")
         print(f"Sub-5ms operations: {fast_rate:.1%} ({fast_operations}/{len(storage_times)})")
@@ -349,11 +356,11 @@ class TestSubMillisecondOperations:
         
         # Epic 8 quality target: >60% hit rate
         if hit_rate < 0.6:
-            pytest.warns(UserWarning, f"Hit rate below target: {hit_rate:.1%} (target >60%)")
+            warnings.warn(f"Hit rate below target: {hit_rate:.1%} (target >60%)", UserWarning, stacklevel=2)
         
         # Quality flag: Mixed operations should be fast
         if avg_time > 0.01:  # 10ms
-            pytest.warns(UserWarning, f"Mixed operations slow: {avg_time:.3f}s average")
+            warnings.warn(f"Mixed operations slow: {avg_time:.3f}s average", UserWarning, stacklevel=2)
         
         print(f"Mixed operations: {total_operations} ops, avg {avg_time*1000:.2f}ms, {hit_rate:.1%} hit rate")
 
@@ -403,10 +410,10 @@ class TestHighThroughputScenarios:
         
         # Epic 8 quality target: High throughput
         if set_throughput < 100:  # 100 ops/sec
-            pytest.warns(UserWarning, f"SET throughput below target: {set_throughput:.1f} ops/sec")
+            warnings.warn(f"SET throughput below target: {set_throughput:.1f} ops/sec", UserWarning, stacklevel=2)
         
         if get_throughput < 500:  # 500 ops/sec
-            pytest.warns(UserWarning, f"GET throughput below target: {get_throughput:.1f} ops/sec")
+            warnings.warn(f"GET throughput below target: {get_throughput:.1f} ops/sec", UserWarning, stacklevel=2)
         
         print(f"Sequential throughput: SET {set_throughput:.1f} ops/sec, GET {get_throughput:.1f} ops/sec")
 
@@ -471,11 +478,11 @@ class TestHighThroughputScenarios:
         
         # Quality target: High concurrent throughput
         if throughput < 50:  # 50 ops/sec minimum for concurrent
-            pytest.warns(UserWarning, f"Concurrent throughput low: {throughput:.1f} ops/sec")
+            warnings.warn(f"Concurrent throughput low: {throughput:.1f} ops/sec", UserWarning, stacklevel=2)
         
         # Epic 8 target: Should approach or exceed 1000 ops/sec in ideal conditions
         if throughput < 100:
-            pytest.warns(UserWarning, f"Concurrent throughput below expectations: {throughput:.1f} ops/sec")
+            warnings.warn(f"Concurrent throughput below expectations: {throughput:.1f} ops/sec", UserWarning, stacklevel=2)
         
         print(f"Concurrent throughput: {throughput:.1f} ops/sec ({success_rate:.1%} success rate)")
         if failed_operations:
@@ -530,7 +537,7 @@ class TestHighThroughputScenarios:
         
         # Quality: Service should recover from burst to sustained performance
         if sustained_throughput < burst_throughput * 0.5:
-            pytest.warns(UserWarning, "Significant performance degradation after burst")
+            warnings.warn("Significant performance degradation after burst", UserWarning, stacklevel=2)
         
         print(f"Burst load: {burst_throughput:.1f} ops/sec ({burst_success_rate:.1%} success)")
         print(f"Sustained load: {sustained_throughput:.1f} ops/sec ({sustained_success_rate:.1%} success)")
@@ -581,7 +588,7 @@ class TestConcurrentRequestHandling:
         
         # Quality: Should handle concurrent readers efficiently
         if read_throughput < 100:  # 100 ops/sec minimum
-            pytest.warns(UserWarning, f"Concurrent read throughput low: {read_throughput:.1f} ops/sec")
+            warnings.warn(f"Concurrent read throughput low: {read_throughput:.1f} ops/sec", UserWarning, stacklevel=2)
         
         # Data consistency check: All successful reads should return same data
         data_consistency_check = True
@@ -632,7 +639,7 @@ class TestConcurrentRequestHandling:
         
         # Quality: Should handle concurrent writes efficiently
         if write_throughput < 20:  # 20 ops/sec minimum for writes
-            pytest.warns(UserWarning, f"Concurrent write throughput low: {write_throughput:.1f} ops/sec")
+            warnings.warn(f"Concurrent write throughput low: {write_throughput:.1f} ops/sec", UserWarning, stacklevel=2)
         
         # Verify all written data can be retrieved
         verification_reads = []
@@ -728,7 +735,7 @@ class TestConcurrentRequestHandling:
         
         # Quality: Should handle mixed workload efficiently
         if throughput < 30:  # 30 ops/sec minimum for mixed workload
-            pytest.warns(UserWarning, f"Mixed workload throughput low: {throughput:.1f} ops/sec")
+            warnings.warn(f"Mixed workload throughput low: {throughput:.1f} ops/sec", UserWarning, stacklevel=2)
         
         print(f"Mixed concurrent workload: {throughput:.1f} ops/sec, {overall_success_rate:.1%} success rate")
         print(f"Breakdown: {len(read_results)} reads, {len(write_results)} writes, {len(delete_results)} deletes")
@@ -798,7 +805,7 @@ class TestMemoryUsageAndEfficiency:
         
         # Quality flag: Memory efficiency
         if total_memory_increase > 100:  # 100MB total increase
-            pytest.warns(UserWarning, f"High memory usage: +{total_memory_increase:.1f}MB")
+            warnings.warn(f"High memory usage: +{total_memory_increase:.1f}MB", UserWarning, stacklevel=2)
         
         # Test memory cleanup by clearing cache
         await service.clear_cache()
@@ -866,14 +873,14 @@ class TestMemoryUsageAndEfficiency:
             
             # Quality flag: Memory should not show consistent upward trend
             if growth_trend > 30:  # 30MB growth trend
-                pytest.warns(UserWarning, f"Memory growth trend detected: +{growth_trend:.1f}MB")
+                warnings.warn(f"Memory growth trend detected: +{growth_trend:.1f}MB", UserWarning, stacklevel=2)
         
         # Hard fail: Total memory growth after repeated cycles
         assert total_growth < 100, f"Memory leak suspected: +{total_growth:.1f}MB after {cycles} cycles"
         
         # Quality flag: Memory growth should be minimal
         if total_growth > 20:  # 20MB growth
-            pytest.warns(UserWarning, f"Memory growth after cycles: +{total_growth:.1f}MB")
+            warnings.warn(f"Memory growth after cycles: +{total_growth:.1f}MB", UserWarning, stacklevel=2)
         
         print(f"Memory leak test: {baseline_memory:.1f}MB -> {final_memory:.1f}MB (+{total_growth:.1f}MB) over {cycles} cycles")
 
@@ -948,7 +955,7 @@ class TestCacheHitRateOptimization:
         
         # Epic 8 quality target: >60% hit rate
         if hit_rate < 0.6:
-            pytest.warns(UserWarning, f"Hit rate below Epic 8 target: {hit_rate:.1%} (target >60%)")
+            warnings.warn(f"Hit rate below Epic 8 target: {hit_rate:.1%} (target >60%)", UserWarning, stacklevel=2)
         
         # With 80/20 pattern, should achieve good hit rate
         expected_min_hit_rate = 0.4  # Should get at least 40% with popular query repetition

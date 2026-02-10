@@ -12,6 +12,7 @@ Testing Philosophy:
 import pytest
 import asyncio
 import time
+import warnings
 import psutil
 import os
 import tempfile
@@ -41,7 +42,7 @@ except ImportError as e:
 class TestRetrieverServiceBasicPerformance:
     """Test basic performance characteristics of retrieval operations."""
 
-    # Service availability handled by fixtures
+    @pytest.mark.requires_docker
     @pytest.mark.asyncio
     async def test_single_query_latency(self):
         """Test latency of single query operations (CT-8.3.1)."""
@@ -113,11 +114,11 @@ class TestRetrieverServiceBasicPerformance:
                 # Quality thresholds based on Epic 8 specifications
                 # Quality flag: P95 latency >2s indicates performance issues
                 if p95_latency > 2.0:
-                    pytest.warns(UserWarning, f"P95 latency {p95_latency:.3f}s exceeds 2s target")
+                    warnings.warn(f"P95 latency {p95_latency:.3f}s exceeds 2s target", UserWarning, stacklevel=2)
                 
                 # Quality flag: Average latency >1s is slow
                 if avg_latency > 1.0:
-                    pytest.warns(UserWarning, f"Average latency {avg_latency:.3f}s exceeds 1s target")
+                    warnings.warn(f"Average latency {avg_latency:.3f}s exceeds 1s target", UserWarning, stacklevel=2)
                 
                 print(f"Single query latency performance:")
                 print(f"  Average: {avg_latency:.3f}s")
@@ -128,7 +129,7 @@ class TestRetrieverServiceBasicPerformance:
             except Exception as e:
                 pytest.fail(f"Single query latency test failed: {e}")
 
-    # Service availability handled by fixtures
+    @pytest.mark.requires_docker
     @pytest.mark.asyncio
     async def test_indexing_throughput(self):
         """Test document indexing throughput performance (CT-8.3.3)."""
@@ -193,14 +194,14 @@ class TestRetrieverServiceBasicPerformance:
                 
                 # Quality flag: Throughput <1 doc/sec is very slow
                 if best_throughput < 1.0:
-                    pytest.warns(UserWarning, f"Best throughput {best_throughput:.2f} docs/sec below 1 doc/sec")
+                    warnings.warn(f"Best throughput {best_throughput:.2f} docs/sec below 1 doc/sec", UserWarning, stacklevel=2)
                 
                 # Quality flag: Should see some improvement with larger batches
                 small_batch_throughput = throughput_results[1]['throughput']
                 large_batch_throughput = throughput_results[max(batch_sizes)]['throughput']
                 
                 if large_batch_throughput < small_batch_throughput * 1.5:
-                    pytest.warns(UserWarning, f"Batching not improving throughput significantly")
+                    warnings.warn(f"Batching not improving throughput significantly", UserWarning, stacklevel=2)
                 
                 print(f"\nIndexing throughput summary:")
                 print(f"  Best throughput: {best_throughput:.2f} docs/sec")
@@ -209,7 +210,7 @@ class TestRetrieverServiceBasicPerformance:
             except Exception as e:
                 pytest.fail(f"Indexing throughput test failed: {e}")
 
-    # Service availability handled by fixtures
+    @pytest.mark.requires_docker
     @pytest.mark.asyncio
     async def test_concurrent_query_performance(self):
         """Test performance under concurrent query load (CT-8.3.2)."""
@@ -294,12 +295,12 @@ class TestRetrieverServiceBasicPerformance:
                 
                 # Quality flag: Peak throughput <10 queries/sec is low
                 if peak_throughput < 10.0:
-                    pytest.warns(UserWarning, f"Peak concurrent throughput {peak_throughput:.1f} q/s below 10 q/s target")
+                    warnings.warn(f"Peak concurrent throughput {peak_throughput:.1f} q/s below 10 q/s target", UserWarning, stacklevel=2)
                 
                 # Quality flag: Success rate should remain high under load
                 high_concurrency_success = concurrent_results[max(concurrency_levels)]['success_rate']
                 if high_concurrency_success < 0.9:
-                    pytest.warns(UserWarning, f"High concurrency success rate {high_concurrency_success:.1%} below 90%")
+                    warnings.warn(f"High concurrency success rate {high_concurrency_success:.1%} below 90%", UserWarning, stacklevel=2)
                 
                 print(f"\nConcurrent performance summary:")
                 print(f"  Peak throughput: {peak_throughput:.1f} queries/sec")
@@ -312,7 +313,7 @@ class TestRetrieverServiceBasicPerformance:
 class TestRetrieverServiceScalabilityPerformance:
     """Test scalability characteristics with increasing data sizes."""
 
-    # Service availability handled by fixtures
+    @pytest.mark.requires_docker
     @pytest.mark.asyncio
     async def test_dataset_size_scaling(self):
         """Test how performance scales with dataset size."""
@@ -399,12 +400,12 @@ class TestRetrieverServiceScalabilityPerformance:
                 
                 # Quality flag: Retrieval time growth should be sub-linear
                 if retrieval_scaling_factor > dataset_scaling_factor * 0.5:
-                    pytest.warns(UserWarning, f"Retrieval time scaling factor {retrieval_scaling_factor:.1f}x concerning")
+                    warnings.warn(f"Retrieval time scaling factor {retrieval_scaling_factor:.1f}x concerning", UserWarning, stacklevel=2)
                 
                 # Quality flag: Indexing rate shouldn't degrade too much
                 indexing_scaling_factor = small_scale['indexing_rate'] / large_scale['indexing_rate']
                 if indexing_scaling_factor > 3.0:
-                    pytest.warns(UserWarning, f"Indexing rate degraded {indexing_scaling_factor:.1f}x at larger scales")
+                    warnings.warn(f"Indexing rate degraded {indexing_scaling_factor:.1f}x at larger scales", UserWarning, stacklevel=2)
                 
                 print(f"\nScaling analysis:")
                 print(f"  Dataset size: {min(dataset_sizes)} -> {max(dataset_sizes)} ({dataset_scaling_factor:.1f}x)")
@@ -414,7 +415,7 @@ class TestRetrieverServiceScalabilityPerformance:
             except Exception as e:
                 pytest.fail(f"Dataset size scaling test failed: {e}")
 
-    # Service availability handled by fixtures
+    @pytest.mark.requires_docker
     @pytest.mark.asyncio
     async def test_query_complexity_scaling(self):
         """Test performance with different query complexities and k values."""
@@ -509,7 +510,7 @@ class TestRetrieverServiceScalabilityPerformance:
                 
                 # Quality flag: >200% overhead for complex queries is concerning
                 if complexity_overhead > 200:
-                    pytest.warns(UserWarning, f"Complex query overhead {complexity_overhead:.1f}% is high")
+                    warnings.warn(f"Complex query overhead {complexity_overhead:.1f}% is high", UserWarning, stacklevel=2)
                 
                 # Check that performance doesn't degrade too much with k
                 k_small = complexity_results['medium'][5]['avg_time']
@@ -519,7 +520,7 @@ class TestRetrieverServiceScalabilityPerformance:
                 
                 # Quality flag: >300% overhead for larger k is concerning  
                 if k_overhead > 300:
-                    pytest.warns(UserWarning, f"Large k overhead {k_overhead:.1f}% is high")
+                    warnings.warn(f"Large k overhead {k_overhead:.1f}% is high", UserWarning, stacklevel=2)
                 
                 print(f"\nQuery complexity scaling:")
                 print(f"  Simple -> Complex: {simple_avg:.3f}s -> {complex_avg:.3f}s ({complexity_overhead:.1f}% overhead)")
@@ -532,7 +533,7 @@ class TestRetrieverServiceScalabilityPerformance:
 class TestRetrieverServiceResourceUsage:
     """Test resource usage characteristics and limits."""
 
-    # Service availability handled by fixtures
+    @pytest.mark.requires_docker
     @pytest.mark.asyncio
     async def test_memory_usage_profiling(self):
         """Test memory usage patterns during operations."""
@@ -593,13 +594,13 @@ class TestRetrieverServiceResourceUsage:
                 
                 # Quality flags for memory usage
                 if total_memory > 2000:  # 2GB
-                    pytest.warns(UserWarning, f"High total memory usage: {total_memory:.1f}MB")
+                    warnings.warn(f"High total memory usage: {total_memory:.1f}MB", UserWarning, stacklevel=2)
                 
                 if indexing_increase > 1000:  # 1GB increase during indexing
-                    pytest.warns(UserWarning, f"High indexing memory increase: {indexing_increase:.1f}MB")
+                    warnings.warn(f"High indexing memory increase: {indexing_increase:.1f}MB", UserWarning, stacklevel=2)
                 
                 if retrieval_increase > 500:  # 500MB increase during retrieval
-                    pytest.warns(UserWarning, f"High retrieval memory increase: {retrieval_increase:.1f}MB")
+                    warnings.warn(f"High retrieval memory increase: {retrieval_increase:.1f}MB", UserWarning, stacklevel=2)
                 
                 # Test for memory leaks (simplified)
                 memory_before_gc = process.memory_info().rss / 1024 / 1024
@@ -624,7 +625,7 @@ class TestRetrieverServiceResourceUsage:
         except Exception as e:
             pytest.fail(f"Memory usage profiling test failed: {e}")
 
-    # Service availability handled by fixtures
+    @pytest.mark.requires_docker
     @pytest.mark.asyncio
     async def test_cpu_usage_patterns(self):
         """Test CPU usage during different operations."""
@@ -688,9 +689,9 @@ class TestRetrieverServiceResourceUsage:
                 
         except Exception as e:
             # CPU monitoring can be flaky, so warn but don't fail
-            pytest.warns(UserWarning, f"CPU usage monitoring failed: {e}")
+            warnings.warn(f"CPU usage monitoring failed: {e}", UserWarning, stacklevel=2)
 
-    # Service availability handled by fixtures
+    @pytest.mark.requires_docker
     @pytest.mark.asyncio
     async def test_disk_usage_patterns(self):
         """Test disk usage for index storage."""
@@ -749,7 +750,7 @@ class TestRetrieverServiceResourceUsage:
                 
                 # Quality flag: >10MB per document seems excessive for index storage
                 if mb_per_doc > 10.0:
-                    pytest.warns(UserWarning, f"High disk usage: {mb_per_doc:.3f}MB per document")
+                    warnings.warn(f"High disk usage: {mb_per_doc:.3f}MB per document", UserWarning, stacklevel=2)
                 
                 # Check disk usage scaling
                 small_usage = disk_usage_results[min(document_sizes)]['mb_per_document']
@@ -758,7 +759,7 @@ class TestRetrieverServiceResourceUsage:
                 # Should be relatively linear (efficient index growth)
                 scaling_ratio = large_usage / small_usage if small_usage > 0 else 1
                 if scaling_ratio > 2.0:
-                    pytest.warns(UserWarning, f"Non-linear disk usage scaling: {scaling_ratio:.1f}x")
+                    warnings.warn(f"Non-linear disk usage scaling: {scaling_ratio:.1f}x", UserWarning, stacklevel=2)
                 
                 print(f"\nDisk usage analysis:")
                 print(f"  Final size: {disk_usage_results[largest_set]['total_size_mb']:.1f}MB")
@@ -772,7 +773,7 @@ class TestRetrieverServiceResourceUsage:
 class TestRetrieverServiceStressTest:
     """Stress testing and edge case performance."""
 
-    # Service availability handled by fixtures
+    @pytest.mark.requires_docker
     @pytest.mark.asyncio
     async def test_sustained_load_performance(self):
         """Test performance under sustained load over time."""
@@ -839,7 +840,7 @@ class TestRetrieverServiceStressTest:
                             response_times.append(query_time)
                         
                     except Exception as e:
-                        pytest.warns(UserWarning, f"Query failed under sustained load: {e}")
+                        warnings.warn(f"Query failed under sustained load: {e}", UserWarning, stacklevel=2)
                     
                     query_count += 1
                     
@@ -856,13 +857,13 @@ class TestRetrieverServiceStressTest:
                 
                 # Quality flags
                 if success_rate < 0.9:
-                    pytest.warns(UserWarning, f"Sustained load success rate {success_rate:.2%} below 90%")
+                    warnings.warn(f"Sustained load success rate {success_rate:.2%} below 90%", UserWarning, stacklevel=2)
                 
                 if avg_response_time > 2.0:
-                    pytest.warns(UserWarning, f"High response time under load: {avg_response_time:.3f}s")
+                    warnings.warn(f"High response time under load: {avg_response_time:.3f}s", UserWarning, stacklevel=2)
                 
                 if throughput < 5.0:
-                    pytest.warns(UserWarning, f"Low throughput under sustained load: {throughput:.1f} q/s")
+                    warnings.warn(f"Low throughput under sustained load: {throughput:.1f} q/s", UserWarning, stacklevel=2)
                 
                 print(f"Sustained load test results:")
                 print(f"  Duration: {total_test_time:.1f}s")
@@ -874,7 +875,7 @@ class TestRetrieverServiceStressTest:
             except Exception as e:
                 pytest.fail(f"Sustained load performance test failed: {e}")
 
-    # Service availability handled by fixtures
+    @pytest.mark.requires_docker
     @pytest.mark.asyncio
     async def test_edge_case_performance(self):
         """Test performance with edge cases like very long queries, large k values."""
@@ -956,7 +957,7 @@ class TestRetrieverServiceStressTest:
                         
                         # Quality flag: Edge cases taking >10s might indicate issues
                         if response_time > 10.0:
-                            pytest.warns(UserWarning, f"{case['name']} slow: {response_time:.2f}s")
+                            warnings.warn(f"{case['name']} slow: {response_time:.2f}s", UserWarning, stacklevel=2)
                         
                         print(f"{case['name']:20s}: {response_time:.3f}s, {len(results)} results")
                         
@@ -969,7 +970,7 @@ class TestRetrieverServiceStressTest:
                         }
                         
                         # Edge case failures might be acceptable, but log them
-                        pytest.warns(UserWarning, f"{case['name']} failed: {e}")
+                        warnings.warn(f"{case['name']} failed: {e}", UserWarning, stacklevel=2)
                 
                 # Quality assessment
                 successful_cases = sum(1 for result in edge_case_results.values() if result['successful'])
@@ -977,7 +978,7 @@ class TestRetrieverServiceStressTest:
                 
                 # Quality flag: <80% success rate on edge cases indicates robustness issues
                 if success_rate < 0.8:
-                    pytest.warns(UserWarning, f"Edge case success rate {success_rate:.1%} below 80%")
+                    warnings.warn(f"Edge case success rate {success_rate:.1%} below 80%", UserWarning, stacklevel=2)
                 
                 print(f"\nEdge case performance summary:")
                 print(f"  Success rate: {success_rate:.1%} ({successful_cases}/{len(edge_cases)})")

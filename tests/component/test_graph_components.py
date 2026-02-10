@@ -116,51 +116,54 @@ class TestEntityExtractor(unittest.TestCase):
         self.mock_nlp = Mock()
         self.mock_matcher = Mock()
         
+    @patch('src.components.retrievers.graph.entity_extraction.Matcher')
     @patch('src.components.retrievers.graph.entity_extraction.spacy')
-    def test_entity_extractor_initialization(self, mock_spacy):
+    def test_entity_extractor_initialization(self, mock_spacy, mock_matcher_class):
         """Test entity extractor initialization."""
         mock_spacy.load.return_value = self.mock_nlp
-        mock_spacy.Matcher.return_value = self.mock_matcher
-        
+        mock_matcher_class.return_value = self.mock_matcher
+
         extractor = EntityExtractor(self.config)
-        
+
         self.assertEqual(extractor.config, self.config)
         mock_spacy.load.assert_called_once_with("en_core_web_sm")
     
+    @patch('src.components.retrievers.graph.entity_extraction.Matcher')
     @patch('src.components.retrievers.graph.entity_extraction.spacy')
-    def test_extract_entities_empty_documents(self, mock_spacy):
+    def test_extract_entities_empty_documents(self, mock_spacy, mock_matcher_class):
         """Test entity extraction with empty document list."""
         mock_spacy.load.return_value = self.mock_nlp
-        mock_spacy.Matcher.return_value = self.mock_matcher
-        
+        mock_matcher_class.return_value = self.mock_matcher
+
         extractor = EntityExtractor(self.config)
         result = extractor.extract_entities([])
-        
+
         self.assertEqual(result, {})
     
+    @patch('src.components.retrievers.graph.entity_extraction.Matcher')
     @patch('src.components.retrievers.graph.entity_extraction.spacy')
-    def test_extract_entities_basic(self, mock_spacy):
+    def test_extract_entities_basic(self, mock_spacy, mock_matcher_class):
         """Test basic entity extraction."""
         # Mock spaCy components
         mock_spacy.load.return_value = self.mock_nlp
-        mock_spacy.Matcher.return_value = self.mock_matcher
-        
+        mock_matcher_class.return_value = self.mock_matcher
+
         # Mock document processing
         mock_doc = Mock()
         mock_doc.ents = []
         self.mock_nlp.return_value = mock_doc
         self.mock_matcher.return_value = []
-        
+
         extractor = EntityExtractor(self.config)
-        
+
         # Create test documents
         documents = [
             Document(content="RISC-V is an instruction set architecture", metadata={"id": "doc1"}),
             Document(content="The vector extension implements SIMD operations", metadata={"id": "doc2"})
         ]
-        
+
         result = extractor.extract_entities(documents)
-        
+
         self.assertIsInstance(result, dict)
         self.assertEqual(len(result), 2)
         self.assertIn("doc1", result)
