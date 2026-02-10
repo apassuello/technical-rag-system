@@ -322,7 +322,8 @@ class TestCalculatorWithOpenAIAdapter:
 
         # Assert
         assert result.success is True
-        assert result.content == "25.0"
+        # Calculator returns "25" for whole numbers (formatted as int)
+        assert result.content == "25"
 
 
 class TestCalculatorPerformance:

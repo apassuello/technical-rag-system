@@ -110,21 +110,21 @@ class TestDocumentSearchScenario:
         # Arrange
         mock_retriever = Mock()
         mock_retriever.retrieve.return_value = [
-            {
-                "content": "The ModularUnifiedRetriever combines FAISS and BM25...",
-                "score": 0.92,
-                "metadata": {"source": "retriever_docs.pdf", "page": 5}
-            },
-            {
-                "content": "Retriever supports multiple fusion strategies...",
-                "score": 0.88,
-                "metadata": {"source": "architecture.pdf", "page": 8}
-            },
-            {
-                "content": "Document chunking affects retriever performance...",
-                "score": 0.75,
-                "metadata": {"source": "best_practices.pdf", "page": 12}
-            },
+            make_retrieval_result(
+                "The ModularUnifiedRetriever combines FAISS and BM25...",
+                0.92,
+                {"source": "retriever_docs.pdf", "page": 5}
+            ),
+            make_retrieval_result(
+                "Retriever supports multiple fusion strategies...",
+                0.88,
+                {"source": "architecture.pdf", "page": 8}
+            ),
+            make_retrieval_result(
+                "Document chunking affects retriever performance...",
+                0.75,
+                {"source": "best_practices.pdf", "page": 12}
+            ),
         ]
 
         registry = ToolRegistry()
@@ -189,16 +189,16 @@ class TestDocumentSearchScenario:
         # Arrange
         mock_retriever = Mock()
         mock_retriever.retrieve.return_value = [
-            {
-                "content": "Some marginally relevant content...",
-                "score": 0.45,
-                "metadata": {"source": "misc.pdf", "page": 10}
-            },
-            {
-                "content": "Another low-relevance document...",
-                "score": 0.38,
-                "metadata": {"source": "other.pdf", "page": 5}
-            },
+            make_retrieval_result(
+                "Some marginally relevant content...",
+                0.45,
+                {"source": "misc.pdf", "page": 10}
+            ),
+            make_retrieval_result(
+                "Another low-relevance document...",
+                0.38,
+                {"source": "other.pdf", "page": 5}
+            ),
         ]
 
         registry = ToolRegistry()
@@ -230,14 +230,14 @@ class TestDocumentSearchScenario:
         # Arrange
         mock_retriever = Mock()
 
-        def search_side_effect(query: str, num_results: int = 5) -> List[Dict]:
+        def search_side_effect(query: str, k: int = 5) -> List[RetrievalResult]:
             """Return different results based on query."""
             if "embedding" in query.lower():
-                return [{"content": f"Embedding info", "score": 0.9}]
+                return [make_retrieval_result("Embedding info", 0.9)]
             elif "retriev" in query.lower():
-                return [{"content": f"Retrieval info", "score": 0.85}]
+                return [make_retrieval_result("Retrieval info", 0.85)]
             elif "evaluat" in query.lower():
-                return [{"content": f"Evaluation info", "score": 0.88}]
+                return [make_retrieval_result("Evaluation info", 0.88)]
             return []
 
         mock_retriever.retrieve.side_effect = search_side_effect
@@ -315,11 +315,11 @@ class TestDocumentSearchWithAnthropicAdapter:
         # Arrange
         mock_retriever = Mock()
         mock_retriever.retrieve.return_value = [
-            {
-                "content": "RAG systems combine retrieval with generation...",
-                "score": 0.94,
-                "metadata": {"source": "rag_intro.pdf"}
-            }
+            make_retrieval_result(
+                "RAG systems combine retrieval with generation...",
+                0.94,
+                {"source": "rag_intro.pdf"}
+            )
         ]
 
         registry = ToolRegistry()
@@ -328,7 +328,7 @@ class TestDocumentSearchWithAnthropicAdapter:
 
         # Simulate Claude's tool use request
         tool_name = "search_documents"
-        tool_input = {"query": "RAG systems", "top_k": 1}
+        tool_input = {"query": "RAG systems", "num_results": 1}
 
         # Act
         result = registry.execute_tool(tool_name, **tool_input)
@@ -385,11 +385,11 @@ class TestDocumentSearchWithOpenAIAdapter:
         # Arrange
         mock_retriever = Mock()
         mock_retriever.retrieve.return_value = [
-            {
-                "content": "Vector databases store embeddings efficiently...",
-                "score": 0.91,
-                "metadata": {"source": "vector_db.pdf"}
-            }
+            make_retrieval_result(
+                "Vector databases store embeddings efficiently...",
+                0.91,
+                {"source": "vector_db.pdf"}
+            )
         ]
 
         registry = ToolRegistry()
@@ -398,7 +398,7 @@ class TestDocumentSearchWithOpenAIAdapter:
 
         # Simulate GPT function call
         function_name = "search_documents"
-        function_args = {"query": "vector databases", "top_k": 1}
+        function_args = {"query": "vector databases", "num_results": 1}
 
         # Act
         result = registry.execute_tool(function_name, **function_args)
@@ -441,7 +441,8 @@ class TestDocumentSearchErrorHandling:
         # Assert
         assert result.success is False
         assert result.error is not None
-        assert "error" in result.error.lower() or "exception" in result.error.lower()
+        # Error message should contain information about the failure
+        assert "search failed" in result.error.lower() or "index not found" in result.error.lower()
 
     def test_missing_query_parameter(self) -> None:
         """
@@ -519,7 +520,7 @@ class TestDocumentSearchPerformance:
         # Arrange
         mock_retriever = Mock()
         mock_retriever.retrieve.return_value = [
-            {"content": f"Document {i}", "score": 0.9 - (i * 0.05)}
+            make_retrieval_result(f"Document {i}", 0.9 - (i * 0.05))
             for i in range(10)
         ]
 
@@ -547,7 +548,7 @@ class TestDocumentSearchPerformance:
         # Arrange
         mock_retriever = Mock()
         mock_retriever.retrieve.return_value = [
-            {"content": "Result", "score": 0.9}
+            make_retrieval_result("Result", 0.9)
         ]
 
         registry = ToolRegistry()
@@ -584,7 +585,7 @@ class TestDocumentSearchEdgeCases:
         # Arrange
         mock_retriever = Mock()
         mock_retriever.retrieve.return_value = [
-            {"content": "Result", "score": 0.8}
+            make_retrieval_result("Result", 0.8)
         ]
 
         registry = ToolRegistry()
@@ -610,7 +611,7 @@ class TestDocumentSearchEdgeCases:
         # Arrange
         mock_retriever = Mock()
         mock_retriever.retrieve.return_value = [
-            {"content": "Result", "score": 0.85}
+            make_retrieval_result("Result", 0.85)
         ]
 
         registry = ToolRegistry()
@@ -634,7 +635,7 @@ class TestDocumentSearchEdgeCases:
         # Arrange
         mock_retriever = Mock()
         mock_retriever.retrieve.return_value = [
-            {"content": "Résultat", "score": 0.9}
+            make_retrieval_result("Résultat", 0.9)
         ]
 
         registry = ToolRegistry()
@@ -658,7 +659,7 @@ class TestDocumentSearchEdgeCases:
         # Arrange
         mock_retriever = Mock()
         mock_retriever.retrieve.return_value = [
-            {"content": f"Doc {i}", "score": 0.9}
+            make_retrieval_result(f"Doc {i}", 0.9)
             for i in range(100)
         ]
 

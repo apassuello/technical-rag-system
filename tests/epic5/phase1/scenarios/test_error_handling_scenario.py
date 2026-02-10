@@ -24,7 +24,7 @@ from src.components.query_processors.tools.implementations import (
     DocumentSearchTool,
     CodeAnalyzerTool,
 )
-from src.components.query_processors.tools.models import ToolResult
+from src.components.query_processors.tools.models import ToolResult, ToolParameter
 from src.components.query_processors.tools.base_tool import BaseTool
 
 
@@ -66,6 +66,9 @@ class TestToolExecutionFailures:
         Scenario: User provides invalid mathematical expression.
 
         Expected: SyntaxError caught, descriptive error returned.
+
+        Note: "2 + + 2" is valid (unary plus: 2 + (+2) = 4)
+              "5 / / 2" is valid (floor division: 5 // 2 = 2)
         """
         # Arrange
         registry = ToolRegistry()
@@ -73,10 +76,8 @@ class TestToolExecutionFailures:
         registry.register(calculator)
 
         invalid_expressions = [
-            "2 + + 2",
-            "* 5",
-            "(((1 + 2)",
-            "5 / / 2",
+            "* 5",  # Syntax error: binary operator without left operand
+            "(((1 + 2)",  # Syntax error: unmatched parentheses
             "x + y",  # Undefined variables
         ]
 
@@ -91,7 +92,11 @@ class TestToolExecutionFailures:
         """
         Scenario: User provides code with syntax errors.
 
-        Expected: Parser error caught, descriptive message returned.
+        Expected: Analysis succeeds and reports syntax error in content.
+
+        Note: CodeAnalyzerTool treats syntax errors as successful analysis
+              that identifies syntax issues (success=True with error details).
+              "return 42" is valid Python in module scope (Python 3.x).
         """
         # Arrange
         registry = ToolRegistry()
@@ -99,28 +104,33 @@ class TestToolExecutionFailures:
         registry.register(analyzer)
 
         invalid_codes = [
-            "def broken(",  # Incomplete function
-            "if True",  # Missing colon
-            "class Test",  # Missing colon
-            "return 42",  # Return outside function
-            "def func():\nreturn x",  # Incorrect indentation (should be indented)
+            "def broken(",  # Incomplete function - syntax error
+            "if True",  # Missing colon - syntax error
+            "class Test",  # Missing colon - syntax error
+            "def func():\nreturn x",  # Incorrect indentation - syntax error
         ]
 
         # Act & Assert
         for code in invalid_codes:
             result = registry.execute_tool("analyze_code", code=code)
-            assert result.success is False, f"Should fail for: {code[:20]}"
-            assert result.error is not None
+            # Syntax error analysis is a successful result that reports the error
+            assert result.success is True, f"Analysis should succeed for: {code[:20]}"
+            assert result.content is not None
+            assert "SYNTAX ERROR" in result.content, f"Should report syntax error for: {code[:20]}"
+            assert result.metadata.get("syntax_valid") is False
 
     def test_document_search_retriever_failure(self) -> None:
         """
         Scenario: Retriever raises exception during search.
 
         Expected: Exception caught, error returned in ToolResult.
+
+        Note: DocumentSearchTool uses num_results parameter, not top_k.
+              Error message format is "Search failed: <exception message>".
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.side_effect = RuntimeError("Index corrupted")
+        mock_retriever.retrieve.side_effect = RuntimeError("Index corrupted")
 
         registry = ToolRegistry()
         search_tool = DocumentSearchTool(retriever=mock_retriever)
@@ -130,13 +140,13 @@ class TestToolExecutionFailures:
         result = registry.execute_tool(
             "search_documents",
             query="test query",
-            top_k=5
+            num_results=5
         )
 
         # Assert
         assert result.success is False
         assert result.error is not None
-        assert "error" in result.error.lower() or "exception" in result.error.lower()
+        assert "failed" in result.error.lower() or "corrupted" in result.error.lower()
 
     def test_document_search_retriever_timeout(self) -> None:
         """
@@ -405,14 +415,18 @@ class TestSystemErrors:
         """
         # Arrange
         class MemoryErrorTool(BaseTool):
-            def __init__(self):
-                super().__init__(
-                    name="memory_error_tool",
-                    description="Tool that raises MemoryError",
-                    parameters=[]
-                )
+            @property
+            def name(self) -> str:
+                return "memory_error_tool"
 
-            def _execute(self, **kwargs) -> str:
+            @property
+            def description(self) -> str:
+                return "Tool that raises MemoryError"
+
+            def get_parameters(self) -> List[ToolParameter]:
+                return []
+
+            def execute(self, **kwargs) -> ToolResult:
                 raise MemoryError("Out of memory")
 
         registry = ToolRegistry()
@@ -435,14 +449,18 @@ class TestSystemErrors:
         """
         # Arrange
         class InterruptibleTool(BaseTool):
-            def __init__(self):
-                super().__init__(
-                    name="interruptible_tool",
-                    description="Tool that can be interrupted",
-                    parameters=[]
-                )
+            @property
+            def name(self) -> str:
+                return "interruptible_tool"
 
-            def _execute(self, **kwargs) -> str:
+            @property
+            def description(self) -> str:
+                return "Tool that can be interrupted"
+
+            def get_parameters(self) -> List[ToolParameter]:
+                return []
+
+            def execute(self, **kwargs) -> ToolResult:
                 # Simulate long operation that gets interrupted
                 raise KeyboardInterrupt("User interrupted")
 
@@ -515,6 +533,9 @@ class TestErrorRecovery:
         Scenario: Multiple errors in sequence don't accumulate or cause issues.
 
         Expected: Each error handled independently.
+
+        Note: CodeAnalyzerTool returns success=True for syntax errors
+              (it successfully analyzes and reports the syntax error).
         """
         # Arrange
         registry = ToolRegistry()
@@ -525,16 +546,26 @@ class TestErrorRecovery:
 
         # Act - Multiple failing operations
         results = [
-            registry.execute_tool("calculator", expression="1 / 0"),
-            registry.execute_tool("analyze_code", code="def broken("),
-            registry.execute_tool("nonexistent_tool"),
-            registry.execute_tool("calculator"),  # Missing parameter
+            registry.execute_tool("calculator", expression="1 / 0"),  # Fails
+            registry.execute_tool("analyze_code", code="def broken("),  # Succeeds with syntax error report
+            registry.execute_tool("nonexistent_tool"),  # Fails
+            registry.execute_tool("calculator"),  # Fails - missing parameter
         ]
 
         # Assert
         assert len(results) == 4
-        assert all(not r.success for r in results)
-        assert all(r.error is not None for r in results)
+        # First result: calculator division by zero (fails)
+        assert results[0].success is False
+        assert results[0].error is not None
+        # Second result: code analyzer with syntax error (succeeds with error report)
+        assert results[1].success is True
+        assert "SYNTAX ERROR" in results[1].content
+        # Third result: nonexistent tool (fails)
+        assert results[2].success is False
+        assert results[2].error is not None
+        # Fourth result: missing parameter (fails)
+        assert results[3].success is False
+        assert results[3].error is not None
 
         # System should still work after errors
         good_result = registry.execute_tool("calculator", expression="5 + 5")
