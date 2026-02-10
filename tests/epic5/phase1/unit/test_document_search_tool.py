@@ -206,6 +206,8 @@ class TestDocumentSearchErrorHandling:
     def test_invalid_num_results_type(self):
         """Test error on invalid num_results type."""
         mock_retriever = Mock(spec=Retriever)
+        # Mock retrieve method to return empty list
+        mock_retriever.retrieve.return_value = []
         tool = DocumentSearchTool(retriever=mock_retriever)
 
         # String that can be converted to int should work

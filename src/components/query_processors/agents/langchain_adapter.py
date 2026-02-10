@@ -244,7 +244,7 @@ def _map_parameter_type(param_type: ToolParameterType) -> Type:
     type_mapping = {
         ToolParameterType.STRING: str,
         ToolParameterType.INTEGER: int,
-        ToolParameterType.FLOAT: float,
+        ToolParameterType.NUMBER: float,
         ToolParameterType.BOOLEAN: bool,
         ToolParameterType.ARRAY: list,
         ToolParameterType.OBJECT: dict,

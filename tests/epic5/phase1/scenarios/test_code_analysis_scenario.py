@@ -170,10 +170,10 @@ def broken_function(
         # Act
         result = registry.execute_tool("analyze_code", code=invalid_code)
 
-        # Assert
-        assert result.success is False
-        assert result.error is not None
-        assert "error" in result.error.lower() or "syntax" in result.error.lower()
+        # Assert - syntax errors return success=True with error info in metadata
+        assert result.success is True
+        assert result.metadata.get('syntax_valid') is False
+        assert 'syntax' in result.content.lower() or 'error' in result.content.lower()
 
     def test_empty_code_scenario(self) -> None:
         """

@@ -320,7 +320,8 @@ class TestCalculatorErrorHandling:
 
     def test_invalid_syntax(self, calculator):
         """Test invalid syntax returns error."""
-        result = calculator.execute(expression="2 + + 3")
+        # Use an actually invalid expression (incomplete operator)
+        result = calculator.execute(expression="2 + ")
 
         assert result.success is False
         assert result.error is not None

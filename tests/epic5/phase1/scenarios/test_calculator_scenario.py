@@ -474,8 +474,9 @@ class TestCalculatorEdgeCases:
         calculator = CalculatorTool()
         registry.register(calculator)
 
+        # Note: "2 + + 2" is valid Python (parsed as 2 + (+2))
         invalid_expressions = [
-            "2 + + 2",
+            "2 + ",  # Incomplete expression
             "* 5",
             "10 /",
             "(5 + 3",
