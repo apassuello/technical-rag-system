@@ -31,6 +31,7 @@ GENERATOR_BASE_URL = "http://localhost:8081"
 API_TIMEOUT = 60.0  # Hard fail timeout
 
 
+@pytest.mark.requires_docker
 class TestGeneratorAPIHealth:
     """Test health and status endpoints."""
 
@@ -110,6 +111,7 @@ class TestGeneratorAPIHealth:
             pytest.fail(f"Status endpoint test failed - HARD FAIL: {e}")
 
 
+@pytest.mark.requires_docker
 class TestGeneratorAPIGeneration:
     """Test answer generation endpoints."""
 
@@ -323,6 +325,7 @@ class TestGeneratorAPIGeneration:
             print(f"Cost constraint test failed (acceptable for early stage): {e}")
 
 
+@pytest.mark.requires_docker
 class TestGeneratorAPIBatchGeneration:
     """Test batch generation functionality."""
 
@@ -436,6 +439,7 @@ class TestGeneratorAPIBatchGeneration:
             print(f"Batch generation test failed (acceptable for early stage): {e}")
 
 
+@pytest.mark.requires_docker
 class TestGeneratorAPIModelsEndpoint:
     """Test models information endpoint."""
 
@@ -506,6 +510,7 @@ class TestGeneratorAPIModelsEndpoint:
             pytest.fail(f"Models endpoint test failed - HARD FAIL: {e}")
 
 
+@pytest.mark.requires_docker
 class TestGeneratorAPIErrorHandling:
     """Test API error handling and edge cases."""
 
@@ -676,6 +681,7 @@ class TestGeneratorAPIErrorHandling:
             pytest.fail(f"Concurrent requests test failed - HARD FAIL: {e}")
 
 
+@pytest.mark.requires_docker
 class TestGeneratorAPIRouting:
     """Test routing-related API endpoints."""
 
@@ -731,6 +737,7 @@ class TestGeneratorAPIRouting:
 
 
 @pytest.mark.api_integration
+@pytest.mark.requires_docker
 class TestGeneratorAPIIntegration:
     """Test API integration scenarios."""
 

@@ -51,6 +51,7 @@ from src.components.query_processors.agents.models import (
     ReasoningStep,
     StepType
 )
+from src.components.query_processors.tools.models import ToolCall
 from src.core.interfaces import Answer
 
 
@@ -128,8 +129,9 @@ class TestRAGBaselinePerformance:
         mock_retriever = Mock()
         mock_generator = Mock()
         mock_generator.generate.return_value = Answer(
-            answer="Test answer",
+            text="Test answer",
             sources=[],
+            confidence=0.9,
             metadata={}
         )
 
@@ -144,9 +146,12 @@ class TestRAGBaselinePerformance:
             metadata={}
         )
 
+        mock_agent = Mock()
+
         processor = IntelligentQueryProcessor(
             retriever=mock_retriever,
             generator=mock_generator,
+            agent=mock_agent,
             query_analyzer=mock_analyzer,
             config=ProcessorConfig()
         )
@@ -190,7 +195,7 @@ class TestRAGBaselinePerformance:
             time.sleep(0.002)  # Simulate generation
             elapsed = time.perf_counter() - start
             generation_times.append(elapsed * 1000)
-            return Answer(answer="Test", sources=[], metadata={})
+            return Answer(text="Test", sources=[], confidence=0.9, metadata={})
 
         mock_retriever = Mock()
         mock_retriever.retrieve.side_effect = mock_retrieval
@@ -208,9 +213,12 @@ class TestRAGBaselinePerformance:
             metadata={}
         )
 
+        mock_agent = Mock()
+
         processor = IntelligentQueryProcessor(
             retriever=mock_retriever,
             generator=mock_generator,
+            agent=mock_agent,
             query_analyzer=mock_analyzer,
             config=ProcessorConfig()
         )
@@ -240,13 +248,15 @@ class TestAgentSystemPerformance:
         mock_generator = Mock()
 
         mock_agent = Mock()
+        mock_tool_call = ToolCall(id="call_1", tool_name="test_tool", arguments={})
+        mock_tool_result = Mock()
         mock_agent.process.return_value = AgentResult(
             success=True,
             answer="Agent answer",
             reasoning_steps=[
                 ReasoningStep(1, StepType.THOUGHT, "thinking"),
-                ReasoningStep(2, StepType.ACTION, "acting"),
-                ReasoningStep(3, StepType.OBSERVATION, "observing")
+                ReasoningStep(2, StepType.ACTION, "acting", tool_call=mock_tool_call),
+                ReasoningStep(3, StepType.OBSERVATION, "observing", tool_result=mock_tool_result)
             ],
             tool_calls=[],
             execution_time=0.5,
@@ -300,8 +310,9 @@ class TestAgentSystemPerformance:
         mock_retriever = Mock()
         mock_generator = Mock()
         mock_generator.generate.return_value = Answer(
-            answer="RAG answer",
+            text="RAG answer",
             sources=[],
+            confidence=0.9,
             metadata={}
         )
 
@@ -317,9 +328,12 @@ class TestAgentSystemPerformance:
             metadata={}
         )
 
+        mock_agent_rag = Mock()
+
         processor_rag = IntelligentQueryProcessor(
             retriever=mock_retriever,
             generator=mock_generator,
+            agent=mock_agent_rag,
             query_analyzer=mock_analyzer_rag,
             config=ProcessorConfig()
         )
@@ -542,7 +556,7 @@ class TestQueryAnalysisPerformance:
         # Act
         for _ in range(benchmark_iterations):
             start = time.perf_counter()
-            planner.create_plan(query, analysis, sub_tasks)
+            planner.create_plan(sub_tasks, query, analysis)
             elapsed = (time.perf_counter() - start) * 1000
             benchmark.add_measurement(elapsed)
 
@@ -665,12 +679,14 @@ class TestRoutingPerformance:
         mock_retriever = Mock()
         mock_generator = Mock()
         mock_generator.generate.return_value = Answer(
-            answer="Answer",
+            text="Answer",
             sources=[],
+            confidence=0.9,
             metadata={}
         )
 
         mock_analyzer = Mock()
+        mock_agent = Mock()
 
         # Alternate between simple and complex queries
         analyses = [
@@ -697,6 +713,7 @@ class TestRoutingPerformance:
         processor = IntelligentQueryProcessor(
             retriever=mock_retriever,
             generator=mock_generator,
+            agent=mock_agent,
             query_analyzer=mock_analyzer,
             config=ProcessorConfig()
         )
@@ -739,8 +756,9 @@ class TestThroughputBenchmarks:
         mock_retriever = Mock()
         mock_generator = Mock()
         mock_generator.generate.return_value = Answer(
-            answer="Answer",
+            text="Answer",
             sources=[],
+            confidence=0.9,
             metadata={}
         )
 
@@ -755,9 +773,12 @@ class TestThroughputBenchmarks:
             metadata={}
         )
 
+        mock_agent = Mock()
+
         processor = IntelligentQueryProcessor(
             retriever=mock_retriever,
             generator=mock_generator,
+            agent=mock_agent,
             query_analyzer=mock_analyzer,
             config=ProcessorConfig()
         )
@@ -804,8 +825,9 @@ class TestCostBenchmarks:
         mock_retriever = Mock()
         mock_generator = Mock()
         mock_generator.generate.return_value = Answer(
-            answer="Answer",
+            text="Answer",
             sources=[],
+            confidence=0.9,
             metadata={"cost": 0.001}
         )
 
@@ -814,9 +836,12 @@ class TestCostBenchmarks:
         mock_analyzer = Mock()
 
         # Simple query config
+        mock_agent_simple = Mock()
+
         processor_simple = IntelligentQueryProcessor(
             retriever=mock_retriever,
             generator=mock_generator,
+            agent=mock_agent_simple,
             query_analyzer=mock_analyzer,
             config=ProcessorConfig()
         )

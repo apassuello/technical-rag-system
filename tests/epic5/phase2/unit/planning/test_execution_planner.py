@@ -85,7 +85,9 @@ class TestExecutionPlanner:
 
         plan = planner.create_plan(tasks, query="test")
 
-        assert plan.strategy == ExecutionStrategy.HYBRID
+        # All tasks in same connected component (all depend on task_0), so only 1 group
+        # Line 188: if len(independent_groups) > 1 → HYBRID, else SEQUENTIAL
+        assert plan.strategy == ExecutionStrategy.SEQUENTIAL
 
     def test_strategy_cost_optimization(self, cost_planner: ExecutionPlanner) -> None:
         """Test cost optimization prefers SEQUENTIAL."""

@@ -30,6 +30,7 @@ from src.components.query_processors.tools.implementations import (
     CodeAnalyzerTool,
 )
 from src.components.query_processors.tools.models import ToolResult
+from src.core.interfaces import Document, RetrievalResult
 
 
 class TestToolRegistryBasicOperations:
@@ -335,9 +336,18 @@ def hello():
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {"content": "Document 1 content", "score": 0.95},
-            {"content": "Document 2 content", "score": 0.87},
+        # DocumentSearchTool expects RetrievalResult objects with Document objects
+        mock_retriever.retrieve.return_value = [
+            RetrievalResult(
+                document=Document(content="Document 1 content", metadata={}),
+                score=0.95,
+                retrieval_method="semantic"
+            ),
+            RetrievalResult(
+                document=Document(content="Document 2 content", metadata={}),
+                score=0.87,
+                retrieval_method="semantic"
+            ),
         ]
 
         registry = ToolRegistry()
@@ -348,14 +358,15 @@ def hello():
         result = registry.execute_tool(
             "search_documents",
             query="test query",
-            top_k=2
+            num_results=2
         )
 
         # Assert
         assert result.success is True
         assert result.content is not None
         assert "Document 1" in result.content
-        mock_retriever.search.assert_called_once_with("test query", top_k=2)
+        # DocumentSearchTool calls retriever.retrieve() not retriever.search()
+        mock_retriever.retrieve.assert_called_once_with(query="test query", k=2)
 
     def test_execute_nonexistent_tool_returns_error(self) -> None:
         """
@@ -652,7 +663,8 @@ class TestToolRegistryIntegrationScenarios:
 
         # Step 4: Verify results
         assert calc_result.success is True
-        assert calc_result.content == "25.0"
+        # Calculator returns "25" for whole numbers (formatted as int)
+        assert calc_result.content == "25"
 
         assert analyzer_result.success is True
         assert "class" in analyzer_result.content.lower()

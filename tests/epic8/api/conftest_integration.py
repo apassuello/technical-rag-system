@@ -44,9 +44,9 @@ async def service_health_check():
                 response = await client.get(f"{base_url}{health_endpoint}")
                 if response.status_code != 200:
                     pytest.skip(f"Service {service_name} is not healthy: {response.status_code}")
-            except (httpx.ConnectError, httpx.TimeoutException) as e:
+            except (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError) as e:
                 pytest.skip(f"Service {service_name} is not reachable: {e}")
-    
+
     return True
 
 
@@ -176,15 +176,4 @@ async def clear_cache(cache_client: httpx.AsyncClient) -> None:
         pass  # Ignore if clear endpoint doesn't exist
 
 
-# Test markers
-def pytest_configure(config):
-    """Register custom markers."""
-    config.addinivalue_line(
-        "markers", "integration: mark test as integration test against running services"
-    )
-    config.addinivalue_line(
-        "markers", "requires_docker: mark test as requiring Docker containers"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
+# Test markers are registered in pytest.ini

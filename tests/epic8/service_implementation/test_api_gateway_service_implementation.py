@@ -193,17 +193,29 @@ class TestSimpleCircuitBreaker:
         assert cb.failure_count == 0
 
 
+@pytest.fixture
+def mock_settings():
+    """Mock gateway settings — module-level so all test classes can use it."""
+    settings = Mock(spec=APIGatewaySettings)
+
+    # Create proper ServiceEndpoint mock object
+    endpoint_mock = Mock()
+    endpoint_mock.host = "localhost"
+    endpoint_mock.port = 8000
+    endpoint_mock.scheme = "http"
+    endpoint_mock.path = ""
+    endpoint_mock.timeout = 30
+    endpoint_mock.retries = 3
+    endpoint_mock.url = "http://localhost:8000"
+
+    settings.get_service_endpoint.return_value = endpoint_mock
+    settings.circuit_breaker_failure_threshold = 5
+    settings.circuit_breaker_recovery_timeout = 60
+    return settings
+
+
 class TestAPIGatewayServiceInitialization:
     """Test API Gateway Service initialization and setup."""
-
-    @pytest.fixture
-    def mock_settings(self):
-        """Mock gateway settings."""
-        settings = Mock(spec=APIGatewaySettings)
-        settings.get_service_endpoint.return_value = "http://localhost:8000"
-        settings.circuit_breaker_failure_threshold = 5
-        settings.circuit_breaker_recovery_timeout = 60
-        return settings
 
     # Service availability handled by fixtures
     def test_gateway_service_initialization_basic(self, mock_settings):
@@ -586,8 +598,8 @@ class TestBatchQueryProcessing:
                 sources=[],
                 complexity="simple",
                 confidence=0.8,
-                cost=CostBreakdown(model_used="test", total_cost=0.001),
-                metrics=ProcessingMetrics(total_time=1.0),
+                cost=CostBreakdown(model_used="test", model_cost=0.001, total_cost=0.001),
+                metrics=ProcessingMetrics(analysis_time=0.1, retrieval_time=0.3, generation_time=0.5, total_time=1.0, documents_retrieved=3, cache_hit=False),
                 query_id=f"query_{i}",
                 session_id="batch_session",
                 strategy_used="test",
@@ -647,8 +659,8 @@ class TestBatchQueryProcessing:
                 sources=[],
                 complexity="medium", 
                 confidence=0.85,
-                cost=CostBreakdown(model_used="parallel", total_cost=0.002),
-                metrics=ProcessingMetrics(total_time=0.1),
+                cost=CostBreakdown(model_used="parallel", model_cost=0.002, total_cost=0.002),
+                metrics=ProcessingMetrics(analysis_time=0.01, retrieval_time=0.03, generation_time=0.05, total_time=0.1, documents_retrieved=3, cache_hit=False),
                 query_id=str(uuid.uuid4()),
                 session_id=request.session_id,
                 strategy_used="parallel",
@@ -659,7 +671,7 @@ class TestBatchQueryProcessing:
         service.process_unified_query.side_effect = mock_query_processing
         
         # Create batch request with parallel processing
-        options = QueryOptions(strategy="fast")
+        options = QueryOptions(strategy="performance")
         batch_request = BatchQueryRequest(
             queries=["Parallel Query 1", "Parallel Query 2", "Parallel Query 3", "Parallel Query 4"],
             parallel_processing=True,
@@ -702,8 +714,8 @@ class TestBatchQueryProcessing:
                     sources=[],
                     complexity="simple",
                     confidence=0.9,
-                    cost=CostBreakdown(model_used="test", total_cost=0.001),
-                    metrics=ProcessingMetrics(total_time=0.5),
+                    cost=CostBreakdown(model_used="test", model_cost=0.001, total_cost=0.001),
+                    metrics=ProcessingMetrics(analysis_time=0.05, retrieval_time=0.15, generation_time=0.25, total_time=0.5, documents_retrieved=3, cache_hit=False),
                     query_id=str(uuid.uuid4()),
                     session_id=request.session_id,
                     strategy_used="test",
@@ -714,7 +726,7 @@ class TestBatchQueryProcessing:
         service.process_unified_query.side_effect = mock_query_side_effect
         
         # Create batch with some failing queries
-        options = QueryOptions(strategy="test")
+        options = QueryOptions(strategy="balanced")
         batch_request = BatchQueryRequest(
             queries=["Success Query 1", "FAIL Query", "Success Query 2", "Another FAIL"],
             parallel_processing=False,
@@ -764,8 +776,8 @@ class TestBatchQueryProcessing:
                 index=0, query="Q1", success=True,
                 result=UnifiedQueryResponse(
                     answer="A1", sources=[], complexity="simple", confidence=0.8,
-                    cost=CostBreakdown(model_used="test", total_cost=0.001),
-                    metrics=ProcessingMetrics(total_time=1.0),
+                    cost=CostBreakdown(model_used="test", model_cost=0.001, total_cost=0.001),
+                    metrics=ProcessingMetrics(analysis_time=0.1, retrieval_time=0.3, generation_time=0.5, total_time=1.0, documents_retrieved=3, cache_hit=False),
                     query_id="1", session_id="test", strategy_used="test",
                     fallback_used=False, warnings=[]
                 )
@@ -774,8 +786,8 @@ class TestBatchQueryProcessing:
                 index=1, query="Q2", success=True,
                 result=UnifiedQueryResponse(
                     answer="A2", sources=[], complexity="medium", confidence=0.8,
-                    cost=CostBreakdown(model_used="test", total_cost=0.002),
-                    metrics=ProcessingMetrics(total_time=1.5),
+                    cost=CostBreakdown(model_used="test", model_cost=0.002, total_cost=0.002),
+                    metrics=ProcessingMetrics(analysis_time=0.2, retrieval_time=0.5, generation_time=0.7, total_time=1.5, documents_retrieved=3, cache_hit=False),
                     query_id="2", session_id="test", strategy_used="test",
                     fallback_used=False, warnings=[]
                 )
@@ -784,8 +796,8 @@ class TestBatchQueryProcessing:
                 index=2, query="Q3", success=True,
                 result=UnifiedQueryResponse(
                     answer="A3", sources=[], complexity="complex", confidence=0.7,
-                    cost=CostBreakdown(model_used="test", total_cost=0.005),
-                    metrics=ProcessingMetrics(total_time=2.0),
+                    cost=CostBreakdown(model_used="test", model_cost=0.005, total_cost=0.005),
+                    metrics=ProcessingMetrics(analysis_time=0.3, retrieval_time=0.7, generation_time=0.9, total_time=2.0, documents_retrieved=5, cache_hit=False),
                     query_id="3", session_id="test", strategy_used="test",
                     fallback_used=False, warnings=[]
                 )
@@ -794,8 +806,8 @@ class TestBatchQueryProcessing:
                 index=3, query="Q4", success=True,
                 result=UnifiedQueryResponse(
                     answer="A4", sources=[], complexity="simple", confidence=0.9,
-                    cost=CostBreakdown(model_used="test", total_cost=0.001),
-                    metrics=ProcessingMetrics(total_time=0.8),
+                    cost=CostBreakdown(model_used="test", model_cost=0.001, total_cost=0.001),
+                    metrics=ProcessingMetrics(analysis_time=0.1, retrieval_time=0.2, generation_time=0.4, total_time=0.8, documents_retrieved=3, cache_hit=False),
                     query_id="4", session_id="test", strategy_used="test",
                     fallback_used=False, warnings=[]
                 )
@@ -979,13 +991,12 @@ class TestGatewayServiceHealthAndStatus:
         assert len(models_response.models) == 3
         
         # Find specific models
-        gpt4_model = next(m for m in models_response.models if m.id == "openai/gpt-4")
-        assert gpt4_model.name == "GPT-4"
+        gpt4_model = next(m for m in models_response.models if m.name == "GPT-4")
         assert gpt4_model.provider == "openai"
         assert gpt4_model.available is True
         assert gpt4_model.type == "generative"  # Should be added by gateway
-        
-        llama_model = next(m for m in models_response.models if m.id == "ollama/llama3.2:3b")
+
+        llama_model = next(m for m in models_response.models if m.name == "Llama 3.2 3B")
         assert llama_model.available is False
 
     # Service availability handled by fixtures

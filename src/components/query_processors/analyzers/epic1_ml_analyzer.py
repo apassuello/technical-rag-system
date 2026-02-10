@@ -759,6 +759,9 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             }
         )
 
+    # Note: sync analyze() inherited from BaseQueryAnalyzer calls _analyze_query()
+    # Use analyze_async() for the async path with mode support
+
     async def analyze_async(self, query: str, mode: str = 'hybrid') -> 'AnalysisResult':
         """
         Perform comprehensive ML-powered query analysis using trained models (async version).
@@ -1228,6 +1231,56 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 'model_recommendation': "ollama:llama3.2:3b"
             }
         )
+
+    def get_capabilities(self) -> List[str]:
+        """
+        Get list of analyzer capabilities.
+
+        Returns:
+            List of capability strings
+        """
+        return [
+            "ml_analysis",
+            "multi_view_analysis",
+            "model_recommendation",
+            "technical_term_extraction",
+            "entity_recognition",
+            "confidence_scoring",
+            "complexity_classification"
+        ]
+
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        Get analyzer statistics and metrics.
+
+        Returns:
+            Dictionary containing component metrics
+        """
+        stats = {
+            "analyzer_type": "Epic1MLAnalyzer",
+            "view_count": len(self.views),
+            "memory_budget_gb": self.memory_budget_gb,
+            "parallel_execution": self.parallel_execution
+        }
+
+        # Add model manager stats if available
+        if hasattr(self, 'model_manager') and self.model_manager:
+            try:
+                stats["model_manager_stats"] = self.model_manager.get_stats()
+            except Exception:
+                pass
+
+        return stats
+
+    def initialize_services(self, platform: 'PlatformOrchestrator') -> None:
+        """
+        Initialize platform services for the analyzer.
+
+        Args:
+            platform: PlatformOrchestrator instance
+        """
+        # Epic1MLAnalyzer is self-contained and doesn't need platform services
+        logger.debug("Epic1MLAnalyzer.initialize_services called (no-op)")
 
     def shutdown(self) -> None:
         """

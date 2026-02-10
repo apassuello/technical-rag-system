@@ -88,32 +88,44 @@ def mock_prometheus_metrics():
 def create_test_cache_app():
     """
     Create a test instance of the cache service app with mocked dependencies.
-    
+
     This function handles:
     1. Prometheus metrics mocking to prevent registration conflicts
     2. Module cache clearing to ensure fresh imports
     3. Dependency injection for testability
+
+    Raises:
+        ImportError: If cache service is not implemented
     """
+    # Check if cache service exists
+    import sys
+    from pathlib import Path
+    project_root = Path(__file__).resolve().parents[3]
+    service_path = project_root / "services" / "cache"
+
+    if not service_path.exists():
+        raise ImportError(f"Cache service not implemented: {service_path} does not exist")
+
     # Clear any previously imported cache modules
     clear_module_cache(['cache_app', 'services.cache'])
-    
+
     # Reset Prometheus registry to avoid duplicate registrations
     reset_prometheus_registry()
-    
+
     # Create isolated registry for this test
     test_registry = create_isolated_prometheus_registry()
-    
+
     # Get enhanced Prometheus mocks
     prometheus_mocks = mock_prometheus_metrics()
-    
+
     # Mock Prometheus metrics with isolated registry
     with patch('prometheus_client.REGISTRY', test_registry):
-        with patch.multiple('prometheus_client', 
+        with patch.multiple('prometheus_client',
                            Counter=prometheus_mocks['prometheus_client.Counter'],
                            Histogram=prometheus_mocks['prometheus_client.Histogram'],
                            Gauge=prometheus_mocks['prometheus_client.Gauge'],
                            make_asgi_app=MagicMock(return_value=MagicMock())):
-            
+
             # Mock Redis client to avoid needing actual Redis
             with patch('redis.asyncio.Redis') as mock_redis:
                 mock_redis_instance = MagicMock()
@@ -123,10 +135,10 @@ def create_test_cache_app():
                 mock_redis_instance.exists = MagicMock(return_value=0)
                 mock_redis_instance.ping = MagicMock(return_value=True)
                 mock_redis.from_url.return_value = mock_redis_instance
-                
+
                 # Create a mock cache service with proper async methods and in-memory storage
                 from unittest.mock import AsyncMock
-                
+
                 # In-memory storage for the mock cache
                 mock_storage = {}
                 mock_stats = {
@@ -136,7 +148,7 @@ def create_test_cache_app():
                     'deletes': 0,
                     'errors': 0
                 }
-                
+
                 async def mock_get_cached_response(query_hash: str):
                     """Mock get that uses actual in-memory storage and tracks stats."""
                     result = mock_storage.get(query_hash)
@@ -145,19 +157,19 @@ def create_test_cache_app():
                     else:
                         mock_stats['misses'] += 1
                     return result
-                
+
                 async def mock_cache_response(query_hash: str, response_data, content_type=None, custom_ttl=None):
                     """Mock cache that actually stores data in memory and tracks stats."""
                     mock_storage[query_hash] = response_data
                     mock_stats['sets'] += 1
                     return True
-                
+
                 async def mock_set_cached_response(query_hash: str, response_data, ttl=None):
                     """Mock set that stores data in memory and tracks stats."""
                     mock_storage[query_hash] = response_data
                     mock_stats['sets'] += 1
                     return True
-                
+
                 async def mock_delete_cached_response(query_hash: str):
                     """Mock delete that removes from memory storage and tracks stats."""
                     if query_hash in mock_storage:
@@ -165,12 +177,12 @@ def create_test_cache_app():
                         mock_stats['deletes'] += 1
                         return 1
                     return 0
-                
+
                 async def mock_clear_cache():
                     """Mock clear that empties memory storage and tracks stats."""
                     mock_storage.clear()
                     return {"redis": True, "fallback": True}
-                
+
                 mock_cache_service = MagicMock()
                 mock_cache_service.get_cached_response = mock_get_cached_response
                 mock_cache_service.set_cached_response = mock_set_cached_response
@@ -181,7 +193,7 @@ def create_test_cache_app():
                     """Mock statistics that returns actual tracked stats."""
                     total_requests = mock_stats['hits'] + mock_stats['misses']
                     hit_rate = mock_stats['hits'] / total_requests if total_requests > 0 else 0.0
-                    
+
                     return {
                         "service": "cache",
                         "version": "1.0.0",
@@ -229,28 +241,28 @@ def create_test_cache_app():
                             "max_retries": 3
                         }
                     }
-                
+
                 mock_cache_service.get_cache_statistics = mock_get_cache_statistics
                 mock_cache_service.health_check = AsyncMock(return_value={'status': 'healthy', 'redis_connected': True})
                 mock_cache_service.redis = mock_redis_instance
                 mock_cache_service._is_circuit_breaker_open = MagicMock(return_value=False)
                 mock_cache_service._calculate_ttl = MagicMock(return_value=3600)  # 1 hour default
-                
+
                 # Import the app components
                 from services.cache.cache_app.main import create_app
                 from services.cache.cache_app.api.rest import get_cache_service as api_get_cache_service
-                
+
                 # Create app with test configuration
                 app = create_app()
-                
+
                 # Override the dependency to return our mock service
                 app.dependency_overrides[api_get_cache_service] = lambda: mock_cache_service
-                
+
                 # Attach mocks for test access
                 app._test_cache_service = mock_cache_service
                 app._test_storage = mock_storage
                 app._test_stats = mock_stats
-                
+
                 return app
 
 

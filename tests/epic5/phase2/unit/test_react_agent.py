@@ -91,19 +91,6 @@ def working_memory():
     return WorkingMemory()
 
 
-@pytest.fixture
-def mock_agent_executor():
-    """Mock AgentExecutor for testing."""
-    with patch('src.components.query_processors.agents.react_agent.AgentExecutor') as mock:
-        executor = Mock()
-        executor.invoke = Mock(return_value={
-            "output": "The answer is 42",
-            "intermediate_steps": []
-        })
-        mock.return_value = executor
-        yield executor
-
-
 # =============================================================================
 # Initialization Tests
 # =============================================================================
@@ -204,22 +191,18 @@ def test_agent_initialization_with_multiple_tools(
 # Query Processing Tests
 # =============================================================================
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_process_simple_query(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test processing simple query."""
-    # Mock executor
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -235,21 +218,18 @@ def test_process_simple_query(
     assert result.execution_time > 0
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_process_adds_query_to_memory(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test query is added to conversation memory."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "Answer",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -265,22 +245,19 @@ def test_process_adds_query_to_memory(
     assert any(msg.content == query and msg.role == "user" for msg in messages)
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_process_adds_answer_to_memory(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test answer is added to conversation memory."""
-    mock_executor = Mock()
     answer = "The answer is 42"
     mock_executor.invoke = Mock(return_value={
         "output": answer,
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -295,9 +272,7 @@ def test_process_adds_answer_to_memory(
     assert any(msg.content == answer and msg.role == "assistant" for msg in messages)
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_process_empty_query_returns_error(
-    mock_executor_class,
     mock_llm,
     calculator_tool,
     conversation_memory,
@@ -318,9 +293,8 @@ def test_process_empty_query_returns_error(
     assert "empty" in result.error.lower()
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_process_never_raises_exception(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
@@ -328,9 +302,7 @@ def test_process_never_raises_exception(
 ):
     """Test process() never raises exceptions."""
     # Mock executor to raise exception
-    mock_executor = Mock()
     mock_executor.invoke = Mock(side_effect=RuntimeError("Test error"))
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -350,9 +322,8 @@ def test_process_never_raises_exception(
 # Multi-Step Reasoning Tests
 # =============================================================================
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_process_with_intermediate_steps(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
@@ -365,12 +336,10 @@ def test_process_with_intermediate_steps(
     mock_action.tool_input = "2 + 2"
     mock_action.log = "I need to calculate 2 + 2"
 
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": [(mock_action, "4")]
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -385,9 +354,8 @@ def test_process_with_intermediate_steps(
     assert len(result.reasoning_steps) > 0
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_reasoning_trace_includes_all_step_types(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
@@ -399,12 +367,10 @@ def test_reasoning_trace_includes_all_step_types(
     mock_action.tool_input = "2 + 2"
     mock_action.log = "Thinking about the calculation"
 
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": [(mock_action, "4")]
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -421,9 +387,8 @@ def test_reasoning_trace_includes_all_step_types(
     assert StepType.FINAL_ANSWER in step_types
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_tool_calls_tracked(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
@@ -435,12 +400,10 @@ def test_tool_calls_tracked(
     mock_action.tool_input = "2 + 2"
     mock_action.log = "Calculating"
 
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": [(mock_action, "4")]
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -459,21 +422,18 @@ def test_tool_calls_tracked(
 # Reasoning Trace Tests
 # =============================================================================
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_get_reasoning_trace(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test get_reasoning_trace returns steps."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -490,21 +450,18 @@ def test_get_reasoning_trace(
     assert all(isinstance(step, ReasoningStep) for step in trace)
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_reasoning_trace_is_copy(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test reasoning trace returns copy, not reference."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -521,21 +478,18 @@ def test_reasoning_trace_is_copy(
     assert len(trace1) == len(trace2)  # Same content
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_reasoning_steps_have_sequential_numbers(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test reasoning steps have sequential step numbers."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -555,9 +509,8 @@ def test_reasoning_steps_have_sequential_numbers(
 # Memory Integration Tests
 # =============================================================================
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_working_memory_available_during_processing(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
@@ -565,12 +518,10 @@ def test_working_memory_available_during_processing(
     agent_config
 ):
     """Test working memory is available during processing."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -587,21 +538,18 @@ def test_working_memory_available_during_processing(
     assert working_memory.get_context("test_key") == "test_value"
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_conversation_history_passed_to_executor(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test conversation history is passed to executor."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -624,21 +572,18 @@ def test_conversation_history_passed_to_executor(
 # Statistics Tests
 # =============================================================================
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_stats_track_query_count(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test statistics track query count."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -654,23 +599,19 @@ def test_stats_track_query_count(
     assert stats["total_queries"] == 2
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_stats_track_success_rate(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test statistics track success rate."""
-    mock_executor = Mock()
-
     # First call succeeds
     mock_executor.invoke = Mock(side_effect=[
         {"output": "4", "intermediate_steps": []},
         RuntimeError("Test error")
     ])
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -687,21 +628,18 @@ def test_stats_track_success_rate(
     assert stats["success_rate"] == 0.5
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_stats_track_execution_time(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test statistics track execution time."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -717,21 +655,18 @@ def test_stats_track_execution_time(
     assert stats["avg_execution_time"] > 0
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_stats_track_cost(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test statistics track cost."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -751,21 +686,18 @@ def test_stats_track_cost(
 # Reset Tests
 # =============================================================================
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_reset_clears_reasoning_trace(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test reset clears reasoning trace."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -781,9 +713,8 @@ def test_reset_clears_reasoning_trace(
     assert len(agent.get_reasoning_trace()) == 0
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_reset_clears_tool_calls(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
@@ -795,12 +726,10 @@ def test_reset_clears_tool_calls(
     mock_action.tool_input = "2 + 2"
     mock_action.log = "Calculating"
 
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": [(mock_action, "4")]
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -819,9 +748,8 @@ def test_reset_clears_tool_calls(
     # (tool calls are per-query, so this tests internal state reset)
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_reset_clears_working_memory(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
@@ -829,12 +757,10 @@ def test_reset_clears_working_memory(
     agent_config
 ):
     """Test reset clears working memory."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -854,9 +780,8 @@ def test_reset_clears_working_memory(
 # Cost Estimation Tests
 # =============================================================================
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_cost_estimation_for_openai(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory
@@ -868,12 +793,10 @@ def test_cost_estimation_for_openai(
         max_iterations=10
     )
 
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -888,9 +811,8 @@ def test_cost_estimation_for_openai(
     assert result.total_cost >= 0
 
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_cost_estimation_for_anthropic(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory
@@ -902,12 +824,10 @@ def test_cost_estimation_for_anthropic(
         max_iterations=10
     )
 
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,
@@ -926,21 +846,18 @@ def test_cost_estimation_for_anthropic(
 # Metadata Tests
 # =============================================================================
 
-@patch('src.components.query_processors.agents.react_agent.AgentExecutor')
 def test_result_includes_metadata(
-    mock_executor_class,
+    mock_executor,
     mock_llm,
     calculator_tool,
     conversation_memory,
     agent_config
 ):
     """Test result includes metadata."""
-    mock_executor = Mock()
     mock_executor.invoke = Mock(return_value={
         "output": "4",
         "intermediate_steps": []
     })
-    mock_executor_class.return_value = mock_executor
 
     agent = ReActAgent(
         llm=mock_llm,

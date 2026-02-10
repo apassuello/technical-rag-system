@@ -45,9 +45,9 @@ from typing import Any, Dict, List, Optional
 
 try:
     from langchain.agents import AgentExecutor, create_react_agent
-except ImportError:
+except (ImportError, AttributeError):
     try:
-        from langchain_community.agents import AgentExecutor, create_react_agent
+        from langchain_classic.agents import AgentExecutor, create_react_agent
     except ImportError:
         AgentExecutor = None  # type: ignore[assignment,misc]
         create_react_agent = None  # type: ignore[assignment,misc]
@@ -172,7 +172,7 @@ class ReActAgent(BaseAgent):
         self.phase1_tools = tools
         self.memory = memory
         self.config = config
-        self.working_memory = working_memory or WorkingMemory()
+        self.working_memory = working_memory if working_memory is not None else WorkingMemory()
 
         # Convert Phase 1 tools to LangChain format
         self.langchain_tools = convert_tools_to_langchain(tools)
@@ -320,6 +320,8 @@ class ReActAgent(BaseAgent):
                 # Agent execution failed
                 logger.error(f"Agent execution failed: {e}", exc_info=True)
                 execution_time = time.time() - start_time
+                self._total_queries += 1
+                self._total_execution_time += execution_time
                 return AgentResult(
                     success=False,
                     answer="",
@@ -536,6 +538,7 @@ class ReActAgent(BaseAgent):
 
             # Add action step
             tool_call = ToolCall(
+                id=f"call_{i}",
                 tool_name=action.tool,
                 arguments={action.tool_input: action.tool_input} if isinstance(action.tool_input, str) else action.tool_input,
                 timestamp=datetime.now()

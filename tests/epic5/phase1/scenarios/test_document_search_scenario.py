@@ -23,6 +23,16 @@ from typing import Dict, List, Any
 from src.components.query_processors.tools.tool_registry import ToolRegistry
 from src.components.query_processors.tools.implementations import DocumentSearchTool
 from src.components.query_processors.tools.models import ToolResult
+from src.core.interfaces import Document, RetrievalResult
+
+
+def make_retrieval_result(content: str, score: float, metadata: Dict[str, Any] = None) -> RetrievalResult:
+    """Helper to create RetrievalResult objects for mocking."""
+    return RetrievalResult(
+        document=Document(content=content, metadata=metadata or {}),
+        score=score,
+        retrieval_method="semantic"
+    )
 
 
 class TestDocumentSearchScenario:
@@ -51,17 +61,17 @@ class TestDocumentSearchScenario:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {
-                "content": "Embeddings are dense vector representations of text...",
-                "score": 0.95,
-                "metadata": {"source": "embeddings_guide.pdf", "page": 1}
-            },
-            {
-                "content": "We use sentence-transformers for generating embeddings...",
-                "score": 0.87,
-                "metadata": {"source": "architecture.pdf", "page": 3}
-            },
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result(
+                "Embeddings are dense vector representations of text...",
+                0.95,
+                {"source": "embeddings_guide.pdf", "page": 1}
+            ),
+            make_retrieval_result(
+                "We use sentence-transformers for generating embeddings...",
+                0.87,
+                {"source": "architecture.pdf", "page": 3}
+            ),
         ]
 
         registry = ToolRegistry()
@@ -75,7 +85,7 @@ class TestDocumentSearchScenario:
         result = registry.execute_tool(
             "search_documents",
             query=search_query,
-            top_k=2
+            num_results=2
         )
 
         # Assert
@@ -85,7 +95,7 @@ class TestDocumentSearchScenario:
         assert result.error is None
 
         # Verify retriever was called correctly
-        mock_retriever.search.assert_called_once_with(search_query, top_k=2)
+        mock_retriever.retrieve.assert_called_once_with(query=search_query, k=2)
 
     def test_technical_documentation_query(self) -> None:
         """
@@ -99,22 +109,22 @@ class TestDocumentSearchScenario:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {
-                "content": "The ModularUnifiedRetriever combines FAISS and BM25...",
-                "score": 0.92,
-                "metadata": {"source": "retriever_docs.pdf", "page": 5}
-            },
-            {
-                "content": "Retriever supports multiple fusion strategies...",
-                "score": 0.88,
-                "metadata": {"source": "architecture.pdf", "page": 8}
-            },
-            {
-                "content": "Document chunking affects retriever performance...",
-                "score": 0.75,
-                "metadata": {"source": "best_practices.pdf", "page": 12}
-            },
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result(
+                "The ModularUnifiedRetriever combines FAISS and BM25...",
+                0.92,
+                {"source": "retriever_docs.pdf", "page": 5}
+            ),
+            make_retrieval_result(
+                "Retriever supports multiple fusion strategies...",
+                0.88,
+                {"source": "architecture.pdf", "page": 8}
+            ),
+            make_retrieval_result(
+                "Document chunking affects retriever performance...",
+                0.75,
+                {"source": "best_practices.pdf", "page": 12}
+            ),
         ]
 
         registry = ToolRegistry()
@@ -125,7 +135,7 @@ class TestDocumentSearchScenario:
         result = registry.execute_tool(
             "search_documents",
             query="retriever architecture",
-            top_k=3
+            num_results=3
         )
 
         # Assert
@@ -148,7 +158,7 @@ class TestDocumentSearchScenario:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = []  # No results
+        mock_retriever.retrieve.return_value = []  # No results
 
         registry = ToolRegistry()
         search_tool = DocumentSearchTool(retriever=mock_retriever)
@@ -158,7 +168,7 @@ class TestDocumentSearchScenario:
         result = registry.execute_tool(
             "search_documents",
             query="quantum computing",
-            top_k=5
+            num_results=5
         )
 
         # Assert
@@ -178,17 +188,17 @@ class TestDocumentSearchScenario:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {
-                "content": "Some marginally relevant content...",
-                "score": 0.45,
-                "metadata": {"source": "misc.pdf", "page": 10}
-            },
-            {
-                "content": "Another low-relevance document...",
-                "score": 0.38,
-                "metadata": {"source": "other.pdf", "page": 5}
-            },
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result(
+                "Some marginally relevant content...",
+                0.45,
+                {"source": "misc.pdf", "page": 10}
+            ),
+            make_retrieval_result(
+                "Another low-relevance document...",
+                0.38,
+                {"source": "other.pdf", "page": 5}
+            ),
         ]
 
         registry = ToolRegistry()
@@ -199,7 +209,7 @@ class TestDocumentSearchScenario:
         result = registry.execute_tool(
             "search_documents",
             query="obscure topic",
-            top_k=2
+            num_results=2
         )
 
         # Assert
@@ -220,26 +230,26 @@ class TestDocumentSearchScenario:
         # Arrange
         mock_retriever = Mock()
 
-        def search_side_effect(query: str, top_k: int = 5) -> List[Dict]:
+        def search_side_effect(query: str, k: int = 5) -> List[RetrievalResult]:
             """Return different results based on query."""
             if "embedding" in query.lower():
-                return [{"content": f"Embedding info", "score": 0.9}]
+                return [make_retrieval_result("Embedding info", 0.9)]
             elif "retriev" in query.lower():
-                return [{"content": f"Retrieval info", "score": 0.85}]
+                return [make_retrieval_result("Retrieval info", 0.85)]
             elif "evaluat" in query.lower():
-                return [{"content": f"Evaluation info", "score": 0.88}]
+                return [make_retrieval_result("Evaluation info", 0.88)]
             return []
 
-        mock_retriever.search.side_effect = search_side_effect
+        mock_retriever.retrieve.side_effect = search_side_effect
 
         registry = ToolRegistry()
         search_tool = DocumentSearchTool(retriever=mock_retriever)
         registry.register(search_tool)
 
         # Act
-        result1 = registry.execute_tool("search_documents", query="embeddings", top_k=1)
-        result2 = registry.execute_tool("search_documents", query="retrieval", top_k=1)
-        result3 = registry.execute_tool("search_documents", query="evaluation", top_k=1)
+        result1 = registry.execute_tool("search_documents", query="embeddings", num_results=1)
+        result2 = registry.execute_tool("search_documents", query="retrieval", num_results=1)
+        result3 = registry.execute_tool("search_documents", query="evaluation", num_results=1)
 
         # Assert
         assert result1.success is True
@@ -252,7 +262,7 @@ class TestDocumentSearchScenario:
         assert "Evaluation" in result3.content
 
         # Verify retriever called 3 times
-        assert mock_retriever.search.call_count == 3
+        assert mock_retriever.retrieve.call_count == 3
 
 
 class TestDocumentSearchWithAnthropicAdapter:
@@ -304,12 +314,12 @@ class TestDocumentSearchWithAnthropicAdapter:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {
-                "content": "RAG systems combine retrieval with generation...",
-                "score": 0.94,
-                "metadata": {"source": "rag_intro.pdf"}
-            }
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result(
+                "RAG systems combine retrieval with generation...",
+                0.94,
+                {"source": "rag_intro.pdf"}
+            )
         ]
 
         registry = ToolRegistry()
@@ -318,7 +328,7 @@ class TestDocumentSearchWithAnthropicAdapter:
 
         # Simulate Claude's tool use request
         tool_name = "search_documents"
-        tool_input = {"query": "RAG systems", "top_k": 1}
+        tool_input = {"query": "RAG systems", "num_results": 1}
 
         # Act
         result = registry.execute_tool(tool_name, **tool_input)
@@ -374,12 +384,12 @@ class TestDocumentSearchWithOpenAIAdapter:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {
-                "content": "Vector databases store embeddings efficiently...",
-                "score": 0.91,
-                "metadata": {"source": "vector_db.pdf"}
-            }
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result(
+                "Vector databases store embeddings efficiently...",
+                0.91,
+                {"source": "vector_db.pdf"}
+            )
         ]
 
         registry = ToolRegistry()
@@ -388,7 +398,7 @@ class TestDocumentSearchWithOpenAIAdapter:
 
         # Simulate GPT function call
         function_name = "search_documents"
-        function_args = {"query": "vector databases", "top_k": 1}
+        function_args = {"query": "vector databases", "num_results": 1}
 
         # Act
         result = registry.execute_tool(function_name, **function_args)
@@ -415,7 +425,7 @@ class TestDocumentSearchErrorHandling:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.side_effect = Exception("Index not found")
+        mock_retriever.retrieve.side_effect = Exception("Index not found")
 
         registry = ToolRegistry()
         search_tool = DocumentSearchTool(retriever=mock_retriever)
@@ -425,13 +435,14 @@ class TestDocumentSearchErrorHandling:
         result = registry.execute_tool(
             "search_documents",
             query="test query",
-            top_k=5
+            num_results=5
         )
 
         # Assert
         assert result.success is False
         assert result.error is not None
-        assert "error" in result.error.lower() or "exception" in result.error.lower()
+        # Error message should contain information about the failure
+        assert "search failed" in result.error.lower() or "index not found" in result.error.lower()
 
     def test_missing_query_parameter(self) -> None:
         """
@@ -450,9 +461,9 @@ class TestDocumentSearchErrorHandling:
         assert result.success is False
         assert result.error is not None
 
-    def test_invalid_top_k_parameter(self) -> None:
+    def test_invalid_num_results_parameter(self) -> None:
         """
-        Test: Invalid top_k parameter handled.
+        Test: Invalid num_results parameter handled.
         """
         # Arrange
         mock_retriever = Mock()
@@ -464,7 +475,7 @@ class TestDocumentSearchErrorHandling:
         result = registry.execute_tool(
             "search_documents",
             query="test",
-            top_k=-5  # Invalid: negative
+            num_results=-5  # Invalid: negative
         )
 
         # Assert
@@ -485,7 +496,7 @@ class TestDocumentSearchErrorHandling:
         result = registry.execute_tool(
             "search_documents",
             query="",  # Empty query
-            top_k=5
+            num_results=5
         )
 
         # Assert
@@ -508,8 +519,8 @@ class TestDocumentSearchPerformance:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {"content": f"Document {i}", "score": 0.9 - (i * 0.05)}
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result(f"Document {i}", 0.9 - (i * 0.05))
             for i in range(10)
         ]
 
@@ -521,7 +532,7 @@ class TestDocumentSearchPerformance:
         result = registry.execute_tool(
             "search_documents",
             query="test query",
-            top_k=10
+            num_results=10
         )
 
         # Assert
@@ -536,8 +547,8 @@ class TestDocumentSearchPerformance:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {"content": "Result", "score": 0.9}
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result("Result", 0.9)
         ]
 
         registry = ToolRegistry()
@@ -552,14 +563,14 @@ class TestDocumentSearchPerformance:
             result = registry.execute_tool(
                 "search_documents",
                 query=query,
-                top_k=1
+                num_results=1
             )
             results.append(result)
 
         # Assert
         assert len(results) == 10
         assert all(r.success for r in results)
-        assert mock_retriever.search.call_count == 10
+        assert mock_retriever.retrieve.call_count == 10
 
 
 class TestDocumentSearchEdgeCases:
@@ -573,8 +584,8 @@ class TestDocumentSearchEdgeCases:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {"content": "Result", "score": 0.8}
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result("Result", 0.8)
         ]
 
         registry = ToolRegistry()
@@ -586,7 +597,7 @@ class TestDocumentSearchEdgeCases:
         result = registry.execute_tool(
             "search_documents",
             query=long_query,
-            top_k=5
+            num_results=5
         )
 
         # Assert - Should handle gracefully (either success or specific error)
@@ -599,8 +610,8 @@ class TestDocumentSearchEdgeCases:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {"content": "Result", "score": 0.85}
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result("Result", 0.85)
         ]
 
         registry = ToolRegistry()
@@ -611,7 +622,7 @@ class TestDocumentSearchEdgeCases:
         result = registry.execute_tool(
             "search_documents",
             query="test @#$% query",
-            top_k=3
+            num_results=3
         )
 
         # Assert
@@ -623,8 +634,8 @@ class TestDocumentSearchEdgeCases:
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {"content": "Résultat", "score": 0.9}
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result("Résultat", 0.9)
         ]
 
         registry = ToolRegistry()
@@ -635,20 +646,20 @@ class TestDocumentSearchEdgeCases:
         result = registry.execute_tool(
             "search_documents",
             query="Qu'est-ce que c'est?",
-            top_k=1
+            num_results=1
         )
 
         # Assert
         assert result is not None
 
-    def test_very_large_top_k(self) -> None:
+    def test_very_large_num_results(self) -> None:
         """
-        Test: Very large top_k value handled.
+        Test: Very large num_results value handled.
         """
         # Arrange
         mock_retriever = Mock()
-        mock_retriever.search.return_value = [
-            {"content": f"Doc {i}", "score": 0.9}
+        mock_retriever.retrieve.return_value = [
+            make_retrieval_result(f"Doc {i}", 0.9)
             for i in range(100)
         ]
 
@@ -660,7 +671,7 @@ class TestDocumentSearchEdgeCases:
         result = registry.execute_tool(
             "search_documents",
             query="test",
-            top_k=1000  # Very large
+            num_results=1000  # Very large
         )
 
         # Assert - Should either cap the value or handle appropriately
