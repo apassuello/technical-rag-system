@@ -26,17 +26,27 @@ print(f"✓ Root conftest.py: Added {PROJECT_ROOT} and {SRC_PATH} to sys.path")
 from src.core.component_factory import ComponentFactory as _RealComponentFactory
 
 
+import src.core.platform_orchestrator as _po_module
+
+
 @pytest.fixture(autouse=True)
 def _clear_component_factory_cache():
     """Prevent cached Mock components from leaking between tests.
 
-    Only clear _component_cache (instances), NOT _class_cache (import refs).
-    Clearing _class_cache forces re-import of every component class and can
-    break PlatformOrchestrator initialization in validation tests.
+    Clears caches AND restores the ComponentFactory reference in the
+    platform_orchestrator module namespace. Unit tests that patch
+    'src.core.platform_orchestrator.ComponentFactory' can leave a Mock
+    reference that persists into subsequent tests (e.g. validation tests),
+    causing 'Mock object is not iterable' errors when the orchestrator
+    tries to use a Mock embedder.
     """
     _RealComponentFactory._component_cache.clear()
+    _RealComponentFactory._class_cache.clear()
+    _po_module.ComponentFactory = _RealComponentFactory
     yield
     _RealComponentFactory._component_cache.clear()
+    _RealComponentFactory._class_cache.clear()
+    _po_module.ComponentFactory = _RealComponentFactory
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -47,12 +57,53 @@ def pytest_sessionfinish(session, exitstatus):
         _thread._threads_queues[t] = None
 
 
-def pytest_configure(config):
-    """Register custom markers programmatically."""
-    # Epic 8 Docker service marker
-    config.addinivalue_line(
-        "markers", "integration: mark test as integration test with real dependencies"
-    )
-    config.addinivalue_line(
-        "markers", "requires_docker: mark test as requiring Docker services (Epic 8 microservices)"
-    )
+import urllib.request
+import socket
+
+
+def _service_available(url: str, timeout: float = 2.0) -> bool:
+    """Check if an HTTP service is reachable."""
+    try:
+        urllib.request.urlopen(url, timeout=timeout)
+        return True
+    except Exception:
+        return False
+
+
+def _redis_available(host: str = "localhost", port: int = 6379, timeout: float = 2.0) -> bool:
+    """Check if Redis is reachable via TCP."""
+    try:
+        s = socket.create_connection((host, port), timeout=timeout)
+        s.close()
+        return True
+    except Exception:
+        return False
+
+
+def pytest_collection_modifyitems(config, items):
+    """Auto-skip tests whose required services are unavailable."""
+    service_checks = {
+        "requires_ollama": (
+            lambda: _service_available("http://localhost:11434/api/tags"),
+            "Ollama not running on localhost:11434",
+        ),
+        "requires_weaviate": (
+            lambda: _service_available("http://localhost:8180/v1/.well-known/ready"),
+            "Weaviate not running on localhost:8180",
+        ),
+        "requires_redis": (
+            lambda: _redis_available(),
+            "Redis not running on localhost:6379",
+        ),
+    }
+
+    # Cache availability checks (run each probe at most once)
+    availability = {}
+    for marker_name, (check_fn, _reason) in service_checks.items():
+        availability[marker_name] = check_fn()
+
+    for item in items:
+        for marker_name, (_check_fn, reason) in service_checks.items():
+            if marker_name in {m.name for m in item.iter_markers()}:
+                if not availability[marker_name]:
+                    item.add_marker(pytest.mark.skip(reason=reason))
