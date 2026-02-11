@@ -26,18 +26,27 @@ print(f"✓ Root conftest.py: Added {PROJECT_ROOT} and {SRC_PATH} to sys.path")
 from src.core.component_factory import ComponentFactory as _RealComponentFactory
 
 
+import src.core.platform_orchestrator as _po_module
+
+
 @pytest.fixture(autouse=True)
 def _clear_component_factory_cache():
     """Prevent cached Mock components from leaking between tests.
 
-    Clears both _component_cache (instances) and _class_cache (import refs)
-    to prevent Mock objects from unit tests leaking into validation tests.
+    Clears caches AND restores the ComponentFactory reference in the
+    platform_orchestrator module namespace. Unit tests that patch
+    'src.core.platform_orchestrator.ComponentFactory' can leave a Mock
+    reference that persists into subsequent tests (e.g. validation tests),
+    causing 'Mock object is not iterable' errors when the orchestrator
+    tries to use a Mock embedder.
     """
     _RealComponentFactory._component_cache.clear()
     _RealComponentFactory._class_cache.clear()
+    _po_module.ComponentFactory = _RealComponentFactory
     yield
     _RealComponentFactory._component_cache.clear()
     _RealComponentFactory._class_cache.clear()
+    _po_module.ComponentFactory = _RealComponentFactory
 
 
 def pytest_sessionfinish(session, exitstatus):
