@@ -759,6 +759,9 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             }
         )
 
+    # Note: sync analyze() inherited from BaseQueryAnalyzer calls _analyze_query()
+    # Use analyze_async() for the async path with mode support
+
     async def analyze_async(self, query: str, mode: str = 'hybrid') -> 'AnalysisResult':
         """
         Perform comprehensive ML-powered query analysis using trained models (async version).

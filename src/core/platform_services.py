@@ -120,11 +120,11 @@ class ComponentHealthServiceImpl(ComponentHealthService):
                 memory_mb = process.memory_info().rss / 1024 / 1024
                 health_status.metrics["memory_mb"] = round(memory_mb, 1)
 
-                if memory_mb > 1024:  # 1GB warning
-                    health_status.issues.append(f"High memory usage: {memory_mb:.1f}MB")
-                if memory_mb > 2048:  # 2GB critical
-                    health_status.is_healthy = False
-                    health_status.issues.append(f"Critical memory usage: {memory_mb:.1f}MB")
+                # Memory is process-wide, not component-specific — record in metrics only
+                if memory_mb > 1024:
+                    health_status.metrics["memory_warning"] = f"{memory_mb:.1f}MB"
+                if memory_mb > 2048:
+                    health_status.metrics["memory_critical"] = f"{memory_mb:.1f}MB"
             except ImportError:
                 health_status.metrics["memory_monitoring"] = "unavailable"
 

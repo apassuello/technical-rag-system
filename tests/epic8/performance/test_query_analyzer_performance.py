@@ -13,6 +13,7 @@ Testing Philosophy:
 import pytest
 import asyncio
 import time
+import warnings
 import threading
 import queue
 from typing import List, Dict, Any
@@ -76,7 +77,7 @@ class TestQueryAnalyzerBasicPerformance:
                 
                 # Quality flag: >2s response time (suboptimal)
                 if response_time > 2.0:
-                    pytest.warns(UserWarning, f"Slow response for '{query[:50]}...': {response_time:.2f}s")
+                    warnings.warn(f"Slow response for '{query[:50]}...': {response_time:.2f}s", UserWarning, stacklevel=2)
             
             # Calculate statistics
             times = [r["response_time"] for r in response_times]
@@ -93,10 +94,10 @@ class TestQueryAnalyzerBasicPerformance:
             
             # Quality checks
             if avg_time > 1.0:
-                pytest.warns(UserWarning, f"High average response time: {avg_time:.3f}s")
+                warnings.warn(f"High average response time: {avg_time:.3f}s", UserWarning, stacklevel=2)
             
             if max_time > 5.0:
-                pytest.warns(UserWarning, f"Very slow maximum response time: {max_time:.3f}s")
+                warnings.warn(f"Very slow maximum response time: {max_time:.3f}s", UserWarning, stacklevel=2)
                 
         except Exception as e:
             pytest.fail(f"Single query performance test failed: {e}")
@@ -124,7 +125,7 @@ class TestQueryAnalyzerBasicPerformance:
             
             # Quality flag: >10s initialization
             if init_time > 10.0:
-                pytest.warns(UserWarning, f"Slow initialization: {init_time:.2f}s")
+                warnings.warn(f"Slow initialization: {init_time:.2f}s", UserWarning, stacklevel=2)
             
             # Test subsequent query (should be faster)
             start_time = time.time()
@@ -186,7 +187,7 @@ class TestQueryAnalyzerBasicPerformance:
             
             # Very long queries shouldn't be more than 10x slower
             if long_time > short_time * 10:
-                pytest.warns(UserWarning, f"Poor scaling: {long_time:.2f}s vs {short_time:.2f}s ({long_time/short_time:.1f}x)")
+                warnings.warn(f"Poor scaling: {long_time:.2f}s vs {short_time:.2f}s ({long_time/short_time:.1f}x)", UserWarning, stacklevel=2)
             
             print(f"\nQuery Length Scaling Results:")
             print(f"  Scaling factor: {long_time/short_time:.1f}x (long vs short)")
@@ -225,13 +226,13 @@ class TestQueryAnalyzerConcurrentPerformance:
             
             # Quality checks
             if success_rate < 0.8:
-                pytest.warns(UserWarning, f"Low concurrent success rate: {success_rate:.2%}")
+                warnings.warn(f"Low concurrent success rate: {success_rate:.2%}", UserWarning, stacklevel=2)
             
             if throughput < 1.0:  # Less than 1 request per second
-                pytest.warns(UserWarning, f"Low throughput: {throughput:.2f} req/s")
+                warnings.warn(f"Low throughput: {throughput:.2f} req/s", UserWarning, stacklevel=2)
             
             if total_time > 30.0:  # 10 requests taking >30s
-                pytest.warns(UserWarning, f"Slow concurrent processing: {total_time:.2f}s")
+                warnings.warn(f"Slow concurrent processing: {total_time:.2f}s", UserWarning, stacklevel=2)
             
             print(f"\nConcurrent Performance Results (10 requests):")
             print(f"  Success rate: {success_rate:.2%} ({len(successful_results)}/{len(queries)})")
@@ -377,10 +378,10 @@ class TestQueryAnalyzerConcurrentPerformance:
             
             # Quality checks
             if success_rate < 0.8:
-                pytest.warns(UserWarning, f"Low threaded success rate: {success_rate:.2%}")
+                warnings.warn(f"Low threaded success rate: {success_rate:.2%}", UserWarning, stacklevel=2)
             
             if total_time > 60.0:
-                pytest.warns(UserWarning, f"Slow threaded processing: {total_time:.2f}s")
+                warnings.warn(f"Slow threaded processing: {total_time:.2f}s", UserWarning, stacklevel=2)
             
             print(f"\nThreaded Concurrent Results:")
             print(f"  Threads: {num_threads}, Requests/thread: {requests_per_thread}")
@@ -437,10 +438,10 @@ class TestQueryAnalyzerResourceUsage:
             
             # Quality flags
             if total_increase > 1000:  # 1GB increase
-                pytest.warns(UserWarning, f"High memory increase: {total_increase:.1f}MB")
+                warnings.warn(f"High memory increase: {total_increase:.1f}MB", UserWarning, stacklevel=2)
             
             if queries_increase > 100:  # 100MB for 10 queries
-                pytest.warns(UserWarning, f"High per-query memory increase: {queries_increase:.1f}MB for 10 queries")
+                warnings.warn(f"High per-query memory increase: {queries_increase:.1f}MB for 10 queries", UserWarning, stacklevel=2)
             
             print(f"\nMemory Usage Results:")
             print(f"  Initial: {initial_memory:.1f}MB")
@@ -485,7 +486,7 @@ class TestQueryAnalyzerResourceUsage:
                 
                 # Quality flag: Significant memory growth
                 if memory_increase > 50 * (batch + 1):  # More than 50MB per batch
-                    pytest.warns(UserWarning, f"Potential memory leak: {memory_increase:.1f}MB after {(batch + 1) * 10} queries")
+                    warnings.warn(f"Potential memory leak: {memory_increase:.1f}MB after {(batch + 1) * 10} queries", UserWarning, stacklevel=2)
             
             final_memory = process.memory_info().rss / 1024 / 1024  # MB
             total_increase = final_memory - baseline_memory
@@ -498,7 +499,7 @@ class TestQueryAnalyzerResourceUsage:
             
             # Quality flag: High per-query memory increase
             if total_increase > 150:  # 150MB for 30 queries
-                pytest.warns(UserWarning, f"High memory growth: {total_increase:.1f}MB for 30 queries")
+                warnings.warn(f"High memory growth: {total_increase:.1f}MB for 30 queries", UserWarning, stacklevel=2)
             
         except Exception as e:
             pytest.fail(f"Memory leak detection test failed: {e}")
@@ -548,10 +549,10 @@ class TestQueryAnalyzerResourceUsage:
             
             # Quality flags
             if avg_cpu > 90:
-                pytest.warns(UserWarning, f"High average CPU usage: {avg_cpu:.1f}%")
+                warnings.warn(f"High average CPU usage: {avg_cpu:.1f}%", UserWarning, stacklevel=2)
             
             if max_cpu > 100:  # This shouldn't happen, but check anyway
-                pytest.warns(UserWarning, f"CPU usage exceeded 100%: {max_cpu:.1f}%")
+                warnings.warn(f"CPU usage exceeded 100%: {max_cpu:.1f}%", UserWarning, stacklevel=2)
             
         except Exception as e:
             pytest.fail(f"CPU usage monitoring test failed: {e}")
@@ -597,7 +598,7 @@ class TestQueryAnalyzerStressTest:
             
             # Quality checks
             if throughput < 5.0:  # Less than 5 req/s
-                pytest.warns(UserWarning, f"Low rapid fire throughput: {throughput:.2f} req/s")
+                warnings.warn(f"Low rapid fire throughput: {throughput:.2f} req/s", UserWarning, stacklevel=2)
             
         except Exception as e:
             pytest.fail(f"Rapid fire test failed: {e}")
@@ -655,10 +656,10 @@ class TestQueryAnalyzerStressTest:
             
             # Quality checks
             if actual_throughput < 1.0:
-                pytest.warns(UserWarning, f"Low sustained throughput: {actual_throughput:.2f} req/s")
+                warnings.warn(f"Low sustained throughput: {actual_throughput:.2f} req/s", UserWarning, stacklevel=2)
             
             if max_query_time > 10.0:
-                pytest.warns(UserWarning, f"Very slow query during sustained load: {max_query_time:.2f}s")
+                warnings.warn(f"Very slow query during sustained load: {max_query_time:.2f}s", UserWarning, stacklevel=2)
             
             # Check for performance degradation over time
             first_half = query_times[:len(query_times)//2]
@@ -669,7 +670,7 @@ class TestQueryAnalyzerStressTest:
                 second_avg = sum(second_half) / len(second_half)
                 
                 if second_avg > first_avg * 1.5:  # 50% slower
-                    pytest.warns(UserWarning, f"Performance degradation: {first_avg:.3f}s -> {second_avg:.3f}s")
+                    warnings.warn(f"Performance degradation: {first_avg:.3f}s -> {second_avg:.3f}s", UserWarning, stacklevel=2)
                 
                 print(f"  Performance trend: {first_avg:.3f}s -> {second_avg:.3f}s")
             

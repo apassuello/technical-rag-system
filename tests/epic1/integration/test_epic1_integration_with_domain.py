@@ -173,7 +173,7 @@ except Exception as e:
                 query = queries[0]
                 logger.info(f"Testing {domain} domain: {query[:50]}...")
                 
-                result = await analyzer.analyze(query, mode='ml')
+                result = analyzer.analyze(query, mode='ml')
                 domain_results[domain] = result
                 
                 # Validate result
@@ -272,7 +272,7 @@ except Exception as e:
                     logger.info(f"Processing {domain} query {i+1}: {query[:50]}...")
                     
                     start_time = time.time()
-                    result = await analyzer.analyze(query, mode='ml')
+                    result = analyzer.analyze(query, mode='ml')
                     end_time = time.time()
                     
                     # Validate result

@@ -162,9 +162,9 @@ class Epic1QueryAnalyzer(BaseQueryAnalyzer):
                 features
             )
             phase_times['model_recommendation'] = time.time() - phase_start
-            
+
             logger.debug(
-                f"Recommended {recommendation.model} in "
+                f"Recommended {recommendation['model']} in "
                 f"{phase_times['model_recommendation']*1000:.1f}ms"
             )
             

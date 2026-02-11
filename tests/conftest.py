@@ -22,16 +22,21 @@ if str(PROJECT_ROOT) not in sys.path:
 
 print(f"✓ Root conftest.py: Added {PROJECT_ROOT} and {SRC_PATH} to sys.path")
 
+# Eagerly import ComponentFactory so the reference survives any test patches
+from src.core.component_factory import ComponentFactory as _RealComponentFactory
+
 
 @pytest.fixture(autouse=True)
 def _clear_component_factory_cache():
-    """Prevent cached Mock components from leaking between tests."""
+    """Prevent cached Mock components from leaking between tests.
+
+    Only clear _component_cache (instances), NOT _class_cache (import refs).
+    Clearing _class_cache forces re-import of every component class and can
+    break PlatformOrchestrator initialization in validation tests.
+    """
+    _RealComponentFactory._component_cache.clear()
     yield
-    try:
-        from src.core.component_factory import ComponentFactory
-        ComponentFactory.clear_cache()
-    except ImportError:
-        pass
+    _RealComponentFactory._component_cache.clear()
 
 
 def pytest_sessionfinish(session, exitstatus):

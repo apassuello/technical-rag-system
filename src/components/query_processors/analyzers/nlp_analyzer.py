@@ -161,13 +161,21 @@ class NLPAnalyzer(BaseQueryAnalyzer):
         intent_category = self._determine_intent_category(query, basic_features)
         suggested_k = self._suggest_retrieval_k(query, basic_features)
         confidence = self._calculate_confidence(basic_features)
-        
+
+        if complexity_score < 0.33:
+            complexity_level = 'simple'
+        elif complexity_score < 0.67:
+            complexity_level = 'medium'
+        else:
+            complexity_level = 'complex'
+
         # Epic 2 feature analysis
         epic2_features = self._analyze_epic2_features(query, basic_features)
-        
+
         return QueryAnalysis(
             query=query,
             complexity_score=complexity_score,
+            complexity_level=complexity_level,
             technical_terms=technical_terms,
             entities=entities,
             intent_category=intent_category,
