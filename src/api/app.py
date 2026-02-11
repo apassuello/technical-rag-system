@@ -57,7 +57,6 @@ async def lifespan(app: FastAPI):
     config_path = _resolve_config()
     logger.info(f"Initializing PlatformOrchestrator from {config_path}")
     _orchestrator = PlatformOrchestrator(config_path=config_path)
-    _orchestrator.initialize()
     yield
     _orchestrator = None
 
@@ -90,9 +89,9 @@ async def query(req: QueryRequest):
             confidence=answer.confidence,
             sources=[
                 SourceDoc(
-                    title=getattr(doc, "title", ""),
+                    title=doc.metadata.get("title", ""),
                     content=doc.content[:500],
-                    score=getattr(doc, "score", None),
+                    score=doc.metadata.get("score"),
                 )
                 for doc in answer.sources
             ],

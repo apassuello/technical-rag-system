@@ -17,7 +17,7 @@ def mock_orchestrator():
     }
     orch.process_query.return_value = Answer(
         text="RISC-V is an open ISA.",
-        sources=[Document(content="RISC-V spec chapter 1", title="RISC-V Spec")],
+        sources=[Document(content="RISC-V spec chapter 1", metadata={"title": "RISC-V Spec"})],
         confidence=0.92,
         metadata={"retrieved_docs": 1},
     )
@@ -26,13 +26,11 @@ def mock_orchestrator():
 
 @pytest.fixture
 def client(mock_orchestrator):
-    """Create test client with mocked orchestrator."""
-    import src.api.app as api_module
-
-    api_module._orchestrator = mock_orchestrator
-    with TestClient(api_module.app) as c:
-        yield c
-    api_module._orchestrator = None
+    """Create test client with mocked PlatformOrchestrator."""
+    with patch("src.api.app.PlatformOrchestrator", return_value=mock_orchestrator):
+        from src.api.app import app
+        with TestClient(app) as c:
+            yield c
 
 
 class TestHealthEndpoint:
@@ -41,14 +39,13 @@ class TestHealthEndpoint:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "healthy"
+        assert "components" in data
 
-    def test_health_503_when_not_initialized(self):
-        import src.api.app as api_module
-
-        api_module._orchestrator = None
-        with TestClient(api_module.app) as c:
-            resp = c.get("/health")
-            assert resp.status_code == 503
+    def test_health_includes_component_info(self, client):
+        resp = client.get("/health")
+        data = resp.json()
+        assert data["components"]["embedder"] == "ok"
+        assert data["components"]["retriever"] == "ok"
 
 
 class TestQueryEndpoint:
@@ -68,3 +65,10 @@ class TestQueryEndpoint:
         resp = client.post("/query", json={"query": "test", "k": 10})
         assert resp.status_code == 200
         mock_orchestrator.process_query.assert_called_with("test", k=10)
+
+    def test_query_returns_source_metadata(self, client):
+        resp = client.post("/query", json={"query": "test"})
+        data = resp.json()
+        assert len(data["sources"]) == 1
+        assert data["sources"][0]["title"] == "RISC-V Spec"
+        assert "RISC-V spec" in data["sources"][0]["content"]
