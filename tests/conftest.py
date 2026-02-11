@@ -55,3 +55,55 @@ def pytest_sessionfinish(session, exitstatus):
 
     for t in list(_thread._threads_queues):
         _thread._threads_queues[t] = None
+
+
+import urllib.request
+import socket
+
+
+def _service_available(url: str, timeout: float = 2.0) -> bool:
+    """Check if an HTTP service is reachable."""
+    try:
+        urllib.request.urlopen(url, timeout=timeout)
+        return True
+    except Exception:
+        return False
+
+
+def _redis_available(host: str = "localhost", port: int = 6379, timeout: float = 2.0) -> bool:
+    """Check if Redis is reachable via TCP."""
+    try:
+        s = socket.create_connection((host, port), timeout=timeout)
+        s.close()
+        return True
+    except Exception:
+        return False
+
+
+def pytest_collection_modifyitems(config, items):
+    """Auto-skip tests whose required services are unavailable."""
+    service_checks = {
+        "requires_ollama": (
+            lambda: _service_available("http://localhost:11434/api/tags"),
+            "Ollama not running on localhost:11434",
+        ),
+        "requires_weaviate": (
+            lambda: _service_available("http://localhost:8180/v1/.well-known/ready"),
+            "Weaviate not running on localhost:8180",
+        ),
+        "requires_redis": (
+            lambda: _redis_available(),
+            "Redis not running on localhost:6379",
+        ),
+    }
+
+    # Cache availability checks (run each probe at most once)
+    availability = {}
+    for marker_name, (check_fn, _reason) in service_checks.items():
+        availability[marker_name] = check_fn()
+
+    for item in items:
+        for marker_name, (_check_fn, reason) in service_checks.items():
+            if marker_name in {m.name for m in item.iter_markers()}:
+                if not availability[marker_name]:
+                    item.add_marker(pytest.mark.skip(reason=reason))
