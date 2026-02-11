@@ -30,13 +30,14 @@ from src.core.component_factory import ComponentFactory as _RealComponentFactory
 def _clear_component_factory_cache():
     """Prevent cached Mock components from leaking between tests.
 
-    Only clear _component_cache (instances), NOT _class_cache (import refs).
-    Clearing _class_cache forces re-import of every component class and can
-    break PlatformOrchestrator initialization in validation tests.
+    Clears both _component_cache (instances) and _class_cache (import refs)
+    to prevent Mock objects from unit tests leaking into validation tests.
     """
     _RealComponentFactory._component_cache.clear()
+    _RealComponentFactory._class_cache.clear()
     yield
     _RealComponentFactory._component_cache.clear()
+    _RealComponentFactory._class_cache.clear()
 
 
 def pytest_sessionfinish(session, exitstatus):
