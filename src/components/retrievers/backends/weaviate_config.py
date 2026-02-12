@@ -15,6 +15,7 @@ class WeaviateConnectionConfig:
     """Configuration for Weaviate connection."""
     
     url: str = "http://localhost:8080"
+    grpc_port: int = 50051
     api_key: Optional[str] = None
     timeout: int = 30
     startup_period: int = 5
@@ -193,6 +194,7 @@ class WeaviateBackendConfig:
         return {
             'connection': {
                 'url': self.connection.url,
+                'grpc_port': self.connection.grpc_port,
                 'api_key': self.connection.api_key,
                 'timeout': self.connection.timeout,
                 'startup_period': self.connection.startup_period,

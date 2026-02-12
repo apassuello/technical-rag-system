@@ -2134,9 +2134,7 @@ class BackendManagementServiceImpl(BackendManagementService):
         # Add defaults for optional fields
         if "backend_type" not in backend_config:
             # Try to infer from name or set default
-            if "redis" in backend_name.lower():
-                backend_config["backend_type"] = "cache"
-            elif "faiss" in backend_name.lower() or "vector" in backend_name.lower():
+            if "faiss" in backend_name.lower() or "vector" in backend_name.lower():
                 backend_config["backend_type"] = "vector_store"
             else:
                 backend_config["backend_type"] = "unknown"
@@ -2688,21 +2686,7 @@ class BackendManagementServiceImpl(BackendManagementService):
         backend_type = backend_config["type"]
 
         # Type-specific validation
-        if backend_type == "redis":
-            # Redis requires host
-            if "host" not in backend_config:
-                return False
-
-            # Port should be int if provided
-            if "port" in backend_config:
-                if not isinstance(backend_config["port"], int):
-                    return False
-
-            # Host should not be empty
-            if isinstance(backend_config.get("host"), str) and not backend_config["host"]:
-                return False
-
-        elif backend_type == "faiss":
+        if backend_type == "faiss":
             # FAISS validation (very minimal)
             pass
 
@@ -2724,13 +2708,6 @@ class BackendManagementServiceImpl(BackendManagementService):
         discovered = []
 
         # Check environment variables for backend discovery
-        redis_hosts = os.environ.get('REDIS_HOSTS', '')
-        if redis_hosts:
-            # Parse comma-separated list of hosts
-            for host_port in redis_hosts.split(','):
-                if ':' in host_port:
-                    discovered.append(f"redis_{host_port.replace(':', '_')}")
-
         # Additional discovery mechanisms could be added here
         # For now, return what's configured
         return discovered if discovered else list(self.registered_backends.keys())

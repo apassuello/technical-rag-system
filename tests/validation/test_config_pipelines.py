@@ -1,12 +1,19 @@
 """Tier 1: Config-driven pipeline validation.
 
 Tests that different YAML configs boot a working PlatformOrchestrator
-and produce correct results end-to-end. Requires Ollama.
+and produce correct results end-to-end.
+
+Two test classes:
+- TestConfigPipelineEndToEnd: Full Ollama-backed pipelines (requires_ollama)
+- TestCISafePipeline: Every config with mock LLM override (no Ollama needed)
 
 Spec references: all specs — validates full component wiring.
 """
 
+import copy
+
 import pytest
+import yaml
 from pathlib import Path
 from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Answer, Document
@@ -90,16 +97,58 @@ class TestConfigPipelineEndToEnd:
         assert health["status"] == "healthy", f"{config_name}: unhealthy after query"
 
 
+# ---------------------------------------------------------------------------
+# CI-safe: every config with mock LLM override (no Ollama, no Weaviate)
+# ---------------------------------------------------------------------------
+
+MOCK_LLM_CLIENT = {
+    "type": "mock",
+    "config": {
+        "model_name": "mock-model",
+        "response_pattern": "technical",
+        "include_citations": True,
+    },
+}
+
+# Configs that need external services beyond ML (Weaviate, etc.)
+_SKIP_CI_CONFIGS = {"weaviate_rrf_local.yaml"}
+
+# Discover all YAML configs, excluding external-service ones
+_ALL_YAML = sorted(p.name for p in CONFIGS_DIR.glob("*.yaml") if p.name not in _SKIP_CI_CONFIGS)
+
 CI_SAFE_CONFIGS = [
-    pytest.param("mock_generator_local.yaml", id="mock-rrf-identity"),
+    pytest.param(name, id=name.removesuffix(".yaml"))
+    for name in _ALL_YAML
 ]
 
 
+def _mock_config_path(original_path: Path, tmp_path: Path) -> Path:
+    """Load a config YAML, override llm_client to mock, write to tmp_path."""
+    with open(original_path) as f:
+        cfg = yaml.safe_load(f)
+
+    # Override generator's LLM client to mock
+    gen = cfg.get("answer_generator", {})
+    gen_config = gen.setdefault("config", {})
+    gen_config["llm_client"] = copy.deepcopy(MOCK_LLM_CLIENT)
+
+    out = tmp_path / original_path.name
+    with open(out, "w") as f:
+        yaml.dump(cfg, f)
+    return out
+
+
 @pytest.fixture(params=CI_SAFE_CONFIGS)
-def ci_pipeline(request):
-    """Boot PlatformOrchestrator with mock generator — no Ollama needed."""
-    config_path = CONFIGS_DIR / request.param
-    orch = PlatformOrchestrator(config_path)
+def ci_pipeline(request, tmp_path):
+    """Boot PlatformOrchestrator with mock generator — no Ollama needed.
+
+    Loads each config, overrides llm_client to mock, writes to tmp_path,
+    then boots the orchestrator.  query_processor is kept intact so the
+    wiring fix in platform_orchestrator is actually exercised.
+    """
+    original = CONFIGS_DIR / request.param
+    mock_path = _mock_config_path(original, tmp_path)
+    orch = PlatformOrchestrator(mock_path)
 
     docs = [
         Document(content=text, metadata={"source": f"golden_{i}", "type": "test"})

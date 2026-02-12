@@ -6,73 +6,56 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
 MODE="${1:---full}"
-DOCKER_STARTED=false
+WEAVIATE_STARTED=false
+
+start_weaviate() {
+    echo "Starting Weaviate via Docker..."
+    docker compose up -d weaviate
+    WEAVIATE_STARTED=true
+    for i in $(seq 1 30); do
+        if curl -sf http://localhost:8180/v1/.well-known/ready > /dev/null 2>&1; then
+            echo "  Weaviate ready"
+            return
+        fi
+        [ "$i" -eq 30 ] && echo "  WARNING: Weaviate not ready after 30s"
+        sleep 1
+    done
+}
 
 cleanup() {
-    if [ "$DOCKER_STARTED" = true ]; then
-        echo "Tearing down Docker services..."
+    if [ "$WEAVIATE_STARTED" = true ]; then
+        echo "Stopping Weaviate..."
         docker compose down
     fi
 }
 trap cleanup EXIT
 
-start_docker() {
-    echo "Starting Docker services (Weaviate, Redis)..."
-    docker compose up -d
-    echo "Waiting for services to be healthy..."
-    for i in $(seq 1 30); do
-        if curl -sf http://localhost:8180/v1/.well-known/ready > /dev/null 2>&1; then
-            echo "  Weaviate ready"
-            break
-        fi
-        [ "$i" -eq 30 ] && echo "  WARNING: Weaviate not ready after 30s"
-        sleep 1
-    done
-    for i in $(seq 1 10); do
-        if redis-cli -p 6379 ping > /dev/null 2>&1; then
-            echo "  Redis ready"
-            break
-        fi
-        [ "$i" -eq 10 ] && echo "  WARNING: Redis not ready after 10s"
-        sleep 1
-    done
-    DOCKER_STARTED=true
-}
-
-check_ollama() {
-    if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
-        echo "Ollama is running"
-        return 0
-    else
-        echo "WARNING: Ollama not running. Tests requiring Ollama will be skipped."
-        echo "  Start with: ollama serve"
-        return 1
-    fi
-}
-
 case "$MODE" in
-    --ci)
-        echo "=== CI Mode: no external services ==="
-        pytest tests/ \
-            -m "not requires_ollama and not requires_weaviate and not requires_redis and not integration" \
-            --cov=src --cov-report=term-missing --tb=short -q
-        ;;
     --quick)
-        echo "=== Quick Mode: unit + component only ==="
+        echo "=== Quick: unit + component, no ML, no coverage ==="
         pytest tests/unit tests/component tests/api \
             -m "not requires_ml and not requires_ollama" \
             --override-ini="addopts=--strict-config --tb=short" -x -q
         ;;
-    --coverage)
-        start_docker
-        check_ollama || true
-        echo "=== Full Suite with Coverage ==="
-        pytest tests/ --cov=src --cov-report=term-missing --cov-report=html --tb=short -q
+    --local)
+        echo "=== Local: everything without external services, with coverage ==="
+        pytest tests/ \
+            -m "not requires_ollama and not requires_weaviate" \
+            --cov=src --cov-report=term-missing --cov-report=html --tb=short -q
         ;;
-    --full|*)
-        start_docker
-        check_ollama || true
-        echo "=== Full Suite ==="
-        pytest tests/ --tb=short -q
+    --full)
+        start_weaviate
+        echo "=== Full: all tests, with coverage ==="
+        echo "Expects: Ollama running (ollama serve)"
+        pytest tests/ \
+            --cov=src --cov-report=term-missing --cov-report=html --tb=short -q
+        ;;
+    *)
+        echo "Usage: $0 [--quick|--local|--full]"
+        echo ""
+        echo "  --quick   Unit + component, no ML deps, no coverage (fast feedback)"
+        echo "  --local   All tests except Ollama/Weaviate, with coverage"
+        echo "  --full    All tests with coverage (needs Ollama, starts Weaviate via Docker)"
+        exit 1
         ;;
 esac
