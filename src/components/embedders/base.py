@@ -163,7 +163,7 @@ class EmbeddingCache(ABC):
     
     Architecture Patterns:
     - Direct Implementation: In-memory cache
-    - Adapter Pattern: External stores (Redis, disk)
+    - Adapter Pattern: External stores (disk)
     """
     
     @abstractmethod

@@ -261,13 +261,17 @@ class PlatformOrchestrator:
                 else:
                     self._components['query_processor'] = ComponentFactory.create_query_processor(
                         qp_type,
+                        retriever=self._components.get('retriever'),
+                        generator=self._components.get('answer_generator'),
                         **qp_config_dict
                     )
                 logger.debug(f"Query processor initialized: {qp_type}")
             else:
                 # For backward compatibility, create a default query processor with proper config
                 self._components['query_processor'] = ComponentFactory.create_query_processor(
-                    "modular"
+                    "modular",
+                    retriever=self._components.get('retriever'),
+                    generator=self._components.get('answer_generator'),
                 )
                 logger.debug("Default query processor initialized")
             

@@ -58,7 +58,6 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 import urllib.request
-import socket
 
 
 def _spacy_model_available(model: str = "en_core_web_sm") -> bool:
@@ -80,16 +79,6 @@ def _service_available(url: str, timeout: float = 2.0) -> bool:
         return False
 
 
-def _redis_available(host: str = "localhost", port: int = 6379, timeout: float = 2.0) -> bool:
-    """Check if Redis is reachable via TCP."""
-    try:
-        s = socket.create_connection((host, port), timeout=timeout)
-        s.close()
-        return True
-    except Exception:
-        return False
-
-
 def pytest_collection_modifyitems(config, items):
     """Auto-skip tests whose required services are unavailable."""
     service_checks = {
@@ -100,10 +89,6 @@ def pytest_collection_modifyitems(config, items):
         "requires_weaviate": (
             lambda: _service_available("http://localhost:8180/v1/.well-known/ready"),
             "Weaviate not running on localhost:8180",
-        ),
-        "requires_redis": (
-            lambda: _redis_available(),
-            "Redis not running on localhost:6379",
         ),
         "requires_spacy": (
             lambda: _spacy_model_available(),
