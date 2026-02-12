@@ -83,7 +83,7 @@ class ModularEmbedder(EmbedderInterface, ConfigurableEmbedderComponent):
             }
         },
         "cache": {
-            "type": "memory",  # or "redis", "disk"
+            "type": "memory",  # or "disk"
             "config": {
                 "max_entries": 100000,
                 "max_memory_mb": 1024
@@ -112,7 +112,6 @@ class ModularEmbedder(EmbedderInterface, ConfigurableEmbedderComponent):
     
     _CACHE_TYPES = {
         "memory": MemoryCache,
-        # Future: "redis": RedisCacheAdapter,
         # Future: "disk": DiskCacheAdapter,
     }
     

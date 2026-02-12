@@ -273,28 +273,18 @@ class WeaviateIndex(VectorIndex):
     def get_memory_usage(self) -> Dict[str, Any]:
         """
         Get memory usage statistics.
-        
+
         Returns:
             Dictionary with memory usage information
         """
         if not self.is_available:
             return {"total_bytes": 0, "per_document_bytes": 0, "adapter_available": False}
-        
-        try:
-            backend_memory = self.weaviate_backend.get_memory_usage()
-            return {
-                **backend_memory,
-                "adapter_available": True,
-                "adapter_overhead_bytes": 1024  # Minimal adapter overhead
-            }
-        except Exception as e:
-            logger.warning(f"Failed to get Weaviate memory usage: {e}")
-            return {
-                "total_bytes": 0,
-                "per_document_bytes": 0,
-                "adapter_available": True,
-                "memory_error": str(e)
-            }
+        return {
+            "total_bytes": 0,  # Weaviate manages memory server-side
+            "per_document_bytes": 0,
+            "adapter_available": True,
+            "note": "Memory managed by Weaviate server",
+        }
     
     def supports_batch_queries(self) -> bool:
         """

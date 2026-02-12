@@ -322,23 +322,29 @@ class TestBackendManagementServiceImpl:
         """Test backend configuration validation."""
         # Valid configuration
         valid_config = {
-            "type": "redis",
-            "host": "localhost",
-            "port": 6379,
-            "timeout": 30
+            "type": "faiss",
+            "path": "/tmp/index",
         }
-        
+
         is_valid = backend_management_service.validate_backend_config(valid_config)
         assert is_valid is True
-        
-        # Invalid configuration
+
+        # Invalid configuration — missing required 'type' field
         invalid_config = {
-            "type": "redis",
-            "host": "",  # Empty host
-            "port": "invalid_port",  # Should be int
+            "host": "localhost",
+            "port": 6379,
         }
-        
+
         is_valid = backend_management_service.validate_backend_config(invalid_config)
+        assert is_valid is False
+
+        # Invalid configuration — pinecone without api_key
+        invalid_pinecone = {
+            "type": "pinecone",
+            "index_name": "test",
+        }
+
+        is_valid = backend_management_service.validate_backend_config(invalid_pinecone)
         assert is_valid is False
 
     def test_concurrent_backend_operations(self, backend_management_service):

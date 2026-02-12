@@ -17,11 +17,6 @@ pytestmark = [
     pytest.mark.requires_ml,
     pytest.mark.requires_ollama,
     pytest.mark.requires_weaviate,
-    pytest.mark.xfail(
-        reason="WeaviateBackend uses v3 API (weaviate.Client, TimeoutConfig) "
-        "but weaviate-client v4 installed — needs backend migration",
-        strict=False,
-    ),
 ]
 
 CONFIGS_DIR = Path(__file__).parent / "configs"
