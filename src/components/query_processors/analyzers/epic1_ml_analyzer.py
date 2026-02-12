@@ -415,6 +415,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 intent_category=intent_category,
                 suggested_k=suggested_k,
                 confidence=ml_result.confidence,
+                final_score=ml_result.final_score,
                 metadata=analysis_metadata
             )
             
@@ -750,6 +751,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             complexity_level=complexity_level,
             complexity_score=analysis_result.final_score if hasattr(analysis_result, 'final_score') and analysis_result.final_score is not None else 0.5,
             confidence=confidence_value,
+            final_score=analysis_result.final_score if hasattr(analysis_result, 'final_score') else None,
             metadata={
                 'analyzer': 'Epic1MLAnalyzer',
                 'view_contributions': view_contributions,
