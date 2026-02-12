@@ -176,7 +176,7 @@ class DomainAwareQueryProcessor(ModularQueryProcessor):
             logger.error(f"Domain-aware query processing failed: {e}")
             
             # Fallback to parent implementation
-            return super().process_query(query, options)
+            return super().process(query, options)
     
     def analyze_query(self, query: str) -> QueryAnalysis:
         """

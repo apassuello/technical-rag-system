@@ -19,7 +19,6 @@ Architecture:
 - Comprehensive error handling and fallback strategies
 """
 
-import asyncio
 import logging
 import sys
 import time
@@ -415,6 +414,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 intent_category=intent_category,
                 suggested_k=suggested_k,
                 confidence=ml_result.confidence,
+                final_score=ml_result.final_score,
                 metadata=analysis_metadata
             )
             
@@ -678,90 +678,6 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             
         return ensemble_models
     
-    def _analyze_query(self, query: str) -> 'QueryAnalysis':
-        """
-        Synchronous implementation required by BaseQueryAnalyzer interface.
-
-        This method wraps the async analyze_async() method for compatibility with
-        synchronous test code and interfaces that expect a sync analyze method.
-
-        Args:
-            query: The query string to analyze
-
-        Returns:
-            QueryAnalysis object with analysis results
-        """
-        # Run the async analyze method synchronously
-        try:
-            # Try to get existing event loop
-            try:
-                loop = asyncio.get_running_loop()
-                # Loop is running, we need to use a different approach
-                # For now, raise to fall through to asyncio.run()
-                raise RuntimeError("Event loop already running")
-            except RuntimeError:
-                # No loop running, safe to use asyncio.run()
-                pass
-
-            analysis_result = asyncio.run(self.analyze_async(query, mode='hybrid'))
-        except Exception as e:
-            logger.error(f"Failed to run async analyze: {e}")
-            # Fall back to simple analysis
-            from ..base import QueryAnalysis
-            return QueryAnalysis(
-                query=query,
-                complexity_level='moderate',
-                complexity_score=0.5,
-                metadata={
-                    'analyzer': 'Epic1MLAnalyzer',
-                    'error': str(e),
-                    'fallback': True,
-                    'method': 'epic1_ml_fallback'
-                }
-            )
-
-        # Convert AnalysisResult to QueryAnalysis
-        from ..base import QueryAnalysis
-
-        # Extract complexity level from AnalysisResult
-        if hasattr(analysis_result, 'final_complexity') and analysis_result.final_complexity:
-            if hasattr(analysis_result.final_complexity, 'value'):
-                complexity_level = analysis_result.final_complexity.value
-            else:
-                complexity_level = str(analysis_result.final_complexity)
-        else:
-            complexity_level = 'moderate'
-
-        # Extract view contributions
-        view_contributions = {}
-        if hasattr(analysis_result, 'view_results') and analysis_result.view_results:
-            for view, result in analysis_result.view_results.items():
-                # Get score from ViewResult
-                if hasattr(result, 'score'):
-                    view_contributions[view] = result.score
-                elif hasattr(result, 'complexity_score'):
-                    view_contributions[view] = result.complexity_score
-
-        # Extract confidence from analysis result
-        confidence_value = analysis_result.confidence if hasattr(analysis_result, 'confidence') else 0.0
-
-        return QueryAnalysis(
-            query=query,
-            complexity_level=complexity_level,
-            complexity_score=analysis_result.final_score if hasattr(analysis_result, 'final_score') and analysis_result.final_score is not None else 0.5,
-            confidence=confidence_value,
-            metadata={
-                'analyzer': 'Epic1MLAnalyzer',
-                'view_contributions': view_contributions,
-                'processing_time_ms': analysis_result.total_latency_ms if hasattr(analysis_result, 'total_latency_ms') else 0,
-                'method': 'epic1_ml',
-                'confidence': confidence_value
-            }
-        )
-
-    # Note: sync analyze() inherited from BaseQueryAnalyzer calls _analyze_query()
-    # Use analyze_async() for the async path with mode support
-
     async def analyze_async(self, query: str, mode: str = 'hybrid') -> 'AnalysisResult':
         """
         Perform comprehensive ML-powered query analysis using trained models (async version).

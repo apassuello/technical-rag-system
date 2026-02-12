@@ -37,6 +37,7 @@ class QueryAnalysis:
     intent_category: str = "general"
     suggested_k: int = 5
     confidence: float = 0.0
+    final_score: Optional[float] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
