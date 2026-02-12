@@ -478,3 +478,318 @@ class TestWeaviateBackendClose:
 
         mock_client.close.assert_called_once()
         assert backend.is_connected is False
+
+    def test_close_no_client(self, mock_weaviate_module):
+        """close() should be safe when client is None."""
+        mock_client = MagicMock()
+        mock_client.is_ready.return_value = True
+        mock_client.collections.list_all.return_value = {}
+        mock_client.collections.create.return_value = None
+        mock_client.collections.get.return_value = MagicMock()
+        mock_weaviate_module.connect_to_custom.return_value = mock_client
+
+        from components.retrievers.backends.weaviate_backend import WeaviateBackend
+
+        backend = WeaviateBackend(WeaviateBackendConfig())
+        backend.client = None
+        backend.close()  # Should not raise
+        # is_connected unchanged since client was None
+        assert backend.is_connected is True
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendInitializeIndex:
+    """Verify initialize_index() validation and reconnect logic."""
+
+    def test_initialize_index_connected(self, mock_weaviate_module):
+        """Should succeed when already connected with schema."""
+        backend, mock_client, mock_collection = _make_backend(mock_weaviate_module.connect_to_custom)
+        backend.initialize_index(384)
+        assert backend.stats["total_operations"] >= 1
+
+    def test_initialize_index_reconnects(self, mock_weaviate_module):
+        """Should reconnect if not connected."""
+        backend, mock_client, mock_collection = _make_backend(mock_weaviate_module.connect_to_custom)
+        backend.is_connected = False
+        # _connect is called during init already; override so reconnect works
+        backend.is_connected = False
+        # The method calls _connect() which calls connect_to_custom again
+        backend.initialize_index(384)
+        # After reconnect through _connect, is_connected should be True
+        assert backend.is_connected is True
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendIsTrained:
+    """Verify is_trained() checks."""
+
+    def test_is_trained_when_connected_and_schema(self, mock_weaviate_module):
+        """Should return True when connected and schema created."""
+        backend, _, _ = _make_backend(mock_weaviate_module.connect_to_custom)
+        assert backend.is_trained() is True
+
+    def test_is_trained_not_connected(self, mock_weaviate_module):
+        """Should return False when not connected."""
+        backend, _, _ = _make_backend(mock_weaviate_module.connect_to_custom)
+        backend.is_connected = False
+        assert backend.is_trained() is False
+
+    def test_is_trained_no_schema(self, mock_weaviate_module):
+        """Should return False when schema not created."""
+        backend, _, _ = _make_backend(mock_weaviate_module.connect_to_custom)
+        backend.schema_created = False
+        assert backend.is_trained() is False
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendGetBackendInfo:
+    """Verify get_backend_info() returns expected structure."""
+
+    def test_get_backend_info_connected(self, mock_weaviate_module):
+        """Should return full info when connected."""
+        backend, mock_client, mock_collection = _make_backend(mock_weaviate_module.connect_to_custom)
+        mock_client.get_meta.return_value = {"version": "1.28.0"}
+        mock_aggregate = MagicMock()
+        mock_aggregate.total_count = 5
+        mock_collection.aggregate.over_all.return_value = mock_aggregate
+
+        info = backend.get_backend_info()
+
+        assert info["backend_type"] == "weaviate"
+        assert info["backend_version"] == "v4-adapter"
+        assert info["is_connected"] is True
+        assert info["schema_created"] is True
+        assert info["document_count"] == 5
+        assert info["weaviate_meta"]["version"] == "1.28.0"
+
+    def test_get_backend_info_meta_error(self, mock_weaviate_module):
+        """Should handle get_meta() failure gracefully."""
+        backend, mock_client, mock_collection = _make_backend(mock_weaviate_module.connect_to_custom)
+        mock_client.get_meta.side_effect = Exception("meta unavailable")
+        mock_aggregate = MagicMock()
+        mock_aggregate.total_count = 0
+        mock_collection.aggregate.over_all.return_value = mock_aggregate
+
+        info = backend.get_backend_info()
+
+        assert info["weaviate_meta"]["error"] == "Could not retrieve meta info"
+
+    def test_get_backend_info_not_connected(self, mock_weaviate_module):
+        """Should return empty meta when disconnected."""
+        backend, mock_client, _ = _make_backend(mock_weaviate_module.connect_to_custom)
+        backend.is_connected = False
+
+        info = backend.get_backend_info()
+
+        assert info["is_connected"] is False
+        assert info["weaviate_meta"] == {}
+        assert info["document_count"] == 0
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendGetConfiguration:
+    """Verify get_configuration() return structure."""
+
+    def test_get_configuration(self, mock_weaviate_module):
+        """Should return backend_type and config dict."""
+        backend, _, _ = _make_backend(mock_weaviate_module.connect_to_custom)
+        config = backend.get_configuration()
+        assert config["backend_type"] == "weaviate"
+        assert "config" in config
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendCapabilities:
+    """Verify capability flags."""
+
+    def test_supports_hybrid_search(self, mock_weaviate_module):
+        """Should always return True."""
+        backend, _, _ = _make_backend(mock_weaviate_module.connect_to_custom)
+        assert backend.supports_hybrid_search() is True
+
+    def test_supports_filtering(self, mock_weaviate_module):
+        """Should always return True."""
+        backend, _, _ = _make_backend(mock_weaviate_module.connect_to_custom)
+        assert backend.supports_filtering() is True
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendRetry:
+    """Verify retry/backoff logic in _connect()."""
+
+    def test_connect_retries_on_transient_error(self, mock_weaviate_module):
+        """Should retry on non-WeaviateConnectionError exceptions."""
+        mock_client = MagicMock()
+        mock_client.is_ready.return_value = True
+        mock_client.collections.list_all.return_value = {}
+        mock_client.collections.create.return_value = None
+        mock_client.collections.get.return_value = MagicMock()
+
+        # First call raises transient error, second call succeeds
+        mock_weaviate_module.connect_to_custom.side_effect = [
+            ConnectionError("transient failure"),
+            mock_client,
+        ]
+
+        from components.retrievers.backends.weaviate_backend import WeaviateBackend
+
+        config = WeaviateBackendConfig(max_retries=1, retry_delay_seconds=0.0)
+        backend = WeaviateBackend(config)
+
+        assert backend.is_connected is True
+        assert mock_weaviate_module.connect_to_custom.call_count == 2
+        assert backend.stats["connection_errors"] == 1
+
+    def test_connect_exhausts_retries(self, mock_weaviate_module):
+        """Should raise WeaviateConnectionError after exhausting retries."""
+        mock_weaviate_module.connect_to_custom.side_effect = ConnectionError("down")
+
+        from components.retrievers.backends.weaviate_backend import (
+            WeaviateBackend,
+            WeaviateConnectionError,
+        )
+
+        config = WeaviateBackendConfig(max_retries=1, retry_delay_seconds=0.0)
+        with pytest.raises(WeaviateConnectionError, match="Failed to connect"):
+            WeaviateBackend(config)
+
+        # initial attempt + 1 retry = 2 calls
+        assert mock_weaviate_module.connect_to_custom.call_count == 2
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendHealthCheckExtended:
+    """Verify additional health_check branches."""
+
+    def test_health_check_disconnected(self, mock_weaviate_module):
+        """Should report unhealthy when is_connected=False."""
+        backend, mock_client, _ = _make_backend(mock_weaviate_module.connect_to_custom)
+        backend.is_connected = False
+
+        health = backend.health_check()
+
+        assert health["is_healthy"] is False
+        assert "Not connected to Weaviate" in health["issues"]
+
+    def test_health_check_schema_not_created(self, mock_weaviate_module):
+        """Should flag schema_created=False as unhealthy."""
+        backend, mock_client, mock_collection = _make_backend(mock_weaviate_module.connect_to_custom)
+        backend.schema_created = False
+        mock_client.is_ready.return_value = True
+        mock_aggregate = MagicMock()
+        mock_aggregate.total_count = 0
+        mock_collection.aggregate.over_all.return_value = mock_aggregate
+
+        health = backend.health_check()
+
+        assert health["is_healthy"] is False
+        assert "Schema not created" in health["issues"]
+
+    def test_health_check_high_error_rate(self, mock_weaviate_module):
+        """Should flag high error rate."""
+        backend, mock_client, mock_collection = _make_backend(mock_weaviate_module.connect_to_custom)
+        mock_client.is_ready.return_value = True
+        mock_aggregate = MagicMock()
+        mock_aggregate.total_count = 10
+        mock_collection.aggregate.over_all.return_value = mock_aggregate
+
+        # Simulate high error rate: 5 errors out of 10 ops
+        backend.stats["error_count"] = 5
+        backend.stats["total_operations"] = 10
+
+        health = backend.health_check()
+
+        assert health["is_healthy"] is False
+        assert any("error rate" in i.lower() for i in health["issues"])
+
+    def test_health_check_exception(self, mock_weaviate_module):
+        """Should return fallback dict on exception."""
+        backend, mock_client, _ = _make_backend(mock_weaviate_module.connect_to_custom)
+        # Force is_ready to raise inside health_check
+        mock_client.is_ready.side_effect = RuntimeError("boom")
+
+        health = backend.health_check()
+
+        assert health["is_healthy"] is False
+        assert "boom" in health["error"]
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendSearchScoreFallback:
+    """Verify search score fallback when no metadata scores available."""
+
+    def test_search_no_score_metadata(self, mock_weaviate_module):
+        """Should use positional fallback when no score/certainty/distance."""
+        backend, mock_client, mock_collection = _make_backend(mock_weaviate_module.connect_to_custom)
+
+        mock_obj1 = MagicMock()
+        mock_obj1.metadata.score = None
+        mock_obj1.metadata.certainty = None
+        mock_obj1.metadata.distance = None
+        mock_obj1.properties = {"chunk_index": 0}
+
+        mock_obj2 = MagicMock()
+        mock_obj2.metadata.score = None
+        mock_obj2.metadata.certainty = None
+        mock_obj2.metadata.distance = None
+        mock_obj2.properties = {"chunk_index": 1}
+
+        mock_response = MagicMock()
+        mock_response.objects = [mock_obj1, mock_obj2]
+        mock_collection.query.near_vector.return_value = mock_response
+
+        query_vec = np.random.rand(384).astype(np.float32)
+        results = backend.search(query_vec, k=5)
+
+        assert len(results) == 2
+        # Positional fallback: 1.0 - (i * 0.1)
+        assert results[0] == (0, 1.0)
+        assert results[1] == (1, 0.9)
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendClearNotConnected:
+    """Verify clear() early return when disconnected."""
+
+    def test_clear_when_disconnected(self, mock_weaviate_module):
+        """Should return without error when not connected."""
+        backend, mock_client, _ = _make_backend(mock_weaviate_module.connect_to_custom)
+        backend.is_connected = False
+
+        mock_client.collections.delete.reset_mock()
+        backend.clear()  # Should not raise
+
+        mock_client.collections.delete.assert_not_called()
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendDocumentCountException:
+    """Verify get_document_count() exception path."""
+
+    def test_document_count_exception_returns_zero(self, mock_weaviate_module):
+        """Should return 0 on aggregate exception."""
+        backend, _, mock_collection = _make_backend(mock_weaviate_module.connect_to_custom)
+        mock_collection.aggregate.over_all.side_effect = RuntimeError("aggregate failed")
+
+        count = backend.get_document_count()
+        assert count == 0
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendDictConfig:
+    """Verify WeaviateBackend accepts a dict config."""
+
+    def test_dict_config_converted(self, mock_weaviate_module):
+        """Should convert dict to WeaviateBackendConfig."""
+        mock_client = MagicMock()
+        mock_client.is_ready.return_value = True
+        mock_client.collections.list_all.return_value = {}
+        mock_client.collections.create.return_value = None
+        mock_client.collections.get.return_value = MagicMock()
+        mock_weaviate_module.connect_to_custom.return_value = mock_client
+
+        from components.retrievers.backends.weaviate_backend import WeaviateBackend
+
+        backend = WeaviateBackend({"connection": {"url": "http://localhost:8080"}})
+        assert backend.is_connected is True
+        assert isinstance(backend.config, WeaviateBackendConfig)
