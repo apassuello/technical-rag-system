@@ -61,6 +61,16 @@ import urllib.request
 import socket
 
 
+def _spacy_model_available(model: str = "en_core_web_sm") -> bool:
+    """Check if spaCy and a specific model are installed."""
+    try:
+        import spacy
+        spacy.load(model)
+        return True
+    except Exception:
+        return False
+
+
 def _service_available(url: str, timeout: float = 2.0) -> bool:
     """Check if an HTTP service is reachable."""
     try:
@@ -94,6 +104,10 @@ def pytest_collection_modifyitems(config, items):
         "requires_redis": (
             lambda: _redis_available(),
             "Redis not running on localhost:6379",
+        ),
+        "requires_spacy": (
+            lambda: _spacy_model_available(),
+            "spaCy or en_core_web_sm not installed (pip install spacy && python -m spacy download en_core_web_sm)",
         ),
     }
 
