@@ -9,6 +9,7 @@ from src.components.query_processors.base import QueryAnalysis
 pytestmark = [pytest.mark.unit]
 
 
+@pytest.mark.requires_spacy
 class TestNLPAnalyzerWithSpaCy:
     """Tests with spaCy model loaded."""
 
@@ -89,6 +90,7 @@ class TestNLPAnalyzerWithoutSpaCy:
         assert result.metadata['nlp_available'] is False
 
 
+@pytest.mark.requires_spacy
 class TestNLPAnalyzerConfiguration:
     """Tests for configuration options."""
 
