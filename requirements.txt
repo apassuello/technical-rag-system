@@ -19,6 +19,7 @@ mlflow>=2.9.0,<3.0.0  # Experiment tracking. TODO: upgrade to >=3.1.0 (4 CVEs) â
 
 # Vector Search & Indexing
 faiss-cpu>=1.7.4
+weaviate-client>=4.15.0,<5.0.0
 
 # Document Processing (Essential only)
 PyMuPDF>=1.23.0
@@ -49,9 +50,6 @@ mistralai>=0.4.0  # Official Mistral Python client
 tenacity>=8.0.0  # Retry logic with exponential backoff
 tiktoken>=0.5.0  # OpenAI token counting
 mistral-common>=1.0.0  # Mistral token counting
-
-# Epic 8 Cloud-Native Dependencies
-redis>=5.0.1  # Redis Python client with async support for cache service
 
 # Testing & Quality Assurance
 pytest>=7.4.0,<8.0.0  # Testing framework
