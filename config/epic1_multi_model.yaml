@@ -7,13 +7,77 @@ global_settings:
   enable_metrics: true
   enable_caching: true
 
-# Platform orchestrator configuration
-platform_orchestrator:
-  type: "production"
-  config:
-    monitoring_enabled: true
-    health_check_interval: 30
-    performance_tracking: true
+  # Platform orchestrator configuration
+  platform_orchestrator:
+    type: "production"
+    config:
+      monitoring_enabled: true
+      health_check_interval: 30
+      performance_tracking: true
+
+  # Model-specific API configurations
+  api_keys:
+    # These should be set as environment variables in production
+    openai_api_key: "${OPENAI_API_KEY}"
+    mistral_api_key: "${MISTRAL_API_KEY}"
+    anthropic_api_key: "${ANTHROPIC_API_KEY}"  # Future use
+
+  # Model provider configurations
+  providers:
+    ollama:
+      base_url: "http://localhost:11434"
+      timeout: 120
+      keep_alive: "5m"
+      models:
+        - "llama3.2:3b"
+
+    openai:
+      base_url: "https://api.openai.com/v1"
+      timeout: 30
+      organization: "${OPENAI_ORG_ID}"  # Optional
+      models:
+        - "gpt-3.5-turbo"
+        - "gpt-4-turbo"
+        - "gpt-4o-mini"
+
+    mistral:
+      base_url: "https://api.mistral.ai/v1"
+      timeout: 30
+      models:
+        - "mistral-tiny"
+        - "mistral-small"
+        - "mistral-medium"
+        - "mistral-large"
+
+  # Epic 1 specific settings
+  epic1:
+    # Enable all Epic 1 features
+    enabled: true
+
+    # Cost optimization targets
+    cost_reduction_target: 0.40      # 40% cost reduction target
+    routing_overhead_target_ms: 50   # <50ms routing overhead target
+
+    # Quality assurance
+    min_quality_threshold: 0.80      # Minimum acceptable quality
+    quality_regression_threshold: 0.05  # Max 5% quality regression
+
+    # Performance monitoring
+    routing_decision_logging: true
+    cost_tracking_logging: true
+    model_performance_logging: true
+
+    # A/B testing (future enhancement)
+    ab_testing:
+      enabled: false
+      test_percentage: 0.10
+
+    # Advanced features (future enhancements)
+    advanced:
+      enable_model_fine_tuning: false
+      enable_prompt_optimization: false
+      enable_response_caching: true
+      cache_ttl_hours: 24
 
 # Document processor configuration (existing)
 document_processor:
@@ -318,67 +382,3 @@ query_processor:
       config:
         include_sources: true
         format_citations: true
-
-# Model-specific API configurations
-api_keys:
-  # These should be set as environment variables in production
-  openai_api_key: "${OPENAI_API_KEY}"
-  mistral_api_key: "${MISTRAL_API_KEY}"
-  anthropic_api_key: "${ANTHROPIC_API_KEY}"  # Future use
-
-# Model provider configurations
-providers:
-  ollama:
-    base_url: "http://localhost:11434"
-    timeout: 120
-    keep_alive: "5m"
-    models:
-      - "llama3.2:3b"
-      
-  openai:
-    base_url: "https://api.openai.com/v1"
-    timeout: 30
-    organization: "${OPENAI_ORG_ID}"  # Optional
-    models:
-      - "gpt-3.5-turbo"
-      - "gpt-4-turbo"
-      - "gpt-4o-mini"
-      
-  mistral:
-    base_url: "https://api.mistral.ai/v1"
-    timeout: 30
-    models:
-      - "mistral-tiny"
-      - "mistral-small"
-      - "mistral-medium"
-      - "mistral-large"
-
-# Epic 1 specific settings
-epic1:
-  # Enable all Epic 1 features
-  enabled: true
-  
-  # Cost optimization targets
-  cost_reduction_target: 0.40      # 40% cost reduction target
-  routing_overhead_target_ms: 50   # <50ms routing overhead target
-  
-  # Quality assurance
-  min_quality_threshold: 0.80      # Minimum acceptable quality
-  quality_regression_threshold: 0.05  # Max 5% quality regression
-  
-  # Performance monitoring
-  routing_decision_logging: true
-  cost_tracking_logging: true
-  model_performance_logging: true
-  
-  # A/B testing (future enhancement)
-  ab_testing:
-    enabled: false
-    test_percentage: 0.10
-    
-  # Advanced features (future enhancements)
-  advanced:
-    enable_model_fine_tuning: false
-    enable_prompt_optimization: false
-    enable_response_caching: true
-    cache_ttl_hours: 24
