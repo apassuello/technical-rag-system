@@ -3,21 +3,13 @@
 import pytest
 from pathlib import Path
 
-from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Document
 from src.components.embedders.modular_embedder import ModularEmbedder
 from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from .golden_corpus import ALL_CORPUS_TEXTS
 
 
-@pytest.fixture
-def orchestrator():
-    """Create PlatformOrchestrator with test config."""
-    config_path = Path(__file__).resolve().parents[2] / "config" / "test.yaml"
-    return PlatformOrchestrator(config_path)
-
-
-@pytest.fixture
+@pytest.fixture(scope="session")
 def golden_documents():
     """4 Document objects: 3 on-topic RISC-V + 1 off-topic weather."""
     return [
@@ -26,9 +18,9 @@ def golden_documents():
     ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def indexed_orchestrator(orchestrator, golden_documents):
-    """Orchestrator with golden corpus indexed."""
+    """Orchestrator with golden corpus indexed — shared across all tests."""
     count = orchestrator.index_documents(golden_documents)
     assert count == 4, f"Expected 4 docs indexed, got {count}"
     return orchestrator
@@ -42,7 +34,7 @@ def shared_embedder():
             "type": "sentence_transformer",
             "config": {
                 "model_name": "sentence-transformers/multi-qa-MiniLM-L6-cos-v1",
-                "device": "mps",
+                "device": "auto",
                 "normalize_embeddings": True,
             },
         },

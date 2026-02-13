@@ -20,8 +20,6 @@ if str(SRC_PATH) not in sys.path:
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-print(f"✓ Root conftest.py: Added {PROJECT_ROOT} and {SRC_PATH} to sys.path")
-
 # Eagerly import ComponentFactory so the reference survives any test patches
 from src.core.component_factory import ComponentFactory as _RealComponentFactory
 
@@ -30,8 +28,11 @@ import src.core.platform_orchestrator as _po_module
 
 
 @pytest.fixture(autouse=True)
-def _clear_component_factory_cache():
-    """Prevent cached Mock components from leaking between tests.
+def _clear_component_factory_cache(request):
+    """Prevent cached Mock components from leaking between unit tests.
+
+    Only active for tests/unit — integration and validation tests need
+    component reuse across session-scoped orchestrator fixtures.
 
     Clears caches AND restores the ComponentFactory reference in the
     platform_orchestrator module namespace. Unit tests that patch
@@ -40,24 +41,49 @@ def _clear_component_factory_cache():
     causing 'Mock object is not iterable' errors when the orchestrator
     tries to use a Mock embedder.
     """
-    _RealComponentFactory._component_cache.clear()
-    _RealComponentFactory._class_cache.clear()
-    _po_module.ComponentFactory = _RealComponentFactory
+    is_unit = "/tests/unit/" in str(request.fspath) or str(request.fspath).endswith("/tests/unit")
+    if is_unit:
+        _RealComponentFactory._component_cache.clear()
+        _RealComponentFactory._class_cache.clear()
+        _po_module.ComponentFactory = _RealComponentFactory
     yield
-    _RealComponentFactory._component_cache.clear()
-    _RealComponentFactory._class_cache.clear()
-    _po_module.ComponentFactory = _RealComponentFactory
+    if is_unit:
+        _RealComponentFactory._component_cache.clear()
+        _RealComponentFactory._class_cache.clear()
+        _po_module.ComponentFactory = _RealComponentFactory
 
 
 def pytest_sessionfinish(session, exitstatus):
-    """Shut down lingering ThreadPoolExecutor threads to prevent pytest from hanging."""
-    import concurrent.futures.thread as _thread
+    """Shut down lingering ThreadPoolExecutor threads to prevent pytest from hanging.
 
-    for t in list(_thread._threads_queues):
-        _thread._threads_queues[t] = None
+    Uses the internal _threads_queues dict to deregister threads from
+    Python's atexit handler.  This is a private API but stable across
+    Python 3.9-3.12 and the only reliable way to prevent the hang.
+    """
+    import concurrent.futures.thread as _cft
+
+    for t in list(_cft._threads_queues):
+        _cft._threads_queues[t] = None
 
 
 import urllib.request
+
+
+@pytest.fixture(scope="session")
+def orchestrator():
+    """Shared PlatformOrchestrator — loaded once, used by integration + validation."""
+    from src.core.platform_orchestrator import PlatformOrchestrator
+
+    config_path = Path(__file__).resolve().parent.parent / "config" / "test-ollama.yaml"
+    orch = PlatformOrchestrator(config_path)
+    yield orch
+    if hasattr(orch, '_components'):
+        orch._components.clear()
+    if hasattr(orch, 'health_service'):
+        orch.health_service.monitored_components.clear()
+        orch.health_service.health_history.clear()
+    if hasattr(orch, 'analytics_service'):
+        orch.analytics_service.component_metrics.clear()
 
 
 def _spacy_model_available(model: str = "en_core_web_sm") -> bool:
@@ -79,8 +105,19 @@ def _service_available(url: str, timeout: float = 2.0) -> bool:
         return False
 
 
+TIER_ORDER = {"unit": 0, "integration": 1, "validation": 2}
+
+
+def _get_tier(item):
+    parts = item.nodeid.split("/")
+    for part in parts:
+        if part in TIER_ORDER:
+            return TIER_ORDER[part]
+    return len(TIER_ORDER)
+
+
 def pytest_collection_modifyitems(config, items):
-    """Auto-skip tests whose required services are unavailable."""
+    """Auto-skip tests whose required services are unavailable, then sort by tier."""
     service_checks = {
         "requires_ollama": (
             lambda: _service_available("http://localhost:11434/api/tags"),
@@ -106,3 +143,6 @@ def pytest_collection_modifyitems(config, items):
             if marker_name in {m.name for m in item.iter_markers()}:
                 if not availability[marker_name]:
                     item.add_marker(pytest.mark.skip(reason=reason))
+
+    # Sort by tier: unit → integration → validation
+    items.sort(key=_get_tier)
