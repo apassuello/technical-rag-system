@@ -593,9 +593,9 @@ class EnsembleEvaluator:
 
         # Flatten axes for easier indexing if needed
         if isinstance(axes, np.ndarray):
-            axes_flat = axes.flatten() if axes.ndim > 1 else axes
+            _axes_flat = axes.flatten() if axes.ndim > 1 else axes
         else:
-            axes_flat = [axes]
+            _axes_flat = [axes]
 
         # Accuracy comparison
         view_names = list(ensemble_report['individual_view_performance'].keys())

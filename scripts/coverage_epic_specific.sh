@@ -2,7 +2,7 @@
 # Epic-specific coverage analysis
 # Analyzes coverage for specific Epic test suites
 
-EPIC_NUMBER=${1:-8}
+EPIC_NUMBER=${1:-1}
 
 echo "🧪 Running Epic $EPIC_NUMBER Coverage Analysis"
 echo "============================================="
@@ -33,7 +33,7 @@ case $EPIC_NUMBER in
     1)
         echo "🔍 Running Epic 1 tests with src/ coverage..."
         echo "Tests: Multi-model routing, cost tracking, ML infrastructure, query analysis"
-        
+
         pytest tests/epic1/ tests/unit/test_epic* \
             --cov=src \
             --cov-config=.coveragerc \
@@ -43,26 +43,12 @@ case $EPIC_NUMBER in
             --cov-report=term-missing \
             --tb=no -q
         ;;
-    8)
-        echo "🔍 Running Epic 8 tests with services/ coverage..."
-        echo "Tests: Cloud-native microservices, API gateway, services"
-        
-        pytest tests/epic8/ \
-            --cov=services \
-            --cov-config=.coveragerc \
-            --cov-report=html:reports/coverage/epic8_html \
-            --cov-report=json:reports/coverage/epic8_coverage.json \
-            --cov-report=xml:reports/coverage/epic8_coverage.xml \
-            --cov-report=term-missing \
-            --tb=no -q
-        ;;
     *)
         echo "❌ Unknown Epic number: $EPIC_NUMBER"
-        echo "Available Epics: 1, 8"
+        echo "Available Epics: 1"
         echo ""
         echo "Usage:"
         echo "  $0 1    # Run Epic 1 coverage (src/)"
-        echo "  $0 8    # Run Epic 8 coverage (services/)"
         exit 1
         ;;
 esac

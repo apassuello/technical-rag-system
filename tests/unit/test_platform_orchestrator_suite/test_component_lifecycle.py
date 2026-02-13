@@ -38,9 +38,7 @@ class TestPlatformOrchestratorLifecycle:
         # Verify service initialization
         assert orchestrator.health_service is not None
         assert orchestrator.analytics_service is not None
-        assert orchestrator.ab_testing_service is not None
         assert orchestrator.configuration_service is not None
-        assert orchestrator.backend_management_service is not None
 
     def test_orchestrator_initialization_invalid_config_path(self):
         """Test orchestrator initialization with invalid config path."""
@@ -171,18 +169,6 @@ class TestPlatformOrchestratorLifecycle:
         
         assert isinstance(processor_config, dict)
         assert "type" in processor_config
-
-    def test_backend_management_service_integration(self, valid_config_file, mock_component_factory):
-        """Test backend management service integration."""
-        orchestrator = PlatformOrchestrator(valid_config_file)
-        
-        # Test backend management service access
-        backend_service = orchestrator.backend_management_service
-        assert backend_service is not None
-        
-        # Test backend operations
-        all_backends = orchestrator.get_all_backends()
-        assert isinstance(all_backends, dict)
 
     def test_component_embedder_integration(self, valid_config_file, mock_component_factory):
         """Test embedder integration with answer generator."""
@@ -383,9 +369,7 @@ class TestPlatformOrchestratorLifecycle:
         # All services should be initialized
         assert orchestrator.health_service is not None
         assert orchestrator.analytics_service is not None
-        assert orchestrator.ab_testing_service is not None
         assert orchestrator.configuration_service is not None
-        assert orchestrator.backend_management_service is not None
 
         # Config references should be consistent
         assert orchestrator.config_path is not None

@@ -448,8 +448,8 @@ def main():
     view_splits = loader.create_train_val_split(view_examples)
     
     # Normalize features
-    normalized_splits = loader.normalize_features(view_splits)
-    
+    loader.normalize_features(view_splits)
+
     # Get statistics
     stats = loader.get_statistics()
     logger.info("\nDataset Statistics:")

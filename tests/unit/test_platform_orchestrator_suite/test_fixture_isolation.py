@@ -10,8 +10,6 @@ import pytest
 from src.core.platform_orchestrator import (
     ComponentHealthServiceImpl,
     SystemAnalyticsServiceImpl,
-    ABTestingServiceImpl,
-    BackendManagementServiceImpl,
 )
 from .conftest import MockComponent
 
@@ -87,73 +85,21 @@ class TestFixtureIsolation:
         assert len(analytics_service.system_metrics_history) == 0
         assert len(analytics_service.performance_tracking) == 0
 
-    def test_ab_testing_service_isolation_test1(self, ab_testing_service):
-        """First test with ab_testing_service - should have clean state."""
-        assert len(ab_testing_service.experiments) == 0
-        assert len(ab_testing_service.assignments) == 0
-        assert len(ab_testing_service.results) == 0
-        assert len(ab_testing_service.active_experiments) == 0
-
-        # Add experiment
-        ab_testing_service.configure_experiment({
-            "name": "test_exp",
-            "variants": {"control": {}, "treatment": {}},
-            "traffic_allocation": {"control": 0.5, "treatment": 0.5},
-            "active": True
-        })
-        assert len(ab_testing_service.experiments) == 1
-
-    def test_ab_testing_service_isolation_test2(self, ab_testing_service):
-        """Second test with ab_testing_service - should have clean state."""
-        # Verify clean state (no contamination from test1)
-        assert len(ab_testing_service.experiments) == 0
-        assert len(ab_testing_service.assignments) == 0
-        assert len(ab_testing_service.results) == 0
-
-    def test_backend_management_service_isolation_test1(self, backend_management_service):
-        """First test with backend_management_service - should have clean state."""
-        assert len(backend_management_service.registered_backends) == 0
-        assert len(backend_management_service.backend_status) == 0
-        assert len(backend_management_service.backend_health) == 0
-        assert len(backend_management_service.component_backends) == 0
-        assert len(backend_management_service.migration_history) == 0
-
-        # Register a backend
-        backend_management_service.register_backend("test_backend", {"type": "faiss"})
-        assert len(backend_management_service.registered_backends) == 1
-
-    def test_backend_management_service_isolation_test2(self, backend_management_service):
-        """Second test with backend_management_service - should have clean state."""
-        # Verify clean state (no contamination from test1)
-        assert len(backend_management_service.registered_backends) == 0
-        assert len(backend_management_service.backend_status) == 0
-        assert len(backend_management_service.migration_history) == 0
-
     def test_multiple_services_no_cross_contamination(
-        self, health_service, analytics_service, ab_testing_service
+        self, health_service, analytics_service
     ):
         """Verify multiple services don't contaminate each other."""
         # All should start clean
         assert len(health_service.monitored_components) == 0
         assert len(analytics_service.component_metrics) == 0
-        assert len(ab_testing_service.experiments) == 0
 
         # Modify all services
         component = MockComponent("MultiServiceTest")
         health_service.monitor_component_health(component)
         analytics_service.collect_component_metrics(component)
-        ab_testing_service.configure_experiment({
-            "name": "multi_exp",
-            "variants": {"control": {}, "treatment": {}},
-            "traffic_allocation": {"control": 0.5, "treatment": 0.5},
-            "active": True
-        })
 
         # Each should have their own state
         assert len(health_service.monitored_components) == 1
-        assert len(ab_testing_service.experiments) == 1
-        # Note: analytics_service.component_metrics may be empty if collect_component_metrics
-        # doesn't store in that specific dict, but the point is they're independent
 
     def test_sequential_runs_maintain_isolation(self, health_service):
         """Test that running multiple operations in sequence maintains isolation."""

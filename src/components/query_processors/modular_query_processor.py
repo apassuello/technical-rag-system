@@ -436,7 +436,7 @@ class ModularQueryProcessor(QueryProcessor):
             
             # Phase 1.5: Epic 2 Workflow Orchestration
             phase_start = time.time()
-            workflow_results = self._workflow_orchestrator.orchestrate_query_workflow(query, query_analysis, phase_times)
+            self._workflow_orchestrator.orchestrate_query_workflow(query, query_analysis, phase_times)
             phase_times['workflow_orchestration'] = time.time() - phase_start
             
             # Phase 2: Document Retrieval (with analysis-optimized parameters)

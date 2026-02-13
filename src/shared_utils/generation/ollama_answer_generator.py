@@ -36,7 +36,7 @@ except ImportError:
     AnswerGenerator = object
 
 
-class OllamaAnswerGenerator(AnswerGenerator if AnswerGenerator != object else object):
+class OllamaAnswerGenerator(AnswerGenerator if AnswerGenerator is not object else object):
     """
     Generates answers using local Ollama server.
 
@@ -266,7 +266,6 @@ Answer:"""
         Target range: 150-400 characters (down from 1000-2600)
         """
         # Analyze query complexity
-        query_length = len(query)
         query_words = len(query.split())
         
         # Check for complexity indicators
@@ -367,7 +366,6 @@ Answer:"""
             logger.debug(f"🔧 Fallback: Creating {num_fallback_citations} citations for answer without explicit [chunk_X] references")
 
         # Create Citation objects
-        chunk_to_source = {}
         for idx in cited_chunks:
             chunk = chunks[idx]
             citation = Citation(

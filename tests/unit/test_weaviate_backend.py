@@ -776,6 +776,43 @@ class TestWeaviateBackendDocumentCountException:
 
 
 @patch("components.retrievers.backends.weaviate_backend.weaviate")
+class TestWeaviateBackendTimestamps:
+    """Verify timestamps are RFC3339-compliant (include timezone)."""
+
+    def test_document_properties_use_rfc3339_timestamps(self, mock_weaviate_module):
+        """Verify created_at timestamps include timezone for RFC3339 compliance."""
+        mock_client = MagicMock()
+        mock_client.is_ready.return_value = True
+        mock_client.collections.list_all.return_value = {}
+        mock_client.collections.create.return_value = None
+        mock_collection = MagicMock()
+        mock_batch = MagicMock()
+        mock_collection.batch.fixed_size.return_value.__enter__ = MagicMock(return_value=mock_batch)
+        mock_collection.batch.fixed_size.return_value.__exit__ = MagicMock(return_value=False)
+        mock_client.collections.get.return_value = mock_collection
+        mock_weaviate_module.connect_to_custom.return_value = mock_client
+
+        from components.retrievers.backends.weaviate_backend import WeaviateBackend
+        from src.core.interfaces import Document
+
+        backend = WeaviateBackend(WeaviateBackendConfig())
+        docs = [
+            Document(
+                content="Test document",
+                metadata={"source": "test.pdf", "chunk_index": 0},
+                embedding=[0.1] * 384,
+            ),
+        ]
+        backend.add_documents(docs)
+
+        props = mock_batch.add_object.call_args.kwargs["properties"]
+        created_at = props["created_at"]
+        assert "+" in created_at or "Z" in created_at, (
+            f"created_at '{created_at}' lacks timezone suffix; not RFC3339 compliant"
+        )
+
+
+@patch("components.retrievers.backends.weaviate_backend.weaviate")
 class TestWeaviateBackendDictConfig:
     """Verify WeaviateBackend accepts a dict config."""
 

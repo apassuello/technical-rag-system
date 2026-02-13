@@ -43,14 +43,11 @@ def test_epic1_component_factory():
         print(f"   Type: {info.get('type')}")
         print(f"   Routing enabled: {info.get('routing_enabled')}")
         print(f"   Epic1 available: {info.get('epic1_available')}")
-        
-        return epic1_generator
-        
+
     except Exception as e:
-        print(f"❌ ComponentFactory test failed: {e}")
         import traceback
         traceback.print_exc()
-        return None
+        pytest.fail(f"ComponentFactory test failed: {e}")
 
 def test_epic1_configuration_loading():
     """Test Epic1 configuration loading."""
@@ -73,16 +70,13 @@ def test_epic1_configuration_loading():
             print(f"   Routing enabled: {routing_config.get('enabled')}")
             print(f"   Default strategy: {routing_config.get('default_strategy')}")
             
-            return config
         else:
-            print(f"❌ Configuration file not found: {config_path}")
-            return None
-            
+            pytest.fail(f"Configuration file not found: {config_path}")
+
     except Exception as e:
-        print(f"❌ Configuration loading failed: {e}")
         import traceback
         traceback.print_exc()
-        return None
+        pytest.fail(f"Configuration loading failed: {e}")
 
 def test_epic1_with_config():
     """Test Epic1AnswerGenerator with full configuration."""
@@ -128,14 +122,11 @@ def test_epic1_with_config():
                 print(f"   Cost tracking enabled: ✅")
             else:
                 print(f"   Cost tracking: Not yet used")
-        
-        return epic1_generator
-        
+
     except Exception as e:
-        print(f"❌ Epic1 configuration test failed: {e}")
         import traceback
         traceback.print_exc()
-        return None
+        pytest.fail(f"Epic1 configuration test failed: {e}")
 
 def test_query_complexity_analyzer():
     """Test the Epic1 Query Complexity Analyzer directly."""
@@ -166,14 +157,11 @@ def test_query_complexity_analyzer():
             print(f"     Analysis time: {analysis_time:.1f}ms")
             recommended_model = analysis.metadata.get('epic1_analysis', {}).get('recommended_model', 'unknown')
             print(f"     Recommended model: {recommended_model}")
-        
-        return analyzer
-        
+
     except Exception as e:
-        print(f"❌ Query analyzer test failed: {e}")
         import traceback
         traceback.print_exc()
-        return None
+        pytest.fail(f"Query analyzer test failed: {e}")
 
 def main():
     """Run all Epic1 integration tests."""

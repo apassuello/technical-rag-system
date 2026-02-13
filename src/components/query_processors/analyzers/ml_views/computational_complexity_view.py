@@ -367,8 +367,7 @@ class ComputationalComplexityView(HybridView):
     def _analyze_algorithm_complexity(self, query: str) -> Dict[str, Any]:
         """Analyze algorithmic complexity patterns in query."""
         complexity_scores = {}
-        matched_patterns = {}
-        
+
         for complexity_type, data in self.algorithm_patterns.items():
             score = 0
             matches = []

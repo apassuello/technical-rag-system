@@ -415,13 +415,13 @@ class OpenAIAdapter(BaseLLMAdapter):
             # Test with a minimal request
             test_messages = [{"role": "user", "content": "Hi"}]
             
-            response = self.client.chat.completions.create(
+            self.client.chat.completions.create(
                 model=self.model_name,
                 messages=test_messages,
                 max_tokens=1,
                 temperature=0
             )
-            
+
             return True
             
         except Exception as e:

@@ -89,7 +89,7 @@ class FusionStrategy(ABC):
             List in the same format as inputs (tuples or RetrievalResult objects)
         """
         # Import here to avoid circular dependency
-        from src.core.interfaces import RetrievalResult, Document
+        from src.core.interfaces import RetrievalResult
 
         # Check if inputs are RetrievalResult objects
         uses_retrieval_results = False

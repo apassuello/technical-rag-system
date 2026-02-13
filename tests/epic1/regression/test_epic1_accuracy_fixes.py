@@ -80,13 +80,6 @@ def test_technical_term_improvements():
         manager.extract_terms(test_query)
     avg_time = (time.time() - start_time) * 10  # ms per call
     print(f"Average extraction time: {avg_time:.2f}ms (Target: <5ms)")
-    
-    return {
-        'detection_rate': detection_rate,
-        'technical_density': density,
-        'avg_time_ms': avg_time,
-        'total_terms': len(manager.terms)
-    }
 
 def test_syntactic_parser_improvements():
     """Test that SyntacticParser now properly counts clauses."""
@@ -118,24 +111,18 @@ def test_syntactic_parser_improvements():
     
     accuracy = sum(1 for _, _, _, correct in results if correct) / len(results)
     print(f"\nClause Detection Accuracy: {accuracy:.1%} (Target: >90%)")
-    
+
     # Test complex analysis
     complex_query = test_cases[-1][0]
     analysis = parser.analyze_complexity(complex_query)
     features = parser.get_complexity_features(complex_query)
-    
+
     print(f"\nComplex Query Analysis:")
     print(f"  Query: {complex_query}")
     print(f"  Clause count: {analysis['clause_count']}")
     print(f"  Nesting depth: {analysis['nesting_depth']}")
     print(f"  Conjunction count: {analysis['conjunction_count']}")
     print(f"  Syntactic complexity: {features['syntactic_score']:.3f}")
-    
-    return {
-        'clause_accuracy': accuracy,
-        'syntactic_complexity': features['syntactic_score'],
-        'total_tests': len(test_cases)
-    }
 
 def test_feature_extractor_improvements():
     """Test that FeatureExtractor now provides all required features."""
@@ -208,11 +195,6 @@ def test_feature_extractor_improvements():
         
         feature_success_rate = working_features / max(1, total_features)
         print(f"  Feature success rate: {feature_success_rate:.1%} ({working_features}/{total_features})")
-    
-    return {
-        'feature_categories_complete': len(required_categories),
-        'feature_success_rate': feature_success_rate
-    }
 
 def test_complexity_classifier_improvements():
     """Test that ComplexityClassifier now produces realistic scores."""
@@ -298,12 +280,6 @@ def test_complexity_classifier_improvements():
     print(f"\nClassification Results:")
     print(f"Level Accuracy: {level_accuracy:.1%} (Target: >85%)")
     print(f"Score Reasonableness: {score_accuracy:.1%} (Target: >80%)")
-    
-    return {
-        'level_accuracy': level_accuracy,
-        'score_accuracy': score_accuracy,
-        'results': results
-    }
 
 def test_end_to_end_performance():
     """Test overall system performance improvements."""
@@ -345,12 +321,6 @@ def test_end_to_end_performance():
     print(f"Average time: {avg_time:.1f}ms")
     print(f"P95 time: {p95_time:.1f}ms (Target: <50ms)")
     print(f"Classification: {classification['complexity_level']} (score: {classification['complexity_score']:.3f})")
-    
-    return {
-        'avg_time_ms': avg_time,
-        'p95_time_ms': p95_time,
-        'meets_target': p95_time < 50
-    }
 
 def main():
     """Run all validation tests."""
