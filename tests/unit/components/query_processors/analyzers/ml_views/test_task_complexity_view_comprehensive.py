@@ -83,18 +83,18 @@ class TestTaskComplexityViewComprehensive:
             }
         }
 
-    @pytest.fixture  
+    @pytest.fixture
     def mock_model_manager(self):
         """Mock ModelManager for ML model loading."""
-        with patch('src.components.query_processors.analyzers.ml_views.task_complexity_view.ModelManager') as mock_manager:
+        with patch('components.query_processors.analyzers.ml_views.base_view.ModelManager') as mock_manager:
             mock_instance = Mock()
             mock_manager.return_value = mock_instance
-            
+
             # Mock model loading
             mock_instance.load_model.return_value = (Mock(), Mock())
             mock_instance.is_model_available.return_value = True
             mock_instance.get_model_info.return_value = {'name': 'deberta-v3-base', 'size': '279MB'}
-            
+
             yield mock_instance
 
     # ==================== INITIALIZATION TESTS ====================
