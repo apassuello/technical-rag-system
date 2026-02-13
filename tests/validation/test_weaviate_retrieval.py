@@ -93,7 +93,7 @@ class TestWeaviateRetrieval:
     def test_document_count(self, weaviate_pipeline):
         """Weaviate index should report correct document count."""
         retriever = weaviate_pipeline.get_component("retriever")
-        results = retriever.retrieve("technical documentation", k=10)
+        results = retriever.retrieve("What is RISC-V?", k=10)
         assert len(results) >= 1, "Expected at least 1 result"
 
     def test_pipeline_produces_answer(self, weaviate_pipeline):
