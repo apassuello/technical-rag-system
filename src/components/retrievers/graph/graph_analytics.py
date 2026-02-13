@@ -21,7 +21,6 @@ except ImportError:
     np = None
 
 try:
-    import plotly.express as px
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
     PLOTLY_AVAILABLE = True
@@ -518,7 +517,6 @@ class GraphAnalytics:
             builder_memory = builder_stats.get("memory_usage_mb", 0.0)
             
             # Estimate retriever memory (cache size)
-            retriever_stats = graph_retriever.get_statistics()
             cache_entries = len(graph_retriever.query_cache) if hasattr(graph_retriever, 'query_cache') else 0
             retriever_memory = cache_entries * 0.01  # Rough estimate: 10KB per cache entry
             

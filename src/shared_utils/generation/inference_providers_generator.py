@@ -117,7 +117,7 @@ class InferenceProvidersGenerator:
             
             # First try chat completion (preferred)
             try:
-                response = self.client.chat_completion(
+                self.client.chat_completion(
                     messages=test_messages,
                     model=self.model_name,
                     max_tokens=10,
@@ -134,7 +134,7 @@ class InferenceProvidersGenerator:
                     if model != self.model_name:
                         try:
                             logger.info(f"🔄 Trying {model}...")
-                            response = self.client.chat_completion(
+                            self.client.chat_completion(
                                 messages=test_messages,
                                 model=model,
                                 max_tokens=10
@@ -151,7 +151,7 @@ class InferenceProvidersGenerator:
             logger.info("🔄 Falling back to classic text generation API...")
             for model in self.CLASSIC_FALLBACK_MODELS:
                 try:
-                    response = self.client.text_generation(
+                    self.client.text_generation(
                         model=model,
                         prompt="Hello",
                         max_new_tokens=10

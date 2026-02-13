@@ -48,9 +48,8 @@ class PipelineConfig(BaseModel):
     retriever: ComponentConfig
     answer_generator: ComponentConfig
     query_processor: Optional[ComponentConfig] = None  # Epic 1/2 modular query processor
-    global_settings: Optional[Dict[str, Any]] = None  # Global configuration settings
-    
-    # Optional global settings
+
+    # Global configuration settings
     global_settings: Dict[str, Any] = Field(default_factory=dict)
     
     model_config = ConfigDict(extra='forbid')  # Forbid extra fields as per test expectations
@@ -378,9 +377,20 @@ class ConfigManager:
             self._config = self.load()
         return self._config
     
+    def reload(self) -> PipelineConfig:
+        """Reload configuration, clearing any cached state.
+
+        Returns:
+            Freshly loaded pipeline configuration
+        """
+        self._config = None
+        self._raw_config = None
+        self.clear_cache()
+        return self.load()
+
     def save(self, path: Path) -> None:
         """Save current configuration to YAML file.
-        
+
         Args:
             path: Path to save configuration
         """

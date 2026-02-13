@@ -23,7 +23,10 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from src.core.platform_orchestrator import PlatformOrchestrator
 
 import joblib
 import numpy as np

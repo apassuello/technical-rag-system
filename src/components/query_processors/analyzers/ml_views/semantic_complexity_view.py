@@ -516,9 +516,6 @@ class SemanticComplexityView(HybridView):
         elif primary_depth == 'intermediate':
             confidence += 0.1
 
-        # Add depth_confidence for test compatibility
-        depth_confidence = 0.9 if primary_depth == 'deep' else (0.6 if primary_depth == 'intermediate' else 0.3)
-
         # Boost from concept richness
         if concepts.get('is_concept_rich', False):
             confidence += 0.1

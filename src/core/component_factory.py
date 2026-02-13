@@ -1066,9 +1066,9 @@ class ComponentFactory:
                     raise ValueError("IntelligentQueryProcessor requires 'query_analyzer' parameter (QueryAnalyzer)")
 
                 # Build config from remaining kwargs or use provided config
-                config = kwargs.pop('config', None)
-                if config is None:
-                    config = ProcessorConfig(
+                processor_config: Any = kwargs.pop('config', None)
+                if processor_config is None:
+                    processor_config = ProcessorConfig(
                         use_agent_by_default=kwargs.pop('use_agent_by_default', False),
                         complexity_threshold=kwargs.pop('complexity_threshold', 0.7),
                         max_agent_cost=kwargs.pop('max_agent_cost', 0.10),
@@ -1084,7 +1084,7 @@ class ComponentFactory:
                     generator=generator,
                     agent=agent,
                     query_analyzer=query_analyzer,
-                    config=config
+                    config=processor_config
                 )
             else:
                 # Default handling for other processor types
@@ -1285,7 +1285,6 @@ class ComponentFactory:
             'vector_store': 'vector_stores'
         }
         
-        all_components = {**required_components, **optional_components}
         available = cls.get_available_components()
         
         # Check required components

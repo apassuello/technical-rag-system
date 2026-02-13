@@ -414,7 +414,6 @@ class MemoryCache(EmbeddingCache, ConfigurableEmbedderComponent):
             return 0
         
         with self._lock:
-            current_time = time.time()
             expired_keys = []
             
             for key, (embedding, timestamp) in self._cache.items():

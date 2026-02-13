@@ -26,7 +26,6 @@ import numpy as np
 project_root = Path(__file__).parent.parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
 
-from ..ml_models.model_manager import ModelManager
 from ..utils.syntactic_parser import SyntacticParser
 from .base_view import HybridView
 

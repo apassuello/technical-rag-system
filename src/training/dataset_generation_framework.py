@@ -609,8 +609,8 @@ For each query, provide a complete TrainingDataPoint following this exact JSON s
             logger.warning("Dataset not well balanced, consider regenerating some categories")
         
         # Coverage validation
-        coverage_validation = validate_dataset_coverage(validated_datapoints)
-        
+        validate_dataset_coverage(validated_datapoints)
+
         logger.info(f"Dataset validation complete: {len(validated_datapoints)} samples passed quality check")
         return validated_datapoints
     

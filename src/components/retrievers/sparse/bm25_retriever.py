@@ -197,7 +197,6 @@ class BM25Retriever(SparseRetriever):
         self._index_dirty = False
         
         elapsed = time.time() - start_time
-        total_tokens = sum(len(tokens) for tokens in self.tokenized_corpus)
         valid_doc_count = len([tokens for tokens in self.tokenized_corpus if tokens])
         
         logger.info(f"Rebuilt BM25 index with {valid_doc_count} documents in {elapsed:.3f}s")

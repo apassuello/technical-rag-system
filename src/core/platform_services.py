@@ -25,13 +25,13 @@ logger = logging.getLogger(__name__)
 class ComponentHealthServiceImpl(ComponentHealthService):
     """Implementation of ComponentHealthService for universal health monitoring."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the health service."""
         self.monitored_components: Dict[str, Any] = {}
         self.health_history: Dict[str, List[HealthStatus]] = {}
         self.failure_counts: Dict[str, int] = {}
         self.last_health_checks: Dict[str, float] = {}
-        self.health_check_interval = 30.0  # seconds
+        self.health_check_interval: float = 30.0  # seconds
 
     def _get_component_id(self, component: Any) -> str:
         """Get a unique storage key for a component, preferring instance name over class name."""
@@ -197,20 +197,14 @@ class ComponentHealthServiceImpl(ComponentHealthService):
         Returns:
             Dictionary with system health information
         """
-        summary = {
-            "total_components": len(self.monitored_components),
-            "healthy_components": 0,
-            "unhealthy_components": 0,
-            "overall_health": "unknown",
-            "components": {},
-            "total_failures": sum(self.failure_counts.values()),
-            "timestamp": time.time()
-        }
+        components: Dict[str, Any] = {}
+        healthy_components = 0
+        unhealthy_components = 0
 
         for component_id, component in self.monitored_components.items():
             health_status = self.check_component_health(component)
 
-            summary["components"][component_id] = {
+            components[component_id] = {
                 "healthy": health_status.is_healthy,
                 "issues": health_status.issues,
                 "metrics": health_status.metrics,
@@ -219,21 +213,31 @@ class ComponentHealthServiceImpl(ComponentHealthService):
             }
 
             if health_status.is_healthy:
-                summary["healthy_components"] += 1
+                healthy_components += 1
             else:
-                summary["unhealthy_components"] += 1
+                unhealthy_components += 1
+
+        total_components = len(self.monitored_components)
 
         # Determine overall health status
-        if summary["total_components"] == 0:
-            summary["overall_health"] = "unknown"
-        elif summary["unhealthy_components"] == 0:
-            summary["overall_health"] = "healthy"
-        elif summary["healthy_components"] == 0:
-            summary["overall_health"] = "critical"
+        if total_components == 0:
+            overall_health = "unknown"
+        elif unhealthy_components == 0:
+            overall_health = "healthy"
+        elif healthy_components == 0:
+            overall_health = "critical"
         else:
-            summary["overall_health"] = "degraded"
+            overall_health = "degraded"
 
-        return summary
+        return {
+            "total_components": total_components,
+            "healthy_components": healthy_components,
+            "unhealthy_components": unhealthy_components,
+            "overall_health": overall_health,
+            "components": components,
+            "total_failures": sum(self.failure_counts.values()),
+            "timestamp": time.time()
+        }
 
     def _get_required_methods(self, component_name: str) -> List[str]:
         """Get required methods for a component type.
@@ -329,14 +333,18 @@ class ComponentHealthServiceImpl(ComponentHealthService):
 class SystemAnalyticsServiceImpl(SystemAnalyticsService):
     """Implementation of SystemAnalyticsService for universal analytics collection."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the analytics service."""
-        self.component_metrics: Dict[str, List[ComponentMetrics]] = {}
+        # component_metrics stores either List[ComponentMetrics] (from collect_component_metrics)
+        # or Dict[str, Any] (from track_component_performance for backward compat).
+        # Typed as Any to accommodate both uses.
+        self.component_metrics: Dict[str, Any] = {}
         self.system_metrics_history: List[Dict[str, Any]] = []
         self.performance_tracking: Dict[str, Dict[str, Any]] = {}
         self.performance_history: Dict[str, List[Dict[str, Any]]] = {}  # For test compatibility
         self.query_analytics: Dict[str, Any] = {}  # For query-specific analytics
-        self.analytics_enabled = True
+        self.analytics_enabled: bool = True
+        self._component_metrics_objects: Dict[str, List[ComponentMetrics]] = {}
 
     def _get_component_id(self, component: Any) -> str:
         """Get a unique storage key for a component, preferring instance name over class name."""
@@ -425,31 +433,30 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
         Returns:
             Dictionary with system-wide metrics
         """
-        aggregated_metrics = {
-            "timestamp": time.time(),
-            "total_components": len(self.component_metrics),
-            "component_metrics": {},
-            "system_summary": {
-                "total_success_count": 0,
-                "total_error_count": 0,
-                "average_memory_mb": 0,
-                "total_memory_mb": 0,
-                "average_cpu_percent": 0
-            }
+        # Use _component_metrics_objects for structured ComponentMetrics access
+        metrics_source = self._component_metrics_objects
+
+        component_metrics_out: Dict[str, Any] = {}
+        system_summary: Dict[str, Any] = {
+            "total_success_count": 0,
+            "total_error_count": 0,
+            "average_memory_mb": 0,
+            "total_memory_mb": 0,
+            "average_cpu_percent": 0
         }
 
-        total_memory = 0
-        total_cpu = 0
+        total_memory: float = 0
+        total_cpu: float = 0
         component_count = 0
 
-        for component_name, metrics_list in self.component_metrics.items():
+        for component_name, metrics_list in metrics_source.items():
             if not metrics_list:
                 continue
 
             # Get latest metrics for this component
             latest_metrics = metrics_list[-1]
 
-            component_summary = {
+            component_summary: Dict[str, Any] = {
                 "name": component_name,
                 "type": latest_metrics.component_type,
                 "success_count": latest_metrics.success_count,
@@ -460,11 +467,11 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
                 "metrics_history_count": len(metrics_list)
             }
 
-            aggregated_metrics["component_metrics"][component_name] = component_summary
+            component_metrics_out[component_name] = component_summary
 
             # Add to system totals
-            aggregated_metrics["system_summary"]["total_success_count"] += latest_metrics.success_count
-            aggregated_metrics["system_summary"]["total_error_count"] += latest_metrics.error_count
+            system_summary["total_success_count"] += latest_metrics.success_count
+            system_summary["total_error_count"] += latest_metrics.error_count
 
             # Add memory and CPU if available
             if "memory_rss_mb" in latest_metrics.resource_usage:
@@ -477,9 +484,16 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
 
         # Calculate averages
         if component_count > 0:
-            aggregated_metrics["system_summary"]["average_memory_mb"] = round(total_memory / component_count, 2)
-            aggregated_metrics["system_summary"]["total_memory_mb"] = round(total_memory, 2)
-            aggregated_metrics["system_summary"]["average_cpu_percent"] = round(total_cpu / component_count, 2)
+            system_summary["average_memory_mb"] = round(total_memory / component_count, 2)
+            system_summary["total_memory_mb"] = round(total_memory, 2)
+            system_summary["average_cpu_percent"] = round(total_cpu / component_count, 2)
+
+        aggregated_metrics: Dict[str, Any] = {
+            "timestamp": time.time(),
+            "total_components": len(self.component_metrics),
+            "component_metrics": component_metrics_out,
+            "system_summary": system_summary
+        }
 
         # Store in history
         self.system_metrics_history.append(aggregated_metrics)
@@ -608,8 +622,6 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
         # Tests expect component_metrics[component_id] to be a dict with direct key access
 
         # Initialize a dedicated metrics history list
-        if not hasattr(self, '_component_metrics_objects'):
-            self._component_metrics_objects = {}
         if component_id not in self._component_metrics_objects:
             self._component_metrics_objects[component_id] = []
 
@@ -653,37 +665,35 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
         Returns:
             Dictionary with analytics report
         """
-        report = {
-            "timestamp": time.time(),
-            "report_period": "current_session",
-            "system_overview": {},
-            "system_summary": {},  # For test compatibility - same as system_overview
-            "component_performance": {},
-            "performance_trends": {},  # Test expects this key name
-            "recommendations": []
+        component_performance: Dict[str, Any] = {}
+        recommendations: List[str] = []
+        performance_trends: Dict[str, str] = {
+            "response_time_trend": "stable",
+            "success_rate_trend": "stable",
+            "error_rate_trend": "stable"
         }
 
         # Get current system metrics
         system_metrics = self.collect_system_metrics()
 
         # Build system overview/summary
-        system_summary = {
+        healthy_count = 0
+
+        # Count healthy components (those with low error rates)
+        for component_name, metrics_val in self.component_metrics.items():
+            if isinstance(metrics_val, dict):
+                error_count = metrics_val.get("error_count", 0)
+                total_ops = metrics_val.get("total_operations", 1)
+                error_rate = error_count / total_ops if total_ops > 0 else 0
+                if error_rate < 0.1:  # Less than 10% error rate
+                    healthy_count += 1
+
+        system_summary: Dict[str, Any] = {
             "total_components": system_metrics.get("total_components", 0),
-            "healthy_components": 0,
+            "healthy_components": healthy_count,
             "average_response_time": system_metrics.get("average_response_time", 0.0),
             "system_load": "normal"  # Default load indicator
         }
-
-        # Count healthy components (those with low error rates)
-        for component_name, metrics in self.component_metrics.items():
-            error_count = metrics.get("error_count", 0)
-            total_ops = metrics.get("total_operations", 1)
-            error_rate = error_count / total_ops if total_ops > 0 else 0
-            if error_rate < 0.1:  # Less than 10% error rate
-                system_summary["healthy_components"] += 1
-
-        report["system_overview"] = system_summary
-        report["system_summary"] = system_summary  # Duplicate for test compatibility
 
         # Component performance analysis
         for component_name, tracking_data in self.performance_tracking.items():
@@ -692,7 +702,7 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
                 success_rate = tracking_data["success_count"] / total_ops
                 error_rate = tracking_data["error_count"] / total_ops
 
-                component_performance = {
+                component_performance[component_name] = {
                     "component_name": component_name,
                     "total_operations": total_ops,
                     "success_rate": round(success_rate, 3),
@@ -701,16 +711,14 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
                     "last_operation": tracking_data["last_operation_time"]
                 }
 
-                report["component_performance"][component_name] = component_performance
-
                 # Add recommendations based on performance
                 if error_rate > 0.1:  # More than 10% error rate
-                    report["recommendations"].append(
+                    recommendations.append(
                         f"High error rate detected in {component_name}: {error_rate:.1%}"
                     )
 
                 if tracking_data["average_latency"] > 1000:  # More than 1 second
-                    report["recommendations"].append(
+                    recommendations.append(
                         f"High latency detected in {component_name}: {tracking_data['average_latency']:.0f}ms"
                     )
 
@@ -718,16 +726,9 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
         if "system_summary" in system_metrics and "total_memory_mb" in system_metrics["system_summary"]:
             total_memory = system_metrics["system_summary"]["total_memory_mb"]
             if total_memory > 1024:  # More than 1GB
-                report["recommendations"].append(
+                recommendations.append(
                     f"High memory usage detected: {total_memory:.1f}MB"
                 )
-
-        # Performance trends analysis
-        report["performance_trends"] = {
-            "response_time_trend": "stable",
-            "success_rate_trend": "stable",
-            "error_rate_trend": "stable"
-        }
 
         # Calculate trends from performance history
         for component_name in self.performance_history:
@@ -741,28 +742,36 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
                 if "response_time" in first_metrics and "response_time" in last_metrics:
                     rt_change = last_metrics["response_time"] - first_metrics["response_time"]
                     if rt_change > 0.05:  # 50ms increase
-                        report["performance_trends"]["response_time_trend"] = "increasing"
+                        performance_trends["response_time_trend"] = "increasing"
                     elif rt_change < -0.05:
-                        report["performance_trends"]["response_time_trend"] = "decreasing"
+                        performance_trends["response_time_trend"] = "decreasing"
 
                 # Success rate trend
                 if "success_rate" in first_metrics and "success_rate" in last_metrics:
                     sr_change = last_metrics["success_rate"] - first_metrics["success_rate"]
                     if sr_change > 0.02:
-                        report["performance_trends"]["success_rate_trend"] = "improving"
+                        performance_trends["success_rate_trend"] = "improving"
                     elif sr_change < -0.02:
-                        report["performance_trends"]["success_rate_trend"] = "degrading"
+                        performance_trends["success_rate_trend"] = "degrading"
 
                 # Error rate trend
                 if "error_count" in first_metrics and "error_count" in last_metrics:
                     error_change = last_metrics["error_count"] - first_metrics["error_count"]
                     if error_change > 2:
-                        report["performance_trends"]["error_rate_trend"] = "increasing"
-                        report["recommendations"].append("Error count is increasing over time")
+                        performance_trends["error_rate_trend"] = "increasing"
+                        recommendations.append("Error count is increasing over time")
                     elif error_change < -2:
-                        report["performance_trends"]["error_rate_trend"] = "decreasing"
+                        performance_trends["error_rate_trend"] = "decreasing"
 
-        return report
+        return {
+            "timestamp": time.time(),
+            "report_period": "current_session",
+            "system_overview": system_summary,
+            "system_summary": system_summary,  # Duplicate for test compatibility
+            "component_performance": component_performance,
+            "performance_trends": performance_trends,
+            "recommendations": recommendations
+        }
 
     def get_component_performance_history(self, component_name: str) -> List[Dict[str, Any]]:
         """Get performance history for a specific component.
@@ -1014,7 +1023,7 @@ class SystemAnalyticsServiceImpl(SystemAnalyticsService):
 class ConfigurationServiceImpl(ConfigurationService):
     """Implementation of ConfigurationService for universal configuration management."""
 
-    def __init__(self, config_manager: ConfigManager):
+    def __init__(self, config_manager: ConfigManager) -> None:
         """Initialize the configuration service.
 
         Args:
