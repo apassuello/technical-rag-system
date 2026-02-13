@@ -31,6 +31,36 @@ def weaviate_available():
         pytest.skip("Weaviate not available on localhost:8180")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def clean_weaviate(weaviate_available):
+    """Delete stale collections before test run to prevent shard errors."""
+    try:
+        import weaviate
+        from weaviate.classes.init import AdditionalConfig, Timeout
+
+        client = weaviate.connect_to_custom(
+            http_host="localhost",
+            http_port=8180,
+            http_secure=False,
+            grpc_host="localhost",
+            grpc_port=50051,
+            grpc_secure=False,
+            additional_config=AdditionalConfig(
+                timeout=Timeout(query=30, insert=60)
+            ),
+        )
+
+        try:
+            client.collections.delete("TestTechnicalDocument")
+        except Exception:
+            pass
+        finally:
+            client.close()
+    except Exception:
+        pass
+    yield
+
+
 @pytest.fixture
 def weaviate_pipeline(weaviate_available):
     """Boot PlatformOrchestrator with Weaviate backend, index golden corpus."""
