@@ -11,7 +11,7 @@ embedder:
       type: "sentence_transformer"
       config:
         model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        device: "mps"
+        device: "auto"
         normalize_embeddings: true
     batch_processor:
       type: "dynamic"
@@ -57,5 +57,5 @@ answer_generator:
     llm_client:
       type: "ollama"
       config:
-        model_name: "llama3.2:3b"
+        model_name: "tinyllama"
         base_url: "http://localhost:11434"

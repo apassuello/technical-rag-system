@@ -5,8 +5,60 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
-MODE="${1:---full}"
+# ---------------------------------------------------------------------------
+# Flags
+# ---------------------------------------------------------------------------
+RUN_UNIT=false
+RUN_INTEGRATION=false
+RUN_VALIDATION=false
+NO_COV=false
+FAIL_FAST=false
+
+usage() {
+    cat <<EOF
+Usage: $0 [FLAGS]
+
+Flags:
+  --unit            Run unit tests only (tests/unit/)
+  --integration     Run integration tests (tests/integration/)
+  --validation      Run validation tests (tests/validation/)
+  --full            Run all 3 tiers
+  --no-cov          Disable coverage collection
+  --fail-fast        Stop on first failure (-x)
+
+Examples:
+  $0 --unit                     # Fast unit tests (<30s)
+  $0 --unit --no-cov            # Unit tests without coverage
+  $0 --unit --integration       # Unit + integration
+  $0 --full                     # All tiers with coverage
+  $0 --full --no-cov            # All tiers without coverage
+EOF
+    exit 1
+}
+
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --unit)         RUN_UNIT=true ;;
+        --integration)  RUN_INTEGRATION=true ;;
+        --validation)   RUN_VALIDATION=true ;;
+        --full)         RUN_UNIT=true; RUN_INTEGRATION=true; RUN_VALIDATION=true ;;
+        --no-cov)       NO_COV=true ;;
+        --fail-fast)    FAIL_FAST=true ;;
+        -h|--help)      usage ;;
+        *)              echo "Unknown flag: $1"; usage ;;
+    esac
+    shift
+done
+
+# ---------------------------------------------------------------------------
+# Service management (only for integration / validation)
+# ---------------------------------------------------------------------------
 WEAVIATE_STARTED=false
+OLLAMA_STARTED=false
 
 start_weaviate() {
     echo "Starting Weaviate via Docker..."
@@ -22,40 +74,139 @@ start_weaviate() {
     done
 }
 
+start_ollama() {
+    echo "Starting Ollama via Docker..."
+    docker compose up -d ollama
+    OLLAMA_STARTED=true
+    for i in $(seq 1 30); do
+        if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
+            echo "  Ollama ready"
+            return
+        fi
+        [ "$i" -eq 30 ] && echo "  WARNING: Ollama not ready after 30s"
+        sleep 1
+    done
+}
+
+pull_ollama_models() {
+    echo "Ensuring Ollama models are available..."
+    local models
+    models=$(curl -sf http://localhost:11434/api/tags | grep -o '"name":"[^"]*"' | cut -d'"' -f4 || echo "")
+
+    if ! echo "$models" | grep -q "tinyllama"; then
+        echo "  Pulling tinyllama..."
+        docker compose exec ollama ollama pull tinyllama
+    else
+        echo "  tinyllama already available"
+    fi
+}
+
 cleanup() {
-    if [ "$WEAVIATE_STARTED" = true ]; then
-        echo "Stopping Weaviate..."
+    if [ "$WEAVIATE_STARTED" = true ] || [ "$OLLAMA_STARTED" = true ]; then
+        echo "Stopping services..."
         docker compose down
     fi
 }
 trap cleanup EXIT
 
-case "$MODE" in
-    --quick)
-        echo "=== Quick: unit + component, no ML, no coverage ==="
-        pytest tests/unit tests/component tests/api \
-            -m "not requires_ml and not requires_ollama" \
-            --override-ini="addopts=--strict-config --tb=short" -x -q
-        ;;
-    --local)
-        echo "=== Local: everything without external services, with coverage ==="
-        pytest tests/ \
-            -m "not requires_ollama and not requires_weaviate" \
-            --cov=src --cov-report=term-missing --cov-report=html --tb=short -q
-        ;;
-    --full)
+# ---------------------------------------------------------------------------
+# Build test paths
+# ---------------------------------------------------------------------------
+TESTPATHS=()
+[ "$RUN_UNIT" = true ]        && TESTPATHS+=(tests/unit)
+[ "$RUN_INTEGRATION" = true ] && TESTPATHS+=(tests/integration)
+[ "$RUN_VALIDATION" = true ]  && TESTPATHS+=(tests/validation)
+
+if [ ${#TESTPATHS[@]} -eq 0 ]; then
+    echo "ERROR: No tier selected. Use --unit, --integration, --validation, or --full."
+    exit 1
+fi
+
+# Start services only when integration or validation is selected
+if [ "$RUN_INTEGRATION" = true ] || [ "$RUN_VALIDATION" = true ]; then
+    if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
+        echo "Ollama already running"
+    else
+        start_ollama
+    fi
+    pull_ollama_models
+
+    if curl -sf http://localhost:8180/v1/.well-known/ready > /dev/null 2>&1; then
+        echo "Weaviate already running"
+    else
         start_weaviate
-        echo "=== Full: all tests, with coverage ==="
-        echo "Expects: Ollama running (ollama serve)"
-        pytest tests/ \
-            --cov=src --cov-report=term-missing --cov-report=html --tb=short -q
-        ;;
-    *)
-        echo "Usage: $0 [--quick|--local|--full]"
-        echo ""
-        echo "  --quick   Unit + component, no ML deps, no coverage (fast feedback)"
-        echo "  --local   All tests except Ollama/Weaviate, with coverage"
-        echo "  --full    All tests with coverage (needs Ollama, starts Weaviate via Docker)"
-        exit 1
-        ;;
-esac
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Build pytest args
+# ---------------------------------------------------------------------------
+COV_THRESHOLD=70
+
+PYTEST_ARGS=(
+    "${TESTPATHS[@]}"
+    --override-ini="addopts=--strict-markers --strict-config --tb=short"
+    -rfEsx
+)
+
+if [ "$NO_COV" = false ]; then
+    PYTEST_ARGS+=(
+        --cov=src
+        --cov-report=html:htmlcov
+    )
+fi
+
+if [ "$FAIL_FAST" = true ]; then
+    PYTEST_ARGS+=(-x)
+fi
+
+# ---------------------------------------------------------------------------
+# Show collection summary per tier
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== Test collection ==="
+for tier in "${TESTPATHS[@]}"; do
+    count=$(pytest "$tier" --collect-only -q 2>/dev/null | tail -1 | grep -o '[0-9]\+' | head -1 || echo "0")
+    echo "  $(basename "$tier"): ${count:-0} tests"
+done
+total=$(pytest "${TESTPATHS[@]}" --collect-only -q 2>/dev/null | tail -1 | grep -o '[0-9]\+' | head -1 || echo "0")
+echo "  total: ${total:-0} tests"
+echo ""
+
+# ---------------------------------------------------------------------------
+# Run
+# ---------------------------------------------------------------------------
+echo "=== Running: ${TESTPATHS[*]} ==="
+set +e
+pytest "${PYTEST_ARGS[@]}" 2>&1 | tee /tmp/pytest-output.log
+PYTEST_EXIT=${PIPESTATUS[0]}
+set -e
+
+# ---------------------------------------------------------------------------
+# Coverage summary (compact: file, stmts, miss, cover%)
+# ---------------------------------------------------------------------------
+if [ "$NO_COV" = false ] && [ -f .coverage ]; then
+    echo ""
+    echo "=== Coverage (files < 100%) ==="
+    coverage report --skip-covered --include="src/*" 2>/dev/null \
+        | awk '
+            /^Name /    { printf "  %-70s %5s %5s %6s\n", "File", "Stmts", "Miss", "Cover"; next }
+            /^-/        { next }
+            /^TOTAL/    { printf "  %-70s %5s %5s %6s\n", "TOTAL", $2, $3, $NF; next }
+            NF >= 4     { printf "  %-70s %5s %5s %6s\n", $1, $2, $3, $NF }
+        '
+    echo ""
+
+    # Extract total percentage and compare to threshold
+    COV_TOTAL=$(coverage report --include="src/*" 2>/dev/null | awk '/^TOTAL/ { print $NF }' | tr -d '%')
+    if [ -n "$COV_TOTAL" ]; then
+        if [ "$(echo "$COV_TOTAL < $COV_THRESHOLD" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+            echo "WARNING: Coverage ${COV_TOTAL}% is below threshold ${COV_THRESHOLD}%"
+        else
+            echo "Coverage: ${COV_TOTAL}% (threshold: ${COV_THRESHOLD}%)"
+        fi
+    fi
+    echo "HTML report: htmlcov/index.html"
+fi
+
+exit $PYTEST_EXIT

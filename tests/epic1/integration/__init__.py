@@ -1,1 +1,0 @@
-"""Epic1 integration tests for architecture-specific component interactions."""
