@@ -95,8 +95,7 @@ def test_epic1_end_to_end_pipeline():
         # Load Epic1 configuration
         config_path = Path("config/epic1_multi_model.yaml")
         if not config_path.exists():
-            print("❌ Epic1 configuration not found, using fallback")
-            return False
+            pytest.fail("Epic1 configuration not found")
             
         print("✅ Epic1 configuration found")
         
@@ -117,8 +116,7 @@ def test_epic1_end_to_end_pipeline():
         print(f"✅ Total chunks processed and indexed: {total_chunks}")
         
         if total_chunks == 0:
-            print("❌ No documents were processed")
-            return False
+            pytest.fail("No documents were processed")
         
         # Test queries from ground truth dataset with different complexity levels
         test_queries = [
@@ -190,13 +188,13 @@ def test_epic1_end_to_end_pipeline():
             print(f"  Sources: {result['sources_count']}")
             print(f"  Success: {'✅' if result['success'] else '❌'}")
         
-        return analyze_epic1_results(results)
-        
+        if not analyze_epic1_results(results):
+            pytest.fail("Epic1 results analysis did not pass all success criteria")
+
     except Exception as e:
-        print(f"❌ End-to-end test failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"End-to-end test failed: {e}")
 
 def analyze_epic1_results(results: List[Dict[str, Any]]) -> bool:
     """Analyze Epic1 test results for validation."""
@@ -307,11 +305,11 @@ def test_routing_strategies():
             status = "✅" if result['success'] else "❌"
             print(f"  {strategy}: {status}")
         
-        return successful_strategies == len(strategies)
-        
+        if successful_strategies != len(strategies):
+            pytest.fail(f"Only {successful_strategies}/{len(strategies)} strategies succeeded")
+
     except Exception as e:
-        print(f"❌ Strategy testing failed: {e}")
-        return False
+        pytest.fail(f"Strategy testing failed: {e}")
 
 def test_cost_tracking():
     """Test cost tracking functionality."""
@@ -378,13 +376,13 @@ def test_cost_tracking():
         expected_total = sum(usage['cost_usd'] for usage in test_usage)
         cost_accurate = abs(total_cost - expected_total) < Decimal('0.000001')
         
-        print(f"Cost accuracy: {'✅ PASS' if cost_accurate else '❌ FAIL'}")
-        
-        return cost_accurate
-        
+        print(f"Cost accuracy: {'PASS' if cost_accurate else 'FAIL'}")
+
+        if not cost_accurate:
+            pytest.fail("Cost calculation was not accurate")
+
     except Exception as e:
-        print(f"❌ Cost tracking test failed: {e}")
-        return False
+        pytest.fail(f"Cost tracking test failed: {e}")
 
 def main():
     """Run comprehensive Epic1 validation."""

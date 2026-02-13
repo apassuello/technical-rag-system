@@ -16,6 +16,7 @@ Key Requirements:
 import os
 import sys
 import logging
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch
 from decimal import Decimal
@@ -168,14 +169,11 @@ def test_epic1_cost_metadata_integration():
                 assert 'output_cost' in cost_breakdown, "Missing output_cost in breakdown"
                 
                 print("✅ Cost breakdown validation passed")
-                
-                return True
-                
+
     except Exception as e:
-        print(f"❌ Cost metadata integration test FAILED: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"Cost metadata integration test FAILED: {e}")
 
 
 def test_budget_enforcement_integration():
@@ -276,14 +274,11 @@ def test_budget_enforcement_integration():
                     assert len(answer.text) > 0, "System should remain functional under budget constraints"
                     
                     print("✅ Budget enforcement maintains system functionality")
-                    
-                    return True
-                    
+
     except Exception as e:
-        print(f"❌ Budget enforcement test FAILED: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"Budget enforcement test FAILED: {e}")
 
 
 if __name__ == "__main__":

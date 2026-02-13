@@ -6,6 +6,7 @@ Simple test to validate Epic1QueryAnalyzer functionality.
 import sys
 from pathlib import Path
 import time
+import pytest
 
 # Add project to path
 project_root = Path(__file__).parent.parent.parent.parent
@@ -128,12 +129,8 @@ def test_epic1_basic():
     print(f"  Avg Total Time: {epic1_perf.get('avg_total_ms', 0):.2f}ms")
     print(f"  Meets Target: {epic1_perf.get('meets_latency_target', False)}")
     
-    if passed == total_tests:
-        print("\n✅ All tests passed!")
-        return 0
-    else:
-        print(f"\n⚠️  {total_tests - passed} tests failed")
-        return 1
+    if passed != total_tests:
+        pytest.fail(f"{total_tests - passed}/{total_tests} tests failed")
 
 if __name__ == "__main__":
     exit(test_epic1_basic())

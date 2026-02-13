@@ -73,12 +73,9 @@ def test_cost_tracker():
         # Test recommendations
         recommendations = tracker.get_cost_optimization_recommendations()
         print(f"  ✅ Generated {len(recommendations)} cost optimization recommendations")
-        
-        return True
-        
+
     except Exception as e:
-        print(f"  ❌ Cost tracker test failed: {str(e)}")
-        return False
+        pytest.fail(f"Cost tracker test failed: {str(e)}")
 
 def test_routing_strategies():
     """Test routing strategy implementations."""
@@ -118,11 +115,9 @@ def test_routing_strategies():
                       f"(cost=${model_option.estimated_cost:.4f}, quality={model_option.estimated_quality:.2f})")
         
         print("  ✅ All routing strategies working correctly")
-        return True
-        
+
     except Exception as e:
-        print(f"  ❌ Routing strategies test failed: {str(e)}")
-        return False
+        pytest.fail(f"Routing strategies test failed: {str(e)}")
 
 def test_adaptive_router():
     """Test adaptive router without external dependencies.""" 
@@ -160,12 +155,9 @@ def test_adaptive_router():
         stats = router.get_routing_stats()
         print(f"  ✅ Routing stats: {stats['total_decisions']} decisions, "
               f"avg {stats['avg_decision_time_ms']:.1f}ms")
-        
-        return True
-        
+
     except Exception as e:
-        print(f"  ❌ Adaptive router test failed: {str(e)}")
-        return False
+        pytest.fail(f"Adaptive router test failed: {str(e)}")
 
 def test_llm_adapters():
     """Test LLM adapter imports and basic functionality."""
@@ -199,12 +191,9 @@ def test_llm_adapters():
         # Test basic functionality
         model_info = mock_adapter.get_model_info()
         print(f"  ✅ Mock adapter info: {model_info['provider']}/{model_info['model']}")
-        
-        return True
-        
+
     except Exception as e:
-        print(f"  ❌ LLM adapters test failed: {str(e)}")
-        return False
+        pytest.fail(f"LLM adapters test failed: {str(e)}")
 
 def test_epic1_answer_generator():
     """Test Epic 1 Answer Generator in backward compatibility mode."""
@@ -231,12 +220,9 @@ def test_epic1_answer_generator():
         if generator.routing_enabled:
             routing_stats = generator.get_routing_statistics()
             print(f"  Routing stats: {routing_stats}")
-        
-        return True
-        
+
     except Exception as e:
-        print(f"  ❌ Epic 1 answer generator test failed: {str(e)}")
-        return False
+        pytest.fail(f"Epic 1 answer generator test failed: {str(e)}")
 
 def main():
     """Run all basic validation tests."""

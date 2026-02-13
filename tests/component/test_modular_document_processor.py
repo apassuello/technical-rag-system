@@ -8,6 +8,7 @@ to ensure all components work together correctly.
 
 import sys
 from pathlib import Path
+import pytest
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -22,8 +23,7 @@ def test_modular_processor():
     test_pdf_path = project_root / "data" / "test" / "riscv-card.pdf"
     
     if not test_pdf_path.exists():
-        print(f"Test PDF not found at {test_pdf_path}")
-        return False
+        pytest.fail(f"Test PDF not found at {test_pdf_path}")
     
     print(f"Testing modular processor with: {test_pdf_path}")
     
@@ -44,8 +44,7 @@ def test_modular_processor():
         if validation_result.warnings:
             print(f"Warnings: {validation_result.warnings}")
         if validation_result.errors:
-            print(f"Errors: {validation_result.errors}")
-            return False
+            pytest.fail(f"Validation errors: {validation_result.errors}")
         
         # Process document
         print("\nProcessing document...")
@@ -71,14 +70,11 @@ def test_modular_processor():
         print(f"  Total chunks created: {metrics['total_chunks_created']}")
         print(f"  Total processing time: {metrics['total_processing_time']:.3f}s")
         print(f"  Average chunks per document: {metrics.get('average_chunks_per_document', 'N/A')}")
-        
-        return True
-        
+
     except Exception as e:
-        print(f"Error during processing: {str(e)}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"Error during processing: {str(e)}")
 
 def test_configuration():
     """Test configuration-driven component selection."""
@@ -121,12 +117,9 @@ def test_configuration():
         print(f"  Parser max file size: {current_config['parser']['config']['max_file_size_mb']}MB")
         print(f"  Chunker size: {current_config['chunker']['config']['chunk_size']} characters")
         print(f"  Cleaner preserves code: {current_config['cleaner']['config']['preserve_code_blocks']}")
-        
-        return True
-        
+
     except Exception as e:
-        print(f"Configuration test failed: {str(e)}")
-        return False
+        pytest.fail(f"Configuration test failed: {str(e)}")
 
 def main():
     """Run all tests."""
