@@ -34,10 +34,15 @@ logger = logging.getLogger(__name__)
 def get_test_documents() -> List[Path]:
     """Get real RISC-V corpus documents for Epic1 validation."""
     print("📄 Selecting RISC-V corpus documents for testing...")
-    
+
     project_root = Path(__file__).parent.parent.parent.parent
     corpus_base = project_root / "data" / "riscv_comprehensive_corpus"
-    
+
+    # Check if corpus directory exists
+    if not corpus_base.exists():
+        print(f"⚠️  Corpus directory not found: {corpus_base}")
+        return []
+
     # Select 3 documents of varying complexity from RISC-V corpus
     test_docs = [
         # Simple: Profile specification (straightforward technical content)
