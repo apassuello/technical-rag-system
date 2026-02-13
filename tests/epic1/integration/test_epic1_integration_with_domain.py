@@ -181,11 +181,11 @@ except Exception as e:
                 assert result.final_score >= 0.0
                 assert result.confidence >= 0.0
                 
-                logger.info(f"✅ {domain}: score={result.final_score:.4f}, complexity={result.final_complexity}")
+                logger.info(f"✅ {domain}: score={result.final_score:.4f}, complexity={result.complexity_level}")
             
             # Validate that different domains can produce different results
             scores = [result.final_score for result in domain_results.values()]
-            complexities = [result.final_complexity.value for result in domain_results.values()]
+            complexities = [result.complexity_level for result in domain_results.values()]
             
             logger.info(f"Domain score range: {min(scores):.4f} - {max(scores):.4f}")
             logger.info(f"Complexity levels: {set(complexities)}")
@@ -284,7 +284,7 @@ except Exception as e:
                         'domain': domain,
                         'query_index': i,
                         'score': result.final_score,
-                        'complexity': result.final_complexity.value,
+                        'complexity': result.complexity_level,
                         'confidence': result.confidence,
                         'processing_time': end_time - start_time
                     }

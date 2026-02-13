@@ -138,3 +138,13 @@ mlartifacts/
 # Validation results
 validation_results/
 sessions/docker-compose.yml
+
+# Coverage artifacts
+.coverage
+.coverage.*
+
+# Potential credentials
+HF_API.txt
+
+# Reports (generated)
+reports/

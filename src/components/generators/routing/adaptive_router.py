@@ -987,9 +987,6 @@ class AdaptiveRouter:
         Returns:
             True if model is suitable for the complexity level
         """
-        # Get all models to determine where this model typically fits
-        all_models = self.model_registry.get_all_models()
-        
         # Check which complexity tiers this model appears in
         model_tiers = []
         for tier, models in [('simple', self.model_registry.get_models_for_complexity('simple')),

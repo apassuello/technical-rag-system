@@ -22,11 +22,10 @@ mkdir -p reports/coverage
 
 # Run integration tests with coverage
 echo "🔍 Running integration tests with coverage..."
-echo "Includes: core integration, Epic 1 integration, Epic 8 integration"
+echo "Includes: core integration, Epic 1 integration"
 python -m pytest \
     tests/integration/ \
     tests/epic1/integration/ \
-    tests/epic8/integration/ \
     tests/component/test_modular_document_processor.py \
     --cov=src \
     --cov=services \

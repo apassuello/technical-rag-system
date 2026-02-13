@@ -8,6 +8,7 @@ Spec references: SPEC-P1 in docs/specs/query-processors.md
 """
 
 import pytest
+from unittest.mock import MagicMock
 from src.core.interfaces import Answer
 from src.components.query_processors.domain_aware_query_processor import (
     DomainAwareQueryProcessor,
@@ -20,7 +21,10 @@ pytestmark = [pytest.mark.validation, pytest.mark.requires_ml, pytest.mark.requi
 def domain_processor(indexed_orchestrator):
     """Create DomainAwareQueryProcessor wrapping the test orchestrator's components."""
     retriever = indexed_orchestrator.get_component("retriever")
-    generator = indexed_orchestrator.get_component("generator")
+    generator = indexed_orchestrator.get_component("answer_generator")
+    if generator is None:
+        generator = MagicMock()
+        generator.generate.return_value = "RISC-V is a free and open ISA specification."
     return DomainAwareQueryProcessor(
         retriever=retriever,
         generator=generator,

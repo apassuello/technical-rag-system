@@ -296,8 +296,6 @@ class NLPAnalyzer(BaseQueryAnalyzer):
         # Count syntactic features
         word_count = len([token for token in sent if token.is_alpha])
         clause_count = sum(1 for token in sent if token.dep_ in ['ccomp', 'xcomp', 'advcl'])
-        subordinate_count = sum(1 for token in sent if token.dep_ in ['mark', 'prep'])
-        
         # Determine complexity
         if word_count < 8 and clause_count == 0:
             return 'simple'

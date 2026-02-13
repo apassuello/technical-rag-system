@@ -56,7 +56,7 @@ class GeneratedAnswer:
     context_used: List[Dict[str, Any]]
 
 
-class HuggingFaceAnswerGenerator(AnswerGenerator if AnswerGenerator != object else object):
+class HuggingFaceAnswerGenerator(AnswerGenerator if AnswerGenerator is not object else object):
     """
     Generates answers using HuggingFace Inference API with hybrid reliability.
     
@@ -694,9 +694,6 @@ Answer:"""
             GeneratedAnswer with custom prompt enhancement
         """
         start_time = datetime.now()
-        
-        # Format context
-        context = self._format_context(chunks)
         
         # Build prompt using custom format
         if "llama" in self.model_name.lower():

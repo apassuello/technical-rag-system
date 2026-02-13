@@ -169,7 +169,6 @@ class TrainedModelAdapter:
             scores = list(view_scores.values())
             
             # Base confidence on consistency across views
-            mean_score = np.mean(scores)
             std_score = np.std(scores)
             
             # High consistency = high confidence

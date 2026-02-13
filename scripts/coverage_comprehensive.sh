@@ -29,10 +29,9 @@ echo ""
 echo "📊 Running comprehensive test suite with coverage..."
 echo "This includes:"
 echo "  - Unit tests (tests/unit/)"
-echo "  - Integration tests (tests/integration/)" 
+echo "  - Integration tests (tests/integration/)"
 echo "  - Component tests (tests/component/)"
 echo "  - Epic 1 tests (integration, smoke, phase2, demos)"
-echo "  - Epic 8 tests (unit, integration, api)"
 echo "  - Working Epic 2 validation tests"
 echo ""
 
@@ -47,9 +46,6 @@ python -m pytest \
     tests/epic1/smoke/ \
     tests/epic1/phase2/ \
     tests/epic1/demos/scripts/ \
-    tests/epic8/unit/ \
-    tests/epic8/integration/ \
-    tests/epic8/api/ \
     --cov \
     --cov-config=.coveragerc \
     --cov-report=html:reports/coverage/comprehensive_html \

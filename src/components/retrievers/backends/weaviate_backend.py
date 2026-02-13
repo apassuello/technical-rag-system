@@ -11,7 +11,7 @@ Uses weaviate-client v4 collection-based API.
 import logging
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
@@ -286,7 +286,7 @@ class WeaviateBackend:
                         "chunk_index": document.metadata.get("chunk_index", i),
                         "page_number": document.metadata.get("page", 0),
                         "chunk_size": len(document.content),
-                        "created_at": datetime.now().isoformat()
+                        "created_at": datetime.now(timezone.utc).isoformat()
                     }
 
                     doc_uuid = str(uuid.uuid4())

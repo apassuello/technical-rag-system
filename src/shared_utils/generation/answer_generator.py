@@ -231,8 +231,6 @@ Be direct, confident, and accurate. If the context answers the question, provide
         # Assess context quality to determine base confidence
         scores = [chunk.get('score', 0) for chunk in chunks]
         max_relevance = max(scores) if scores else 0
-        avg_relevance = sum(scores) / len(scores) if scores else 0
-        
         # Dynamic base confidence based on context quality
         if max_relevance >= 0.8:
             confidence = 0.6  # High-quality context starts high

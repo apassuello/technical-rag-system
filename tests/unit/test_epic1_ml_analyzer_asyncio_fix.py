@@ -47,7 +47,7 @@ class TestAnalyzeQueryNoAsyncio:
         async def run_in_loop():
             return analyzer._analyze_query("What is RISC-V?")
 
-        result = asyncio.get_event_loop().run_until_complete(run_in_loop())
+        result = asyncio.run(run_in_loop())
 
         assert isinstance(result, QueryAnalysis)
         assert result.query == "What is RISC-V?"

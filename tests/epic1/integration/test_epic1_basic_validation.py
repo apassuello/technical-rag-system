@@ -73,56 +73,96 @@ def test_cost_tracker():
         # Test recommendations
         recommendations = tracker.get_cost_optimization_recommendations()
         print(f"  ✅ Generated {len(recommendations)} cost optimization recommendations")
-        
-        return True
-        
+
     except Exception as e:
-        print(f"  ❌ Cost tracker test failed: {str(e)}")
-        return False
+        pytest.fail(f"Cost tracker test failed: {str(e)}")
 
 def test_routing_strategies():
     """Test routing strategy implementations."""
     print("🧭 Testing Routing Strategies...")
-    
+
     try:
         from src.components.generators.routing.routing_strategies import (
             CostOptimizedStrategy,
             QualityFirstStrategy,
-            BalancedStrategy
+            BalancedStrategy,
+            ModelOption
         )
-        
+
         # Test queries with different complexity levels
         test_cases = [
             {'complexity': 0.2, 'level': 'simple', 'query': 'What is Python?'},
             {'complexity': 0.5, 'level': 'medium', 'query': 'How does a REST API work?'},
             {'complexity': 0.8, 'level': 'complex', 'query': 'Explain the implementation of distributed consensus algorithms in microservices architecture.'}
         ]
-        
+
+        # Create available model options
+        available_models = [
+            ModelOption(
+                provider='ollama',
+                model='llama3.2:3b',
+                estimated_cost=Decimal('0.0000'),
+                estimated_quality=0.80,
+                estimated_latency_ms=2000.0
+            ),
+            ModelOption(
+                provider='mistral',
+                model='mistral-small',
+                estimated_cost=Decimal('0.002'),
+                estimated_quality=0.85,
+                estimated_latency_ms=1500.0
+            ),
+            ModelOption(
+                provider='openai',
+                model='gpt-3.5-turbo',
+                estimated_cost=Decimal('0.0015'),
+                estimated_quality=0.90,
+                estimated_latency_ms=1000.0
+            ),
+            ModelOption(
+                provider='openai',
+                model='gpt-4-turbo',
+                estimated_cost=Decimal('0.020'),
+                estimated_quality=0.95,
+                estimated_latency_ms=1200.0
+            )
+        ]
+
         strategies = {
             'cost_optimized': CostOptimizedStrategy(),
-            'quality_first': QualityFirstStrategy(), 
+            'quality_first': QualityFirstStrategy(),
             'balanced': BalancedStrategy()
         }
-        
+
         for strategy_name, strategy in strategies.items():
             print(f"  Testing {strategy_name} strategy:")
-            
+
             for test_case in test_cases:
+                # Build query_analysis dict
+                query_analysis = {
+                    'complexity_score': test_case['complexity'],
+                    'complexity_level': test_case['level'],
+                    'query_length': len(test_case['query'].split())
+                }
+
+                # Call with correct API signature
                 model_option = strategy.select_model(
-                    query_complexity=test_case['complexity'],
-                    complexity_level=test_case['level'],
-                    query_metadata={'query_length': len(test_case['query'].split())}
+                    query_analysis=query_analysis,
+                    available_models=available_models
                 )
-                
+
+                # Assert result is valid
+                assert model_option is not None, f"Strategy {strategy_name} returned None for {test_case['level']}"
+                assert hasattr(model_option, 'provider'), "ModelOption missing provider attribute"
+                assert hasattr(model_option, 'model'), "ModelOption missing model attribute"
+
                 print(f"    {test_case['level']}: {model_option.provider}/{model_option.model} "
                       f"(cost=${model_option.estimated_cost:.4f}, quality={model_option.estimated_quality:.2f})")
-        
+
         print("  ✅ All routing strategies working correctly")
-        return True
-        
+
     except Exception as e:
-        print(f"  ❌ Routing strategies test failed: {str(e)}")
-        return False
+        pytest.fail(f"Routing strategies test failed: {str(e)}")
 
 def test_adaptive_router():
     """Test adaptive router without external dependencies.""" 
@@ -160,12 +200,9 @@ def test_adaptive_router():
         stats = router.get_routing_stats()
         print(f"  ✅ Routing stats: {stats['total_decisions']} decisions, "
               f"avg {stats['avg_decision_time_ms']:.1f}ms")
-        
-        return True
-        
+
     except Exception as e:
-        print(f"  ❌ Adaptive router test failed: {str(e)}")
-        return False
+        pytest.fail(f"Adaptive router test failed: {str(e)}")
 
 def test_llm_adapters():
     """Test LLM adapter imports and basic functionality."""
@@ -199,12 +236,9 @@ def test_llm_adapters():
         # Test basic functionality
         model_info = mock_adapter.get_model_info()
         print(f"  ✅ Mock adapter info: {model_info['provider']}/{model_info['model']}")
-        
-        return True
-        
+
     except Exception as e:
-        print(f"  ❌ LLM adapters test failed: {str(e)}")
-        return False
+        pytest.fail(f"LLM adapters test failed: {str(e)}")
 
 def test_epic1_answer_generator():
     """Test Epic 1 Answer Generator in backward compatibility mode."""
@@ -231,12 +265,9 @@ def test_epic1_answer_generator():
         if generator.routing_enabled:
             routing_stats = generator.get_routing_statistics()
             print(f"  Routing stats: {routing_stats}")
-        
-        return True
-        
+
     except Exception as e:
-        print(f"  ❌ Epic 1 answer generator test failed: {str(e)}")
-        return False
+        pytest.fail(f"Epic 1 answer generator test failed: {str(e)}")
 
 def main():
     """Run all basic validation tests."""

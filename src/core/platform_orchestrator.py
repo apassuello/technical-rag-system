@@ -15,83 +15,17 @@ from .component_factory import ComponentFactory
 from .config import ConfigManager
 from .interfaces import (
     Answer,
-    BackendStatus,
     ComponentMetrics,
     Document,
-    ExperimentAssignment,
-    ExperimentResult,
     HealthStatus,
 )
 from .platform_services import (
-    ABTestingServiceImpl,
-    BackendManagementServiceImpl,
     ComponentHealthServiceImpl,
     ConfigurationServiceImpl,
     SystemAnalyticsServiceImpl,
 )
 
 logger = logging.getLogger(__name__)
-
-
-class ComponentRegistry:
-    """Component registry for tracking component lifecycles and metadata."""
-
-    def __init__(self) -> None:
-        """Initialize the component registry."""
-        self.registered_components: Dict[str, Dict[str, Any]] = {}
-        self.component_metadata: Dict[str, Dict[str, Any]] = {}
-        
-    def register_component(self, component_name: str, component_instance: Any, metadata: Dict[str, Any] = None) -> None:
-        """Register a component with the registry.
-        
-        Args:
-            component_name: Name of the component
-            component_instance: Component instance
-            metadata: Optional metadata for the component
-        """
-        self.registered_components[component_name] = {
-            "instance": component_instance,
-            "registration_time": time.time(),
-            "type": type(component_instance).__name__
-        }
-        
-        if metadata:
-            self.component_metadata[component_name] = metadata
-    
-    def get_component(self, component_name: str) -> Optional[Any]:
-        """Get a registered component.
-        
-        Args:
-            component_name: Name of the component
-            
-        Returns:
-            Component instance or None if not found
-        """
-        component_data = self.registered_components.get(component_name)
-        return component_data["instance"] if component_data else None
-    
-    def get_all_components(self) -> Dict[str, Any]:
-        """Get all registered components.
-        
-        Returns:
-            Dictionary mapping component names to instances
-        """
-        return {name: data["instance"] for name, data in self.registered_components.items()}
-    
-    def unregister_component(self, component_name: str) -> bool:
-        """Unregister a component.
-        
-        Args:
-            component_name: Name of the component
-            
-        Returns:
-            True if component was unregistered, False if not found
-        """
-        if component_name in self.registered_components:
-            del self.registered_components[component_name]
-            self.component_metadata.pop(component_name, None)
-            return True
-        return False
 
 
 class PlatformOrchestrator:
@@ -138,14 +72,12 @@ class PlatformOrchestrator:
         
         # Phase 2: Track architecture type for compatibility
         self._using_unified_retriever = False
-        self._retriever_type = None
+        self._retriever_type: Optional[str] = None
         
         # Initialize system services
         self.health_service = ComponentHealthServiceImpl()
         self.analytics_service = SystemAnalyticsServiceImpl()
-        self.ab_testing_service = ABTestingServiceImpl()
         self.configuration_service = ConfigurationServiceImpl(self.config_manager)
-        self.backend_management_service = BackendManagementServiceImpl()
         
         # Monitoring adapter for external systems
         self._monitoring_adapter = None  # Will be set based on configuration
@@ -401,7 +333,7 @@ class PlatformOrchestrator:
         if agent_config.llm_provider == 'openai':
             try:
                 from langchain_openai import ChatOpenAI
-                return ChatOpenAI(
+                return ChatOpenAI(  # type: ignore[call-arg]  # Pydantic model fields invisible to mypy
                     model=agent_config.llm_model,
                     temperature=agent_config.temperature,
                     max_tokens=agent_config.max_tokens,
@@ -411,7 +343,7 @@ class PlatformOrchestrator:
         elif agent_config.llm_provider == 'anthropic':
             try:
                 from langchain_anthropic import ChatAnthropic
-                return ChatAnthropic(
+                return ChatAnthropic(  # type: ignore[call-arg]  # Pydantic model fields invisible to mypy
                     model=agent_config.llm_model,
                     temperature=agent_config.temperature,
                     max_tokens=agent_config.max_tokens,
@@ -681,21 +613,6 @@ class PlatformOrchestrator:
             logger.error(f"Failed to process query: {str(e)}")
             raise RuntimeError(f"Query processing failed: {str(e)}") from e
 
-    def _get_ab_testing_context(self) -> Optional[Dict[str, Any]]:
-        """
-        Get A/B testing context for the current request.
-
-        This method can be overridden or mocked in tests to provide
-        request-specific A/B testing context (user_id, session_id, etc.).
-
-        Returns:
-            Dictionary with A/B testing context or None if not available
-        """
-        # Default implementation returns None
-        # In production, this would extract context from request headers,
-        # session data, or other sources
-        return None
-
     def get_system_health(self) -> Dict[str, Any]:
         """
         Get system health information.
@@ -724,18 +641,19 @@ class PlatformOrchestrator:
         if self._initialized:
             # Get component status
             for name, component in self._components.items():
-                component_info = {
+                health_checks: Dict[str, Any] = {}
+                component_info: Dict[str, Any] = {
                     "type": type(component).__name__,
                     "module": type(component).__module__,
                     "healthy": True,  # Will be updated by health checks
                     "factory_managed": True,  # Phase 3: All components now factory-managed
                     "created_at": getattr(component, '_created_at', None),
                     "last_used": getattr(component, '_last_used', None),
-                    "health_checks": {}
+                    "health_checks": health_checks
                 }
-                
+
                 # Phase 4: Enhanced component health validation
-                component_info["healthy"] = self._validate_component_health(component, component_info["health_checks"])
+                component_info["healthy"] = self._validate_component_health(component, health_checks)
                 
                 # Add component-specific health info if available
                 if hasattr(component, 'get_stats'):
@@ -750,9 +668,6 @@ class PlatformOrchestrator:
                     component_info["config"] = component.get_model_info()
                 
                 health["components"][name] = component_info
-        
-        # Phase 4: Add deployment readiness check
-        health["deployment_readiness"] = self._check_deployment_readiness()
         
         return health
     
@@ -841,147 +756,6 @@ class PlatformOrchestrator:
         
         return overall_healthy
     
-    def _check_deployment_readiness(self) -> Dict[str, Any]:
-        """
-        Check system readiness for cloud deployment.
-        
-        Returns:
-            Dictionary with deployment readiness assessment
-        """
-        readiness = {
-            "ready": True,
-            "score": 100,
-            "checks": {},
-            "recommendations": []
-        }
-        
-        # Check 1: All components initialized
-        if not self._initialized:
-            readiness["ready"] = False
-            readiness["score"] -= 50
-            readiness["checks"]["initialization"] = {
-                "passed": False,
-                "message": "System not initialized"
-            }
-        else:
-            readiness["checks"]["initialization"] = {
-                "passed": True,
-                "message": "System fully initialized"
-            }
-        
-        # Check 2: Memory usage within limits
-        try:
-            import os
-
-            import psutil
-            process = psutil.Process(os.getpid())
-            memory_mb = process.memory_info().rss / 1024 / 1024
-            
-            if memory_mb > 1024:  # 1GB warning threshold
-                readiness["score"] -= 20
-                readiness["recommendations"].append("Memory usage high - consider optimization")
-            
-            readiness["checks"]["memory"] = {
-                "passed": memory_mb < 2048,  # 2GB hard limit
-                "current_mb": round(memory_mb, 1),
-                "limit_mb": 2048
-            }
-            
-            if memory_mb >= 2048:
-                readiness["ready"] = False
-                readiness["score"] -= 30
-                
-        except ImportError:
-            readiness["checks"]["memory"] = {
-                "passed": False,
-                "message": "Memory monitoring not available"
-            }
-            readiness["score"] -= 10
-        
-        # Check 3: Configuration validation
-        try:
-            errors = self.validate_configuration()
-            if errors:
-                readiness["ready"] = False
-                readiness["score"] -= 40
-                readiness["checks"]["configuration"] = {
-                    "passed": False,
-                    "errors": errors
-                }
-            else:
-                readiness["checks"]["configuration"] = {
-                    "passed": True,
-                    "message": "Configuration valid"
-                }
-        except Exception as e:
-            readiness["ready"] = False
-            readiness["score"] -= 40
-            readiness["checks"]["configuration"] = {
-                "passed": False,
-                "error": str(e)
-            }
-        
-        # Check 4: Performance metrics
-        try:
-            from .component_factory import ComponentFactory
-            metrics = ComponentFactory.get_performance_metrics()
-            cache_stats = ComponentFactory.get_cache_stats()
-            
-            # Check if we have reasonable performance
-            slow_components = []
-            for comp_type, stats in metrics.items():
-                if stats.get("average_time", 0) > 5.0:  # 5 second threshold
-                    slow_components.append(comp_type)
-            
-            if slow_components:
-                readiness["score"] -= 15
-                readiness["recommendations"].append(f"Slow components detected: {slow_components}")
-            
-            readiness["checks"]["performance"] = {
-                "passed": len(slow_components) == 0,
-                "metrics": {
-                    "tracked_components": len(metrics),
-                    "cache_usage": f"{cache_stats['cache_size']}/{cache_stats['max_size']}",
-                    "slow_components": slow_components
-                }
-            }
-            
-        except ImportError:
-            readiness["checks"]["performance"] = {
-                "passed": False,
-                "message": "Performance monitoring not available"
-            }
-            readiness["score"] -= 10
-        
-        # Check 5: Environment variables for production
-        prod_env_vars = ["RAG_ENV", "RAG_LOG_LEVEL"]
-        missing_env_vars = [var for var in prod_env_vars if not os.getenv(var)]
-        
-        if missing_env_vars:
-            readiness["score"] -= 5
-            readiness["recommendations"].append(f"Consider setting: {missing_env_vars}")
-        
-        readiness["checks"]["environment"] = {
-            "passed": len(missing_env_vars) == 0,
-            "missing_vars": missing_env_vars,
-            "current_env": self.config.global_settings.get("platform", "unknown")
-        }
-        
-        # Final score adjustment
-        readiness["score"] = max(0, readiness["score"])
-        
-        # Add readiness level
-        if readiness["score"] >= 90:
-            readiness["level"] = "fully_validated"
-        elif readiness["score"] >= 70:
-            readiness["level"] = "staging_ready"
-        elif readiness["score"] >= 50:
-            readiness["level"] = "development_ready"
-        else:
-            readiness["level"] = "not_ready"
-        
-        return readiness
-    
     def _determine_system_architecture(self) -> str:
         """
         Determine the overall system architecture based on component types.
@@ -1065,8 +839,8 @@ class PlatformOrchestrator:
             # Pydantic v1
             return self.config.dict()
         else:
-            # Fallback for other types
-            return self.config
+            # Fallback: convert via vars() for non-Pydantic config objects
+            return dict(vars(self.config))
     
     def get_metrics(self) -> Dict[str, Any]:
         """
@@ -1199,33 +973,24 @@ class PlatformOrchestrator:
     
     # System Service Access Methods
     
-    def check_component_health(self, component_name: str) -> HealthStatus:
-        """Check the health of a specific component.
-        
+    def check_component_health(self, component_or_name: Any) -> HealthStatus:
+        """Check the health of a component by name or object reference.
+
         Args:
-            component_name: Name of the component to check
-            
+            component_or_name: Component name (str) or component instance
+
         Returns:
             HealthStatus object with health information
-            
+
         Raises:
-            KeyError: If component not found
+            KeyError: If component name not found
         """
-        if component_name not in self._components:
-            raise KeyError(f"Component '{component_name}' not found")
-        
-        component = self._components[component_name]
-        return self.health_service.check_component_health(component)
-    
-    def check_component_health(self, component: Any) -> HealthStatus:
-        """Check health of a component object.
-        
-        Args:
-            component: Component instance to check
-            
-        Returns:
-            HealthStatus object with health information
-        """
+        if isinstance(component_or_name, str):
+            if component_or_name not in self._components:
+                raise KeyError(f"Component '{component_or_name}' not found")
+            component = self._components[component_or_name]
+        else:
+            component = component_or_name
         return self.health_service.check_component_health(component)
     
     def get_system_health_summary(self) -> Dict[str, Any]:
@@ -1278,36 +1043,35 @@ class PlatformOrchestrator:
         """
         return self.analytics_service.aggregate_system_metrics()
     
-    def track_component_performance(self, component_name: str, metrics: Dict[str, Any]) -> None:
-        """Track performance metrics for a specific component.
-        
+    def track_component_performance(self, component_or_name: Any, operation_or_metrics: Any = None, metrics: Optional[Dict[str, Any]] = None) -> None:
+        """Track performance metrics for a component.
+
+        Supports two call signatures:
+          - track_component_performance(name: str, metrics: dict) -- by component name
+          - track_component_performance(component, operation: str, metrics: dict) -- by object
+
         Args:
-            component_name: Name of the component
-            metrics: Performance metrics to track
-            
+            component_or_name: Component name (str looked up in registry) or component instance
+            operation_or_metrics: Operation string (object mode) or metrics dict (name mode)
+            metrics: Metrics dict (only used in object mode)
+
         Raises:
-            KeyError: If component not found
+            KeyError: If component name not found
         """
-        if component_name not in self._components:
-            raise KeyError(f"Component '{component_name}' not found")
-        
-        component = self._components[component_name]
-        self.analytics_service.track_component_performance(component, metrics)
-    
-    def track_component_performance(self, component: Any, operation: str, metrics: Dict[str, Any]) -> None:
-        """Track performance metrics for a component object.
-        
-        Args:
-            component: Component instance
-            operation: Operation type (e.g., 'query_processing', 'embedding_generation')
-            metrics: Performance metrics to track
-        """
-        # Create combined metrics with operation type
-        combined_metrics = {
-            "operation": operation,
-            **metrics
-        }
-        self.analytics_service.track_component_performance(component, combined_metrics)
+        if isinstance(component_or_name, str) and metrics is None:
+            # Called as track_component_performance("name", metrics_dict)
+            component_name = component_or_name
+            if component_name not in self._components:
+                raise KeyError(f"Component '{component_name}' not found")
+            component = self._components[component_name]
+            self.analytics_service.track_component_performance(component, operation_or_metrics)
+        else:
+            # Called as track_component_performance(component, operation, metrics)
+            combined_metrics = {
+                "operation": operation_or_metrics,
+                **(metrics or {})
+            }
+            self.analytics_service.track_component_performance(component_or_name, combined_metrics)
     
     def generate_analytics_report(self) -> Dict[str, Any]:
         """Generate a comprehensive analytics report.
@@ -1316,65 +1080,6 @@ class PlatformOrchestrator:
             Dictionary with analytics report
         """
         return self.analytics_service.generate_analytics_report()
-    
-    def assign_experiment(self, context: Dict[str, Any]) -> ExperimentAssignment:
-        """Assign a user to an experiment.
-        
-        Args:
-            context: Context information for assignment
-            
-        Returns:
-            ExperimentAssignment object
-        """
-        return self.ab_testing_service.assign_experiment(context)
-    
-    def track_experiment_outcome(self, experiment_id: str, variant: str, outcome: Dict[str, Any]) -> None:
-        """Track the outcome of an experiment.
-        
-        Args:
-            experiment_id: Unique experiment identifier
-            variant: Variant that was tested
-            outcome: Outcome data
-        """
-        self.ab_testing_service.track_experiment_outcome(experiment_id, variant, outcome)
-    
-    def get_experiment_results(self, experiment_name: str) -> List[ExperimentResult]:
-        """Get results for an experiment.
-        
-        Args:
-            experiment_name: Name of the experiment
-            
-        Returns:
-            List of experiment results
-        """
-        return self.ab_testing_service.get_experiment_results(experiment_name)
-    
-    def configure_experiment(self, experiment_config: Dict[str, Any]) -> None:
-        """Configure a new experiment.
-        
-        Args:
-            experiment_config: Configuration for the experiment
-        """
-        self.ab_testing_service.configure_experiment(experiment_config)
-    
-    def get_experiment_status(self, experiment_id: str) -> Dict[str, Any]:
-        """Get status and results for an experiment.
-        
-        Args:
-            experiment_id: Unique experiment identifier
-            
-        Returns:
-            Dictionary with experiment status
-        """
-        return self.ab_testing_service.get_experiment_status(experiment_id)
-    
-    def get_all_experiments(self) -> Dict[str, Dict[str, Any]]:
-        """Get all configured experiments.
-        
-        Returns:
-            Dictionary with all experiments
-        """
-        return self.ab_testing_service.get_all_experiments()
     
     def get_component_configuration(self, component_name: str) -> Dict[str, Any]:
         """Get configuration for a component.
@@ -1387,23 +1092,17 @@ class PlatformOrchestrator:
         """
         return self.configuration_service.get_component_config(component_name)
     
-    def update_component_configuration(self, component_name: str, config: Dict[str, Any]) -> None:
-        """Update configuration for a component.
-        
+    def update_component_configuration(self, component_or_name: Any, config: Dict[str, Any]) -> None:
+        """Update configuration for a component by name or object reference.
+
         Args:
-            component_name: Name of the component
+            component_or_name: Component name (str) or component instance
             config: New configuration
         """
-        self.configuration_service.update_component_config(component_name, config)
-    
-    def update_component_configuration(self, component: Any, config: Dict[str, Any]) -> None:
-        """Update configuration for a component object.
-        
-        Args:
-            component: Component instance
-            config: New configuration
-        """
-        component_name = type(component).__name__
+        if isinstance(component_or_name, str):
+            component_name = component_or_name
+        else:
+            component_name = type(component_or_name).__name__
         self.configuration_service.update_component_config(component_name, config)
     
     def get_system_configuration(self) -> Dict[str, Any]:
@@ -1413,140 +1112,7 @@ class PlatformOrchestrator:
             Dictionary with system configuration
         """
         return self.configuration_service.get_system_configuration()
-    
-    def get_feature_flag(self, flag_name: str, default: bool = False) -> bool:
-        """Get a feature flag value.
-        
-        Args:
-            flag_name: Name of the feature flag
-            default: Default value if flag not found
-            
-        Returns:
-            Boolean value of the feature flag
-        """
-        return self.configuration_service.get_feature_flag(flag_name, default)
-    
-    def set_feature_flag(self, flag_name: str, value: bool) -> None:
-        """Set a feature flag value.
-        
-        Args:
-            flag_name: Name of the feature flag
-            value: Boolean value to set
-        """
-        self.configuration_service.set_feature_flag(flag_name, value)
-    
-    def reload_system_configuration(self) -> None:
-        """Reload configuration from file."""
-        self.configuration_service.reload_configuration()
-    
-    def register_backend(self, backend_name: str, backend_config: Dict[str, Any]) -> None:
-        """Register a new backend.
-        
-        Args:
-            backend_name: Name of the backend
-            backend_config: Configuration for the backend
-        """
-        self.backend_management_service.register_backend(backend_name, backend_config)
-    
-    def switch_component_backend(self, component_name: str, backend_name: str) -> None:
-        """Switch a component to a different backend.
-        
-        Args:
-            component_name: Name of the component to switch
-            backend_name: Name of the target backend
-            
-        Raises:
-            KeyError: If component not found
-        """
-        if component_name not in self._components:
-            raise KeyError(f"Component '{component_name}' not found")
-        
-        component = self._components[component_name]
-        self.backend_management_service.switch_component_backend(component, backend_name)
-    
-    def switch_component_backend(self, component: Any, backend_name: str) -> None:
-        """Switch a component object to a different backend.
-        
-        Args:
-            component: Component instance
-            backend_name: Name of the target backend
-        """
-        self.backend_management_service.switch_component_backend(component, backend_name)
-    
-    def initialize_component_services(self, component: Any) -> None:
-        """Initialize platform services for a component.
-        
-        Args:
-            component: Component instance that needs service initialization
-        """
-        if hasattr(component, 'initialize_services'):
-            component.initialize_services(self)
-        else:
-            logger.warning(f"Component {type(component).__name__} does not support service initialization")
-    
-    def get_backend_status(self, backend_name: str) -> BackendStatus:
-        """Get status information for a backend.
-        
-        Args:
-            backend_name: Name of the backend
-            
-        Returns:
-            BackendStatus object with status information
-        """
-        return self.backend_management_service.get_backend_status(backend_name)
-    
-    def migrate_component_data(self, component_name: str, from_backend: str, to_backend: str) -> None:
-        """Migrate component data between backends.
-        
-        Args:
-            component_name: Name of the component to migrate
-            from_backend: Source backend name
-            to_backend: Target backend name
-            
-        Raises:
-            KeyError: If component not found
-        """
-        if component_name not in self._components:
-            raise KeyError(f"Component '{component_name}' not found")
-        
-        component = self._components[component_name]
-        self.backend_management_service.migrate_component_data(component, from_backend, to_backend)
-    
-    def get_all_backends(self) -> Dict[str, Dict[str, Any]]:
-        """Get information about all registered backends.
-        
-        Returns:
-            Dictionary with all backend information
-        """
-        return self.backend_management_service.get_all_backends()
-    
-    def get_migration_history(self) -> List[Dict[str, Any]]:
-        """Get backend migration history.
-        
-        Returns:
-            List of migration records
-        """
-        return self.backend_management_service.get_migration_history()
-    
-    def check_component_backend_health(self, component: Any) -> None:
-        """Check backend health for a component and switch if necessary.
-        
-        Args:
-            component: Component to check backend health for
-        """
-        return self.backend_management_service.check_component_backend_health(component)
-    
-    def monitor_component_backends(self, components: List[Any]) -> Dict[str, Any]:
-        """Monitor backend health for multiple components.
-        
-        Args:
-            components: List of components to monitor
-            
-        Returns:
-            Dictionary with monitoring results
-        """
-        return self.backend_management_service.monitor_component_backends(components)
-    
+
     def __str__(self) -> str:
         """String representation of the orchestrator."""
         return f"PlatformOrchestrator(config={self.config_path}, initialized={self._initialized})"

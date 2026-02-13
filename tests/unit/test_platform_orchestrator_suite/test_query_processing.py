@@ -114,38 +114,6 @@ class TestPlatformOrchestratorQueryProcessing:
         # Verify retrieval results were passed
         assert len(call_args) >= 2 or 'retrieved_docs' in call_kwargs or 'context' in call_kwargs
 
-    def test_process_query_ab_testing_integration(self, valid_config_file, mock_component_factory):
-        """Test query processing with A/B testing integration."""
-        orchestrator = PlatformOrchestrator(valid_config_file)
-        
-        # Configure A/B testing experiment
-        experiment_config = {
-            "name": "query_processing_test",
-            "variants": {
-                "control": {"retrieval_k": 5},
-                "treatment": {"retrieval_k": 10}
-            },
-            "traffic_allocation": {"control": 0.5, "treatment": 0.5}
-        }
-        orchestrator.ab_testing_service.configure_experiment(experiment_config)
-        
-        # Process query with A/B testing context
-        context = {
-            "user_id": "test_user",
-            "session_id": "test_session",
-            "experiment": "query_processing_test"
-        }
-        
-        with patch.object(orchestrator, '_get_ab_testing_context', return_value=context):
-            answer = orchestrator.process_query("ab testing query")
-        
-        assert isinstance(answer, Answer)
-        
-        # Verify experiment assignment was made (if implemented)
-        ab_service = orchestrator.ab_testing_service
-        if hasattr(ab_service, 'experiment_assignments') and ab_service.experiment_assignments:
-            assert len(ab_service.experiment_assignments) > 0
-
     def test_process_query_performance_tracking(self, valid_config_file, mock_component_factory):
         """Test query processing tracks performance metrics."""
         orchestrator = PlatformOrchestrator(valid_config_file)

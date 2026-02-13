@@ -310,9 +310,9 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
     
     # Check required fields
     required_fields = ['analyzer_type', 'selector_type', 'assembler_type']
-    for field in required_fields:
-        if field not in config:
-            errors.append(f"Missing required field: {field}")
+    for field_name in required_fields:
+        if field_name not in config:
+            errors.append(f"Missing required field: {field_name}")
     
     # Validate known types
     valid_analyzers = ['nlp', 'rule_based', 'llm']

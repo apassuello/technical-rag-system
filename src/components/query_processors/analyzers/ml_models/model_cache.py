@@ -311,8 +311,8 @@ class ModelCache(Generic[T]):
         if not self._warmup_executor:
             self._warmup_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="cache-warmup")
         
-        # Start warmup process
-        future = self._warmup_executor.submit(self._warmup_worker, warmup_loader_func)
+        # Start warmup process (fire-and-forget; executor keeps a reference)
+        self._warmup_executor.submit(self._warmup_worker, warmup_loader_func)
         logger.info(f"Started cache warmup for {len(warmup_keys)} keys")
     
     def _warmup_worker(self, loader_func) -> None:
