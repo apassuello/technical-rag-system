@@ -18,9 +18,7 @@ from src.core.platform_orchestrator import (
     PlatformOrchestrator,
     ComponentHealthServiceImpl,
     SystemAnalyticsServiceImpl,
-    ABTestingServiceImpl,
     ConfigurationServiceImpl,
-    BackendManagementServiceImpl
 )
 
 
@@ -221,31 +219,6 @@ def analytics_service():
     service.performance_tracking.clear()
     service.performance_history.clear()
     service.query_analytics.clear()
-
-
-@pytest.fixture
-def ab_testing_service():
-    """Create ABTestingServiceImpl instance with proper cleanup."""
-    service = ABTestingServiceImpl()
-    yield service
-    # Explicit cleanup to ensure no state leakage between tests
-    service.experiments.clear()
-    service.assignments.clear()
-    service.results.clear()
-    service.active_experiments.clear()
-
-
-@pytest.fixture
-def backend_management_service():
-    """Create BackendManagementServiceImpl instance with proper cleanup."""
-    service = BackendManagementServiceImpl()
-    yield service
-    # Explicit cleanup to ensure no state leakage between tests
-    service.registered_backends.clear()
-    service.backend_status.clear()
-    service.backend_health.clear()
-    service.component_backends.clear()
-    service.migration_history.clear()
 
 
 @pytest.fixture
