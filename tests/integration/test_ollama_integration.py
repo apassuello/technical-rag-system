@@ -6,15 +6,34 @@ Requires Docker with Ollama running and tinyllama model pulled:
     docker exec <container> ollama pull tinyllama
 """
 
+import requests
 import pytest
 
 from components.generators.llm_adapters.ollama_adapter import OllamaAdapter
 from components.generators.base import GenerationParams, LLMError
 from components.generators.llm_adapters.base_adapter import ModelNotFoundError
 
+
+def _ollama_model_available(model="tinyllama"):
+    """Check whether Ollama is running and the given model is pulled."""
+    try:
+        resp = requests.post(
+            "http://localhost:11434/api/show",
+            json={"name": model},
+            timeout=5,
+        )
+        return resp.status_code == 200
+    except Exception:
+        return False
+
+
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.requires_ollama,
+    pytest.mark.skipif(
+        not _ollama_model_available(),
+        reason="Ollama tinyllama model not available",
+    ),
 ]
 
 OLLAMA_URL = "http://localhost:11434"
