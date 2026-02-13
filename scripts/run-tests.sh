@@ -7,6 +7,7 @@ cd "$PROJECT_ROOT"
 
 MODE="${1:---full}"
 WEAVIATE_STARTED=false
+OLLAMA_STARTED=false
 
 start_weaviate() {
     echo "Starting Weaviate via Docker..."
@@ -22,9 +23,23 @@ start_weaviate() {
     done
 }
 
+start_ollama() {
+    echo "Starting Ollama via Docker..."
+    docker compose up -d ollama
+    OLLAMA_STARTED=true
+    for i in $(seq 1 30); do
+        if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
+            echo "  Ollama ready"
+            return
+        fi
+        [ "$i" -eq 30 ] && echo "  WARNING: Ollama not ready after 30s"
+        sleep 1
+    done
+}
+
 cleanup() {
-    if [ "$WEAVIATE_STARTED" = true ]; then
-        echo "Stopping Weaviate..."
+    if [ "$WEAVIATE_STARTED" = true ] || [ "$OLLAMA_STARTED" = true ]; then
+        echo "Stopping services..."
         docker compose down
     fi
 }
@@ -45,8 +60,8 @@ case "$MODE" in
         ;;
     --full)
         start_weaviate
+        start_ollama
         echo "=== Full: all tests, with coverage ==="
-        echo "Expects: Ollama running (ollama serve)"
         pytest tests/ \
             --cov=src --cov-report=term-missing --cov-report=html --tb=short -q
         ;;
@@ -55,7 +70,7 @@ case "$MODE" in
         echo ""
         echo "  --quick   Unit + component, no ML deps, no coverage (fast feedback)"
         echo "  --local   All tests except Ollama/Weaviate, with coverage"
-        echo "  --full    All tests with coverage (needs Ollama, starts Weaviate via Docker)"
+        echo "  --full    All tests with coverage (starts Ollama + Weaviate via Docker)"
         exit 1
         ;;
 esac
