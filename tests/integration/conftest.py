@@ -15,10 +15,10 @@ def project_root():
 
 @pytest.fixture
 def orchestrator():
-    """Create PlatformOrchestrator with test config."""
+    """Create PlatformOrchestrator with Ollama-only test config."""
     from src.core.platform_orchestrator import PlatformOrchestrator
 
-    config_path = Path(__file__).resolve().parents[2] / "config" / "test.yaml"
+    config_path = Path(__file__).resolve().parents[2] / "config" / "test-ollama.yaml"
     return PlatformOrchestrator(config_path)
 
 

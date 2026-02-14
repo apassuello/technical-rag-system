@@ -37,6 +37,30 @@ start_ollama() {
     done
 }
 
+pull_ollama_models() {
+    echo "Ensuring Ollama models are available..."
+
+    # Get list of currently pulled models
+    local models
+    models=$(curl -sf http://localhost:11434/api/tags | grep -o '"name":"[^"]*"' | cut -d'"' -f4 || echo "")
+
+    # Pull llama3.2:3b if not present
+    if ! echo "$models" | grep -q "llama3.2:3b"; then
+        echo "  Pulling llama3.2:3b..."
+        docker exec rag-portfolio-extract-ollama-1 ollama pull llama3.2:3b
+    else
+        echo "  ✓ llama3.2:3b already available"
+    fi
+
+    # Pull tinyllama if not present
+    if ! echo "$models" | grep -q "tinyllama"; then
+        echo "  Pulling tinyllama..."
+        docker exec rag-portfolio-extract-ollama-1 ollama pull tinyllama
+    else
+        echo "  ✓ tinyllama already available"
+    fi
+}
+
 cleanup() {
     if [ "$WEAVIATE_STARTED" = true ] || [ "$OLLAMA_STARTED" = true ]; then
         echo "Stopping services..."
@@ -61,7 +85,10 @@ case "$MODE" in
     --full)
         start_weaviate
         start_ollama
+        pull_ollama_models
+
         echo "=== Full: all tests, with coverage ==="
+        echo "Using config: test-ollama.yaml (Ollama-only)"
         pytest tests/ \
             --cov=src --cov-report=term-missing --cov-report=html --tb=short -q
         ;;
