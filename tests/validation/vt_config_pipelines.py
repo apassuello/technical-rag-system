@@ -39,7 +39,7 @@ PIPELINE_CONFIGS = [
 ]
 
 
-@pytest.fixture(params=PIPELINE_CONFIGS)
+@pytest.fixture(scope="class", params=PIPELINE_CONFIGS)
 def pipeline(request):
     """Boot PlatformOrchestrator from a test config, index golden corpus."""
     config_path = CONFIGS_DIR / request.param
@@ -138,16 +138,17 @@ def _mock_config_path(original_path: Path, tmp_path: Path) -> Path:
     return out
 
 
-@pytest.fixture(params=CI_SAFE_CONFIGS)
-def ci_pipeline(request, tmp_path):
+@pytest.fixture(scope="class", params=CI_SAFE_CONFIGS)
+def ci_pipeline(request, tmp_path_factory):
     """Boot PlatformOrchestrator with mock generator — no Ollama needed.
 
-    Loads each config, overrides llm_client to mock, writes to tmp_path,
+    Loads each config, overrides llm_client to mock, writes to a temp dir,
     then boots the orchestrator.  query_processor is kept intact so the
     wiring fix in platform_orchestrator is actually exercised.
     """
+    tmp_dir = tmp_path_factory.mktemp("ci_pipeline")
     original = CONFIGS_DIR / request.param
-    mock_path = _mock_config_path(original, tmp_path)
+    mock_path = _mock_config_path(original, tmp_dir)
     orch = PlatformOrchestrator(mock_path)
 
     docs = [

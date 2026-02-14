@@ -55,5 +55,5 @@ answer_generator:
     llm_client:
       type: "ollama"
       config:
-        model_name: "llama3.2:3b"
+        model_name: "tinyllama"
         base_url: "http://localhost:11434"

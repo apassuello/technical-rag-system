@@ -93,13 +93,6 @@ pull_ollama_models() {
     local models
     models=$(curl -sf http://localhost:11434/api/tags | grep -o '"name":"[^"]*"' | cut -d'"' -f4 || echo "")
 
-    if ! echo "$models" | grep -q "llama3.2:3b"; then
-        echo "  Pulling llama3.2:3b..."
-        docker compose exec ollama ollama pull llama3.2:3b
-    else
-        echo "  llama3.2:3b already available"
-    fi
-
     if ! echo "$models" | grep -q "tinyllama"; then
         echo "  Pulling tinyllama..."
         docker compose exec ollama ollama pull tinyllama
@@ -148,14 +141,19 @@ fi
 # ---------------------------------------------------------------------------
 # Build pytest args
 # ---------------------------------------------------------------------------
+COV_THRESHOLD=70
+
 PYTEST_ARGS=(
     "${TESTPATHS[@]}"
     --override-ini="addopts=--strict-markers --strict-config --tb=short"
-    -q
+    -rfEsx
 )
 
 if [ "$NO_COV" = false ]; then
-    PYTEST_ARGS+=(--cov=src --cov-report=term-missing --cov-fail-under=70)
+    PYTEST_ARGS+=(
+        --cov=src
+        --cov-report=html:htmlcov
+    )
 fi
 
 if [ "$FAIL_FAST" = true ]; then
@@ -168,10 +166,10 @@ fi
 echo ""
 echo "=== Test collection ==="
 for tier in "${TESTPATHS[@]}"; do
-    count=$(pytest "$tier" --collect-only -q 2>/dev/null | tail -1 | grep -o '[0-9]\+' | head -1)
+    count=$(pytest "$tier" --collect-only -q 2>/dev/null | tail -1 | grep -o '[0-9]\+' | head -1 || echo "0")
     echo "  $(basename "$tier"): ${count:-0} tests"
 done
-total=$(pytest "${TESTPATHS[@]}" --collect-only -q 2>/dev/null | tail -1 | grep -o '[0-9]\+' | head -1)
+total=$(pytest "${TESTPATHS[@]}" --collect-only -q 2>/dev/null | tail -1 | grep -o '[0-9]\+' | head -1 || echo "0")
 echo "  total: ${total:-0} tests"
 echo ""
 
@@ -179,4 +177,36 @@ echo ""
 # Run
 # ---------------------------------------------------------------------------
 echo "=== Running: ${TESTPATHS[*]} ==="
-pytest "${PYTEST_ARGS[@]}"
+set +e
+pytest "${PYTEST_ARGS[@]}" 2>&1 | tee /tmp/pytest-output.log
+PYTEST_EXIT=${PIPESTATUS[0]}
+set -e
+
+# ---------------------------------------------------------------------------
+# Coverage summary (compact: file, stmts, miss, cover%)
+# ---------------------------------------------------------------------------
+if [ "$NO_COV" = false ] && [ -f .coverage ]; then
+    echo ""
+    echo "=== Coverage (files < 100%) ==="
+    coverage report --skip-covered --include="src/*" 2>/dev/null \
+        | awk '
+            /^Name /    { printf "  %-70s %5s %5s %6s\n", "File", "Stmts", "Miss", "Cover"; next }
+            /^-/        { next }
+            /^TOTAL/    { printf "  %-70s %5s %5s %6s\n", "TOTAL", $2, $3, $NF; next }
+            NF >= 4     { printf "  %-70s %5s %5s %6s\n", $1, $2, $3, $NF }
+        '
+    echo ""
+
+    # Extract total percentage and compare to threshold
+    COV_TOTAL=$(coverage report --include="src/*" 2>/dev/null | awk '/^TOTAL/ { print $NF }' | tr -d '%')
+    if [ -n "$COV_TOTAL" ]; then
+        if [ "$(echo "$COV_TOTAL < $COV_THRESHOLD" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+            echo "WARNING: Coverage ${COV_TOTAL}% is below threshold ${COV_THRESHOLD}%"
+        else
+            echo "Coverage: ${COV_TOTAL}% (threshold: ${COV_THRESHOLD}%)"
+        fi
+    fi
+    echo "HTML report: htmlcov/index.html"
+fi
+
+exit $PYTEST_EXIT

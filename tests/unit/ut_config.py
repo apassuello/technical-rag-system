@@ -139,34 +139,26 @@ class TestConfigManager:
         finally:
             temp_path.unlink()
     
-    def test_config_manager_env_overrides(self):
+    def test_config_manager_env_overrides(self, monkeypatch):
         """Test environment variable overrides."""
-        # Set environment variables
-        os.environ['RAG_EMBEDDER__TYPE'] = 'overridden_embedder'
-        os.environ['RAG_EMBEDDER__CONFIG__MODEL_NAME'] = 'test-model'
-        os.environ['RAG_RETRIEVER__CONFIG__DENSE_WEIGHT'] = '0.8'
-        os.environ['RAG_VECTOR_STORE__CONFIG__NORMALIZE'] = 'false'
-        
-        try:
-            manager = ConfigManager()
-            config = manager._apply_env_overrides({
-                "embedder": {"type": "original", "config": {"model_name": "original-model"}},
-                "retriever": {"type": "hybrid", "config": {"dense_weight": 0.7}},
-                "vector_store": {"type": "faiss", "config": {"normalize": True}},
-                "document_processor": {"type": "pdf", "config": {}},
-                "answer_generator": {"type": "adaptive", "config": {}}
-            })
-            
-            assert config["embedder"]["type"] == "overridden_embedder"
-            assert config["embedder"]["config"]["model_name"] == "test-model"
-            assert config["retriever"]["config"]["dense_weight"] == 0.8
-            assert config["vector_store"]["config"]["normalize"] is False
-            
-        finally:
-            # Clean up environment variables
-            for key in ['RAG_EMBEDDER__TYPE', 'RAG_EMBEDDER__CONFIG__MODEL_NAME', 
-                       'RAG_RETRIEVER__CONFIG__DENSE_WEIGHT', 'RAG_VECTOR_STORE__CONFIG__NORMALIZE']:
-                os.environ.pop(key, None)
+        monkeypatch.setenv('RAG_EMBEDDER__TYPE', 'overridden_embedder')
+        monkeypatch.setenv('RAG_EMBEDDER__CONFIG__MODEL_NAME', 'test-model')
+        monkeypatch.setenv('RAG_RETRIEVER__CONFIG__DENSE_WEIGHT', '0.8')
+        monkeypatch.setenv('RAG_VECTOR_STORE__CONFIG__NORMALIZE', 'false')
+
+        manager = ConfigManager()
+        config = manager._apply_env_overrides({
+            "embedder": {"type": "original", "config": {"model_name": "original-model"}},
+            "retriever": {"type": "hybrid", "config": {"dense_weight": 0.7}},
+            "vector_store": {"type": "faiss", "config": {"normalize": True}},
+            "document_processor": {"type": "pdf", "config": {}},
+            "answer_generator": {"type": "adaptive", "config": {}}
+        })
+
+        assert config["embedder"]["type"] == "overridden_embedder"
+        assert config["embedder"]["config"]["model_name"] == "test-model"
+        assert config["retriever"]["config"]["dense_weight"] == 0.8
+        assert config["vector_store"]["config"]["normalize"] is False
     
     def test_config_manager_save(self):
         """Test saving configuration to file."""

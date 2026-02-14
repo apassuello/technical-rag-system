@@ -140,6 +140,7 @@ class TestCheckComponentHealth:
         assert isinstance(status, HealthStatus)
         assert status.is_healthy is True
         assert status.component_name == "Mock"
+        assert status.issues == []
 
     def test_named_component_uses_name_as_id(self, health_service):
         comp = _make_component(name="my_embedder")
@@ -196,6 +197,7 @@ class TestCheckComponentHealth:
         )
         status = health_service.check_component_health(comp)
         assert status.is_healthy is True
+        assert status.issues == []
         assert status.metrics.get("latency") == 5
 
     def test_health_check_method_dict_unhealthy(self, health_service):
@@ -364,6 +366,8 @@ class TestHealthServiceHelpers:
         history = health_service.get_component_health_history("hist")
         assert len(history) == 1
         assert isinstance(history[0], HealthStatus)
+        assert history[0].is_healthy is True
+        assert history[0].issues == []
 
     def test_get_component_health_history_unknown(self, health_service):
         assert health_service.get_component_health_history("nonexistent") == []
@@ -510,6 +514,8 @@ class TestCollectSystemMetrics:
         result = analytics_service.collect_system_metrics()
         assert result["total_components"] == 1
         assert result["average_response_time"] == 0.5
+        assert result["overall_success_rate"] > 0
+        assert result["total_errors"] == 0
 
     def test_aggregates_errors(self, analytics_service):
         for name, errs in [("e1", 2), ("e2", 3)]:
@@ -527,6 +533,9 @@ class TestCollectComponentMetrics:
         metrics = analytics_service.collect_component_metrics(comp)
         assert isinstance(metrics, ComponentMetrics)
         assert metrics.component_name == "Mock"
+        assert metrics.success_count >= 0
+        assert metrics.error_count >= 0
+        assert isinstance(metrics.performance_metrics, dict)
 
     def test_get_stats_integrated(self, analytics_service):
         comp = _make_component(name="gs", has_get_stats=True, get_stats_result={"queries": 42})
@@ -607,6 +616,9 @@ class TestGenerateAnalyticsReport:
         assert "component_performance" in report
         assert "performance_trends" in report
         assert "recommendations" in report
+        assert isinstance(report["system_overview"], dict)
+        assert isinstance(report["component_performance"], dict)
+        assert isinstance(report["recommendations"], list)
 
     def test_component_performance_populated(self, analytics_service):
         comp = _make_component(name="rpt")
@@ -716,6 +728,8 @@ class TestAnalyticsServiceHelpers:
         analytics_service.track_component_performance(comp, {"success": True})
         history = analytics_service.get_component_performance_history("cph")
         assert len(history) == 1
+        assert "metrics" in history[0]
+        assert "timestamp" in history[0]
         # Ensure it returns a copy
         history.append({"fake": True})
         assert len(analytics_service.performance_history["cph"]) == 1
@@ -747,6 +761,8 @@ class TestAnalyticsServiceHelpers:
         result = analytics_service.get_component_analytics("gca")
         assert "current_metrics" in result
         assert "performance_history" in result
+        assert isinstance(result["performance_history"], list)
+        assert len(result["performance_history"]) == 1
 
     def test_get_component_analytics_unknown(self, analytics_service):
         assert analytics_service.get_component_analytics("nope") == {}
@@ -774,6 +790,7 @@ class TestAnalyticsServiceHelpers:
         assert summary["best_performing_component"] == "good"
         assert summary["worst_performing_component"] == "bad"
         assert summary["total_requests"] > 0
+        assert summary["total_requests"] == 2
 
     def test_detect_performance_anomalies_no_data(self, analytics_service):
         assert analytics_service.detect_performance_anomalies() == []
@@ -805,6 +822,8 @@ class TestAnalyticsServiceHelpers:
         assert "component_metrics" in export
         assert "system_metrics" in export
         assert "export_timestamp" in export
+        assert isinstance(export["component_metrics"], dict)
+        assert "exp" in export["component_metrics"]
 
     def test_reset_analytics_data(self, analytics_service):
         comp = _make_component(name="rst")
@@ -850,8 +869,10 @@ class TestGetComponentConfig:
 
     def test_returns_config_for_known_component(self, config_service):
         cfg = config_service.get_component_config("embedder")
+        assert isinstance(cfg, dict)
         assert cfg["type"] == "mock_embedder"
         assert "config" in cfg
+        assert isinstance(cfg["config"], dict)
 
     def test_returns_empty_dict_for_unknown(self, config_service):
         assert config_service.get_component_config("nonexistent") == {}
@@ -873,7 +894,10 @@ class TestUpdateComponentConfig:
     def test_creates_new_component_entry(self, config_service):
         config_service.update_component_config("brand_new", {"x": 1})
         assert "brand_new" in config_service.config_cache
-        assert config_service.config_cache["brand_new"]["type"] == "unknown"
+        entry = config_service.config_cache["brand_new"]
+        assert entry["type"] == "unknown"
+        assert "config" in entry
+        assert entry["config"]["x"] == 1
 
     def test_records_change_in_history(self, config_service):
         config_service.update_component_config("embedder", {"lr": 0.01})
@@ -882,6 +906,7 @@ class TestUpdateComponentConfig:
         assert latest["component"] == "embedder"
         assert latest["change_type"] == "update"
         assert "old_state" in latest
+        assert "timestamp" in latest
 
     def test_rejects_negative_values(self, config_service):
         with pytest.raises(ValueError, match="Invalid negative value"):

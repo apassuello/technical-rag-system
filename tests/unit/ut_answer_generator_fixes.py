@@ -24,13 +24,14 @@ from src.components.generators.routing.adaptive_router import RoutingDecision
 
 class TestEpic1AnswerGeneratorFixes:
     """Focused test fixes for Epic1AnswerGenerator failing tests."""
-    
+
+    @pytest.fixture(autouse=True)
+    def _env(self, monkeypatch):
+        monkeypatch.setenv('OPENAI_API_KEY', 'test-openai-key')
+        monkeypatch.setenv('MISTRAL_API_KEY', 'test-mistral-key')
+
     def setup_method(self):
         """Set up test fixtures and common test data."""
-        # Set up API keys for testing
-        os.environ['OPENAI_API_KEY'] = 'test-openai-key'
-        os.environ['MISTRAL_API_KEY'] = 'test-mistral-key'
-        
         # Common test data
         self.test_query = "How does OAuth 2.0 authentication work?"
         self.test_context = [

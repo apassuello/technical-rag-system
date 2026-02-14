@@ -143,6 +143,9 @@ sessions/docker-compose.yml
 # Coverage artifacts
 .coverage
 .coverage.*
+htmlcov/
+coverage.xml
+.coverage_cache/
 
 # Potential credentials
 HF_API.txt

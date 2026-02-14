@@ -98,7 +98,7 @@ answer_generator:
       simple:
         primary:
           provider: "ollama"
-          model: "llama3.2:3b"
+          model: "tinyllama"
           max_cost_per_query: 0.000
           expected_quality: 0.80
           expected_latency_ms: 2000
@@ -112,7 +112,7 @@ answer_generator:
       medium:
         primary:
           provider: "ollama"
-          model: "llama3.2:3b"
+          model: "tinyllama"
           max_cost_per_query: 0.000
           expected_quality: 0.85
           expected_latency_ms: 2500
@@ -126,7 +126,7 @@ answer_generator:
       complex:
         primary:
           provider: "ollama"
-          model: "llama3.2:3b"
+          model: "tinyllama"
           max_cost_per_query: 0.000
           expected_quality: 0.85
           expected_latency_ms: 3000
@@ -142,7 +142,7 @@ answer_generator:
       enabled: true
       max_retries: 3
       retry_delay_ms: 1000
-      fallback_chain: ["ollama/llama3.2:3b", "ollama/tinyllama"]
+      fallback_chain: ["ollama/tinyllama"]
       fallback_on_cost_exceeded: false
       fallback_on_latency_exceeded: true
       max_latency_ms: 10000
@@ -229,15 +229,15 @@ query_processor:
           model_mappings:
             simple:
               provider: "ollama"
-              model: "llama3.2:3b"
+              model: "tinyllama"
               max_cost: 0.001
             medium:
               provider: "ollama"
-              model: "llama3.2:3b"
+              model: "tinyllama"
               max_cost: 0.001
             complex:
               provider: "ollama"
-              model: "llama3.2:3b"
+              model: "tinyllama"
               max_cost: 0.001
 
     selector:

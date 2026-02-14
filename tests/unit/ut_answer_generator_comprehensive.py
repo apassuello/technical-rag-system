@@ -36,13 +36,14 @@ from src.components.generators.routing.adaptive_router import RoutingDecision
 
 class TestEpic1AnswerGeneratorComprehensive:
     """Comprehensive test suite for Epic1AnswerGenerator achieving 90% coverage."""
-    
+
+    @pytest.fixture(autouse=True)
+    def _env(self, monkeypatch):
+        monkeypatch.setenv('OPENAI_API_KEY', 'test-openai-key')
+        monkeypatch.setenv('MISTRAL_API_KEY', 'test-mistral-key')
+
     def setup_method(self):
         """Set up test fixtures and common test data."""
-        # Set up API keys for testing
-        os.environ['OPENAI_API_KEY'] = 'test-openai-key'
-        os.environ['MISTRAL_API_KEY'] = 'test-mistral-key'
-        
         # Common test data
         self.test_query = "How does OAuth 2.0 authentication work?"
         self.test_context = [
@@ -133,12 +134,6 @@ class TestEpic1AnswerGeneratorComprehensive:
             fallback_options=[self.mock_mistral_model, self.mock_ollama_model]
         )
     
-    def teardown_method(self):
-        """Clean up after tests."""
-        for key in ['OPENAI_API_KEY', 'MISTRAL_API_KEY']:
-            if key in os.environ:
-                del os.environ[key]
-
     # ========== INITIALIZATION AND CONFIGURATION TESTS ==========
     
     def test_initialization_with_routing_enabled(self):

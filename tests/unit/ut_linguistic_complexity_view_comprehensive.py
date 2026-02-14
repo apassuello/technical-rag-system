@@ -17,7 +17,7 @@ import pytest
 # Mark entire module as integration test requiring ML
 pytestmark = [pytest.mark.integration, pytest.mark.requires_ml, pytest.mark.slow]
 import numpy as np
-import torch
+torch = pytest.importorskip("torch", reason="requires PyTorch")
 from unittest.mock import Mock, patch, MagicMock
 from decimal import Decimal
 import asyncio

@@ -7,33 +7,23 @@ Consolidated from:
 - tests/epic1/conftest.py (epic1_imports → ml_imports, epic1_test_data → analyzer_test_data)
 """
 
+import sys
+
 import pytest
 from pathlib import Path
 from typing import Any, Dict, List
+
+# Add tests/unit/ to sys.path so integration tests that import from
+# ``fixtures.xxx`` (shared ML test fixtures) can resolve them.
+_UNIT_DIR = Path(__file__).resolve().parent.parent / "unit"
+if str(_UNIT_DIR) not in sys.path:
+    sys.path.insert(0, str(_UNIT_DIR))
 
 
 @pytest.fixture(scope="session")
 def project_root():
     """Provide project root path for all tests."""
     return Path(__file__).resolve().parents[2]
-
-
-@pytest.fixture(scope="session")
-def orchestrator():
-    """Create PlatformOrchestrator once for all integration tests."""
-    from src.core.platform_orchestrator import PlatformOrchestrator
-
-    config_path = Path(__file__).resolve().parents[2] / "config" / "test-ollama.yaml"
-    orch = PlatformOrchestrator(config_path)
-    yield orch
-    # Cleanup
-    if hasattr(orch, '_components'):
-        orch._components.clear()
-    if hasattr(orch, 'health_service'):
-        orch.health_service.monitored_components.clear()
-        orch.health_service.health_history.clear()
-    if hasattr(orch, 'analytics_service'):
-        orch.analytics_service.component_metrics.clear()
 
 
 @pytest.fixture

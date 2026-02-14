@@ -3,27 +3,10 @@
 import pytest
 from pathlib import Path
 
-from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Document
 from src.components.embedders.modular_embedder import ModularEmbedder
 from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from .golden_corpus import ALL_CORPUS_TEXTS
-
-
-@pytest.fixture(scope="session")
-def orchestrator():
-    """Create PlatformOrchestrator once for all validation tests."""
-    config_path = Path(__file__).resolve().parents[2] / "config" / "test-ollama.yaml"
-    orch = PlatformOrchestrator(config_path)
-    yield orch
-    # Cleanup
-    if hasattr(orch, '_components'):
-        orch._components.clear()
-    if hasattr(orch, 'health_service'):
-        orch.health_service.monitored_components.clear()
-        orch.health_service.health_history.clear()
-    if hasattr(orch, 'analytics_service'):
-        orch.analytics_service.component_metrics.clear()
 
 
 @pytest.fixture(scope="session")

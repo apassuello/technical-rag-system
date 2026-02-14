@@ -29,7 +29,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.requires_ml]
 import unittest.mock as mock
 import time
 import numpy as np
-import torch
+torch = pytest.importorskip("torch", reason="requires PyTorch")
 from pathlib import Path
 from typing import Dict, Any, List
 import sys
