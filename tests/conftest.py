@@ -20,8 +20,6 @@ if str(SRC_PATH) not in sys.path:
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-print(f"✓ Root conftest.py: Added {PROJECT_ROOT} and {SRC_PATH} to sys.path")
-
 # Eagerly import ComponentFactory so the reference survives any test patches
 from src.core.component_factory import ComponentFactory as _RealComponentFactory
 
@@ -79,8 +77,19 @@ def _service_available(url: str, timeout: float = 2.0) -> bool:
         return False
 
 
+TIER_ORDER = {"unit": 0, "integration": 1, "validation": 2}
+
+
+def _get_tier(item):
+    parts = item.nodeid.split("/")
+    for part in parts:
+        if part in TIER_ORDER:
+            return TIER_ORDER[part]
+    return len(TIER_ORDER)
+
+
 def pytest_collection_modifyitems(config, items):
-    """Auto-skip tests whose required services are unavailable."""
+    """Auto-skip tests whose required services are unavailable, then sort by tier."""
     service_checks = {
         "requires_ollama": (
             lambda: _service_available("http://localhost:11434/api/tags"),
@@ -106,3 +115,6 @@ def pytest_collection_modifyitems(config, items):
             if marker_name in {m.name for m in item.iter_markers()}:
                 if not availability[marker_name]:
                     item.add_marker(pytest.mark.skip(reason=reason))
+
+    # Sort by tier: unit → integration → validation
+    items.sort(key=_get_tier)
