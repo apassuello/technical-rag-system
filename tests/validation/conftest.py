@@ -10,14 +10,14 @@ from src.components.retrievers.modular_unified_retriever import ModularUnifiedRe
 from .golden_corpus import ALL_CORPUS_TEXTS
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def orchestrator():
-    """Create PlatformOrchestrator with test config."""
-    config_path = Path(__file__).resolve().parents[2] / "config" / "test.yaml"
+    """Create PlatformOrchestrator once for all validation tests."""
+    config_path = Path(__file__).resolve().parents[2] / "config" / "test-ollama.yaml"
     return PlatformOrchestrator(config_path)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def golden_documents():
     """4 Document objects: 3 on-topic RISC-V + 1 off-topic weather."""
     return [
@@ -26,9 +26,9 @@ def golden_documents():
     ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def indexed_orchestrator(orchestrator, golden_documents):
-    """Orchestrator with golden corpus indexed."""
+    """Orchestrator with golden corpus indexed — shared across all tests."""
     count = orchestrator.index_documents(golden_documents)
     assert count == 4, f"Expected 4 docs indexed, got {count}"
     return orchestrator

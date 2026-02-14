@@ -265,7 +265,7 @@ class TestTaskComplexityViewComprehensive:
         assert isinstance(result, dict)
         assert 'error' in result['features']  # Error result when no model available
         
-    @patch('src.components.query_processors.analyzers.ml_views.task_complexity_view.ModelManager')
+    @patch('components.query_processors.analyzers.ml_views.base_view.ModelManager')
     def test_get_query_embedding(self, mock_manager_class, mock_deberta_model, sample_queries):
         """Test query embedding generation."""
         mock_model, mock_tokenizer = mock_deberta_model
@@ -285,7 +285,7 @@ class TestTaskComplexityViewComprehensive:
         assert isinstance(embedding, np.ndarray)
         assert embedding.shape == (768,)  # DeBERTa-v3 embedding dimension
         
-    @patch('src.components.query_processors.analyzers.ml_views.task_complexity_view.ModelManager')
+    @patch('components.query_processors.analyzers.ml_views.base_view.ModelManager')
     def test_compute_anchor_similarities(self, mock_manager_class, mock_deberta_model):
         """Test anchor similarity computation."""
         mock_model, mock_tokenizer = mock_deberta_model
@@ -325,7 +325,7 @@ class TestTaskComplexityViewComprehensive:
         
     # ==================== INTEGRATION TESTS ====================
     
-    @patch('src.components.query_processors.analyzers.ml_views.task_complexity_view.ModelManager')
+    @patch('components.query_processors.analyzers.ml_views.base_view.ModelManager')
     def test_end_to_end_analysis_flow(self, mock_manager_class, mock_deberta_model, sample_queries):
         """Test complete end-to-end analysis workflow."""
         mock_model, mock_tokenizer = mock_deberta_model
@@ -368,7 +368,7 @@ class TestTaskComplexityViewComprehensive:
         avg_time_ms = ((end_time - start_time) / 10) * 1000
         assert avg_time_ms < 4.0, f"Algorithmic analysis took {avg_time_ms:.2f}ms, exceeds 4ms target"
         
-    @patch('src.components.query_processors.analyzers.ml_views.task_complexity_view.ModelManager')
+    @patch('components.query_processors.analyzers.ml_views.base_view.ModelManager')
     def test_ml_analysis_performance(self, mock_manager_class, mock_deberta_model, sample_queries):
         """Test that ML analysis meets <25ms performance target."""
         mock_model, mock_tokenizer = mock_deberta_model
@@ -422,7 +422,7 @@ class TestTaskComplexityViewComprehensive:
         assert 'score' in result
         assert isinstance(result['score'], float)
         
-    @patch('src.components.query_processors.analyzers.ml_views.task_complexity_view.ModelManager')
+    @patch('components.query_processors.analyzers.ml_views.base_view.ModelManager')
     def test_ml_model_unavailable_fallback(self, mock_manager_class, sample_queries):
         """Test fallback when ML model is unavailable."""
         # Configure ModelManager to indicate model unavailable

@@ -13,9 +13,18 @@ def project_root():
     return Path(__file__).resolve().parents[2]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def orchestrator():
-    """Create PlatformOrchestrator with Ollama-only test config."""
+    """Create PlatformOrchestrator once for all integration tests."""
+    from src.core.platform_orchestrator import PlatformOrchestrator
+
+    config_path = Path(__file__).resolve().parents[2] / "config" / "test-ollama.yaml"
+    return PlatformOrchestrator(config_path)
+
+
+@pytest.fixture
+def fresh_orchestrator():
+    """Fresh PlatformOrchestrator for tests that mutate state."""
     from src.core.platform_orchestrator import PlatformOrchestrator
 
     config_path = Path(__file__).resolve().parents[2] / "config" / "test-ollama.yaml"

@@ -274,7 +274,7 @@ class TestLinguisticComplexityViewComprehensive:
         assert isinstance(result, dict)
         assert 'error' in result['features']  # Error result when no model available
         
-    @patch('src.components.query_processors.analyzers.ml_views.linguistic_complexity_view.ModelManager')
+    @patch('components.query_processors.analyzers.ml_views.base_view.ModelManager')
     def test_get_query_embedding(self, mock_manager_class, mock_distilbert_model, sample_queries):
         """Test query embedding generation."""
         mock_model, mock_tokenizer = mock_distilbert_model
@@ -294,7 +294,7 @@ class TestLinguisticComplexityViewComprehensive:
         assert isinstance(embedding, np.ndarray)
         assert embedding.shape == (768,)  # DistilBERT embedding dimension
         
-    @patch('src.components.query_processors.analyzers.ml_views.linguistic_complexity_view.ModelManager')
+    @patch('components.query_processors.analyzers.ml_views.base_view.ModelManager')
     def test_compute_anchor_similarities(self, mock_manager_class, mock_distilbert_model):
         """Test anchor similarity computation."""
         mock_model, mock_tokenizer = mock_distilbert_model
@@ -316,7 +316,7 @@ class TestLinguisticComplexityViewComprehensive:
             assert isinstance(similarity, float)
             assert -1 <= similarity <= 1
             
-    @patch('src.components.query_processors.analyzers.ml_views.linguistic_complexity_view.ModelManager')
+    @patch('components.query_processors.analyzers.ml_views.base_view.ModelManager')
     def test_analyze_linguistic_features(self, mock_manager_class, mock_distilbert_model, sample_queries):
         """Test linguistic feature analysis using ML."""
         mock_model, mock_tokenizer = mock_distilbert_model
@@ -392,7 +392,7 @@ class TestLinguisticComplexityViewComprehensive:
         avg_time_ms = ((end_time - start_time) / 10) * 1000
         assert avg_time_ms < 3.0, f"Algorithmic analysis took {avg_time_ms:.2f}ms, exceeds 3ms target"
         
-    @patch('src.components.query_processors.analyzers.ml_views.linguistic_complexity_view.ModelManager')
+    @patch('components.query_processors.analyzers.ml_views.base_view.ModelManager')
     def test_ml_analysis_performance(self, mock_manager_class, mock_distilbert_model, sample_queries):
         """Test that ML analysis meets <15ms performance target."""
         mock_model, mock_tokenizer = mock_distilbert_model
@@ -446,7 +446,7 @@ class TestLinguisticComplexityViewComprehensive:
         assert 'score' in result
         assert isinstance(result['score'], float)
         
-    @patch('src.components.query_processors.analyzers.ml_views.linguistic_complexity_view.ModelManager')
+    @patch('components.query_processors.analyzers.ml_views.base_view.ModelManager')
     def test_ml_model_unavailable_fallback(self, mock_manager_class, sample_queries, mock_syntactic_parser):
         """Test fallback when ML model is unavailable."""
         # Configure ModelManager to indicate model unavailable
