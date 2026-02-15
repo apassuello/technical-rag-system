@@ -879,7 +879,9 @@ class PlatformOrchestrator:
         if self._using_unified_retriever:
             # Phase 2: Unified architecture - clear retriever directly
             retriever = self._components['retriever']
-            if hasattr(retriever, 'clear'):
+            if hasattr(retriever, 'clear_index'):
+                retriever.clear_index()
+            elif hasattr(retriever, 'clear'):
                 retriever.clear()
             else:
                 logger.warning(f"Retriever {type(retriever).__name__} does not support clearing")
@@ -888,10 +890,12 @@ class PlatformOrchestrator:
             if 'vector_store' in self._components:
                 vector_store = self._components['vector_store']
                 vector_store.clear()
-            
+
             # Also clear retriever if it has separate state
             retriever = self._components['retriever']
-            if hasattr(retriever, 'clear'):
+            if hasattr(retriever, 'clear_index'):
+                retriever.clear_index()
+            elif hasattr(retriever, 'clear'):
                 retriever.clear()
         
         logger.info("System index cleared")

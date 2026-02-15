@@ -11,6 +11,8 @@ import time
 import logging
 from pathlib import Path
 
+pytestmark = [pytest.mark.integration]
+
 # Load environment variables
 try:
     from dotenv import load_dotenv

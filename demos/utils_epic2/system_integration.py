@@ -45,7 +45,7 @@ class Epic2SystemManager:
     def __init__(self, demo_mode: bool = True):
         self.system: Optional[PlatformOrchestrator] = None
         self.config_path = self._select_config_path()
-        self.corpus_path = Path("data/riscv_comprehensive_corpus")
+        self.corpus_path = Path("data/riscv_corpus")
         self.is_initialized = False
         self.documents_processed = 0
         self.last_query_results = None

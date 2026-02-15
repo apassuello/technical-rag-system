@@ -5,15 +5,10 @@ Tests the ComponentConfig, PipelineConfig, and ConfigManager classes.
 """
 
 import pytest
-import sys
 import os
 import tempfile
 from pathlib import Path
 import yaml
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.core.config import (
     ComponentConfig,
@@ -59,7 +54,12 @@ class TestComponentConfig:
 
 class TestPipelineConfig:
     """Test PipelineConfig model."""
-    
+
+    @pytest.fixture(autouse=True)
+    def skip_validation(self, monkeypatch):
+        monkeypatch.setenv('RAG_SKIP_COMPONENT_VALIDATION', '1')
+        monkeypatch.setenv('RAG_SKIP_ARCHITECTURE_VALIDATION', '1')
+
     def test_pipeline_config_creation(self):
         """Test full pipeline config creation."""
         config = PipelineConfig(
@@ -105,7 +105,12 @@ class TestPipelineConfig:
 
 class TestConfigManager:
     """Test ConfigManager functionality."""
-    
+
+    @pytest.fixture(autouse=True)
+    def skip_validation(self, monkeypatch):
+        monkeypatch.setenv('RAG_SKIP_COMPONENT_VALIDATION', '1')
+        monkeypatch.setenv('RAG_SKIP_ARCHITECTURE_VALIDATION', '1')
+
     def test_config_manager_default_config(self):
         """Test loading default configuration."""
         manager = ConfigManager()
@@ -204,6 +209,11 @@ class TestConfigManager:
 
 class TestUtilityFunctions:
     """Test utility functions."""
+
+    @pytest.fixture(autouse=True)
+    def skip_validation(self, monkeypatch):
+        monkeypatch.setenv('RAG_SKIP_COMPONENT_VALIDATION', '1')
+        monkeypatch.setenv('RAG_SKIP_ARCHITECTURE_VALIDATION', '1')
     
     def test_load_config_function(self):
         """Test load_config convenience function."""

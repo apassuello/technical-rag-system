@@ -17,7 +17,7 @@ embedder:
       type: "sentence_transformer"
       config:
         model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        device: "mps"
+        device: "auto"
         normalize_embeddings: true
     batch_processor:
       type: "dynamic"
@@ -67,14 +67,14 @@ retriever:
       config:
         enabled: true
         model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-        device: "mps"
+        device: "auto"
         batch_size: 16
         max_length: 256
         max_candidates: 50
         models:
           default_model:
             name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-            device: "mps"
+            device: "auto"
             batch_size: 16
             max_length: 256
         default_model: "default_model"

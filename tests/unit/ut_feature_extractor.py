@@ -8,13 +8,7 @@ comprehensive linguistic feature analysis.
 """
 
 import pytest
-import sys
 import time
-from pathlib import Path
-
-# Add project to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.components.query_processors.analyzers.components import FeatureExtractor
 

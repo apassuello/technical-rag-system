@@ -13,12 +13,12 @@ Monorepo migration in progress — target repo: technical-rag-system (empty, 0 c
 
 ```bash
 # Fast unit tests (no ML deps, no coverage, <30s)
-pytest tests/unit tests/component \
+pytest tests/unit \
   -m "not requires_ml and not requires_ollama and not requires_postgres and not requires_redis and not integration" \
   --override-ini="addopts=--strict-markers --strict-config --tb=short" -x -q
 
-# Full validation (unit + component + coverage)
-pytest tests/unit tests/component \
+# Full validation (unit + integration + validation + coverage)
+pytest tests/unit tests/integration tests/validation \
   -m "not requires_ml and not requires_ollama" -v --tb=short \
   --cov=src --cov-report=term-missing --cov-fail-under=70
 

@@ -18,39 +18,9 @@ import numpy as np
 from fixtures.base_test import MLInfrastructureTestBase
 from fixtures.test_data import ViewFrameworkTestData
 
-try:
-    from src.components.query_processors.analyzers.ml_views.view_result import (
-        ViewResult, AnalysisResult, AnalysisMethod, ComplexityLevel
-    )
-except ImportError:
-    # Create mock imports if the real modules aren't available
-    class AnalysisMethod:
-        ALGORITHMIC = "algorithmic"
-        ML = "ml" 
-        HYBRID = "hybrid"
-        FALLBACK = "fallback"
-    
-    class ComplexityLevel:
-        SIMPLE = "simple"
-        MEDIUM = "medium"
-        COMPLEX = "complex"
-    
-    class ViewResult:
-        def __init__(self, view_name, score, confidence, method, latency_ms, features=None, metadata=None):
-            self.view_name = view_name
-            self.score = score
-            self.confidence = confidence
-            self.method = method
-            self.latency_ms = latency_ms
-            self.features = features or {}
-            self.metadata = metadata or {}
-    
-    class AnalysisResult:
-        def __init__(self, query, view_results, **kwargs):
-            self.query = query
-            self.view_results = view_results
-            for key, value in kwargs.items():
-                setattr(self, key, value)
+from components.query_processors.analyzers.ml_views.view_result import (
+    ViewResult, AnalysisResult, AnalysisMethod, ComplexityLevel
+)
 
 
 class TestViewResult(MLInfrastructureTestBase):
@@ -58,9 +28,7 @@ class TestViewResult(MLInfrastructureTestBase):
     
     def test_view_result_creation(self):
         """Test ViewResult creation and validation."""
-        if ViewResult == type:
-            self.skipTest("ViewResult implementation not available")
-        
+
         features = {'technical_terms': 5, 'complexity_score': 0.7}
         metadata = {'model_used': 'SciBERT', 'timestamp': time.time()}
         
@@ -85,9 +53,7 @@ class TestViewResult(MLInfrastructureTestBase):
     
     def test_view_result_validation(self):
         """Test ViewResult input validation."""
-        if ViewResult == type:
-            self.skipTest("ViewResult implementation not available")
-        
+
         # Test score clamping
         result_high_score = ViewResult(
             view_name='test',
@@ -126,9 +92,7 @@ class TestViewResult(MLInfrastructureTestBase):
     
     def test_complexity_level_property(self):
         """Test complexity level calculation from score."""
-        if ViewResult == type:
-            self.skipTest("ViewResult implementation not available")
-        
+
         # Test simple complexity (< 0.35)
         simple_result = ViewResult(
             view_name='test',
@@ -167,9 +131,7 @@ class TestViewResult(MLInfrastructureTestBase):
     
     def test_high_confidence_property(self):
         """Test high confidence detection."""
-        if ViewResult == type:
-            self.skipTest("ViewResult implementation not available")
-        
+
         # High confidence result (> 0.8)
         high_conf_result = ViewResult(
             view_name='test',
@@ -196,9 +158,7 @@ class TestViewResult(MLInfrastructureTestBase):
     
     def test_ml_based_property(self):
         """Test ML-based analysis detection."""
-        if ViewResult == type:
-            self.skipTest("ViewResult implementation not available")
-        
+
         # ML-based result
         ml_result = ViewResult(
             view_name='test',
@@ -237,9 +197,7 @@ class TestViewResult(MLInfrastructureTestBase):
     
     def test_fallback_flag_creation(self):
         """Test creation of fallback-flagged results."""
-        if ViewResult == type:
-            self.skipTest("ViewResult implementation not available")
-        
+
         original_result = ViewResult(
             view_name='technical',
             score=0.7,
@@ -267,9 +225,7 @@ class TestViewResult(MLInfrastructureTestBase):
     
     def test_serialization(self):
         """Test JSON serialization and deserialization."""
-        if ViewResult == type:
-            self.skipTest("ViewResult implementation not available")
-        
+
         original_result = ViewResult(
             view_name='linguistic',
             score=0.65,
@@ -310,9 +266,6 @@ class TestViewResult(MLInfrastructureTestBase):
     
     def test_error_result_creation(self):
         """Test creation of error results."""
-        if ViewResult == type or not hasattr(ViewResult, 'create_error_result'):
-            self.skipTest("ViewResult.create_error_result not available")
-        
         error_result = ViewResult.create_error_result(
             view_name='failed_view',
             error_message='Model loading failed',
@@ -367,9 +320,7 @@ class TestAnalysisResult(MLInfrastructureTestBase):
     
     def test_analysis_result_creation(self):
         """Test AnalysisResult creation and basic properties."""
-        if AnalysisResult == type:
-            self.skipTest("AnalysisResult implementation not available")
-        
+
         query_text = "How does RISC-V implement memory management?"
         
         result = AnalysisResult(
@@ -386,9 +337,7 @@ class TestAnalysisResult(MLInfrastructureTestBase):
     
     def test_derived_field_computation(self):
         """Test automatic computation of derived fields."""
-        if AnalysisResult == type:
-            self.skipTest("AnalysisResult implementation not available")
-        
+
         result = AnalysisResult(
             query="Test query",
             view_results=self.sample_view_results
@@ -423,9 +372,7 @@ class TestAnalysisResult(MLInfrastructureTestBase):
     
     def test_meta_features_integration(self):
         """Test meta-features array handling."""
-        if AnalysisResult == type:
-            self.skipTest("AnalysisResult implementation not available")
-        
+
         # Create meta-features array (15 dimensions as per architecture)
         meta_features = np.array([0.8, 0.6, 0.75, 0.0, 0.0, 0.9, 0.85, 0.8, 0.25, 0.15, 0.05, 0.72, 0.88, 0.0, 0.0])
         
@@ -443,14 +390,12 @@ class TestAnalysisResult(MLInfrastructureTestBase):
     
     def test_view_analysis_properties(self):
         """Test view-specific analysis properties."""
-        if AnalysisResult == type:
-            self.skipTest("AnalysisResult implementation not available")
-        
+
         # Add a failed view to test failure handling
         view_results_with_failure = self.sample_view_results.copy()
         view_results_with_failure['failed_view'] = ViewResult.create_error_result(
             'failed_view', 'Analysis failed', 10.0
-        ) if hasattr(ViewResult, 'create_error_result') else Mock(metadata={'is_error': True})
+        )
         
         result = AnalysisResult(
             query="Test with failures",
@@ -485,9 +430,7 @@ class TestAnalysisResult(MLInfrastructureTestBase):
     
     def test_performance_summary(self):
         """Test performance summary generation."""
-        if AnalysisResult == type:
-            self.skipTest("AnalysisResult implementation not available")
-        
+
         result = AnalysisResult(
             query="Performance test",
             view_results=self.sample_view_results
@@ -516,9 +459,7 @@ class TestAnalysisResult(MLInfrastructureTestBase):
     
     def test_feature_contributions(self):
         """Test feature contribution analysis."""
-        if AnalysisResult == type:
-            self.skipTest("AnalysisResult implementation not available")
-        
+
         result = AnalysisResult(
             query="Feature contribution test",
             view_results=self.sample_view_results
@@ -544,9 +485,7 @@ class TestAnalysisResult(MLInfrastructureTestBase):
     
     def test_serialization(self):
         """Test AnalysisResult serialization."""
-        if AnalysisResult == type:
-            self.skipTest("AnalysisResult implementation not available")
-        
+
         result = AnalysisResult(
             query="Serialization test",
             view_results=self.sample_view_results,
@@ -581,9 +520,7 @@ class TestAnalysisResult(MLInfrastructureTestBase):
     
     def test_explanation_generation(self):
         """Test human-readable explanation generation."""
-        if AnalysisResult == type:
-            self.skipTest("AnalysisResult implementation not available")
-        
+
         result = AnalysisResult(
             query="Explanation test query",
             view_results=self.sample_view_results,
@@ -626,9 +563,7 @@ class TestAnalysisResult(MLInfrastructureTestBase):
     
     def test_success_detection(self):
         """Test analysis success detection."""
-        if AnalysisResult == type:
-            self.skipTest("AnalysisResult implementation not available")
-        
+
         # Successful analysis
         successful_result = AnalysisResult(
             query="Success test",
@@ -642,9 +577,6 @@ class TestAnalysisResult(MLInfrastructureTestBase):
         failed_view_results = {
             'failed1': ViewResult.create_error_result('failed1', 'Error 1'),
             'failed2': ViewResult.create_error_result('failed2', 'Error 2')
-        } if hasattr(ViewResult, 'create_error_result') else {
-            'failed1': Mock(metadata={'is_error': True}),
-            'failed2': Mock(metadata={'is_error': True})
         }
         
         failed_result = AnalysisResult(
@@ -657,9 +589,6 @@ class TestAnalysisResult(MLInfrastructureTestBase):
     
     def test_error_result_creation(self):
         """Test creation of error analysis results."""
-        if AnalysisResult == type or not hasattr(AnalysisResult, 'create_error_result'):
-            self.skipTest("AnalysisResult.create_error_result not available")
-        
         error_result = AnalysisResult.create_error_result(
             query="Error test query",
             error_message="Complete analysis failure"
@@ -680,9 +609,6 @@ class TestViewFrameworkIntegration(MLInfrastructureTestBase):
     
     def test_view_result_aggregation(self):
         """Test aggregation of multiple ViewResults into AnalysisResult."""
-        if ViewResult == type or AnalysisResult == type:
-            self.skipTest("View framework not available")
-        
         # Generate realistic view results
         view_data = ViewFrameworkTestData.generate_view_results()[:5]  # Use first 5
         
@@ -716,9 +642,6 @@ class TestViewFrameworkIntegration(MLInfrastructureTestBase):
     
     def test_empty_view_results_handling(self):
         """Test handling of empty view results."""
-        if AnalysisResult == type:
-            self.skipTest("AnalysisResult not available")
-        
         result = AnalysisResult(
             query="Empty views test",
             view_results={}

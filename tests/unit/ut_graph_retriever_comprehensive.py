@@ -248,6 +248,32 @@ class TestGraphQueryNodeMatching:
         assert isinstance(matches, list)
         self.mock_embedder.embed.assert_called()
         
+    def test_fuzzy_matching_zero_norm_query(self, caplog):
+        """Zero-norm query embedding returns empty immediately with warning."""
+        self.mock_embedder.embed.return_value = [np.array([0.0, 0.0, 0.0])]
+        import logging
+        with caplog.at_level(logging.WARNING):
+            result = self.retriever._fuzzy_node_matching("test", self.mock_graph)
+        assert result == []
+        # embed called once for query, never for nodes
+        assert self.mock_embedder.embed.call_count == 1
+        assert any("zero norm" in r.message.lower() for r in caplog.records)
+
+    def test_fuzzy_matching_zero_norm_node(self, caplog):
+        """Zero-norm node embedding is skipped with warning."""
+        self.mock_embedder.embed.side_effect = [
+            [np.array([0.1, 0.2, 0.3])],  # query embedding (non-zero)
+            [np.array([0.0, 0.0, 0.0])],  # node 1 embedding (zero)
+            [np.array([0.0, 0.0, 0.0])],  # node 2 embedding (zero)
+            [np.array([0.0, 0.0, 0.0])],  # node 3 embedding (zero)
+            [np.array([0.0, 0.0, 0.0])],  # node 4 embedding (zero)
+        ]
+        import logging
+        with caplog.at_level(logging.WARNING):
+            result = self.retriever._fuzzy_node_matching("test", self.mock_graph)
+        assert result == []
+        assert any("zero-norm embedding" in r.message.lower() for r in caplog.records)
+
     def test_limit_max_query_nodes(self):
         """Test limiting maximum number of query nodes."""
         # Create graph with many matching nodes

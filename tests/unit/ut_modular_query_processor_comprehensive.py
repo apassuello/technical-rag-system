@@ -22,14 +22,8 @@ import tempfile
 import numpy as np
 from typing import Dict, Any, List, Optional
 from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
-
-# Import system under test - use direct import to avoid circular import issues
-import sys
-sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
-
-from components.query_processors.modular_query_processor import ModularQueryProcessor
-from components.query_processors.base import QueryProcessorConfig, QueryAnalysis, ContextSelection
+from src.components.query_processors.modular_query_processor import ModularQueryProcessor
+from src.components.query_processors.base import QueryProcessorConfig, QueryAnalysis, ContextSelection
 from src.core.interfaces import Document, Answer, RetrievalResult, QueryOptions
 
 

@@ -35,8 +35,8 @@ def get_test_documents() -> List[Path]:
     """Get real RISC-V corpus documents for Epic1 validation."""
     print("📄 Selecting RISC-V corpus documents for testing...")
 
-    project_root = Path(__file__).parent.parent.parent.parent
-    corpus_base = project_root / "data" / "riscv_comprehensive_corpus"
+    project_root = Path(__file__).parent.parent.parent
+    corpus_base = project_root / "data" / "riscv_corpus"
 
     # Check if corpus directory exists
     if not corpus_base.exists():
@@ -328,10 +328,17 @@ def test_cost_tracking():
     try:
         from src.components.generators.llm_adapters.cost_tracker import get_cost_tracker
         from decimal import Decimal
-        
-        # Get cost tracker
+
+        # Get cost tracker (singleton — may already contain entries from earlier tests)
         tracker = get_cost_tracker()
-        
+
+        # Snapshot baseline totals before recording test entries so we can
+        # compute deltas. This avoids flaky failures when earlier tests in the
+        # session have already recorded usage on the same singleton tracker.
+        baseline_total = tracker.get_total_cost()
+        baseline_by_provider = tracker.get_cost_by_provider()
+        baseline_by_complexity = tracker.get_cost_by_complexity()
+
         # Record some test usage
         test_usage = [
             {
@@ -343,7 +350,7 @@ def test_cost_tracking():
                 'query_complexity': 'simple'
             },
             {
-                'provider': 'openai', 
+                'provider': 'openai',
                 'model': 'gpt-3.5-turbo',
                 'input_tokens': 200,
                 'output_tokens': 150,
@@ -352,14 +359,14 @@ def test_cost_tracking():
             },
             {
                 'provider': 'mistral',
-                'model': 'mistral-small', 
+                'model': 'mistral-small',
                 'input_tokens': 300,
                 'output_tokens': 200,
                 'cost_usd': Decimal('0.003000'),
                 'query_complexity': 'complex'
             }
         ]
-        
+
         # Record usage
         for usage in test_usage:
             tracker.record_usage(
@@ -372,24 +379,39 @@ def test_cost_tracking():
                 request_time_ms=100.0,
                 success=True
             )
-        
-        # Test cost calculations
-        total_cost = tracker.get_total_cost()
+
+        # Compute deltas: current totals minus the pre-test baselines
+        total_cost_delta = tracker.get_total_cost() - baseline_total
+
         cost_by_provider = tracker.get_cost_by_provider()
+        provider_delta = {
+            provider: cost - baseline_by_provider.get(provider, Decimal('0'))
+            for provider, cost in cost_by_provider.items()
+            if cost - baseline_by_provider.get(provider, Decimal('0')) != Decimal('0')
+        }
+
         cost_by_complexity = tracker.get_cost_by_complexity()
-        
-        print(f"✅ Total cost: ${total_cost:.6f}")
-        print(f"✅ Cost by provider: {cost_by_provider}")
-        print(f"✅ Cost by complexity: {cost_by_complexity}")
-        
-        # Validate calculations
+        complexity_delta = {
+            complexity: cost - baseline_by_complexity.get(complexity, Decimal('0'))
+            for complexity, cost in cost_by_complexity.items()
+            if cost - baseline_by_complexity.get(complexity, Decimal('0')) != Decimal('0')
+        }
+
+        print(f"✅ Total cost (delta): ${total_cost_delta:.6f}")
+        print(f"✅ Cost by provider (delta): {provider_delta}")
+        print(f"✅ Cost by complexity (delta): {complexity_delta}")
+
+        # Validate calculations using delta to avoid singleton accumulation
         expected_total = sum(usage['cost_usd'] for usage in test_usage)
-        cost_accurate = abs(total_cost - expected_total) < Decimal('0.000001')
-        
+        cost_accurate = abs(total_cost_delta - expected_total) < Decimal('0.000001')
+
         print(f"Cost accuracy: {'PASS' if cost_accurate else 'FAIL'}")
 
         if not cost_accurate:
-            pytest.fail("Cost calculation was not accurate")
+            pytest.fail(
+                f"Cost calculation was not accurate: "
+                f"expected ${expected_total:.6f}, got delta ${total_cost_delta:.6f}"
+            )
 
     except Exception as e:
         pytest.fail(f"Cost tracking test failed: {e}")

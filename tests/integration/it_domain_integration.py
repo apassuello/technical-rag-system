@@ -94,11 +94,6 @@ class TestEpic1IntegrationWithDomain:
             logger.error(f"❌ Command execution error: {e}")
             return False, "", str(e)
     
-    @pytest.fixture(scope="class")
-    def project_root(self):
-        """Get project root path."""
-        return Path(__file__).parent.parent.parent.parent
-
     def test_epic1_analyzer_availability(self, project_root):
         """Test that Epic1MLAnalyzer can be imported and created."""
         self.project_root = project_root

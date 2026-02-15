@@ -71,6 +71,7 @@ class TestPlatformOrchestratorLifecycle:
         call_args = mock_component_factory.create_retriever.call_args
         assert 'embedder' in call_args.kwargs
 
+    @pytest.mark.filterwarnings("ignore:Component validation warnings:UserWarning")
     def test_orchestrator_legacy_architecture(self, temp_config_dir, mock_component_factory):
         """Test orchestrator with legacy architecture (separate vector store)."""
         # Create legacy configuration
@@ -189,10 +190,11 @@ class TestPlatformOrchestratorLifecycle:
         # Clear index
         orchestrator.clear_index()
         
-        # Verify clear was called on retriever
+        # Verify clear_index was called on retriever
         mock_retriever = mock_component_factory.mock_retriever
-        mock_retriever.clear.assert_called_once()
+        mock_retriever.clear_index.assert_called_once()
 
+    @pytest.mark.filterwarnings("ignore:Component validation warnings:UserWarning")
     def test_clear_index_legacy_architecture(self, temp_config_dir, mock_component_factory):
         """Test clearing index in legacy architecture."""
         # Create legacy configuration

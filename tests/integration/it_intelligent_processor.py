@@ -13,6 +13,8 @@ Test Strategy:
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 
+pytestmark = [pytest.mark.integration]
+
 from src.components.query_processors.intelligent_query_processor import IntelligentQueryProcessor
 from src.components.query_processors.agents.planning.query_analyzer import QueryAnalyzer
 from src.components.query_processors.agents.react_agent import ReActAgent

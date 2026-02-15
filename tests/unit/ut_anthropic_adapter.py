@@ -14,12 +14,12 @@ from unittest.mock import Mock, MagicMock, patch, PropertyMock
 from decimal import Decimal
 import time
 
-from src.components.generators.llm_adapters.anthropic_adapter import (
+from components.generators.llm_adapters.anthropic_adapter import (
     AnthropicAdapter,
     create_anthropic_adapter
 )
-from src.components.generators.base import GenerationParams, LLMError
-from src.components.generators.llm_adapters.base_adapter import (
+from components.generators.base import GenerationParams, LLMError
+from components.generators.llm_adapters.base_adapter import (
     RateLimitError,
     AuthenticationError,
     ModelNotFoundError
@@ -93,7 +93,7 @@ class TestAnthropicAdapterBasicGeneration:
     @pytest.fixture
     def adapter(self):
         """Create adapter with mocked client."""
-        with patch('src.components.generators.llm_adapters.anthropic_adapter.Anthropic'):
+        with patch('components.generators.llm_adapters.anthropic_adapter.Anthropic'):
             adapter = AnthropicAdapter(
                 model_name="claude-3-5-sonnet-20241022",
                 api_key="sk-ant-test-key"
@@ -194,7 +194,7 @@ class TestAnthropicAdapterToolUse:
     @pytest.fixture
     def adapter(self):
         """Create adapter with mocked client."""
-        with patch('src.components.generators.llm_adapters.anthropic_adapter.Anthropic'):
+        with patch('components.generators.llm_adapters.anthropic_adapter.Anthropic'):
             adapter = AnthropicAdapter(
                 model_name="claude-3-5-sonnet-20241022",
                 api_key="sk-ant-test-key"
@@ -379,7 +379,7 @@ class TestAnthropicAdapterCostTracking:
     @pytest.fixture
     def adapter(self):
         """Create adapter with mocked client."""
-        with patch('src.components.generators.llm_adapters.anthropic_adapter.Anthropic'):
+        with patch('components.generators.llm_adapters.anthropic_adapter.Anthropic'):
             adapter = AnthropicAdapter(
                 model_name="claude-3-5-sonnet-20241022",
                 api_key="sk-ant-test-key"
@@ -450,7 +450,7 @@ class TestAnthropicAdapterErrorHandling:
     @pytest.fixture
     def adapter(self):
         """Create adapter with mocked client."""
-        with patch('src.components.generators.llm_adapters.anthropic_adapter.Anthropic'):
+        with patch('components.generators.llm_adapters.anthropic_adapter.Anthropic'):
             adapter = AnthropicAdapter(
                 model_name="claude-3-5-sonnet-20241022",
                 api_key="sk-ant-test-key"
@@ -539,7 +539,7 @@ class TestAnthropicAdapterStreaming:
     @pytest.fixture
     def adapter(self):
         """Create adapter with mocked client."""
-        with patch('src.components.generators.llm_adapters.anthropic_adapter.Anthropic'):
+        with patch('components.generators.llm_adapters.anthropic_adapter.Anthropic'):
             adapter = AnthropicAdapter(
                 model_name="claude-3-5-sonnet-20241022",
                 api_key="sk-ant-test-key"
@@ -578,7 +578,7 @@ class TestAnthropicAdapterValidation:
     @pytest.fixture
     def adapter(self):
         """Create adapter with mocked client."""
-        with patch('src.components.generators.llm_adapters.anthropic_adapter.Anthropic'):
+        with patch('components.generators.llm_adapters.anthropic_adapter.Anthropic'):
             adapter = AnthropicAdapter(
                 model_name="claude-3-5-sonnet-20241022",
                 api_key="sk-ant-test-key"

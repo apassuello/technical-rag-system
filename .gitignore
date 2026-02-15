@@ -68,7 +68,7 @@ logs/
 # Data files (exclude large PDFs from git)
 *.pdf
 !data/test/riscv-base-instructions.pdf
-!data/riscv_comprehensive_corpus/**/*.pdf
+!data/riscv_corpus/**/*.pdf
 !tests/integration/fixtures/*.pdf
 
 # Model files
@@ -79,6 +79,7 @@ models/
 # Cache
 .cache/
 cache/
+data/.demo_cache/
 
 # Temporary files
 tmp/
@@ -125,6 +126,9 @@ STREAMLIT_*.md
 comprehensive_test_results_*.json
 epic2_portfolio_assessment_*.txt
 *.log
+
+# Planning drafts
+docs/plans/
 
 # Claude session artifacts (entire directory)
 .claude/

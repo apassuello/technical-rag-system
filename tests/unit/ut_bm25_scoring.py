@@ -13,12 +13,6 @@ and irrelevant queries.
 import pytest
 import numpy as np
 from typing import List, Dict, Tuple
-from pathlib import Path
-import sys
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 from src.components.retrievers.sparse.bm25_retriever import BM25Retriever
 from src.core.interfaces import Document

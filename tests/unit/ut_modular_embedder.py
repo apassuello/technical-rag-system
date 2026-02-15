@@ -10,15 +10,9 @@ This addresses the critical gap where ModularEmbedder had no dedicated test suit
 
 import pytest
 import numpy as np
-import sys
 import time
-from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from typing import List, Dict, Any
-
-# Add project root to Python path
-project_root = Path(__file__).parent.parent.parent.parent.parent
-sys.path.insert(0, str(project_root / "src"))
 
 from src.core.component_factory import ComponentFactory
 

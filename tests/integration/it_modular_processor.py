@@ -7,14 +7,10 @@ ModularQueryProcessor and validates end-to-end query processing.
 """
 
 import pytest
-import sys
-from pathlib import Path
 import time
 from typing import List, Dict, Any
 
-# Add project to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.append(str(project_root))
+pytestmark = [pytest.mark.integration]
 
 from src.components.query_processors import ModularQueryProcessor
 from src.components.query_processors.base import QueryProcessorConfig
