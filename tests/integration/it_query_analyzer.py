@@ -48,8 +48,8 @@ class TestEpic1QueryAnalyzer:
                 'strategy': 'balanced',
                 'model_mappings': {
                     'simple': {
-                        'provider': 'ollama',
-                        'model': 'llama3.2:3b',
+                        'provider': 'local',
+                        'model': 'qwen2.5-1.5b-instruct',
                         'max_cost_per_query': 0.001,
                         'avg_latency_ms': 500
                     },
@@ -104,7 +104,7 @@ class TestEpic1QueryAnalyzer:
             analysis = self.analyzer.analyze(query)
             epic1_data = analysis.metadata['epic1_analysis']
             assert epic1_data['complexity_level'] == 'simple'
-            assert 'ollama' in epic1_data['recommended_model']
+            assert 'local' in epic1_data['recommended_model']
     
     def test_complex_query_classification(self):
         """Test complex query classification."""

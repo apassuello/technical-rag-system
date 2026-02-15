@@ -24,6 +24,7 @@ import time
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from config.llm_providers import LOCAL
 from src.core.interfaces import Answer, Document
 
 # Import base classes
@@ -88,7 +89,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
         },
         "fallback": {
             "enabled": true,
-            "fallback_model": "ollama/llama3.2:3b"
+            "fallback_model": "local/qwen2.5-1.5b-instruct"
         },
         "cost_tracking": {
             "enabled": true,
@@ -411,7 +412,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
             return {
                 'total_queries': 0,
                 'average_cost': 0.0,
-                'model_distribution': {'ollama': 1.0},
+                'model_distribution': {'local': 1.0},
                 'routing_overhead_ms': 25.0,  # Target < 50ms
                 'cost_trend': 'stable',
                 'recommendations': ['No routing enabled']
@@ -458,7 +459,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
             return {
                 'total_queries': total_queries,
                 'average_cost': average_cost,
-                'model_distribution': patterns.get('provider_distribution', {'ollama': 1.0}),
+                'model_distribution': patterns.get('provider_distribution', {'local': 1.0}),
                 'routing_overhead_ms': routing_overhead,
                 'cost_trend': cost_trend,
                 'recommendations': recommendations,
@@ -471,7 +472,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
             return {
                 'total_queries': 0,
                 'average_cost': 0.002,  # Default value expected by tests
-                'model_distribution': {'ollama': 0.6, 'mistral': 0.3, 'openai': 0.1},
+                'model_distribution': {'local': 0.6, 'mistral': 0.3, 'openai': 0.1},
                 'routing_overhead_ms': 25,  # < 50ms target
                 'cost_trend': 'unknown',
                 'recommendations': ['Analysis failed - check system status']
@@ -587,7 +588,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
             },
             'fallback': {
                 'enabled': True,
-                'fallback_model': 'ollama/llama3.2:3b'
+                'fallback_model': f'local/{LOCAL.model}'
             },
             'cost_tracking': {
                 'enabled': True,
@@ -600,13 +601,12 @@ class Epic1AnswerGenerator(AnswerGenerator):
         
         # Ensure we have a base LLM configuration for fallback
         if 'llm_client' not in routing_config:
-            import os
-            ollama_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
             routing_config['llm_client'] = {
-                'type': 'ollama',
+                'type': LOCAL.adapter_type,
                 'config': {
-                    'model_name': 'llama3.2:3b',
-                    'base_url': ollama_url
+                    'model_name': LOCAL.model,
+                    'api_key': LOCAL.api_key,
+                    'base_url': LOCAL.base_url
                 }
             }
         
@@ -675,8 +675,8 @@ class Epic1AnswerGenerator(AnswerGenerator):
             adapter_class = get_adapter_class(model_option.provider)
             
             # Prepare configuration based on provider
-            if model_option.provider == 'ollama':
-                # For Ollama, pass parameters through config
+            if model_option.provider == 'local':
+                # For local models, pass parameters through config
                 config_params = {
                     'temperature': self.config.get('llm_client', {}).get('config', {}).get('temperature', 0.7),
                     'max_tokens': self.config.get('llm_client', {}).get('config', {}).get('max_tokens', 512),
@@ -883,7 +883,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
         """
         # Model pricing (per 1K tokens) - realistic pricing as of 2024
         pricing = {
-            'ollama': {'input': 0.0, 'output': 0.0},  # Free local models
+            'local': {'input': 0.0, 'output': 0.0},  # Free local models
             'mistral': {'input': 0.0002, 'output': 0.0006},  # Mistral API pricing
             'openai': {'input': 0.0015, 'output': 0.002}  # OpenAI GPT-3.5-turbo pricing
         }
@@ -1044,12 +1044,12 @@ class Epic1AnswerGenerator(AnswerGenerator):
         try:
             from .routing.routing_strategies import ModelOption
             
-            # Return Ollama model as cheapest option
+            # Return local model as cheapest option
             return ModelOption(
-                provider='ollama',
-                model='llama3.2:3b',
-                estimated_cost=Decimal('0.00'),
-                estimated_quality=0.7,
+                provider='local',
+                model=LOCAL.model,
+                estimated_cost=LOCAL.cost_per_1k_input,
+                estimated_quality=LOCAL.estimated_quality,
                 estimated_latency_ms=2000.0,
                 confidence=0.9,
                 fallback_options=[]
@@ -1058,10 +1058,10 @@ class Epic1AnswerGenerator(AnswerGenerator):
             logger.error(f"Failed to get cheapest model: {str(e)}")
             # Return a basic model structure as fallback
             return type('ModelOption', (), {
-                'provider': 'ollama',
-                'model': 'llama3.2:3b',
-                'estimated_cost': Decimal('0.00'),
-                'estimated_quality': 0.7,
+                'provider': 'local',
+                'model': LOCAL.model,
+                'estimated_cost': LOCAL.cost_per_1k_input,
+                'estimated_quality': LOCAL.estimated_quality,
                 'confidence': 0.9
             })()
     
@@ -1145,7 +1145,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
                 if not isinstance(mapping, dict) or 'provider' not in mapping or 'model' not in mapping:
                     raise ValueError(f"Invalid model mapping for {complexity}: {mapping}. Must include 'provider' and 'model'")
                 
-                valid_providers = ['ollama', 'openai', 'mistral']
+                valid_providers = ['local', 'openai', 'mistral']
                 if mapping['provider'] not in valid_providers:
                     raise ValueError(f"Invalid provider: {mapping['provider']}. Must be one of: {valid_providers}")
         
@@ -1392,19 +1392,17 @@ class Epic1AnswerGenerator(AnswerGenerator):
         Returns:
             List of basic fallback ModelOption objects
         """
-        from decimal import Decimal
-
         from .routing.routing_strategies import ModelOption
-        
+
         fallback_models = []
         
         # If external API failed, fallback to local model
         if failed_model.provider in ['openai', 'mistral']:
             local_fallback = ModelOption(
-                provider='ollama',
-                model='llama3.2:3b',
-                estimated_cost=Decimal('0.00'),
-                estimated_quality=0.7,
+                provider='local',
+                model=LOCAL.model,
+                estimated_cost=LOCAL.cost_per_1k_input,
+                estimated_quality=LOCAL.estimated_quality,
                 estimated_latency_ms=2000.0,
                 confidence=0.8,
                 fallback_options=[]

@@ -77,8 +77,8 @@ class TestEpic1Integration:
                         'strategy': 'balanced',
                         'model_mappings': {
                             'simple': {
-                                'provider': 'ollama',
-                                'model': 'llama3.2:3b',
+                                'provider': 'local',
+                                'model': 'qwen2.5-1.5b-instruct',
                                 'max_cost_per_query': 0.001,
                                 'avg_latency_ms': 500
                             },
@@ -183,7 +183,7 @@ class TestEpic1Integration:
             # Verify complexity assessment
             if expected_level == 'simple':
                 assert epic1_data['complexity_level'] == 'simple'
-                assert 'ollama' in epic1_data['recommended_model']
+                assert 'local' in epic1_data['recommended_model']
             
             # The Epic 1 metadata should be preserved through analysis
             assert analysis.metadata.get('epic1_analysis') is not None

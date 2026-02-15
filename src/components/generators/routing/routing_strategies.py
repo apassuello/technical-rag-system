@@ -24,6 +24,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
+from config.llm_providers import LOCAL
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +35,7 @@ class ModelOption:
     Model selection option with associated metadata.
     
     Attributes:
-        provider: LLM provider (openai, mistral, ollama)
+        provider: LLM provider (openai, mistral, local)
         model: Specific model name
         estimated_cost: Estimated cost for this query
         estimated_quality: Quality score (0.0-1.0)
@@ -124,16 +126,16 @@ class CostOptimizedStrategy(RoutingStrategy):
         # Model preferences (cheapest to most expensive)
         self.model_tiers = {
             'simple': [
-                {'provider': 'ollama', 'model': 'llama3.2:3b', 'cost_per_1k': Decimal('0.0000')},
+                {'provider': 'local', 'model': LOCAL.model, 'cost_per_1k': LOCAL.cost_per_1k_input},
                 {'provider': 'mistral', 'model': 'mistral-tiny', 'cost_per_1k': Decimal('0.00025')},
             ],
             'medium': [
-                {'provider': 'ollama', 'model': 'llama3.2:3b', 'cost_per_1k': Decimal('0.0000')},
+                {'provider': 'local', 'model': LOCAL.model, 'cost_per_1k': LOCAL.cost_per_1k_input},
                 {'provider': 'mistral', 'model': 'mistral-small', 'cost_per_1k': Decimal('0.002')},
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'cost_per_1k': Decimal('0.0015')},
             ],
             'complex': [
-                {'provider': 'ollama', 'model': 'llama3.2:3b', 'cost_per_1k': Decimal('0.0000')},
+                {'provider': 'local', 'model': LOCAL.model, 'cost_per_1k': LOCAL.cost_per_1k_input},
                 {'provider': 'mistral', 'model': 'mistral-medium', 'cost_per_1k': Decimal('0.00540')},
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'cost_per_1k': Decimal('0.0015')},
                 {'provider': 'openai', 'model': 'gpt-4-turbo', 'cost_per_1k': Decimal('0.020')},
@@ -212,7 +214,7 @@ class CostOptimizedStrategy(RoutingStrategy):
         """Estimate quality score for model selection."""
         # Quality estimates based on model capabilities
         quality_map = {
-            'ollama': {'simple': 0.85, 'medium': 0.75, 'complex': 0.65},
+            'local': {'simple': 0.85, 'medium': 0.75, 'complex': 0.65},
             'mistral': {'simple': 0.90, 'medium': 0.85, 'complex': 0.80},
             'openai': {'simple': 0.95, 'medium': 0.90, 'complex': 0.95}
         }
@@ -224,7 +226,7 @@ class CostOptimizedStrategy(RoutingStrategy):
         """Estimate response latency in milliseconds."""
         # Latency estimates based on provider and deployment
         latency_map = {
-            'ollama': 2000,    # Local inference, slower but free
+            'local': 2000,     # Local inference, slower but free
             'mistral': 1500,   # Fast cloud API
             'openai': 1000     # Fastest cloud API
         }
@@ -258,7 +260,7 @@ class QualityFirstStrategy(RoutingStrategy):
             'simple': [
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'quality': 0.90, 'cost_per_1k': Decimal('0.0015')},
                 {'provider': 'mistral', 'model': 'mistral-small', 'quality': 0.85, 'cost_per_1k': Decimal('0.002')},
-                {'provider': 'ollama', 'model': 'llama3.2:3b', 'quality': 0.80, 'cost_per_1k': Decimal('0.0000')},
+                {'provider': 'local', 'model': LOCAL.model, 'quality': 0.80, 'cost_per_1k': LOCAL.cost_per_1k_input},
             ],
             'medium': [
                 {'provider': 'openai', 'model': 'gpt-4-turbo', 'quality': 0.95, 'cost_per_1k': Decimal('0.020')},
@@ -322,8 +324,8 @@ class QualityFirstStrategy(RoutingStrategy):
     def _estimate_latency(self, model_info: Dict[str, Any]) -> float:
         """Estimate response latency."""
         latency_map = {
-            'ollama': 2500,    # Local inference, can be slower for large models
-            'mistral': 1200,   # Fast cloud API  
+            'local': 2500,     # Local inference, can be slower for large models
+            'mistral': 1200,   # Fast cloud API
             'openai': 800      # Fastest cloud API
         }
         
@@ -357,18 +359,18 @@ class BalancedStrategy(RoutingStrategy):
         # Model options with cost/quality scores (prioritize Ollama for development)
         self.model_options = {
             'simple': [
-                {'provider': 'ollama', 'model': 'llama3.2:3b', 'quality': 0.80, 'cost_per_1k': Decimal('0.0000'), 'score': 0.0},
+                {'provider': 'local', 'model': LOCAL.model, 'quality': 0.80, 'cost_per_1k': LOCAL.cost_per_1k_input, 'score': 0.0},
                 {'provider': 'mistral', 'model': 'mistral-tiny', 'quality': 0.82, 'cost_per_1k': Decimal('0.00025'), 'score': 0.0},
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'quality': 0.90, 'cost_per_1k': Decimal('0.0015'), 'score': 0.0},
             ],
             'medium': [
-                {'provider': 'ollama', 'model': 'llama3.2:3b', 'quality': 0.85, 'cost_per_1k': Decimal('0.0000'), 'score': 0.0},  # Boosted quality
+                {'provider': 'local', 'model': LOCAL.model, 'quality': 0.85, 'cost_per_1k': LOCAL.cost_per_1k_input, 'score': 0.0},  # Boosted quality
                 {'provider': 'mistral', 'model': 'mistral-small', 'quality': 0.85, 'cost_per_1k': Decimal('0.002'), 'score': 0.0},
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'quality': 0.87, 'cost_per_1k': Decimal('0.0015'), 'score': 0.0},
                 {'provider': 'mistral', 'model': 'mistral-medium', 'quality': 0.88, 'cost_per_1k': Decimal('0.00540'), 'score': 0.0},
             ],
             'complex': [
-                {'provider': 'ollama', 'model': 'llama3.2:3b', 'quality': 0.82, 'cost_per_1k': Decimal('0.0000'), 'score': 0.0},  # Added as first choice
+                {'provider': 'local', 'model': LOCAL.model, 'quality': 0.82, 'cost_per_1k': LOCAL.cost_per_1k_input, 'score': 0.0},  # Added as first choice
                 {'provider': 'mistral', 'model': 'mistral-large', 'quality': 0.88, 'cost_per_1k': Decimal('0.016'), 'score': 0.0},
                 {'provider': 'openai', 'model': 'gpt-3.5-turbo', 'quality': 0.85, 'cost_per_1k': Decimal('0.0015'), 'score': 0.0},
                 {'provider': 'openai', 'model': 'gpt-4-turbo', 'quality': 0.95, 'cost_per_1k': Decimal('0.020'), 'score': 0.0},
@@ -491,7 +493,7 @@ class BalancedStrategy(RoutingStrategy):
     def _estimate_latency(self, model_info: Dict[str, Any]) -> float:
         """Estimate response latency."""
         latency_map = {
-            'ollama': 2000,
+            'local': 2000,
             'mistral': 1300,
             'openai': 900
         }

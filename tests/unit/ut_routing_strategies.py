@@ -29,8 +29,8 @@ class TestRoutingStrategies:
         self.model_options = {
             "simple": [
                 ModelOption(
-                    provider="ollama",
-                    model="llama3.2:3b",
+                    provider="local",
+                    model="qwen2.5-1.5b-instruct",
                     estimated_cost=Decimal('0.000'),
                     estimated_latency_ms=1.5,
                     estimated_quality=0.75

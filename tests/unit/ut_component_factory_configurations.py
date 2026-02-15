@@ -336,8 +336,8 @@ class TestGeneratorConfigurations:
             "models": {
                 "simple": {
                     "primary": {
-                        "provider": "ollama",
-                        "model": "llama3.2:3b",
+                        "provider": "local",
+                        "model": "qwen2.5-1.5b-instruct",
                         "max_cost_per_query": 0.000
                     }
                 }
@@ -354,7 +354,7 @@ class TestGeneratorConfigurations:
                 mock_generate.return_value = {
                     "answer": "Test answer",
                     "confidence": 0.85,
-                    "model_used": "llama3.2:3b",
+                    "model_used": "qwen2.5-1.5b-instruct",
                     "cost": 0.000,
                     "routing_decision": routing_strategy
                 }

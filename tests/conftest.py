@@ -120,8 +120,8 @@ def pytest_collection_modifyitems(config, items):
     """Auto-skip tests whose required services are unavailable, then sort by tier."""
     service_checks = {
         "requires_ollama": (
-            lambda: _service_available("http://localhost:11434/api/tags"),
-            "Ollama not running on localhost:11434",
+            lambda: _service_available("http://localhost:11434/health"),
+            "llama-server not running on localhost:11434",
         ),
         "requires_weaviate": (
             lambda: _service_available("http://localhost:8180/v1/.well-known/ready"),

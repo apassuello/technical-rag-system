@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 
 from src.core.platform_orchestrator import PlatformOrchestrator
-from src.core.interfaces import Document, Answer
+from src.core.interfaces import Answer
 from tests.validation.golden_corpus import (
     RISCV_OVERVIEW,
     RISCV_EXTENSIONS,
@@ -93,8 +93,12 @@ class TestEndToEndWorkflows:
         with pytest.raises(FileNotFoundError):
             orchestrator.process_document(Path("/tmp/non_existent_doc.pdf"))
 
+        # Need a fresh orchestrator with empty index for this assertion —
+        # the session-scoped fixture may already have indexed documents.
+        config_path = Path(__file__).resolve().parent.parent.parent / "config" / "test-ollama.yaml"
+        fresh = PlatformOrchestrator(config_path)
         with pytest.raises(RuntimeError, match="No documents have been indexed"):
-            orchestrator.process_query("What is quantum computing?")
+            fresh.process_query("What is quantum computing?")
 
     # -- Health monitoring --
 

@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from config.llm_providers import LOCAL
 from .base_metrics_collector import BaseMetricsCollector, InMemoryMetricsStorage
 from .data_models import CalibrationQueryMetrics, SessionMetadata
 
@@ -446,7 +447,7 @@ if __name__ == "__main__":
         0.89,
         1.23,
         [{"source": "risc-v-spec.pdf", "relevance": 0.92}],
-        {"model_name": "llama3.2:3b", "temperature": 0.3}
+        {"model_name": LOCAL.model, "temperature": 0.3}
     )
     
     expected = {

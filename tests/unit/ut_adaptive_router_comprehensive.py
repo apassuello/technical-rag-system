@@ -74,8 +74,8 @@ class TestAdaptiveRouterCoreRouting:
         
         # Verify routing to local model
         assert decision is not None
-        assert decision.selected_model.provider == "ollama"
-        assert decision.selected_model.model == "llama3.2:3b"
+        assert decision.selected_model.provider == "local"
+        assert decision.selected_model.model == "qwen2.5-1.5b-instruct"
         assert decision.complexity_level == "simple"
         assert decision.selected_model.estimated_cost == Decimal('0.0000')
         
@@ -110,7 +110,7 @@ class TestAdaptiveRouterCoreRouting:
         available_models = self.router.model_registry.get_models_for_complexity("complex")
         
         # If external APIs are unavailable, Ollama might be selected (correct fallback behavior)
-        if decision.selected_model.provider == "ollama":
+        if decision.selected_model.provider == "local":
             # Fallback behavior is working correctly
             assert decision.selected_model.estimated_quality >= 0.7  # Reasonable quality threshold
         else:
@@ -164,7 +164,7 @@ class TestAdaptiveRouterCoreRouting:
         assert model.estimated_cost <= max_cost  # Not more expensive than available
         
         # Due to API availability issues, quality expectation should be flexible
-        if model.provider == "ollama":
+        if model.provider == "local":
             # Fallback to local model is acceptable for balanced strategy
             assert model.estimated_quality >= 0.7  # Still reasonable quality
         else:
@@ -425,10 +425,10 @@ class TestAdaptiveRouterProviders:
         
         # Verify Ollama selection
         assert decision is not None
-        assert decision.selected_model.provider == "ollama"
-        assert decision.selected_model.model == "llama3.2:3b"
+        assert decision.selected_model.provider == "local"
+        assert decision.selected_model.model == "qwen2.5-1.5b-instruct"
         assert decision.selected_model.estimated_cost == Decimal('0.0000')
-        
+
         # Verify local provider characteristics
         assert decision.selected_model.estimated_latency_ms <= 200  # Local should be fast
     
@@ -780,7 +780,7 @@ class TestAdaptiveRouterFallbackLogic:
         fallback_chain = [
             ("openai", "gpt-4-turbo"),     # Primary
             ("mistral", "mistral-small"),   # Fallback 1 
-            ("ollama", "llama3.2:3b")       # Fallback 2 (guaranteed local)
+            ("local", "qwen2.5-1.5b-instruct")       # Fallback 2 (guaranteed local)
         ]
         self.router.configure_fallback_chain(fallback_chain)
         
@@ -813,7 +813,7 @@ class TestAdaptiveRouterFallbackLogic:
             assert decision.original_query == "Test fallback activation"
             
             # Should select from fallback chain
-            fallback_providers = ["mistral", "ollama"]
+            fallback_providers = ["mistral", "local"]
             assert decision.selected_model.provider in fallback_providers
     
     def test_cascade_fallback_logic(self):
@@ -822,7 +822,7 @@ class TestAdaptiveRouterFallbackLogic:
         fallback_chain = [
             ("openai", "gpt-4-turbo"),     # Primary - will fail
             ("mistral", "mistral-small"),   # Fallback 1 - will fail
-            ("ollama", "llama3.2:3b")       # Fallback 2 - will succeed
+            ("local", "qwen2.5-1.5b-instruct")       # Fallback 2 - will succeed
         ]
         self.router.configure_fallback_chain(fallback_chain)
         
@@ -840,7 +840,7 @@ class TestAdaptiveRouterFallbackLogic:
                     raise Exception("OpenAI service unavailable")
                 elif model_option.provider == "mistral":
                     raise Exception("Mistral rate limited")
-                elif model_option.provider == "ollama":
+                elif model_option.provider == "local":
                     return MagicMock(content="Local model success", metadata={})
                 else:
                     raise Exception("Unexpected model provider")
@@ -857,9 +857,9 @@ class TestAdaptiveRouterFallbackLogic:
             # Verify final fallback success
             assert decision is not None
             assert decision.fallback_used is True  
-            assert decision.selected_model.provider == "ollama"
-            assert decision.selected_model.model == "llama3.2:3b"
-            
+            assert decision.selected_model.provider == "local"
+            assert decision.selected_model.model == "qwen2.5-1.5b-instruct"
+
             # Verify reasonable fallback time
             fallback_time = (end_time - start_time) * 1000
             assert fallback_time < 5000, f"Cascade fallback took {fallback_time:.1f}ms > 5000ms"
@@ -869,7 +869,7 @@ class TestAdaptiveRouterFallbackLogic:
         # Configure expensive primary with cheap fallback
         fallback_chain = [
             ("openai", "gpt-4-turbo"),     # Expensive primary
-            ("ollama", "llama3.2:3b")       # Free fallback
+            ("local", "qwen2.5-1.5b-instruct")       # Free fallback
         ]
         self.router.configure_fallback_chain(fallback_chain)
         
@@ -884,7 +884,7 @@ class TestAdaptiveRouterFallbackLogic:
             def cost_fallback_handler(model_option, query, context=None):
                 if model_option.provider == "openai":
                     raise Exception("Primary expensive model failed")
-                elif model_option.provider == "ollama":
+                elif model_option.provider == "local":
                     return MagicMock(content="Cheap local fallback", metadata={})
             
             mock_request.side_effect = cost_fallback_handler
@@ -897,7 +897,7 @@ class TestAdaptiveRouterFallbackLogic:
             # Verify fallback resulted in cost savings
             assert decision is not None
             assert decision.fallback_used is True
-            assert decision.selected_model.provider == "ollama"
+            assert decision.selected_model.provider == "local"
             assert decision.selected_model.estimated_cost == Decimal('0.0000')
             
             # Verify strategy was overridden by fallback necessity
@@ -910,7 +910,7 @@ class TestAdaptiveRouterFallbackLogic:
         fallback_chain = [
             ("openai", "gpt-4-turbo"),
             ("mistral", "mistral-small"),
-            ("ollama", "llama3.2:3b")
+            ("local", "qwen2.5-1.5b-instruct")
         ]
         self.router.configure_fallback_chain(fallback_chain)
         
@@ -942,7 +942,7 @@ class TestAdaptiveRouterFallbackLogic:
             ("openai", "gpt-4-turbo"),     # Primary
             ("openai", "gpt-3.5-turbo"),   # Same provider fallback
             ("mistral", "mistral-small"),   # Different provider
-            ("ollama", "llama3.2:3b")       # Local guarantee
+            ("local", "qwen2.5-1.5b-instruct")       # Local guarantee
         ]
         self.router.configure_fallback_chain(fallback_chain)
         
@@ -973,7 +973,7 @@ class TestAdaptiveRouterFallbackLogic:
                         else:
                             return MagicMock(content="Cross-provider fallback", metadata={})
                     elif scenario == "multiple_failures":
-                        if model_option.provider != "ollama":
+                        if model_option.provider != "local":
                             raise Exception("External providers down")
                         else:
                             return MagicMock(content="Local fallback", metadata={})
@@ -1182,7 +1182,7 @@ class TestAdaptiveRouterPerformanceReliability:
         fallback_chain = [
             ("openai", "gpt-4-turbo"),
             ("mistral", "mistral-small"),
-            ("ollama", "llama3.2:3b")
+            ("local", "qwen2.5-1.5b-instruct")
         ]
         self.router.configure_fallback_chain(fallback_chain)
         
@@ -1435,7 +1435,7 @@ class TestAdaptiveRouterConfigurationEdgeCases:
             if scenario["expected_behavior"] == "select_zero_cost":
                 # Should select free local models when they meet quality threshold
                 if decision.selected_model.estimated_cost == Decimal('0.0000'):
-                    assert decision.selected_model.provider == "ollama"
+                    assert decision.selected_model.provider == "local"
                 else:
                     # If not free, should be cheapest among quality-qualifying models
                     available_models = router.model_registry.get_models_for_complexity(scenario["complexity"])
@@ -1479,7 +1479,7 @@ class TestAdaptiveRouterConfigurationEdgeCases:
             
             # Verify model discovery includes expected providers
             providers = {model.provider for model in available_models}
-            assert "ollama" in providers, f"Ollama not discovered for {complexity}"
+            assert "local" in providers, f"Local provider not discovered for {complexity}"
             
             # Route query to verify discovery integration
             decision = router.route_query(

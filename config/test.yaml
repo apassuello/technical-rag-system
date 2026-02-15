@@ -101,8 +101,9 @@ answer_generator:
     models:
       simple:
         primary:
-          provider: "ollama"
-          model: "llama3.2:3b"
+          provider: "local"
+          model: "qwen2.5-1.5b-instruct"
+          base_url: "http://localhost:11434/v1"
           max_cost_per_query: 0.000
           expected_quality: 0.80
           expected_latency_ms: 2000
@@ -113,11 +114,12 @@ answer_generator:
           - provider: "openai"
             model: "gpt-3.5-turbo"
             max_cost_per_query: 0.005
-            
+
       medium:
         primary:
-          provider: "ollama"  # Use local model for medium queries too
-          model: "llama3.2:3b"
+          provider: "local"
+          model: "qwen2.5-1.5b-instruct"
+          base_url: "http://localhost:11434/v1"
           max_cost_per_query: 0.000
           expected_quality: 0.85
           expected_latency_ms: 2500
@@ -128,11 +130,12 @@ answer_generator:
           - provider: "openai"
             model: "gpt-3.5-turbo"
             max_cost_per_query: 0.010
-            
+
       complex:
         primary:
-          provider: "ollama"  # Start with local for all queries
-          model: "llama3.2:3b"
+          provider: "local"
+          model: "qwen2.5-1.5b-instruct"
+          base_url: "http://localhost:11434/v1"
           max_cost_per_query: 0.000
           expected_quality: 0.85
           expected_latency_ms: 3000
@@ -143,13 +146,13 @@ answer_generator:
           - provider: "mistral"
             model: "mistral-large"
             max_cost_per_query: 0.025
-    
+
     # Fallback configuration
     fallback:
       enabled: true
       max_retries: 3
       retry_delay_ms: 1000
-      fallback_chain: ["ollama/llama3.2:3b"]
+      fallback_chain: ["local/qwen2.5-1.5b-instruct"]
       fallback_on_cost_exceeded: true
       fallback_on_latency_exceeded: true
       max_latency_ms: 10000
@@ -213,16 +216,19 @@ query_processor:
           strategy: "balanced"
           model_mappings:
             simple:
-              provider: "ollama"
-              model: "llama3.2:3b"
+              provider: "local"
+              model: "qwen2.5-1.5b-instruct"
+              base_url: "http://localhost:11434/v1"
               max_cost: 0.001
             medium:
-              provider: "ollama"
-              model: "llama3.2:3b"
+              provider: "local"
+              model: "qwen2.5-1.5b-instruct"
+              base_url: "http://localhost:11434/v1"
               max_cost: 0.001
             complex:
-              provider: "ollama"
-              model: "llama3.2:3b"
+              provider: "local"
+              model: "qwen2.5-1.5b-instruct"
+              base_url: "http://localhost:11434/v1"
               max_cost: 0.001
     
     selector:

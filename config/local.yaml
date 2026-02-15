@@ -1,6 +1,6 @@
 # Local development configuration.
-# Uses FAISS (in-memory), identity reranker, and Ollama for generation.
-# No Docker required — everything runs in-process except Ollama (native).
+# Uses FAISS (in-memory), identity reranker, and llama-server for generation.
+# No Docker required — everything runs in-process except llama-server (native).
 document_processor:
   type: "hybrid_pdf"
   config:
@@ -55,10 +55,11 @@ answer_generator:
   type: "adaptive_modular"
   config:
     llm_client:
-      type: "ollama"
+      type: "local"
       config:
-        model_name: "llama3.2:3b"
-        base_url: "http://localhost:11434"
+        model_name: "qwen2.5-1.5b-instruct"
+        base_url: "http://localhost:11434/v1"
+        api_key: "local"
 
 query_processor:
   type: "modular"

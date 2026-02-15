@@ -23,6 +23,8 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
+from config.llm_providers import LOCAL
+
 # Import cost tracking
 from ..llm_adapters.cost_tracker import get_cost_tracker
 from .model_registry import ModelRegistry
@@ -1133,17 +1135,10 @@ class AdaptiveRouter:
         
         # Step 4: ALWAYS ensure we have a local model as final fallback
         # This is critical for 99% recovery rate requirement
-        ollama_models = [
-            'llama3.2:3b',  # Primary local fallback
-            'llama3.2:1b',  # Backup if 3b not available
-        ]
-        
-        for ollama_model in ollama_models:
-            if primary_model.provider != 'ollama' or primary_model.model != ollama_model:
-                ollama_fallback = self._create_fallback_model_option('ollama', ollama_model)
-                if ollama_fallback and ollama_fallback not in fallback_models:
-                    fallback_models.append(ollama_fallback)
-                    break  # Only add one Ollama model to avoid duplicates
+        if primary_model.provider != 'local' or primary_model.model != LOCAL.model:
+            local_fallback = self._create_fallback_model_option('local', LOCAL.model)
+            if local_fallback and local_fallback not in fallback_models:
+                fallback_models.append(local_fallback)
         
         # Step 5: If still no fallbacks, create emergency local fallback
         if not fallback_models:
@@ -1159,8 +1154,8 @@ class AdaptiveRouter:
         Create a ModelOption for a fallback model.
         
         Args:
-            provider: Provider name (e.g., 'ollama', 'mistral')
-            model_name: Model name (e.g., 'llama3.2:3b', 'mistral-small')
+            provider: Provider name (e.g., 'local', 'mistral')
+            model_name: Model name (e.g., 'qwen2.5-1.5b-instruct', 'mistral-small')
             
         Returns:
             ModelOption or None if creation fails
@@ -1198,15 +1193,13 @@ class AdaptiveRouter:
             ModelOption for emergency local fallback, or None if creation fails
         """
         try:
-            from decimal import Decimal
-
             from .routing_strategies import ModelOption
-            
-            # Create minimal Ollama fallback with conservative settings
+
+            # Create minimal local fallback with conservative settings
             emergency_fallback = ModelOption(
-                provider='ollama',
-                model='llama3.2:3b',  # Most common local model
-                estimated_cost=Decimal('0.00'),  # Free local model
+                provider='local',
+                model=LOCAL.model,
+                estimated_cost=LOCAL.cost_per_1k_input,
                 estimated_quality=0.6,  # Conservative quality estimate
                 estimated_latency_ms=3000.0,  # Conservative latency estimate
                 confidence=0.7,  # Moderate confidence

@@ -58,7 +58,7 @@ done
 # Service management (only for integration / validation)
 # ---------------------------------------------------------------------------
 WEAVIATE_STARTED=false
-OLLAMA_STARTED=false
+LLAMA_PID=""
 
 start_weaviate() {
     echo "Starting Weaviate via Docker..."
@@ -74,37 +74,62 @@ start_weaviate() {
     done
 }
 
-start_ollama() {
-    echo "Starting Ollama via Docker..."
-    docker compose up -d ollama
-    OLLAMA_STARTED=true
+start_llama_server() {
+    echo "Starting llama-server (native)..."
+
+    # Check llama-server is on PATH
+    if ! which llama-server > /dev/null 2>&1; then
+        echo "ERROR: llama-server not found on PATH. Install llama.cpp first."
+        exit 1
+    fi
+
+    # Resolve model path from env or default
+    LLAMA_MODEL="${LLAMA_MODEL:-$HOME/.cache/llama-models/qwen2.5-1.5b-instruct-q4_k_m.gguf}"
+    if [ ! -f "$LLAMA_MODEL" ]; then
+        echo "ERROR: GGUF model not found at $LLAMA_MODEL"
+        echo "  Set LLAMA_MODEL env var to the correct path."
+        exit 1
+    fi
+
+    # Log file — timestamped, kept in /tmp so it survives the run
+    LLAMA_LOG="/tmp/llama-server-$(date +%Y%m%d-%H%M%S).log"
+
+    # Start llama-server in background, redirect all output to log file
+    llama-server \
+        --model "$LLAMA_MODEL" \
+        --port 11434 \
+        --n-gpu-layers -1 \
+        --ctx-size 4096 \
+        > "$LLAMA_LOG" 2>&1 &
+    LLAMA_PID=$!
+
+    # Poll /health until ready (up to 60s, 2s intervals)
     for i in $(seq 1 30); do
-        if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
-            echo "  Ollama ready"
+        if curl -sf http://localhost:11434/health > /dev/null 2>&1; then
+            echo "  llama-server ready (model: $(basename "$LLAMA_MODEL"))"
+            echo "  log: $LLAMA_LOG"
             return
         fi
-        [ "$i" -eq 30 ] && echo "  WARNING: Ollama not ready after 30s"
-        sleep 1
+        if ! kill -0 "$LLAMA_PID" 2>/dev/null; then
+            echo "ERROR: llama-server exited early. Check log: $LLAMA_LOG"
+            tail -20 "$LLAMA_LOG"
+            exit 1
+        fi
+        [ "$i" -eq 30 ] && echo "  WARNING: llama-server not ready after 60s (log: $LLAMA_LOG)"
+        sleep 2
     done
 }
 
-pull_ollama_models() {
-    echo "Ensuring Ollama models are available..."
-    local models
-    models=$(curl -sf http://localhost:11434/api/tags | grep -o '"name":"[^"]*"' | cut -d'"' -f4 || echo "")
-
-    if ! echo "$models" | grep -q "tinyllama"; then
-        echo "  Pulling tinyllama..."
-        docker compose exec ollama ollama pull tinyllama
-    else
-        echo "  tinyllama already available"
-    fi
-}
-
 cleanup() {
-    if [ "$WEAVIATE_STARTED" = true ] || [ "$OLLAMA_STARTED" = true ]; then
-        echo "Stopping services..."
-        docker compose down
+    if [ -n "$LLAMA_PID" ]; then
+        echo "Stopping llama-server (PID $LLAMA_PID)..."
+        kill $LLAMA_PID 2>/dev/null
+        wait $LLAMA_PID 2>/dev/null
+        echo "  log preserved: ${LLAMA_LOG:-/tmp/llama-server-*.log}"
+    fi
+    if [ "$WEAVIATE_STARTED" = true ]; then
+        echo "Stopping Weaviate..."
+        docker compose down weaviate
     fi
 }
 trap cleanup EXIT
@@ -124,12 +149,11 @@ fi
 
 # Start services only when integration or validation is selected
 if [ "$RUN_INTEGRATION" = true ] || [ "$RUN_VALIDATION" = true ]; then
-    if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
-        echo "Ollama already running"
+    if curl -sf http://localhost:11434/health > /dev/null 2>&1; then
+        echo "llama-server already running"
     else
-        start_ollama
+        start_llama_server
     fi
-    pull_ollama_models
 
     if curl -sf http://localhost:8180/v1/.well-known/ready > /dev/null 2>&1; then
         echo "Weaviate already running"

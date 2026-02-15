@@ -14,11 +14,12 @@ Architecture Notes:
 """
 
 import logging
-import os
 import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from config.llm_providers import LOCAL
 
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent
@@ -118,10 +119,10 @@ class AnswerGenerator(AnswerGeneratorInterface, ConfigurableComponent):
                 }
             },
             'llm_client': {
-                'type': 'ollama',
+                'type': LOCAL.adapter_type,
                 'config': {
-                    'model_name': 'llama3.2:3b',
-                    'base_url': os.getenv('OLLAMA_URL', 'http://localhost:11434'),
+                    'model_name': LOCAL.model,
+                    'base_url': LOCAL.base_url,
                     'timeout': 120
                 }
             },

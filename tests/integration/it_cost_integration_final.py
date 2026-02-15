@@ -86,7 +86,7 @@ def test_epic1_cost_metadata_integration():
                 "complexity_level": "medium",
                 "complexity_score": 0.55,
                 "confidence": 0.85,
-                "recommended_model": {"provider": "ollama", "model": "llama3.2:3b"},  # Force Ollama routing
+                "recommended_model": {"provider": "local", "model": "qwen2.5-1.5b-instruct"},  # Force local routing
                 "features": {"technical_terms": 3, "clause_count": 2}
             }
             
@@ -100,8 +100,8 @@ def test_epic1_cost_metadata_integration():
                     sources=test_context,
                     confidence=0.85,
                     metadata={
-                        "provider": "ollama",
-                        "model": "llama3.2:3b",
+                        "provider": "local",
+                        "model": "qwen2.5-1.5b-instruct",
                         "generation_time": 1.2,
                         # Include the exact token counts expected by test
                         "usage": {
@@ -137,8 +137,8 @@ def test_epic1_cost_metadata_integration():
                 assert 'routing' in answer.metadata, "Missing routing metadata"
                 routing_info = answer.metadata['routing']
                 assert routing_info['complexity_level'] == 'medium'
-                assert routing_info['selected_model']['provider'] == 'ollama'
-                assert routing_info['selected_model']['model'] == 'llama3.2:3b'
+                assert routing_info['selected_model']['provider'] == 'local'
+                assert routing_info['selected_model']['model'] == 'qwen2.5-1.5b-instruct'
                 
                 print("✅ Routing metadata validation passed")
                 
@@ -243,8 +243,8 @@ def test_budget_enforcement_integration():
                         sources=test_context,
                         confidence=0.75,
                         metadata={
-                            "provider": "ollama",  # Should degrade to free option
-                            "model": "llama3.2:3b",
+                            "provider": "local",  # Should degrade to free option
+                            "model": "qwen2.5-1.5b-instruct",
                             "cost_usd": 0.00,
                             "generation_time": 0.8
                         }

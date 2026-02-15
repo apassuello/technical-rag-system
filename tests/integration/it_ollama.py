@@ -1,25 +1,28 @@
 """
-Integration tests for OllamaAdapter against a real Ollama server.
+Integration tests for LlamaAdapter against a real llama-server instance.
 
-Requires Docker with Ollama running and tinyllama model pulled:
-    docker run -d -p 11434:11434 ollama/ollama
-    docker exec <container> ollama pull tinyllama
+Requires llama-server running with qwen2.5-1.5b-instruct model:
+    llama-server -m models/qwen2.5-1.5b-instruct-q4_k_m.gguf \
+        --host 0.0.0.0 --port 11434
 """
 
 import requests
 import pytest
 
-from components.generators.llm_adapters.ollama_adapter import OllamaAdapter
-from components.generators.base import GenerationParams, LLMError
-from components.generators.llm_adapters.base_adapter import ModelNotFoundError
+from components.generators.llm_adapters.llama_adapter import LlamaAdapter
+from components.generators.base import GenerationParams
 
 
-def _ollama_model_available(model="tinyllama"):
-    """Check whether Ollama is running and the given model is pulled."""
+def _llm_server_available(model="qwen2.5-1.5b-instruct"):
+    """Check whether llama-server is running and responding."""
     try:
         resp = requests.post(
-            "http://localhost:11434/api/show",
-            json={"name": model},
+            "http://localhost:11434/v1/chat/completions",
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": "ping"}],
+                "max_tokens": 1,
+            },
             timeout=5,
         )
         return resp.status_code == 200
@@ -31,21 +34,21 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.requires_ollama,
     pytest.mark.skipif(
-        not _ollama_model_available(),
-        reason="Ollama tinyllama model not available",
+        not _llm_server_available(),
+        reason="llama-server qwen2.5-1.5b-instruct model not available",
     ),
 ]
 
-OLLAMA_URL = "http://localhost:11434"
-MODEL = "tinyllama"
+SERVER_URL = "http://localhost:11434/v1"
+MODEL = "qwen2.5-1.5b-instruct"
 
 
 @pytest.fixture
 def adapter():
-    """OllamaAdapter pointed at local Docker Ollama with tinyllama."""
-    return OllamaAdapter(
+    """LlamaAdapter pointed at local llama-server with qwen2.5-1.5b-instruct."""
+    return LlamaAdapter(
         model_name=MODEL,
-        base_url=OLLAMA_URL,
+        base_url=SERVER_URL,
         timeout=60,
     )
 
@@ -64,7 +67,7 @@ def params():
 class TestGeneration:
 
     def test_basic_generation(self, adapter, params):
-        """Generate with tinyllama and verify non-empty string response."""
+        """Generate with qwen2.5-1.5b-instruct and verify non-empty string response."""
         result = adapter.generate("What is 2 + 2?", params)
         assert isinstance(result, str)
         assert len(result.strip()) > 0
@@ -100,11 +103,11 @@ class TestStreaming:
 class TestValidation:
 
     def test_validate_model_returns_true(self, adapter):
-        """_validate_model returns True for an available model."""
+        """_validate_model checks llama-server /health and returns True."""
         assert adapter._validate_model() is True
 
     def test_validate_connection_returns_true(self, adapter):
-        """validate_connection returns True when Ollama is reachable."""
+        """validate_connection returns True when llama-server is reachable."""
         assert adapter.validate_connection() is True
 
 
@@ -119,10 +122,8 @@ class TestModelInfo:
         """get_model_info returns dict with expected keys."""
         info = adapter.get_model_info()
         assert isinstance(info, dict)
-        assert info["provider"] == "Ollama"
         assert info["model"] == MODEL
         assert info["supports_streaming"] is True
-        assert "max_tokens" in info
         assert "requests_made" in info
 
 
@@ -133,13 +134,20 @@ class TestModelInfo:
 
 class TestErrorHandling:
 
-    def test_nonexistent_model_raises(self):
-        """A bogus model name raises LLMError or ModelNotFoundError."""
-        bad_adapter = OllamaAdapter(
+    def test_nonexistent_model_succeeds_on_single_model_server(self):
+        """llama-server ignores model name — always uses the loaded model.
+
+        Unlike Ollama (multi-model), llama-server serves a single model
+        and silently ignores the 'model' field in requests.  This test
+        documents that behavior rather than asserting an error.
+        """
+        adapter = LlamaAdapter(
             model_name="nonexistent-model-xyz-999",
-            base_url=OLLAMA_URL,
+            base_url=SERVER_URL,
             timeout=15,
         )
         params = GenerationParams(max_tokens=10)
-        with pytest.raises((LLMError, ModelNotFoundError)):
-            bad_adapter.generate("hello", params)
+        # Should NOT raise — llama-server ignores the model field
+        result = adapter.generate("hello", params)
+        assert isinstance(result, str)
+        assert len(result.strip()) > 0

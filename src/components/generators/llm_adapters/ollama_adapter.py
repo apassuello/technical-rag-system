@@ -18,6 +18,7 @@ from urllib.parse import urljoin
 
 import requests
 
+from config.llm_providers import LOCAL
 from ..base import GenerationParams
 from .base_adapter import BaseLLMAdapter, LLMError, ModelNotFoundError
 
@@ -42,7 +43,7 @@ class OllamaAdapter(BaseLLMAdapter):
     """
     
     def __init__(self,
-                 model_name: str = "llama3.2:3b",
+                 model_name: str = LOCAL.model,
                  base_url: str = None,
                  timeout: int = 120,
                  auto_pull: bool = False,
