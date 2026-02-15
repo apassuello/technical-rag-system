@@ -33,6 +33,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from config.llm_providers import LOCAL
+
 # Add project paths for imports
 project_root = Path(__file__).parent.parent.parent.parent.parent.parent
 sys.path.append(str(project_root))
@@ -403,7 +405,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 'view_count': len(ml_result.view_results),
                 'successful_views': len([v for v in ml_result.view_results.values() if v.confidence > 0]),
                 'method_breakdown': ml_result.method_breakdown,
-                'model_recommendation': ml_result.metadata.get('model_recommendation', 'ollama:llama3.2:3b'),
+                'model_recommendation': ml_result.metadata.get('model_recommendation', f'local:{LOCAL.model}'),
                 'view_breakdown': {name: v.score for name, v in ml_result.view_results.items()},
                 'original_ml_metadata': ml_result.metadata
             }
@@ -1124,9 +1126,9 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
     def _get_model_recommendation(self, complexity_score: float) -> str:
         """Get model recommendation based on complexity score."""
         if complexity_score < 0.35:
-            return "ollama:llama3.2:3b"
+            return f"local:{LOCAL.model}"
         elif complexity_score < 0.70:
-            return "ollama:llama3.2:8b"
+            return f"local:{LOCAL.model}"
         else:
             return "mistral:mistral-medium"
     
@@ -1147,7 +1149,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 'analyzer': 'Epic1MLAnalyzer',
                 'error': error,
                 'fallback': True,
-                'model_recommendation': "ollama:llama3.2:3b"
+                'model_recommendation': f"local:{LOCAL.model}"
             }
         )
 

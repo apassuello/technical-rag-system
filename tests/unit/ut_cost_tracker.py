@@ -239,7 +239,7 @@ class TestCostTracker:
         
         for i in range(cheap_model_usage):
             self.cost_tracker.record_usage(
-                provider="ollama", model="llama3.2:3b",
+                provider="local", model="qwen2.5-1.5b-instruct",
                 input_tokens=100, output_tokens=50,
                 cost_usd=cheap_cost,
                 query_complexity="simple"  # Correct model
@@ -379,7 +379,7 @@ class TestCostTracker:
     def test_zero_cost_handling(self):
         """Test handling of zero-cost operations (e.g., local models)."""
         self.cost_tracker.record_usage(
-            provider="ollama", model="llama3.2:3b",
+            provider="local", model="qwen2.5-1.5b-instruct",
             input_tokens=100, output_tokens=50,
             cost_usd=Decimal('0.000000'),  # Zero cost
             query_complexity="simple"

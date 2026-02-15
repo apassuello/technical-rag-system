@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from config.llm_providers import LOCAL
+
 logger = logging.getLogger(__name__)
 
 
@@ -77,8 +79,8 @@ class ModelRecommender:
     # Default model mappings by complexity level
     DEFAULT_MODEL_MAPPINGS = {
         'simple': ModelConfig(
-            provider='ollama',
-            model='llama3.2:3b',
+            provider='local',
+            model=LOCAL.model,
             max_cost_per_query=0.001,
             avg_latency_ms=500,
             quality_score=0.6
@@ -102,7 +104,7 @@ class ModelRecommender:
     # Strategy-specific model overrides
     STRATEGY_OVERRIDES = {
         RoutingStrategy.COST_OPTIMIZED: {
-            'simple': 'ollama:llama3.2:3b',
+            'simple': f'local:{LOCAL.model}',
             'medium': 'mistral:mistral-tiny',
             'complex': 'openai:gpt-3.5-turbo'
         },
@@ -112,8 +114,8 @@ class ModelRecommender:
             'complex': 'openai:gpt-4-turbo'
         },
         RoutingStrategy.LATENCY_OPTIMIZED: {
-            'simple': 'ollama:llama3.2:3b',
-            'medium': 'ollama:llama3.2:7b',
+            'simple': f'local:{LOCAL.model}',
+            'medium': f'local:{LOCAL.model}',
             'complex': 'openai:gpt-3.5-turbo'
         }
     }
@@ -121,7 +123,7 @@ class ModelRecommender:
     # Default fallback chains
     DEFAULT_FALLBACK_CHAINS = {
         'simple': [
-            'ollama:llama3.2:3b',
+            f'local:{LOCAL.model}',
             'mistral:mistral-tiny',
             'openai:gpt-3.5-turbo'
         ],
@@ -139,7 +141,7 @@ class ModelRecommender:
     
     # Cost multipliers for token estimation (per 1K tokens)
     COST_PER_1K_TOKENS = {
-        'ollama': 0.0,  # Local, no cost
+        'local': 0.0,  # Local, no cost
         'mistral': {
             'mistral-tiny': 0.00025,
             'mistral-small': 0.001,
@@ -503,7 +505,7 @@ class ModelRecommender:
         """Get estimated latency for a model."""
         # Rough estimates based on provider and model size
         latency_map = {
-            'ollama': 500,  # Local, fast
+            'local': 500,  # Local, fast
             'mistral': 1000,  # API, moderate
             'openai': 1500,  # API, varies
             'anthropic': 2000  # API, generally slower
@@ -527,7 +529,7 @@ class ModelRecommender:
         """Get quality score for a model."""
         # Rough quality estimates
         quality_map = {
-            'llama3.2:3b': 0.6,
+            LOCAL.model: 0.6,
             'mistral-tiny': 0.65,
             'mistral-small': 0.75,
             'gpt-3.5-turbo': 0.85,
@@ -593,7 +595,7 @@ class ModelRecommender:
             strategy: Routing strategy ('balanced', 'cost_optimized', etc.)
             
         Returns:
-            Model identifier string (e.g., 'ollama:llama3.2:3b')
+            Model identifier string (e.g., 'local:qwen2.5-1.5b-instruct')
         """
         # Create classification dictionary for internal recommend method
         classification = {

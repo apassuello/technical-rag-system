@@ -294,7 +294,7 @@ class TestGeneratorCreation:
         
         generator = ComponentFactory.create_generator(
             "adaptive_modular",  # New modular implementation
-            model_name="llama3.2",
+            model_name="qwen2.5-1.5b-instruct",
             temperature=0.5,
             max_tokens=512
         )
@@ -311,7 +311,7 @@ class TestGeneratorCreation:
         assert 'confidence_scorer' in info
         
         # Verify it's the modular implementation
-        assert info['llm_client']['class'] == 'OllamaAdapter'
+        assert info['llm_client']['class'] == 'LlamaAdapter'
         assert info['prompt_builder']['class'] == 'SimplePromptBuilder'
     
     def test_create_generator_invalid_type(self):

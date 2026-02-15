@@ -93,12 +93,13 @@ answer_generator:
     #     mock_delay: 0.1
     #     demo_mode: true
     
-    # Alternative 1: Local Ollama LLM (comment out others, uncomment this)
+    # Alternative 1: Local llama-server LLM (comment out others, uncomment this)
     # llm_client:
-    #   type: "ollama"
+    #   type: "local"
     #   config:
-    #     model_name: "llama3.2:3b"
-    #     base_url: "http://localhost:11434"
+    #     model_name: "qwen2.5-1.5b-instruct"
+    #     base_url: "http://localhost:11434/v1"
+    #     api_key: "local"
     #     timeout: 30
     #     max_retries: 3
     

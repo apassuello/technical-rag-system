@@ -60,7 +60,7 @@ class TestAdaptiveRouter:
             {
                 "query": "What is AI?",
                 "expected_complexity": "simple",
-                "optimal_model": ("ollama", "llama3.2:3b"),
+                "optimal_model": ("local", "qwen2.5-1.5b-instruct"),
                 "strategy": "cost_optimized"
             },
             {
@@ -80,7 +80,7 @@ class TestAdaptiveRouter:
         # Mock model registry
         self.mock_model_registry = {
             "simple": [
-                ModelOption("ollama", "llama3.2:3b", Decimal('0.000'), 1.5, 0.75),
+                ModelOption("local", "qwen2.5-1.5b-instruct", Decimal('0.000'), 1.5, 0.75),
                 ModelOption("openai", "gpt-3.5-turbo", Decimal('0.002'), 0.8, 0.90)
             ],
             "medium": [
@@ -325,7 +325,7 @@ class TestAdaptiveRouter:
         fallback_chain = [
             ("openai", "gpt-4-turbo"),    # Primary
             ("mistral", "mistral-small"),  # Fallback 1
-            ("ollama", "llama3.2:3b")     # Fallback 2 (local)
+            ("local", "qwen2.5-1.5b-instruct")     # Fallback 2 (local)
         ]
         
         self.router.configure_fallback_chain(fallback_chain)
@@ -449,7 +449,7 @@ class TestAdaptiveRouter:
         original_context = "Important context that must be preserved"
         
         # Configure fallback
-        fallback_chain = [("openai", "gpt-4"), ("ollama", "llama3.2:3b")]
+        fallback_chain = [("openai", "gpt-4"), ("local", "qwen2.5-1.5b-instruct")]
         self.router.configure_fallback_chain(fallback_chain)
         
         # Enable fallback testing for this test
@@ -486,7 +486,7 @@ class TestAdaptiveRouter:
             # Verify state preservation in decision
             assert decision.original_query == original_query
             assert decision.fallback_used is True
-            assert decision.selected_model.provider == "ollama"
+            assert decision.selected_model.provider == "local"
     
     # Integration and Edge Case Tests
     def test_routing_decision_metadata(self):

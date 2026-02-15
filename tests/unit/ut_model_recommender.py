@@ -28,8 +28,8 @@ class TestModelRecommender:
             'strategy': 'balanced',
             'model_mappings': {
                 'simple': {
-                    'provider': 'ollama',
-                    'model': 'llama3.2:3b',
+                    'provider': 'local',
+                    'model': 'qwen2.5-1.5b-instruct',
                     'max_cost_per_query': 0.001,
                     'avg_latency_ms': 500
                 },
@@ -63,7 +63,7 @@ class TestModelRecommender:
         medium_result = self.recommender.recommend('medium', 0.5, 0.8)
         complex_result = self.recommender.recommend('complex', 0.8, 0.9)
         
-        assert simple_result['model'] == 'ollama:llama3.2:3b'
+        assert simple_result['model'] == 'local:qwen2.5-1.5b-instruct'
         assert medium_result['model'] == 'mistral:mistral-small'
         assert complex_result['model'] == 'openai:gpt-4-turbo'
     

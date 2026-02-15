@@ -1,5 +1,5 @@
-# Epic 1 Test Configuration - Ollama Only (Local Models)
-# Uses only local Ollama models - no external API dependencies
+# Epic 1 Test Configuration - Local Only (llama-server via OpenAI adapter)
+# Uses only local models via llama-server - no external API dependencies
 
 # Document processor for handling input files
 document_processor:
@@ -65,7 +65,7 @@ retriever:
       config:
         enabled: false
 
-# Epic 1 Multi-Model Answer Generator - Ollama Only
+# Epic 1 Multi-Model Answer Generator - Local Only
 answer_generator:
   type: "epic1"
   config:
@@ -93,56 +93,62 @@ answer_generator:
           quality_weight: 1.0
           max_cost_per_query: 0.000
 
-    # Model mappings - Ollama only
+    # Model mappings - Local only
     models:
       simple:
         primary:
-          provider: "ollama"
-          model: "tinyllama"
+          provider: "local"
+          model: "qwen2.5-1.5b-instruct"
+          base_url: "http://localhost:11434/v1"
           max_cost_per_query: 0.000
           expected_quality: 0.80
           expected_latency_ms: 2000
         fallback:
-          - provider: "ollama"
-            model: "tinyllama"
+          - provider: "local"
+            model: "qwen2.5-1.5b-instruct"
+            base_url: "http://localhost:11434/v1"
             max_cost_per_query: 0.000
             expected_quality: 0.70
             expected_latency_ms: 1500
 
       medium:
         primary:
-          provider: "ollama"
-          model: "tinyllama"
+          provider: "local"
+          model: "qwen2.5-1.5b-instruct"
+          base_url: "http://localhost:11434/v1"
           max_cost_per_query: 0.000
           expected_quality: 0.85
           expected_latency_ms: 2500
         fallback:
-          - provider: "ollama"
-            model: "tinyllama"
+          - provider: "local"
+            model: "qwen2.5-1.5b-instruct"
+            base_url: "http://localhost:11434/v1"
             max_cost_per_query: 0.000
             expected_quality: 0.70
             expected_latency_ms: 1500
 
       complex:
         primary:
-          provider: "ollama"
-          model: "tinyllama"
+          provider: "local"
+          model: "qwen2.5-1.5b-instruct"
+          base_url: "http://localhost:11434/v1"
           max_cost_per_query: 0.000
           expected_quality: 0.85
           expected_latency_ms: 3000
         fallback:
-          - provider: "ollama"
-            model: "tinyllama"
+          - provider: "local"
+            model: "qwen2.5-1.5b-instruct"
+            base_url: "http://localhost:11434/v1"
             max_cost_per_query: 0.000
             expected_quality: 0.70
             expected_latency_ms: 2000
 
-    # Fallback configuration - Ollama only
+    # Fallback configuration - Local only
     fallback:
       enabled: true
       max_retries: 3
       retry_delay_ms: 1000
-      fallback_chain: ["ollama/tinyllama"]
+      fallback_chain: ["local/qwen2.5-1.5b-instruct"]
       fallback_on_cost_exceeded: false
       fallback_on_latency_exceeded: true
       max_latency_ms: 10000
@@ -228,16 +234,19 @@ query_processor:
           strategy: "balanced"
           model_mappings:
             simple:
-              provider: "ollama"
-              model: "tinyllama"
+              provider: "local"
+              model: "qwen2.5-1.5b-instruct"
+              base_url: "http://localhost:11434/v1"
               max_cost: 0.001
             medium:
-              provider: "ollama"
-              model: "tinyllama"
+              provider: "local"
+              model: "qwen2.5-1.5b-instruct"
+              base_url: "http://localhost:11434/v1"
               max_cost: 0.001
             complex:
-              provider: "ollama"
-              model: "tinyllama"
+              provider: "local"
+              model: "qwen2.5-1.5b-instruct"
+              base_url: "http://localhost:11434/v1"
               max_cost: 0.001
 
     selector:

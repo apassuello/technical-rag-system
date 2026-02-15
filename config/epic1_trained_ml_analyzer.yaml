@@ -75,14 +75,14 @@ query_processor:
         strategy: "balanced"  # Options: 'cost_optimized', 'quality_first', 'balanced'
         model_mappings:
           simple:
-            primary: "llama3.2:3b"
-            fallback: "llama3.2:1b"
+            primary: "qwen2.5-1.5b-instruct"
+            fallback: "qwen2.5-1.5b-instruct"
           medium:
-            primary: "llama3.2:8b" 
-            fallback: "llama3.2:3b"
+            primary: "qwen2.5-1.5b-instruct"
+            fallback: "qwen2.5-1.5b-instruct"
           complex:
-            primary: "llama3.1:70b"
-            fallback: "llama3.2:8b"
+            primary: "qwen2.5-1.5b-instruct"
+            fallback: "qwen2.5-1.5b-instruct"
     
     # Context selector configuration
     selector_type: "mmr"

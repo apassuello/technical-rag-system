@@ -14,6 +14,8 @@ from typing import Any, Dict, Generator, List, Tuple
 
 import ollama
 
+from config.llm_providers import LOCAL
+
 # Calibration framework has been removed
 
 logger = logging.getLogger(__name__)
@@ -53,7 +55,7 @@ class AnswerGenerator:
     
     def __init__(
         self,
-        primary_model: str = "llama3.2:3b",
+        primary_model: str = LOCAL.model,
         fallback_model: str = "mistral:latest",
         temperature: float = 0.3,
         max_tokens: int = 1024,

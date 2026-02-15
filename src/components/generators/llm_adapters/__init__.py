@@ -5,6 +5,7 @@ This module provides adapters for various LLM providers, converting
 between the unified interface and provider-specific formats.
 
 Available adapters:
+- LlamaAdapter: For local llama-server (OpenAI-compatible /v1/ API)
 - OllamaAdapter: For local Ollama models
 - OpenAIAdapter: For OpenAI API (GPT models)
 - AnthropicAdapter: For Anthropic Claude API (with tools support)
@@ -20,6 +21,7 @@ from .base_adapter import (
     RateLimitError,
 )
 from .huggingface_adapter import HuggingFaceAdapter
+from .llama_adapter import LlamaAdapter
 from .mistral_adapter import MistralAdapter
 from .mock_adapter import MockLLMAdapter
 from .ollama_adapter import OllamaAdapter
@@ -27,6 +29,7 @@ from .openai_adapter import OpenAIAdapter
 
 __all__ = [
     'BaseLLMAdapter',
+    'LlamaAdapter',
     'OllamaAdapter',
     'HuggingFaceAdapter',
     'MockLLMAdapter',
@@ -40,6 +43,7 @@ __all__ = [
 
 # Adapter registry for easy lookup
 ADAPTER_REGISTRY = {
+    'local': LlamaAdapter,
     'ollama': OllamaAdapter,
     'huggingface': HuggingFaceAdapter,
     'mock': MockLLMAdapter,

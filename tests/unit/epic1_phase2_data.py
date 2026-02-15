@@ -36,7 +36,7 @@ TEST_DATA = {
 
 EXPECTED_ROUTING = {
     "cost_optimized": {
-        "simple": {"provider": "ollama", "model": "llama3.2:3b"},
+        "simple": {"provider": "local", "model": "qwen2.5-1.5b-instruct"},
         "medium": {"provider": "mistral", "model": "mistral-small"},
         "complex": {"provider": "openai", "model": "gpt-3.5-turbo"},
     },
@@ -46,7 +46,7 @@ EXPECTED_ROUTING = {
         "complex": {"provider": "openai", "model": "gpt-4-turbo"},
     },
     "balanced": {
-        "simple": {"provider": "ollama", "model": "llama3.2:3b"},
+        "simple": {"provider": "local", "model": "qwen2.5-1.5b-instruct"},
         "medium": {"provider": "mistral", "model": "mistral-small"},
         "complex": {"provider": "openai", "model": "gpt-4-turbo"},
     },
@@ -61,7 +61,7 @@ COST_VALIDATION = {
         "mistral-small": {"input": "0.0020", "output": "0.0060"},
         "mistral-medium": {"input": "0.0027", "output": "0.0081"},
     },
-    "ollama": {
-        "llama3.2:3b": {"input": "0.0000", "output": "0.0000"},
+    "local": {
+        "qwen2.5-1.5b-instruct": {"input": "0.0000", "output": "0.0000"},
     },
 }

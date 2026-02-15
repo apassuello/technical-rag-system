@@ -40,8 +40,8 @@ def test_cost_tracker():
         
         # Record some test usage
         tracker.record_usage(
-            provider="ollama",
-            model="llama3.2:3b", 
+            provider="local",
+            model="qwen2.5-1.5b-instruct",
             input_tokens=100,
             output_tokens=50,
             cost_usd=Decimal('0.000000'),  # Free
@@ -99,8 +99,8 @@ def test_routing_strategies():
         # Create available model options
         available_models = [
             ModelOption(
-                provider='ollama',
-                model='llama3.2:3b',
+                provider='local',
+                model='qwen2.5-1.5b-instruct',
                 estimated_cost=Decimal('0.0000'),
                 estimated_quality=0.80,
                 estimated_latency_ms=2000.0

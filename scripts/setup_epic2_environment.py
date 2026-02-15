@@ -166,7 +166,6 @@ def start_docker_services() -> Dict[str, bool]:
     
     services = {
         "weaviate": False,
-        "ollama": False
     }
     
     # Check if docker-compose.yml exists
@@ -185,9 +184,9 @@ def start_docker_services() -> Dict[str, bool]:
         compose_cmd = ["docker-compose"]
     
     # Start services
-    log_info("Starting Weaviate and Ollama services...")
-    if run_command(compose_cmd + ["up", "-d", "weaviate", "ollama"], 
-                   "docker-compose up weaviate ollama", timeout=180):
+    log_info("Starting Weaviate service...")
+    if run_command(compose_cmd + ["up", "-d", "weaviate"],
+                   "docker-compose up weaviate", timeout=180):
         
         # Wait for services to be ready
         log_info("Waiting for services to be ready...")
@@ -208,44 +207,9 @@ def start_docker_services() -> Dict[str, bool]:
         
         if not services["weaviate"]:
             log_warning("Weaviate did not become ready within timeout")
-        
-        # Check Ollama
-        for attempt in range(20):  # 20 attempts, 3 seconds each = 1 minute
-            try:
-                response = requests.get("http://localhost:11434/api/version", timeout=5)
-                if response.status_code == 200:
-                    log_success("Ollama is ready")
-                    services["ollama"] = True
-                    break
-            except requests.RequestException:
-                pass
-            
-            if attempt < 19:
-                time.sleep(3)
-        
-        if not services["ollama"]:
-            log_warning("Ollama did not become ready within timeout")
-    
+
     return services
 
-def download_ollama_models() -> bool:
-    """Download required Ollama models."""
-    log_info("Downloading Ollama models for Epic 2...")
-    
-    # Check if Ollama is available
-    try:
-        response = requests.get("http://localhost:11434/api/version", timeout=10)
-        if response.status_code != 200:
-            log_warning("Ollama not available, skipping model download")
-            return False
-    except requests.RequestException:
-        log_warning("Ollama not accessible, skipping model download")
-        return False
-    
-    # Download llama3.2:3b model (used in Epic 2 configurations)
-    log_info("Downloading llama3.2:3b model...")
-    return run_command(["docker", "exec", "rag_ollama", "ollama", "pull", "llama3.2:3b"],
-                      "ollama pull llama3.2:3b", timeout=600)
 
 def validate_epic2_components() -> Dict[str, bool]:
     """Validate Epic 2 components can be imported and created."""
@@ -392,7 +356,6 @@ def generate_setup_summary(prereqs: Dict[str, bool], services: Dict[str, bool],
     report_lines.extend([
         f"🐳 Services: {service_count}/{len(services)}",
         f"   Weaviate: {'✅' if services.get('weaviate') else '❌'}",
-        f"   Ollama: {'✅' if services.get('ollama') else '❌'}",
         ""
     ])
     
@@ -446,9 +409,6 @@ def generate_setup_summary(prereqs: Dict[str, bool], services: Dict[str, bool],
     if not services.get("weaviate"):
         report_lines.append("   • Start Weaviate: docker-compose up -d weaviate")
     
-    if not services.get("ollama"):
-        report_lines.append("   • Start Ollama: docker-compose up -d ollama")
-    
     if not validation.get("advanced_retriever"):
         report_lines.append("   • Check Epic 2 component configuration")
     
@@ -477,13 +437,9 @@ def main():
         log_error("Python/pip not available, skipping dependency installation")
     
     # Start services
-    services = {"weaviate": False, "ollama": False}
+    services = {"weaviate": False}
     if prereqs.get("docker") and prereqs.get("docker_compose"):
         services = start_docker_services()
-        
-        # Download models if Ollama is running
-        if services.get("ollama"):
-            download_ollama_models()
     else:
         log_error("Docker/Docker Compose not available, skipping service startup")
     
