@@ -5,6 +5,7 @@ This file ensures proper Python path configuration for all tests,
 enabling imports from src/ and proper test discovery.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -19,6 +20,18 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+@pytest.fixture(scope="session")
+def project_root():
+    """Canonical project root — use this instead of computing Path(__file__).parent chains."""
+    return PROJECT_ROOT
+
+
+@pytest.fixture(scope="session")
+def src_path():
+    """Path to src/ directory."""
+    return SRC_PATH
+
 
 # Eagerly import ComponentFactory so the reference survives any test patches
 from src.core.component_factory import ComponentFactory as _RealComponentFactory
@@ -74,7 +87,8 @@ def orchestrator():
     """Shared PlatformOrchestrator — loaded once, used by integration + validation."""
     from src.core.platform_orchestrator import PlatformOrchestrator
 
-    config_path = Path(__file__).resolve().parent.parent / "config" / "test-ollama.yaml"
+    config_name = os.getenv("RAG_TEST_CONFIG", "test-local.yaml")
+    config_path = Path(__file__).resolve().parent.parent / "config" / config_name
     orch = PlatformOrchestrator(config_path)
     yield orch
     if hasattr(orch, '_components'):

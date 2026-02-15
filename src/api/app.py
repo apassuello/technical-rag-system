@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
 from src.core.platform_orchestrator import PlatformOrchestrator
 
@@ -83,7 +84,7 @@ async def query(req: QueryRequest):
     if _orchestrator is None:
         raise HTTPException(503, "System not initialized")
     try:
-        answer = _orchestrator.process_query(req.query, k=req.k)
+        answer = await run_in_threadpool(_orchestrator.process_query, req.query, k=req.k)
         return QueryResponse(
             answer=answer.text,
             confidence=answer.confidence,

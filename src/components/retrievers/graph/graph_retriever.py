@@ -215,21 +215,27 @@ class GraphRetriever:
     def _fuzzy_node_matching(self, query: str, graph: nx.DiGraph) -> List[str]:
         """Perform fuzzy matching to find relevant nodes."""
         query_embedding = self.embedder.embed([query])[0]
-        
+        query_norm = np.linalg.norm(query_embedding)
+        if query_norm == 0:
+            logger.warning("Query embedding has zero norm for query: %s. Embedder may be misconfigured.", query)
+            return []
+
         node_similarities = []
         for node_id in graph.nodes():
             node_data = graph.nodes[node_id]
             node_text = node_data.get("text", "")
-            
+
             if node_text:
                 try:
                     node_embedding = self.embedder.embed([node_text])[0]
-                    similarity = np.dot(query_embedding, node_embedding) / (
-                        np.linalg.norm(query_embedding) * np.linalg.norm(node_embedding)
-                    )
+                    node_norm = np.linalg.norm(node_embedding)
+                    if node_norm == 0:
+                        logger.warning(f"Node {node_id} has zero-norm embedding, skipping")
+                        continue
+                    similarity = np.dot(query_embedding, node_embedding) / (query_norm * node_norm)
                     node_similarities.append((node_id, similarity))
                 except Exception as e:
-                    logger.debug(f"Failed to compute similarity for node {node_id}: {str(e)}")
+                    logger.warning(f"Failed to compute similarity for node {node_id}: {str(e)}")
         
         # Sort by similarity and return top matches
         node_similarities.sort(key=lambda x: x[1], reverse=True)

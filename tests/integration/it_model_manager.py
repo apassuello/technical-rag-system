@@ -13,6 +13,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 import pytest
 
+pytestmark = [pytest.mark.integration]
+
 # Imports handled by conftest.py
 
 from fixtures.base_test import MLInfrastructureTestBase, MemoryTestMixin, ConcurrencyTestMixin, PerformanceTestMixin

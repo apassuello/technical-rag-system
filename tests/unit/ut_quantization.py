@@ -16,148 +16,16 @@ import pytest
 from fixtures.base_test import MLInfrastructureTestBase, PerformanceTestMixin
 from fixtures.mock_models import MockTransformerModel, MockModelFactory
 
-try:
-    from src.components.query_processors.analyzers.ml_models.quantization import (
-        QuantizationUtils, QuantizationResult
-    )
-    # Create QuantizationMethod enum since it doesn't exist in real implementation but tests may expect it
-    class QuantizationMethod:
-        DYNAMIC = 'dynamic'
-        STATIC = 'static'
-        QAT = 'qat'
-except ImportError:
-    # Create mock imports with same interface as real modules
-    class MockQuantizationResult:
-        def __init__(self, original_size_mb: float, quantized_size_mb: float, 
-                     compression_ratio: float, quantization_time_seconds: float,
-                     method: str, quality_metrics: dict, success: bool = True, 
-                     error_message: str = None):
-            self.original_size_mb = original_size_mb
-            self.quantized_size_mb = quantized_size_mb
-            self.compression_ratio = compression_ratio
-            self.quantization_time_seconds = quantization_time_seconds
-            self.method = method
-            self.quantization_method = method  # Alias for tests that expect this
-            self.quality_metrics = quality_metrics
-            self.success = success
-            self.error_message = error_message
-        
-        @property
-        def memory_savings_mb(self) -> float:
-            return self.original_size_mb - self.quantized_size_mb
-    
-    class MockQuantizationUtils:
-        def __init__(self, enable_validation: bool = True, default_method: str = 'dynamic'):
-            self.enable_validation = enable_validation
-            self.default_method = default_method
-            self.supported_methods = ['dynamic', 'static', 'qat']
-        
-        def quantize_transformer_model(self, model, method='dynamic'):
-            # Handle failure cases based on model attributes or method
-            if model is None:
-                return MockQuantizationResult(
-                    original_size_mb=0.0,
-                    quantized_size_mb=0.0,
-                    compression_ratio=1.0,
-                    quantization_time_seconds=0.0,
-                    method=method,
-                    quality_metrics={},
-                    success=False,
-                    error_message="Model is None"
-                )
-            
-            # Check for invalid method
-            if method not in self.supported_methods:
-                return MockQuantizationResult(
-                    original_size_mb=0.0,
-                    quantized_size_mb=0.0,
-                    compression_ratio=1.0,
-                    quantization_time_seconds=0.0,
-                    method=method,
-                    quality_metrics={},
-                    success=False,
-                    error_message=f"Unsupported quantization method: {method}"
-                )
-            
-            # Check for model properties that would cause failure
-            if hasattr(model, 'supports_quantization') and not model.supports_quantization:
-                return MockQuantizationResult(
-                    original_size_mb=getattr(model, 'memory_mb', 400.0),
-                    quantized_size_mb=0.0,
-                    compression_ratio=1.0,
-                    quantization_time_seconds=0.0,
-                    method=method,
-                    quality_metrics={},
-                    success=False,
-                    error_message="Model does not support quantization"
-                )
-            
-            # Check if model is loaded
-            if hasattr(model, 'is_loaded') and not model.is_loaded:
-                return MockQuantizationResult(
-                    original_size_mb=0.0,
-                    quantized_size_mb=0.0,
-                    compression_ratio=1.0,
-                    quantization_time_seconds=0.0,
-                    method=method,
-                    quality_metrics={},
-                    success=False,
-                    error_message="Model is not loaded"
-                )
-            
-            # Check for failure rate
-            if hasattr(model, 'failure_rate') and model.failure_rate >= 1.0:
-                original_memory = getattr(model, 'memory_mb', 400.0)
-                return MockQuantizationResult(
-                    original_size_mb=original_memory,
-                    quantized_size_mb=0.0,
-                    compression_ratio=1.0,
-                    quantization_time_seconds=0.0,
-                    method=method,
-                    quality_metrics={},
-                    success=False,
-                    error_message="Quantization failed due to error simulation"
-                )
-            
-            # Handle zero-size models - check multiple possible attributes
-            original_memory = getattr(model, 'memory_mb', None)
-            if original_memory is None:
-                # Try alternative attribute names
-                original_memory = getattr(model, 'memory_usage_mb', 400.0)
-            
-            if original_memory == 0.0:
-                return MockQuantizationResult(
-                    original_size_mb=0.0,
-                    quantized_size_mb=0.0,
-                    compression_ratio=1.0,
-                    quantization_time_seconds=0.0,
-                    method=method,
-                    quality_metrics={},
-                    success=True
-                )
-            
-            # Successful quantization - use model's quantized memory if specified
-            # Check multiple possible attribute names for quantized memory
-            quantized_memory = getattr(model, 'quantized_memory_mb', None)
-            if quantized_memory is None:
-                quantized_memory = original_memory / 2.0  # Default to 50% reduction
-            return MockQuantizationResult(
-                original_size_mb=original_memory,
-                quantized_size_mb=quantized_memory,
-                compression_ratio=original_memory / quantized_memory if quantized_memory > 0 else 1.0,
-                quantization_time_seconds=0.00001,  # Extremely fast for mock
-                method=method,
-                quality_metrics={'accuracy_drop': 0.01},
-                success=True
-            )
-    
-    class QuantizationMethod:
-        DYNAMIC = 'dynamic'
-        STATIC = 'static'
-        QAT = 'qat'
-    
-    QuantizationResult = MockQuantizationResult
-    QuantizationUtils = MockQuantizationUtils
+from components.query_processors.analyzers.ml_models.quantization import (
+    QuantizationUtils, QuantizationResult
+)
+
+
+# Helper class that tests expect but doesn't exist in real implementation
+class QuantizationMethod:
+    DYNAMIC = 'dynamic'
+    STATIC = 'static'
+    QAT = 'qat'
 
 
 class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
@@ -173,27 +41,18 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     def test_initialization(self):
         """Test QuantizationUtils initialization."""
         # Test default initialization
-        if QuantizationUtils != type:
-            quantizer = QuantizationUtils(enable_validation=True)
-            self.quantizer = quantizer
-            
-            if hasattr(quantizer, 'enable_validation'):
-                self.assertTrue(quantizer.enable_validation)
-        
-        # Test custom initialization
-        if QuantizationUtils != type:
-            quantizer_custom = QuantizationUtils(
-                enable_validation=False
-            )
+        quantizer = QuantizationUtils(enable_validation=True)
+        self.quantizer = quantizer
+        self.assertTrue(quantizer.enable_validation)
 
-            if hasattr(quantizer_custom, 'enable_validation'):
-                self.assertFalse(quantizer_custom.enable_validation)
+        # Test custom initialization
+        quantizer_custom = QuantizationUtils(
+            enable_validation=False
+        )
+        self.assertFalse(quantizer_custom.enable_validation)
     
     def test_dynamic_quantization_success(self):
         """Test successful dynamic quantization."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-
         self.quantizer = QuantizationUtils(enable_validation=True)
 
         # Create mock model for quantization
@@ -224,9 +83,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_static_quantization_success(self):
         """Test successful static quantization."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         # Create mock model for quantization  
@@ -251,9 +108,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_quantization_failure_handling(self):
         """Test quantization failure scenarios."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         # Create model that doesn't support quantization
@@ -274,9 +129,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_unloaded_model_handling(self):
         """Test handling of unloaded models."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         # Create unloaded model
@@ -295,9 +148,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_compression_ratio_calculation(self):
         """Test compression ratio calculation accuracy."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         # Create model with known memory size
@@ -323,9 +174,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_quality_validation(self):
         """Test quantization quality validation."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         # Test with validation enabled
         self.quantizer = QuantizationUtils(enable_validation=True)
         
@@ -347,9 +196,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_different_quantization_methods(self):
         """Test different quantization methods."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         mock_model = self.mock_model_factory.create_model('method-test')
@@ -368,9 +215,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_model_size_estimation(self):
         """Test model size estimation before and after quantization."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         # Test size estimation if available
@@ -390,9 +235,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_quantization_metadata(self):
         """Test quantization metadata and tracking."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         mock_model = self.mock_model_factory.create_model('metadata-test')
@@ -415,9 +258,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_batch_quantization(self):
         """Test batch quantization of multiple models."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         # Create multiple models
@@ -442,9 +283,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_quantization_reversibility(self):
         """Test quantization reversibility if supported."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         mock_model = self.mock_model_factory.create_model('reversible-test')
@@ -477,9 +316,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_cross_platform_compatibility(self):
         """Test cross-platform quantization compatibility."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         # Test that quantization works regardless of platform
         # This mainly tests that it doesn't crash on different platforms
         
@@ -500,9 +337,7 @@ class TestQuantizationUtils(MLInfrastructureTestBase, PerformanceTestMixin):
     
     def test_error_recovery(self):
         """Test error recovery and cleanup."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         # Create model that will fail during quantization
@@ -531,9 +366,7 @@ class TestQuantizationResult(MLInfrastructureTestBase):
     
     def test_quantization_result_creation(self):
         """Test QuantizationResult creation and validation."""
-        if QuantizationResult == type:
-            self.skipTest("QuantizationResult implementation not available")
-        
+
         # Test successful result
         success_result = QuantizationResult(
             original_size_mb=750.0,
@@ -552,9 +385,7 @@ class TestQuantizationResult(MLInfrastructureTestBase):
     
     def test_quantization_result_failure(self):
         """Test QuantizationResult for failure cases."""
-        if QuantizationResult == type:
-            self.skipTest("QuantizationResult implementation not available")
-        
+
         # Test failure result
         failure_result = QuantizationResult(
             original_size_mb=750.0,
@@ -572,9 +403,7 @@ class TestQuantizationResult(MLInfrastructureTestBase):
     
     def test_quantization_result_metrics(self):
         """Test quantization result metrics calculation."""
-        if QuantizationResult == type:
-            self.skipTest("QuantizationResult implementation not available")
-        
+
         result = QuantizationResult(
             original_size_mb=1000.0,
             quantized_size_mb=400.0,
@@ -601,9 +430,7 @@ class TestQuantizationPerformance(MLInfrastructureTestBase, PerformanceTestMixin
     
     def test_quantization_latency(self):
         """Test quantization operation latency."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         # Create models of different sizes
@@ -634,9 +461,7 @@ class TestQuantizationPerformance(MLInfrastructureTestBase, PerformanceTestMixin
     
     def test_quantization_throughput(self):
         """Test quantization throughput for multiple models."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         # Create multiple small models for throughput testing
@@ -688,9 +513,7 @@ class TestQuantizationEdgeCases(MLInfrastructureTestBase):
     
     def test_none_model_handling(self):
         """Test handling of None model input."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         if hasattr(self.quantizer, 'quantize_transformer_model'):
@@ -704,9 +527,7 @@ class TestQuantizationEdgeCases(MLInfrastructureTestBase):
     
     def test_invalid_method_handling(self):
         """Test handling of invalid quantization methods."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         mock_model = self.mock_model_factory.create_model('invalid-method-test')
@@ -724,9 +545,7 @@ class TestQuantizationEdgeCases(MLInfrastructureTestBase):
     
     def test_zero_size_model_handling(self):
         """Test handling of zero-size models."""
-        if QuantizationUtils == type:
-            self.skipTest("QuantizationUtils implementation not available")
-        
+
         self.quantizer = QuantizationUtils(enable_validation=True)
         
         # Create model with zero memory usage

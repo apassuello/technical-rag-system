@@ -34,7 +34,7 @@ except ImportError:
 class AcademicPaperCollector:
     """Collect RISC-V academic papers from various sources."""
 
-    def __init__(self, output_dir: str = "data/riscv_comprehensive_corpus"):
+    def __init__(self, output_dir: str = "data/riscv_corpus"):
         """Initialize paper collector."""
         self.output_dir = Path(output_dir)
         self.research_dir = self.output_dir / "research"
@@ -424,7 +424,7 @@ def main():
     )
     parser.add_argument(
         "--output-dir",
-        default="data/riscv_comprehensive_corpus",
+        default="data/riscv_corpus",
         help="Output directory for papers",
     )
 

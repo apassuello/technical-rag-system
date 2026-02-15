@@ -222,20 +222,20 @@ class TestPlatformOrchestrator(unittest.TestCase):
     @patch('src.core.platform_orchestrator.ComponentFactory')
     def test_clear_index(self, mock_factory):
         """Test clearing the index."""
-        # Set up mocks
+        # Set up mocks — retriever exposes clear_index (ModularUnifiedRetriever API)
         mock_retriever = Mock()
-        
+
         mock_factory.create_processor.return_value = Mock()
         mock_factory.create_embedder.return_value = Mock()
         mock_factory.create_retriever.return_value = mock_retriever
         mock_factory.create_generator.return_value = Mock()
-        
+
         # Create orchestrator and clear index
         orchestrator = PlatformOrchestrator(self.config_path)
         orchestrator.clear_index()
-        
-        # Verify clear was called on the retriever (unified architecture)
-        mock_retriever.clear.assert_called_once()
+
+        # Verify clear_index was called on the retriever (unified architecture)
+        mock_retriever.clear_index.assert_called_once()
 
 
 if __name__ == '__main__':

@@ -24,12 +24,6 @@ import pytest
 import logging
 from typing import Dict, Any, List, Tuple
 from unittest.mock import patch, MagicMock
-from pathlib import Path
-import sys
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 from src.core.component_factory import ComponentFactory
 from src.core.interfaces import DocumentProcessor, Embedder, Retriever, AnswerGenerator

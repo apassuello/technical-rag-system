@@ -32,12 +32,7 @@ import numpy as np
 torch = pytest.importorskip("torch", reason="requires PyTorch")
 from pathlib import Path
 from typing import Dict, Any, List
-import sys
 import asyncio
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer, NeuralFusionModel
 from src.components.query_processors.analyzers.ml_views.view_result import (

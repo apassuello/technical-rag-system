@@ -23,6 +23,8 @@ from typing import Dict, List, Any
 from unittest.mock import Mock, MagicMock
 import time
 
+pytestmark = [pytest.mark.integration]
+
 from src.components.query_processors.tools.tool_registry import ToolRegistry
 from src.components.query_processors.tools.implementations import (
     CalculatorTool,

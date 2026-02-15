@@ -10,13 +10,7 @@ This test suite validates the ComponentFactory implementation:
 """
 
 import pytest
-import sys
-from pathlib import Path
 from typing import Dict, Any
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.core.component_factory import ComponentFactory
 from src.core.interfaces import (

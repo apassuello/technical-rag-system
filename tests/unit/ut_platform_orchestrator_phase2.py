@@ -8,13 +8,8 @@ both legacy (Phase 1) and unified (Phase 2) retriever architectures.
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
-import sys
 import tempfile
 import yaml
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Document, Answer
@@ -94,6 +89,7 @@ class TestPlatformOrchestratorPhase2:
         with open(file_path, 'w') as f:
             yaml.dump(config_dict, f)
     
+    @pytest.mark.filterwarnings("ignore:Component validation warnings:UserWarning")
     @patch('src.core.platform_orchestrator.ComponentFactory')
     def test_legacy_architecture_initialization(self, mock_factory, legacy_config, temp_config_file):
         """Test Platform Orchestrator with legacy architecture."""
@@ -147,6 +143,7 @@ class TestPlatformOrchestratorPhase2:
         mock_factory.create_retriever.assert_called_once()
         mock_factory.create_generator.assert_called_once()
     
+    @pytest.mark.filterwarnings("ignore:Component validation warnings:UserWarning")
     @patch('src.core.platform_orchestrator.ComponentFactory')
     def test_legacy_document_processing(self, mock_factory, legacy_config, temp_config_file):
         """Test document processing with legacy architecture."""
@@ -312,6 +309,7 @@ class TestPlatformOrchestratorPhase2:
         # Should have 5 components now (including query_processor)
         assert len(health['components']) >= 4
     
+    @pytest.mark.filterwarnings("ignore:Component validation warnings:UserWarning")
     @patch('src.core.platform_orchestrator.ComponentFactory')
     def test_backward_compatibility_maintained(self, mock_factory, legacy_config, temp_config_file):
         """Test that legacy code continues to work unchanged."""

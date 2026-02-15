@@ -13,6 +13,8 @@ import sys
 import time
 from pathlib import Path
 
+pytestmark = [pytest.mark.integration]
+
 # Imports handled by conftest.py
 
 from src.components.query_processors.analyzers import Epic1QueryAnalyzer

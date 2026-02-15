@@ -20,7 +20,14 @@ def golden_documents():
 
 @pytest.fixture(scope="session")
 def indexed_orchestrator(orchestrator, golden_documents):
-    """Orchestrator with golden corpus indexed — shared across all tests."""
+    """Orchestrator with golden corpus indexed — shared across all tests.
+
+    Clears any previously-indexed documents first so that validation tests
+    always see exactly 4 golden docs, regardless of integration-test ordering.
+    """
+    retriever = orchestrator.get_component("retriever")
+    if hasattr(retriever, "clear_index"):
+        retriever.clear_index()
     count = orchestrator.index_documents(golden_documents)
     assert count == 4, f"Expected 4 docs indexed, got {count}"
     return orchestrator

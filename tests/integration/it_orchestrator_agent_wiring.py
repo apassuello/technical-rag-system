@@ -11,6 +11,8 @@ These tests validate Gap 3 from the Epic 5 audit:
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
+pytestmark = [pytest.mark.integration]
+
 from src.core.platform_orchestrator import PlatformOrchestrator
 from src.components.query_processors.intelligent_query_processor import (
     IntelligentQueryProcessor,

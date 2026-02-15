@@ -11,14 +11,9 @@ Following TDD principles - these tests define the CONTRACT that all implementati
 """
 
 import pytest
-import sys
 import time
 from pathlib import Path
 from unittest.mock import Mock, MagicMock
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.core.interfaces import (
     # Data classes

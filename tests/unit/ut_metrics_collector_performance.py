@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Tuple
 from unittest.mock import patch
 
-from src.components.calibration.metrics_collector import (
+from src.shared_utils.metrics import (
     MetricsCollector,
     QueryMetrics
 )

@@ -121,6 +121,7 @@ class TestPlatformOrchestratorDocumentProcessing:
         assert len(call_args) == 1  # One document
         assert hasattr(call_args[0], 'embedding')
 
+    @pytest.mark.filterwarnings("ignore:Component validation warnings:UserWarning")
     def test_process_document_legacy_architecture_indexing(self, temp_config_dir, mock_component_factory):
         """Test document indexing with legacy architecture."""
         # Create legacy configuration

@@ -562,10 +562,18 @@ class AnthropicAdapter(BaseLLMAdapter):
         Returns:
             Tuple of (response, metadata)
         """
+        # Ensure each tool result has the required 'type' field
+        normalized_results = []
+        for tr in tool_results:
+            entry = dict(tr)
+            if "type" not in entry:
+                entry["type"] = "tool_result"
+            normalized_results.append(entry)
+
         # Add tool results to messages
         messages.append({
             "role": "user",
-            "content": tool_results
+            "content": normalized_results
         })
 
         # Continue conversation

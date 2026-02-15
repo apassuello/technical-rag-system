@@ -11,13 +11,8 @@ This replaces scattered factory tests and focuses on modern architecture.
 import pytest
 import sys
 import time
-from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any
-
-# Add project root to Python path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root / "src"))
 
 from src.core.component_factory import ComponentFactory
 from src.core.interfaces import (

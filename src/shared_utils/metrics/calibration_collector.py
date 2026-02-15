@@ -376,6 +376,7 @@ class MetricsCollector(BaseMetricsCollector):
 
         except Exception as e:
             logger.error(f"Failed to export metrics: {e}")
+            raise
 
     def get_metrics_summary(self) -> str:
         """Get human-readable summary of collected metrics."""

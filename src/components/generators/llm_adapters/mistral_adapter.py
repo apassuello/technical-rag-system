@@ -112,7 +112,11 @@ class MistralAdapter(BaseLLMAdapter):
             'output': Decimal('0.0002')   # $0.0002 per 1K output tokens
         },
         'mistral-small': {
-            'input': Decimal('0.0020'),   # $0.002 per 1K input tokens  
+            'input': Decimal('0.0020'),   # $0.002 per 1K input tokens
+            'output': Decimal('0.0060')   # $0.006 per 1K output tokens
+        },
+        'mistral-small-latest': {
+            'input': Decimal('0.0020'),   # $0.002 per 1K input tokens
             'output': Decimal('0.0060')   # $0.006 per 1K output tokens
         },
         'mistral-medium': {
@@ -129,6 +133,7 @@ class MistralAdapter(BaseLLMAdapter):
     MODEL_LIMITS = {
         'mistral-tiny': 32000,
         'mistral-small': 32000,
+        'mistral-small-latest': 32000,
         'mistral-medium': 32000,
         'mistral-large': 32000
     }
@@ -371,30 +376,23 @@ class MistralAdapter(BaseLLMAdapter):
     def _validate_model(self) -> bool:
         """
         Check if the configured model exists and is accessible.
-        
+
+        Uses the official Mistral client (self.client) which is already
+        configured with API key and base URL in __init__.
+
         Returns:
             True if model is available
         """
         try:
-            # Test with a minimal request
-            test_messages = [{"role": "user", "content": "Hi"}]
-            payload = {
-                'model': self.model_name,
-                'messages': test_messages,
-                'max_tokens': 1,
-                'temperature': 0
-            }
-            
-            url = f"{self.base_url}/chat/completions"
-            response = requests.post(
-                url,
-                headers=self.headers,
-                json=payload,
-                timeout=self.timeout
+            # Test with a minimal request via the official client
+            response = self.client.chat.complete(
+                model=self.model_name,
+                messages=[{"role": "user", "content": "Hi"}],
+                max_tokens=1,
+                temperature=0
             )
-            
-            return response.status_code == 200
-            
+            return response is not None and hasattr(response, 'choices')
+
         except Exception as e:
             logger.error(f"Model validation failed: {str(e)}")
             return False

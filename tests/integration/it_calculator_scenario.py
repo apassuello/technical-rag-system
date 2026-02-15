@@ -18,6 +18,8 @@ import pytest
 from unittest.mock import Mock, MagicMock, patch
 from typing import Dict, List, Any
 
+pytestmark = [pytest.mark.integration]
+
 from src.components.query_processors.tools.tool_registry import ToolRegistry
 from src.components.query_processors.tools.implementations import CalculatorTool
 from src.components.generators.llm_adapters.anthropic_adapter import AnthropicAdapter

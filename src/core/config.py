@@ -104,10 +104,11 @@ class PipelineConfig(BaseModel):
                     UserWarning
                 )
 
-        except (ImportError, Exception):
-            # ComponentFactory not available or validation failed - skip validation
-            # This allows config to work during early development and testing
-            pass
+        except ImportError:
+            pass  # ComponentFactory not available — skip validation
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).debug(f"Config validation skipped: {e}")
 
         return self
     
@@ -260,8 +261,11 @@ class ConfigManager:
         import copy
         config = copy.deepcopy(config)
         
+        # Control env vars used by model validators — not config overrides
+        _control_vars = {'RAG_ENV', 'RAG_SKIP_COMPONENT_VALIDATION', 'RAG_SKIP_ARCHITECTURE_VALIDATION'}
+
         for key, value in os.environ.items():
-            if key.startswith('RAG_') and key != 'RAG_ENV':
+            if key.startswith('RAG_') and key not in _control_vars:
                 # Remove prefix and split by double underscore
                 path_parts = key[4:].lower().split('__')
                 
