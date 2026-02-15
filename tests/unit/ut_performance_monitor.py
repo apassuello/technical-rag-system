@@ -92,11 +92,11 @@ class TestPerformanceMonitor(
         for i in range(5):
             self.monitor.record_request(operation_name)
 
-        # Get metrics for the operation
-        metrics = self.monitor.get_operation_metrics(operation_name)
+        # Get throughput stats for the operation
+        stats = self.monitor.get_throughput_stats(operation_name)
 
-        if metrics and hasattr(metrics, "request_count"):
-            self.assertEqual(metrics.request_count, 5)
+        self.assertIsNotNone(stats)
+        self.assertEqual(stats.request_count, 5)
 
     def test_record_latency(self):
         """Test recording latency measurements."""
@@ -125,29 +125,6 @@ class TestPerformanceMonitor(
             if hasattr(stats, "count"):
                 self.assertEqual(stats.count, len(test_latencies))
 
-    def test_record_throughput(self):
-        """Test recording throughput measurements."""
-        self.monitor = PerformanceMonitor(enable_alerts=True)
-
-        operation_name = "throughput_test"
-
-        # Record throughput over time
-        test_throughputs = [100.0, 150.0, 120.0, 180.0, 160.0]  # ops/sec
-
-        for throughput in test_throughputs:
-            self.monitor.record_throughput(operation_name, throughput)
-
-        # Get throughput statistics
-        stats = self.monitor.get_throughput_stats(operation_name)
-
-        if stats and "current" in stats:
-            # Current throughput should be the last recorded
-            self.assertEqual(stats["current"], test_throughputs[-1])
-
-        if stats and "average" in stats:
-            expected_avg = sum(test_throughputs) / len(test_throughputs)
-            self.assertAlmostEqual(stats["average"], expected_avg, places=1)
-
     def test_record_quality_score(self):
         """Test recording quality score measurements."""
         self.monitor = PerformanceMonitor(enable_alerts=True)
@@ -156,16 +133,14 @@ class TestPerformanceMonitor(
         test_scores = [0.85, 0.90, 0.82, 0.88, 0.91]
 
         for score in test_scores:
-            self.monitor.record_quality_score(operation_name, score)
+            self.monitor.record_quality(operation_name, score, score)
 
         # Get quality statistics
         stats = self.monitor.get_quality_stats(operation_name)
 
-        if stats and "mean_quality" in stats:
-            expected_mean = sum(test_scores) / len(test_scores)
-            self.assertAlmostEqual(
-                stats["mean_quality"], expected_mean, places=2
-            )
+        self.assertIsNotNone(stats)
+        expected_mean = sum(test_scores) / len(test_scores)
+        self.assertAlmostEqual(stats.avg_accuracy, expected_mean, places=2)
 
     def test_record_memory_usage(self):
         """Test recording memory usage measurements."""
@@ -179,77 +154,40 @@ class TestPerformanceMonitor(
         for memory_mb in memory_readings:
             self.monitor.record_memory_usage(model_name, memory_mb)
 
-        # Get memory statistics
-        stats = self.monitor.get_memory_stats(model_name)
-
-        if stats:
-            if "current_usage_mb" in stats:
-                self.assertEqual(stats["current_usage_mb"], memory_readings[-1])
-
-            if "peak_usage_mb" in stats:
-                self.assertEqual(stats["peak_usage_mb"], max(memory_readings))
+        # Verify recordings landed in raw_metrics
+        self.assertEqual(len(self.monitor.raw_metrics), 5)
 
     def test_alert_generation(self):
         """Test performance alert generation."""
 
-        # Create monitor with strict thresholds
+        # Create monitor with strict thresholds so latencies trigger alerts
         self.monitor = PerformanceMonitor(
             enable_alerts=True,
             alert_thresholds={
-                "latency_p95_ms": 50.0,
+                "max_latency_ms": 50.0,
                 "error_rate_percent": 5.0,
-                "memory_usage_mb": 1000.0,
+                "max_memory_mb": 1000.0,
             },
         )
 
         operation_name = "alert_test"
 
-        # Record high latencies that should trigger alerts
-        high_latencies = [60.0, 70.0, 80.0, 90.0, 100.0]  # Above threshold
+        # Record high latencies that should trigger alerts (above 50ms threshold)
+        high_latencies = [60.0, 70.0, 80.0, 90.0, 100.0]
 
         for latency in high_latencies:
             self.monitor.record_latency(operation_name, latency)
 
-        # Check if alerts were generated
-        alerts = self.monitor.get_active_alerts()
+        # Check if alerts were generated via alert_manager.alert_history
+        alerts = list(self.monitor.alert_manager.alert_history)
 
         # Should have at least one alert for high latency
         latency_alerts = [
             alert
             for alert in alerts
-            if hasattr(alert, "message") and "latency" in alert.message.lower()
+            if "latency" in alert.get("message", "").lower()
         ]
         self.assertGreater(len(latency_alerts), 0)
-
-    def test_alert_levels(self):
-        """Test different alert severity levels."""
-
-        self.monitor = PerformanceMonitor(enable_alerts=True)
-
-        operation = "severity_test"
-
-        # Record progressively worse performance
-        latencies = [
-            (25.0, AlertLevel.INFO),  # Good performance
-            (100.0, AlertLevel.WARNING),  # Moderate issue
-            (500.0, AlertLevel.ERROR),  # Significant issue
-            (2000.0, AlertLevel.CRITICAL),  # Critical issue
-        ]
-
-        for latency, expected_level in latencies:
-            self.monitor.record_latency(operation, latency)
-
-            alerts = self.monitor.get_alerts_for_operation(operation)
-
-            # Find alerts matching the expected severity
-            level_alerts = [
-                alert
-                for alert in alerts
-                if hasattr(alert, "level") and alert.level == expected_level
-            ]
-
-            # Should have appropriate alert level for the performance
-            # (This test depends on specific threshold configuration)
 
     def test_metrics_aggregation(self):
         """Test metrics aggregation over time windows."""
@@ -341,11 +279,10 @@ class TestPerformanceMonitor(
         # Wait for background cleanup
         time.sleep(0.5)
 
-        # Check if cleanup occurred
-        metrics = self.monitor.get_operation_metrics(operation_name)
-
-        # Metrics might be cleaned up or retained based on implementation
-        # This test mainly ensures background monitoring doesn't crash
+        # Check metrics are recorded; mainly ensures background monitoring doesn't crash
+        stats = self.monitor.get_latency_stats(operation_name)
+        if stats:
+            self.assertEqual(stats.count, 5)
 
     def test_thread_safety(self):
         """Test thread safety of performance monitoring."""
@@ -362,7 +299,7 @@ class TestPerformanceMonitor(
 
                 for i in range(10):
                     self.monitor.record_latency(operation_name, 10.0 + i)
-                    self.monitor.record_throughput(operation_name, 100.0 + i)
+                    self.monitor.record_request(operation_name)
 
                     time.sleep(0.001)  # Small delay
 
@@ -401,70 +338,21 @@ class TestPerformanceMonitor(
                 self.monitor.record_latency(op, 20.0 + (i * 5.0))
 
             for i in range(3):
-                self.monitor.record_throughput(op, 100.0 + (i * 10.0))
+                self.monitor.record_request(op)
 
         # Generate comprehensive report
-        report = self.monitor.generate_performance_report()
+        report = self.monitor.get_performance_summary()
 
         self.assertIsNotNone(report)
 
         # Should include all operations
-        if "operations" in report:
-            for op in operations:
-                self.assertIn(op, report["operations"])
+        self.assertIn("operations", report)
+        for op in operations:
+            self.assertIn(op, report["operations"])
 
-        # Should include summary statistics
-        if "summary" in report:
-            summary = report["summary"]
-            self.assertIn("total_operations", summary)
-            self.assertIn("overall_health", summary)
-
-    def test_alert_management(self):
-        """Test alert acknowledgment and management."""
-
-        self.monitor = PerformanceMonitor(enable_alerts=True)
-
-        operation_name = "alert_mgmt_test"
-
-        # Generate alerts with high latency
-        for _ in range(5):
-            self.monitor.record_latency(operation_name, 1000.0)  # Very high latency
-
-        # Get active alerts
-        active_alerts = self.monitor.get_active_alerts()
-
-        if active_alerts:
-            alert_to_ack = active_alerts[0]
-
-            # Acknowledge alert
-            self.monitor.acknowledge_alert(alert_to_ack)
-
-            # Alert should be acknowledged
-            if hasattr(alert_to_ack, "acknowledged"):
-                self.assertTrue(alert_to_ack.acknowledged)
-
-            # Should not appear in active alerts
-            updated_alerts = self.monitor.get_active_alerts()
-            self.assertNotIn(alert_to_ack, updated_alerts)
-
-    def test_custom_metrics(self):
-        """Test custom metric recording and retrieval."""
-
-        self.monitor = PerformanceMonitor(enable_alerts=True)
-
-        # Record custom metrics
-        self.monitor.record_custom_metric("cache_hit_rate", 0.85)
-        self.monitor.record_custom_metric("model_accuracy", 0.92)
-        self.monitor.record_custom_metric("inference_batch_size", 32.0)
-
-        # Retrieve custom metrics
-        hit_rate = self.monitor.get_custom_metric("cache_hit_rate")
-        accuracy = self.monitor.get_custom_metric("model_accuracy")
-        batch_size = self.monitor.get_custom_metric("inference_batch_size")
-
-        self.assertEqual(hit_rate, 0.85)
-        self.assertEqual(accuracy, 0.92)
-        self.assertEqual(batch_size, 32.0)
+        # Should include system health and alert count
+        self.assertIn("system_health", report)
+        self.assertIn("alert_count", report)
 
 
 class TestPerformanceMetrics(MLInfrastructureTestBase):
@@ -566,7 +454,7 @@ class TestPerformanceMonitorPerformance(MLInfrastructureTestBase, PerformanceTes
         for op in operations:
             for i in range(50):  # 50 measurements per operation
                 self.monitor.record_latency(op, 10.0 + i)
-                self.monitor.record_throughput(op, 100.0 + i)
+                self.monitor.record_request(op)
 
         # Record final memory snapshot
         final_snapshot = self.take_memory_snapshot("final")

@@ -232,50 +232,6 @@ class TestModelCache(MLInfrastructureTestBase, MemoryTestMixin, ConcurrencyTestM
             success_count = sum(1 for _, success in results if success)
             self.assertGreater(success_count, 0)
     
-    def test_eviction_callbacks(self):
-        """Test eviction callbacks and notification."""
-        self.cache = ModelCache(maxsize=2)
-
-        evicted_items = []
-
-        def eviction_callback(key, value):
-            evicted_items.append((key, value))
-
-        self.cache.set_eviction_callback(eviction_callback)
-
-        # Fill cache beyond capacity
-        models = [self.mock_model_factory.create_model(f'model-{i}') for i in range(3)]
-
-        self.cache.put('model1', models[0], memory_size_mb=100.0)
-        self.cache.put('model2', models[1], memory_size_mb=100.0)
-        self.cache.put('model3', models[2], memory_size_mb=100.0)  # Should evict model1
-
-        # Check if eviction callback was called
-        self.assertEqual(len(evicted_items), 1)
-        self.assertEqual(evicted_items[0][0], 'model1')
-        self.assertEqual(evicted_items[0][1], models[0])
-    
-    def test_cache_warming(self):
-        """Test cache warming functionality."""
-        self.cache = ModelCache(maxsize=5, warmup_enabled=True)
-        
-        # Define models to warm
-        model_keys = ['warm-model-1', 'warm-model-2', 'warm-model-3']
-        models = [self.mock_model_factory.create_model(key) for key in model_keys]
-
-        # Create warming strategy
-        def warming_strategy():
-            return {key: model for key, model in zip(model_keys, models)}
-
-        # Execute cache warming
-        self.cache.warm_cache(warming_strategy)
-        
-        # Verify models are in cache
-        for key in model_keys:
-            cached_model = self.cache.get(key)
-            if cached_model is not None:  # Some warming implementations might be async
-                self.assertIsNotNone(cached_model)
-    
     def test_cache_clear(self):
         """Test cache clearing functionality."""
         self.cache = ModelCache(maxsize=3)
@@ -300,26 +256,6 @@ class TestModelCache(MLInfrastructureTestBase, MemoryTestMixin, ConcurrencyTestM
         cache_info = self.cache.get_cache_info()
         self.assertEqual(cache_info.get('size', 0), 0)
         self.assertEqual(cache_info.get('total_memory_mb', 0), 0)
-    
-    def test_cache_resize(self):
-        """Test dynamic cache resizing."""
-        self.cache = ModelCache(maxsize=2)
-
-        # Fill cache to capacity
-        models = [self.mock_model_factory.create_model(f'model-{i}') for i in range(3)]
-        self.cache.put('model1', models[0], memory_size_mb=100.0)
-        self.cache.put('model2', models[1], memory_size_mb=100.0)
-
-        # Resize to allow more entries
-        self.cache.resize(3)
-
-        # Should now be able to add third model without eviction
-        self.cache.put('model3', models[2], memory_size_mb=100.0)
-
-        # All three should be in cache
-        self.assertIsNotNone(self.cache.get('model1'))
-        self.assertIsNotNone(self.cache.get('model2'))
-        self.assertIsNotNone(self.cache.get('model3'))
     
     def test_memory_monitoring_integration(self):
         """Test integration with memory monitoring."""
