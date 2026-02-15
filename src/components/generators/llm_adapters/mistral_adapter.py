@@ -25,6 +25,8 @@ import time
 from decimal import Decimal
 from typing import Any, Dict, Iterator, Optional
 
+from config.llm_providers import MISTRAL
+
 try:
     from mistralai import Mistral
     MISTRAL_AVAILABLE = True
@@ -135,7 +137,7 @@ class MistralAdapter(BaseLLMAdapter):
     DEFAULT_BASE_URL = "https://api.mistral.ai/v1"
     
     def __init__(self,
-                 model_name: str = "mistral-small",
+                 model_name: str = MISTRAL.model,
                  api_key: Optional[str] = None,
                  base_url: Optional[str] = None,
                  config: Optional[Dict[str, Any]] = None,
