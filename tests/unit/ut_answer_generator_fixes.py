@@ -187,9 +187,11 @@ class TestEpic1AnswerGeneratorFixes:
         # Legacy single-model configuration
         legacy_config = {
             "llm_client": {
-                "type": "local",
+                "type": "openai",
                 "config": {
                     "model_name": "qwen2.5-1.5b-instruct",
+                    "api_key": "local",
+                    "base_url": "http://localhost:11434/v1",
                     "temperature": 0.7
                 }
             }
