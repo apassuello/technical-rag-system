@@ -16,6 +16,8 @@ from typing import Any, Dict, List, Tuple
 
 import requests
 
+from config.llm_providers import LOCAL
+
 logger = logging.getLogger(__name__)
 
 # Import shared components
@@ -50,8 +52,8 @@ class OllamaAnswerGenerator(AnswerGenerator if AnswerGenerator is not object els
 
     def __init__(
         self,
-        model_name: str = "llama3.2:3b",
-        base_url: str = "http://localhost:11434",
+        model_name: str = LOCAL.model,
+        base_url: str = LOCAL.base_url,
         temperature: float = 0.3,
         max_tokens: int = 512,
     ):
@@ -59,7 +61,7 @@ class OllamaAnswerGenerator(AnswerGenerator if AnswerGenerator is not object els
         Initialize Ollama answer generator.
 
         Args:
-            model_name: Ollama model to use (e.g., "llama3.2:3b", "mistral")
+            model_name: Model to use (e.g., "qwen2.5-1.5b-instruct", "mistral")
             base_url: Ollama server URL
             temperature: Generation temperature
             max_tokens: Maximum tokens to generate
@@ -774,7 +776,7 @@ Answer:"""
                     }
                     for cit in ollama_result.citations
                 ],
-                "provider": "ollama",
+                "provider": "local",
                 "temperature": self.temperature,
                 "max_tokens": self.max_tokens
             }
@@ -784,7 +786,7 @@ Answer:"""
 # Example usage
 if __name__ == "__main__":
     # Test Ollama connection
-    generator = OllamaAnswerGenerator(model_name="llama3.2:3b")
+    generator = OllamaAnswerGenerator(model_name=LOCAL.model)
 
     # Mock chunks for testing
     test_chunks = [

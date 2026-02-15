@@ -408,7 +408,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
     def _get_provider_name(self) -> str:
         """Get the name of the current LLM provider."""
         if self.use_ollama:
-            return "ollama"
+            return "local"
         elif self.use_inference_providers:
             return "inference_providers"
         else:

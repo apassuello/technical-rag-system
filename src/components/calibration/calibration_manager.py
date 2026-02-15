@@ -14,6 +14,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import yaml
 
+from config.llm_providers import LOCAL
 from src.core.platform_orchestrator import PlatformOrchestrator
 
 from .metrics_collector import MetricsCollector, QueryMetrics
@@ -463,10 +464,10 @@ class CalibrationManager:
                     "config": {
                         "prompt_builder": {"type": "simple", "config": {}},
                         "llm_client": {
-                            "type": "ollama",
+                            "type": LOCAL.adapter_type,
                             "config": {
-                                "model_name": "llama3.2:3b",
-                                "base_url": "http://localhost:11434",
+                                "model_name": LOCAL.model,
+                                "base_url": LOCAL.base_url,
                                 "timeout": 30,
                             },
                         },

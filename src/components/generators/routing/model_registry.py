@@ -8,6 +8,7 @@ costs, and performance characteristics for the Epic 1 multi-model routing system
 from decimal import Decimal
 from typing import List
 
+from config.llm_providers import LOCAL
 from .routing_strategies import ModelOption
 
 
@@ -19,11 +20,11 @@ class ModelRegistry:
         self.models = {
             'simple': [
                 ModelOption(
-                    provider='ollama',
-                    model='llama3.2:3b',
-                    estimated_cost=Decimal('0.0000'),
-                    estimated_quality=0.75,
-                    estimated_latency_ms=100,
+                    provider='local',
+                    model=LOCAL.model,
+                    estimated_cost=LOCAL.cost_per_1k_input,
+                    estimated_quality=LOCAL.estimated_quality,
+                    estimated_latency_ms=LOCAL.estimated_latency_ms,
                     confidence=0.95,
                     fallback_options=[]
                 ),
@@ -39,10 +40,10 @@ class ModelRegistry:
             ],
             'medium': [
                 ModelOption(
-                    provider='ollama',
-                    model='llama3.2:3b',
-                    estimated_cost=Decimal('0.0000'),
-                    estimated_quality=0.75,
+                    provider='local',
+                    model=LOCAL.model,
+                    estimated_cost=LOCAL.cost_per_1k_input,
+                    estimated_quality=LOCAL.estimated_quality,
                     estimated_latency_ms=150,
                     confidence=0.92,
                     fallback_options=[]
@@ -68,9 +69,9 @@ class ModelRegistry:
             ],
             'complex': [
                 ModelOption(
-                    provider='ollama',
-                    model='llama3.2:3b',
-                    estimated_cost=Decimal('0.0000'),
+                    provider='local',
+                    model=LOCAL.model,
+                    estimated_cost=LOCAL.cost_per_1k_input,
                     estimated_quality=0.82,
                     estimated_latency_ms=200,
                     confidence=0.88,
