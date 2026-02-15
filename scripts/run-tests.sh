@@ -91,21 +91,31 @@ start_llama_server() {
         exit 1
     fi
 
-    # Start llama-server in background
+    # Log file — timestamped, kept in /tmp so it survives the run
+    LLAMA_LOG="/tmp/llama-server-$(date +%Y%m%d-%H%M%S).log"
+
+    # Start llama-server in background, redirect all output to log file
     llama-server \
         --model "$LLAMA_MODEL" \
         --port 11434 \
         --n-gpu-layers -1 \
-        --ctx-size 4096 &
+        --ctx-size 4096 \
+        > "$LLAMA_LOG" 2>&1 &
     LLAMA_PID=$!
 
     # Poll /health until ready (up to 60s, 2s intervals)
     for i in $(seq 1 30); do
         if curl -sf http://localhost:11434/health > /dev/null 2>&1; then
             echo "  llama-server ready (model: $(basename "$LLAMA_MODEL"))"
+            echo "  log: $LLAMA_LOG"
             return
         fi
-        [ "$i" -eq 30 ] && echo "  WARNING: llama-server not ready after 60s"
+        if ! kill -0 "$LLAMA_PID" 2>/dev/null; then
+            echo "ERROR: llama-server exited early. Check log: $LLAMA_LOG"
+            tail -20 "$LLAMA_LOG"
+            exit 1
+        fi
+        [ "$i" -eq 30 ] && echo "  WARNING: llama-server not ready after 60s (log: $LLAMA_LOG)"
         sleep 2
     done
 }
@@ -115,6 +125,7 @@ cleanup() {
         echo "Stopping llama-server (PID $LLAMA_PID)..."
         kill $LLAMA_PID 2>/dev/null
         wait $LLAMA_PID 2>/dev/null
+        echo "  log preserved: ${LLAMA_LOG:-/tmp/llama-server-*.log}"
     fi
     if [ "$WEAVIATE_STARTED" = true ]; then
         echo "Stopping Weaviate..."
