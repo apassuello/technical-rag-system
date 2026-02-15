@@ -81,7 +81,7 @@ answer_generator:
     
     # Alternative 1: Local llama-server LLM (comment out mock, uncomment this)
     # llm_client:
-    #   type: "openai"
+    #   type: "local"
     #   config:
     #     model_name: "qwen2.5-1.5b-instruct"
     #     base_url: "http://localhost:11434/v1"

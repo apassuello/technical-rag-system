@@ -311,7 +311,7 @@ class TestGeneratorCreation:
         assert 'confidence_scorer' in info
         
         # Verify it's the modular implementation
-        assert info['llm_client']['class'] == 'OpenAIAdapter'
+        assert info['llm_client']['class'] == 'LlamaAdapter'
         assert info['prompt_builder']['class'] == 'SimplePromptBuilder'
     
     def test_create_generator_invalid_type(self):

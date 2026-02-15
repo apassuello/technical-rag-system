@@ -103,7 +103,7 @@ answer_generator:
   config:
     # Current: Local llama-server LLM for production (uncomment to use)
     # llm_client:
-    #   type: "openai"
+    #   type: "local"
     #   config:
     #     model_name: "qwen2.5-1.5b-instruct"
     #     base_url: "http://localhost:11434/v1"

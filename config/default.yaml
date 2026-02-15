@@ -101,10 +101,9 @@ answer_generator:
     models:
       simple:
         primary:
-          provider: "openai"
+          provider: "local"
           model: "qwen2.5-1.5b-instruct"
           base_url: "http://localhost:11434/v1"
-          api_key: "local"
           max_cost_per_query: 0.000
           expected_quality: 0.80
           expected_latency_ms: 2000
@@ -118,10 +117,9 @@ answer_generator:
 
       medium:
         primary:
-          provider: "openai"  # Use local model for medium queries too
+          provider: "local"
           model: "qwen2.5-1.5b-instruct"
           base_url: "http://localhost:11434/v1"
-          api_key: "local"
           max_cost_per_query: 0.000
           expected_quality: 0.85
           expected_latency_ms: 2500
@@ -135,10 +133,9 @@ answer_generator:
 
       complex:
         primary:
-          provider: "openai"  # Start with local for all queries
+          provider: "local"
           model: "qwen2.5-1.5b-instruct"
           base_url: "http://localhost:11434/v1"
-          api_key: "local"
           max_cost_per_query: 0.000
           expected_quality: 0.85
           expected_latency_ms: 3000
@@ -219,22 +216,19 @@ query_processor:
           strategy: "balanced"
           model_mappings:
             simple:
-              provider: "openai"
+              provider: "local"
               model: "qwen2.5-1.5b-instruct"
               base_url: "http://localhost:11434/v1"
-              api_key: "local"
               max_cost: 0.001
             medium:
-              provider: "openai"
+              provider: "local"
               model: "qwen2.5-1.5b-instruct"
               base_url: "http://localhost:11434/v1"
-              api_key: "local"
               max_cost: 0.001
             complex:
-              provider: "openai"
+              provider: "local"
               model: "qwen2.5-1.5b-instruct"
               base_url: "http://localhost:11434/v1"
-              api_key: "local"
               max_cost: 0.001
     
     selector:

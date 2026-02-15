@@ -26,7 +26,6 @@ global_settings:
   providers:
     local:
       base_url: "http://localhost:11434/v1"
-      api_key: "local"
       timeout: 120
       keep_alive: "5m"
       models:
@@ -190,10 +189,9 @@ answer_generator:
     models:
       simple:
         primary:
-          provider: "openai"
+          provider: "local"
           model: "qwen2.5-1.5b-instruct"
           base_url: "http://localhost:11434/v1"
-          api_key: "local"
           max_cost_per_query: 0.000
           expected_quality: 0.80
           expected_latency_ms: 2000
@@ -213,10 +211,9 @@ answer_generator:
           expected_quality: 0.85
           expected_latency_ms: 1500
         fallback:
-          - provider: "openai"
+          - provider: "local"
             model: "qwen2.5-1.5b-instruct"
             base_url: "http://localhost:11434/v1"
-            api_key: "local"
             max_cost_per_query: 0.000
           - provider: "openai"
             model: "gpt-3.5-turbo"
@@ -268,10 +265,9 @@ answer_generator:
     # Legacy compatibility (single-model fallback)
     legacy_fallback:
       enabled: true
-      provider: "openai"
+      provider: "local"
       model: "qwen2.5-1.5b-instruct"
       base_url: "http://localhost:11434/v1"
-      api_key: "local"
       temperature: 0.7
       max_tokens: 1000
 
@@ -365,14 +361,13 @@ query_processor:
           # Model mappings by complexity level
           model_mappings:
             simple:
-              provider: "openai"
+              provider: "local"
               model: "qwen2.5-1.5b-instruct"
               base_url: "http://localhost:11434/v1"
-              api_key: "local"
               max_cost: 0.001
               expected_latency: 2.0
             medium:
-              provider: "mistral" 
+              provider: "mistral"
               model: "mistral-small"
               max_cost: 0.01
               expected_latency: 3.0

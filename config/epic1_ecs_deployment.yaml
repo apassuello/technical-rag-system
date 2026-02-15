@@ -40,13 +40,12 @@ generator:
     # Quality: Good for simple tasks
     # ─────────────────────────────────────────────────────────────────
     simple:
-      provider: "openai"
+      provider: "local"
       model_name: "qwen2.5-1.5b-instruct"
       description: "Fast local model for simple queries"
 
       config:
         base_url: "${LLAMA_SERVER_URL}"  # ngrok tunnel URL from Secrets Manager
-        api_key: "local"
         temperature: 0.7
         max_tokens: 512
         top_p: 0.9
@@ -54,7 +53,7 @@ generator:
 
       # Adapter configuration
       adapter:
-        type: "openai"
+        type: "local"
         retry_attempts: 2
         retry_delay: 1
         fallback_enabled: true

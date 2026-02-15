@@ -41,7 +41,7 @@ class LLMProviderConfig:
 # --- Provider definitions ---
 
 LOCAL = LLMProviderConfig(
-    adapter_type="openai",
+    adapter_type="local",
     model="qwen2.5-1.5b-instruct",
     base_url=os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
     cost_per_1k_input=Decimal("0.0000"),
