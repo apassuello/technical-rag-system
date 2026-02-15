@@ -1,6 +1,8 @@
 import pytest
 from pathlib import Path
 
+pytestmark = [pytest.mark.integration]
+
 from src.shared_utils.document_processing.pdf_parser import extract_text_with_metadata
 
 def test_extract_text_with_metadata():

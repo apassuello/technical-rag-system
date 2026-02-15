@@ -5,6 +5,7 @@ This file ensures proper Python path configuration for all tests,
 enabling imports from src/ and proper test discovery.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -86,7 +87,8 @@ def orchestrator():
     """Shared PlatformOrchestrator — loaded once, used by integration + validation."""
     from src.core.platform_orchestrator import PlatformOrchestrator
 
-    config_path = Path(__file__).resolve().parent.parent / "config" / "test-ollama.yaml"
+    config_name = os.getenv("RAG_TEST_CONFIG", "test-local.yaml")
+    config_path = Path(__file__).resolve().parent.parent / "config" / config_name
     orch = PlatformOrchestrator(config_path)
     yield orch
     if hasattr(orch, '_components'):

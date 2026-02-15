@@ -129,7 +129,7 @@ cleanup() {
     fi
     if [ "$WEAVIATE_STARTED" = true ]; then
         echo "Stopping Weaviate..."
-        docker compose down weaviate
+        docker compose stop weaviate 2>/dev/null && docker compose rm -f weaviate 2>/dev/null
     fi
 }
 trap cleanup EXIT

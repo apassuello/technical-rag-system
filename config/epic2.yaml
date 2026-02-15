@@ -1,6 +1,6 @@
 # Epic 2 RAG Configuration  
 # Full Epic 2 features: Neural reranking, Graph enhancement, Analytics
-# Production configuration with Ollama LLM
+# Production configuration with local LLM (llama-server)
 
 # Document processor for handling input files
 document_processor:
@@ -17,7 +17,7 @@ embedder:
       type: "sentence_transformer"
       config:
         model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        device: "mps"
+        device: "auto"
         normalize_embeddings: true
     batch_processor:
       type: "dynamic"
@@ -85,14 +85,14 @@ retriever:
       config:
         enabled: true
         model_name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-        device: "mps"
+        device: "auto"
         batch_size: 32
         max_length: 512
         max_candidates: 100
         models:
           default_model:
             name: "cross-encoder/ms-marco-MiniLM-L6-v2"
-            device: "mps"
+            device: "auto"
             batch_size: 32
             max_length: 512
         default_model: "default_model"

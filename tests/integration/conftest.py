@@ -31,7 +31,7 @@ def fresh_orchestrator():
     """Fresh PlatformOrchestrator for tests that mutate state."""
     from src.core.platform_orchestrator import PlatformOrchestrator
 
-    config_path = Path(__file__).resolve().parents[2] / "config" / "test-ollama.yaml"
+    config_path = Path(__file__).resolve().parents[2] / "config" / "test-local.yaml"
     return PlatformOrchestrator(config_path)
 
 

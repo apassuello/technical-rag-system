@@ -9,6 +9,8 @@ to ensure all components work together correctly.
 from pathlib import Path
 import pytest
 
+pytestmark = [pytest.mark.integration]
+
 # Project root for data file access
 project_root = Path(__file__).parent.parent.parent
 

@@ -10,6 +10,8 @@ import pytest
 import time
 from typing import List, Dict, Any
 
+pytestmark = [pytest.mark.integration]
+
 from src.components.query_processors import ModularQueryProcessor
 from src.components.query_processors.base import QueryProcessorConfig
 from src.core.interfaces import Document, Answer

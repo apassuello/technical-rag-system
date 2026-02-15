@@ -95,7 +95,7 @@ class TestEndToEndWorkflows:
 
         # Need a fresh orchestrator with empty index for this assertion —
         # the session-scoped fixture may already have indexed documents.
-        config_path = Path(__file__).resolve().parent.parent.parent / "config" / "test-ollama.yaml"
+        config_path = Path(__file__).resolve().parent.parent.parent / "config" / "test-local.yaml"
         fresh = PlatformOrchestrator(config_path)
         with pytest.raises(RuntimeError, match="No documents have been indexed"):
             fresh.process_query("What is quantum computing?")

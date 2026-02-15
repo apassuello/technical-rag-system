@@ -12,6 +12,8 @@ import json
 from pathlib import Path
 from typing import Dict, Any, List
 
+pytestmark = [pytest.mark.integration]
+
 # Test fixtures and imports
 @pytest.fixture
 def domain_filter():
