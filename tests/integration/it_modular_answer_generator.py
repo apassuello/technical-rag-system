@@ -95,7 +95,7 @@ class TestModularAnswerGenerator:
         
         # Verify all sub-components are visible
         assert info['prompt_builder']['class'] == 'SimplePromptBuilder'
-        assert info['llm_client']['class'] in ('OllamaAdapter', 'OpenAIAdapter')
+        assert info['llm_client']['class'] in ('OllamaAdapter', 'OpenAIAdapter', 'LlamaAdapter')
         assert info['response_parser']['class'] == 'MarkdownParser'
         assert info['confidence_scorer']['class'] == 'SemanticScorer'
     
