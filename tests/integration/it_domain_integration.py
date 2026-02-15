@@ -6,14 +6,13 @@ Proper pytest-based integration tests that verify Epic1 components work together
 with domain relevance filtering. Transformed from run_epic1_integration_tests_with_domain.py
 """
 
+import os
 import pytest
-import asyncio
 import subprocess
 import time
-import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Tuple, Union
+from typing import List, Tuple, Union
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -75,7 +74,8 @@ class TestEpic1IntegrationWithDomain:
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                cwd=self.project_root
+                cwd=self.project_root,
+                env={**os.environ, "PYTHONPATH": str(Path(self.project_root) / "src")},
             )
             
             success = result.returncode == 0
@@ -106,7 +106,7 @@ class TestEpic1IntegrationWithDomain:
         # Test import - use list format to avoid shell injection, cwd already set
         cmd = [
             "python", "-c",
-            "from src.components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer; print('Epic1MLAnalyzer import successful')"
+            "from components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer; print('Epic1MLAnalyzer import successful')"
         ]
         success, stdout, stderr = self.run_subprocess_test(cmd, "Testing Epic1MLAnalyzer import")
 
@@ -124,7 +124,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path.cwd() / "src"))
 
-from src.components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer
+from components.query_processors.analyzers.epic1_ml_analyzer import Epic1MLAnalyzer
 
 try:
     analyzer = Epic1MLAnalyzer(config={
@@ -205,11 +205,11 @@ except Exception as e:
         self.project_root = project_root
         
         components_to_test = [
-            'src.components.query_processors.analyzers.epic1_ml_analyzer',
-            'src.components.query_processors.analyzers.epic1_query_analyzer',
-            'src.training.dataset_generation_framework',
-            'src.training.data_loader',
-            'src.components.query_processors.analyzers.ml_models.model_manager'
+            'components.query_processors.analyzers.epic1_ml_analyzer',
+            'components.query_processors.analyzers.epic1_query_analyzer',
+            'training.dataset_generation_framework',
+            'training.data_loader',
+            'components.query_processors.analyzers.ml_models.model_manager'
         ]
         
         for component in components_to_test:

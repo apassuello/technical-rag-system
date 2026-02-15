@@ -10,8 +10,7 @@ import requests
 import pytest
 
 from components.generators.llm_adapters.llama_adapter import LlamaAdapter
-from components.generators.base import GenerationParams, LLMError
-from components.generators.llm_adapters.base_adapter import ModelNotFoundError
+from components.generators.base import GenerationParams
 
 
 def _llm_server_available(model="qwen2.5-1.5b-instruct"):
@@ -135,13 +134,20 @@ class TestModelInfo:
 
 class TestErrorHandling:
 
-    def test_nonexistent_model_raises(self):
-        """A bogus model name raises LLMError or ModelNotFoundError."""
-        bad_adapter = LlamaAdapter(
+    def test_nonexistent_model_succeeds_on_single_model_server(self):
+        """llama-server ignores model name — always uses the loaded model.
+
+        Unlike Ollama (multi-model), llama-server serves a single model
+        and silently ignores the 'model' field in requests.  This test
+        documents that behavior rather than asserting an error.
+        """
+        adapter = LlamaAdapter(
             model_name="nonexistent-model-xyz-999",
             base_url=SERVER_URL,
             timeout=15,
         )
         params = GenerationParams(max_tokens=10)
-        with pytest.raises((LLMError, ModelNotFoundError)):
-            bad_adapter.generate("hello", params)
+        # Should NOT raise — llama-server ignores the model field
+        result = adapter.generate("hello", params)
+        assert isinstance(result, str)
+        assert len(result.strip()) > 0
