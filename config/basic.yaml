@@ -79,12 +79,13 @@ answer_generator:
         max_response_length: 512
         mock_delay: 0.05
     
-    # Alternative 1: Local Ollama LLM (comment out mock, uncomment this)
+    # Alternative 1: Local llama-server LLM (comment out mock, uncomment this)
     # llm_client:
-    #   type: "ollama"
+    #   type: "openai"
     #   config:
-    #     model_name: "llama3.2:3b"
-    #     base_url: "http://localhost:11434"
+    #     model_name: "qwen2.5-1.5b-instruct"
+    #     base_url: "http://localhost:11434/v1"
+    #     api_key: "local"
     #     timeout: 30
     #     max_retries: 2
     

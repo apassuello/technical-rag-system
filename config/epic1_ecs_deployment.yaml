@@ -2,7 +2,7 @@
 # 3-Tier Model Routing for AWS Deployment with $100 Budget
 #
 # Model Strategy:
-# - Simple queries (complexity < 3): Local Ollama llama3.2:3b [FREE]
+# - Simple queries (complexity < 3): Local llama-server qwen2.5-1.5b-instruct [FREE]
 # - Medium queries (3 ≤ complexity < 7): HuggingFace API Mistral-7B [FREE with tokens]
 # - Complex queries (complexity ≥ 7): HuggingFace API GPT-OSS-20B [FREE tier/cheap]
 #
@@ -32,7 +32,7 @@ generator:
   # Model Configurations
   models:
     # ─────────────────────────────────────────────────────────────────
-    # Tier 1: Simple Queries (Local Ollama)
+    # Tier 1: Simple Queries (Local llama-server)
     # ─────────────────────────────────────────────────────────────────
     # Use Case: Basic questions, short queries, simple lookups
     # Cost: FREE (running on your Mac)
@@ -40,12 +40,13 @@ generator:
     # Quality: Good for simple tasks
     # ─────────────────────────────────────────────────────────────────
     simple:
-      provider: "ollama"
-      model_name: "llama3.2:3b"
+      provider: "openai"
+      model_name: "qwen2.5-1.5b-instruct"
       description: "Fast local model for simple queries"
 
       config:
-        base_url: "${OLLAMA_URL}"  # ngrok tunnel URL from Secrets Manager
+        base_url: "${LLAMA_SERVER_URL}"  # ngrok tunnel URL from Secrets Manager
+        api_key: "local"
         temperature: 0.7
         max_tokens: 512
         top_p: 0.9
@@ -53,7 +54,7 @@ generator:
 
       # Adapter configuration
       adapter:
-        type: "ollama"
+        type: "openai"
         retry_attempts: 2
         retry_delay: 1
         fallback_enabled: true
@@ -364,11 +365,11 @@ monitoring:
 health:
   endpoint: "/health"
   checks:
-    - name: "ollama_connectivity"
+    - name: "llama_server_connectivity"
       type: "http"
-      url: "${OLLAMA_URL}/api/version"
+      url: "${LLAMA_SERVER_URL}/v1/models"
       timeout: 5
-      critical: false  # Don't fail health check if Ollama is down
+      critical: false  # Don't fail health check if llama-server is down
 
     - name: "huggingface_api"
       type: "http"
@@ -498,7 +499,7 @@ features:
 # individual model characteristics. Actual performance may vary.
 #
 # Request Distribution:
-# - 60% simple queries  → llama3.2:3b (0.5-1s latency)
+# - 60% simple queries  → qwen2.5-1.5b-instruct (0.5-1s latency)
 # - 30% medium queries  → Mistral-7B (1-2s latency)
 # - 10% complex queries → GPT-OSS-20B (2-4s latency)
 #

@@ -1,7 +1,7 @@
-# Epic 2 Configuration: Score Aware Fusion with Ollama
+# Epic 2 Configuration: Score Aware Fusion with llama-server
 # Purpose: Local score-aware fusion development
 # Epic 2 Features: Score-Aware Fusion + Neural Reranking
-# LLM Backend: Ollama (local inference)
+# LLM Backend: llama-server (local inference via OpenAI adapter)
 
 document_processor:
   type: "hybrid_pdf"
@@ -87,15 +87,16 @@ retriever:
             max_length: 512
         default_model: "default_model"
 
-# Ollama LLM for local inference and development
+# Local LLM via llama-server for local inference and development
 answer_generator:
   type: "adaptive_modular"
   config:
     llm_client:
-      type: "ollama"
+      type: "openai"
       config:
-        model_name: "llama3.2:3b"
-        base_url: "http://localhost:11434"
+        model_name: "qwen2.5-1.5b-instruct"
+        base_url: "http://localhost:11434/v1"
+        api_key: "local"
         timeout: 30
         # Alternative timeouts: 60 (patient), 15 (fast-fail)
         max_retries: 3
