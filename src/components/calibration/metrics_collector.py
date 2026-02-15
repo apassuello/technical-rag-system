@@ -62,11 +62,7 @@ class MetricsCollector(_MetricsCollector):
 
     def export_metrics(self, output_path):
         """Export collected metrics to JSON file."""
-        try:
-            super().export_metrics(output_path)
-            logger.info(f"Exported metrics to {output_path}")
-        except Exception as e:
-            logger.error(f"Failed to export metrics: {e}")
+        super().export_metrics(output_path)
 
 # Re-export for backward compatibility
 QueryMetrics = _QueryMetrics

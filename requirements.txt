@@ -36,7 +36,7 @@ pyyaml>=6.0.0  # YAML configuration parsing
 
 # Epic 2 Graph Processing (Lightweight)
 networkx>=3.0,<4.0.0
-spacy>=3.7.0,<3.8.0
+spacy>=3.7.0,<3.8.0  # model: python -m spacy download en_core_web_sm==3.7.1
 
 # HuggingFace API Integration (Essential for cloud deployment)
 huggingface-hub>=0.16.0

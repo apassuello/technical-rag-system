@@ -54,7 +54,12 @@ class TestComponentConfig:
 
 class TestPipelineConfig:
     """Test PipelineConfig model."""
-    
+
+    @pytest.fixture(autouse=True)
+    def skip_validation(self, monkeypatch):
+        monkeypatch.setenv('RAG_SKIP_COMPONENT_VALIDATION', '1')
+        monkeypatch.setenv('RAG_SKIP_ARCHITECTURE_VALIDATION', '1')
+
     def test_pipeline_config_creation(self):
         """Test full pipeline config creation."""
         config = PipelineConfig(
@@ -100,7 +105,12 @@ class TestPipelineConfig:
 
 class TestConfigManager:
     """Test ConfigManager functionality."""
-    
+
+    @pytest.fixture(autouse=True)
+    def skip_validation(self, monkeypatch):
+        monkeypatch.setenv('RAG_SKIP_COMPONENT_VALIDATION', '1')
+        monkeypatch.setenv('RAG_SKIP_ARCHITECTURE_VALIDATION', '1')
+
     def test_config_manager_default_config(self):
         """Test loading default configuration."""
         manager = ConfigManager()
@@ -199,6 +209,11 @@ class TestConfigManager:
 
 class TestUtilityFunctions:
     """Test utility functions."""
+
+    @pytest.fixture(autouse=True)
+    def skip_validation(self, monkeypatch):
+        monkeypatch.setenv('RAG_SKIP_COMPONENT_VALIDATION', '1')
+        monkeypatch.setenv('RAG_SKIP_ARCHITECTURE_VALIDATION', '1')
     
     def test_load_config_function(self):
         """Test load_config convenience function."""

@@ -26,7 +26,7 @@ from datetime import datetime
 from unittest.mock import patch, MagicMock
 from typing import Dict, Any, List, Tuple
 
-from src.components.calibration.metrics_collector import (
+from src.shared_utils.metrics import (
     MetricsCollector,
     QueryMetrics
 )
@@ -139,7 +139,7 @@ class TestMetricsCollector:
         query_id = "TEST001"
         query_text = "What is RISC-V?"
         
-        with patch('src.components.calibration.metrics_collector.logger') as mock_logger:
+        with patch('src.shared_utils.metrics.calibration_collector.logger') as mock_logger:
             metrics = self.collector.start_query_collection(query_id, query_text)
             mock_logger.debug.assert_called_once()
         
@@ -171,7 +171,7 @@ class TestMetricsCollector:
         metrics = self.collector.start_query_collection("TEST001", "Test query")
         retrieval_time = 0.123
         
-        with patch('src.components.calibration.metrics_collector.logger') as mock_logger:
+        with patch('src.shared_utils.metrics.calibration_collector.logger') as mock_logger:
             self.collector.collect_retrieval_metrics(
                 metrics, 
                 self.test_retrieval_results,
@@ -235,7 +235,7 @@ class TestMetricsCollector:
         confidence_score = 0.85
         generation_time = 1.234
         
-        with patch('src.components.calibration.metrics_collector.logger') as mock_logger:
+        with patch('src.shared_utils.metrics.calibration_collector.logger') as mock_logger:
             self.collector.collect_generation_metrics(
                 metrics,
                 self.test_answer,
@@ -305,7 +305,7 @@ class TestMetricsCollector:
         """Test collecting validation results with all checks passing."""
         metrics = self.collector.start_query_collection("TEST001", "Test query")
         
-        with patch('src.components.calibration.metrics_collector.logger') as mock_logger:
+        with patch('src.shared_utils.metrics.calibration_collector.logger') as mock_logger:
             self.collector.collect_validation_results(
                 metrics,
                 self.test_expected_behavior,
@@ -361,7 +361,7 @@ class TestMetricsCollector:
             "citations": self.test_citations
         }
         
-        with patch('src.components.calibration.metrics_collector.logger') as mock_logger:
+        with patch('src.shared_utils.metrics.calibration_collector.logger') as mock_logger:
             self.collector.collect_validation_results(
                 metrics,
                 self.test_expected_behavior,
@@ -637,7 +637,7 @@ class TestMetricsCollector:
             export_path = Path(f.name)
         
         try:
-            with patch('src.components.calibration.metrics_collector.logger') as mock_logger:
+            with patch('src.shared_utils.metrics.calibration_collector.logger') as mock_logger:
                 self.collector.export_metrics(export_path)
                 mock_logger.info.assert_called_once()
             
@@ -676,11 +676,12 @@ class TestMetricsCollector:
             export_path.unlink(missing_ok=True)
     
     def test_export_metrics_error_handling(self):
-        """Test export metrics error handling."""
+        """Test export metrics error handling — logs and re-raises."""
         invalid_path = Path("/invalid/directory/metrics.json")
 
         with patch('src.shared_utils.metrics.calibration_collector.logger') as mock_logger:
-            self.collector.export_metrics(invalid_path)
+            with pytest.raises(Exception):
+                self.collector.export_metrics(invalid_path)
             mock_logger.error.assert_called_once()
     
     def test_get_metrics_summary_no_metrics(self):

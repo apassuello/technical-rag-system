@@ -7,7 +7,7 @@ parameter optimization and confidence calibration.
 """
 
 from .calibration_manager import CalibrationManager
-from .metrics_collector import MetricsCollector
+from src.shared_utils.metrics import MetricsCollector
 from .optimization_engine import OptimizationEngine
 from .parameter_registry import ParameterRegistry
 

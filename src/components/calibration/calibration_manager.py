@@ -17,7 +17,7 @@ import yaml
 from config.llm_providers import LOCAL
 from src.core.platform_orchestrator import PlatformOrchestrator
 
-from .metrics_collector import MetricsCollector, QueryMetrics
+from src.shared_utils.metrics import MetricsCollector, QueryMetrics
 from .optimization_engine import (
     OptimizationEngine,
     OptimizationResult,
