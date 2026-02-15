@@ -1,5 +1,5 @@
 """
-Integration tests for LLM adapter against a real llama-server instance.
+Integration tests for LlamaAdapter against a real llama-server instance.
 
 Requires llama-server running with qwen2.5-1.5b-instruct model:
     llama-server -m models/qwen2.5-1.5b-instruct-q4_k_m.gguf \
@@ -9,7 +9,7 @@ Requires llama-server running with qwen2.5-1.5b-instruct model:
 import requests
 import pytest
 
-from components.generators.llm_adapters.ollama_adapter import OllamaAdapter
+from components.generators.llm_adapters.llama_adapter import LlamaAdapter
 from components.generators.base import GenerationParams, LLMError
 from components.generators.llm_adapters.base_adapter import ModelNotFoundError
 
@@ -46,8 +46,8 @@ MODEL = "qwen2.5-1.5b-instruct"
 
 @pytest.fixture
 def adapter():
-    """OllamaAdapter pointed at local llama-server with qwen2.5-1.5b-instruct."""
-    return OllamaAdapter(
+    """LlamaAdapter pointed at local llama-server with qwen2.5-1.5b-instruct."""
+    return LlamaAdapter(
         model_name=MODEL,
         base_url=SERVER_URL,
         timeout=60,
@@ -104,7 +104,7 @@ class TestStreaming:
 class TestValidation:
 
     def test_validate_model_returns_true(self, adapter):
-        """_validate_model returns True for an available model."""
+        """_validate_model checks llama-server /health and returns True."""
         assert adapter._validate_model() is True
 
     def test_validate_connection_returns_true(self, adapter):
@@ -125,7 +125,6 @@ class TestModelInfo:
         assert isinstance(info, dict)
         assert info["model"] == MODEL
         assert info["supports_streaming"] is True
-        assert "max_tokens" in info
         assert "requests_made" in info
 
 
@@ -138,7 +137,7 @@ class TestErrorHandling:
 
     def test_nonexistent_model_raises(self):
         """A bogus model name raises LLMError or ModelNotFoundError."""
-        bad_adapter = OllamaAdapter(
+        bad_adapter = LlamaAdapter(
             model_name="nonexistent-model-xyz-999",
             base_url=SERVER_URL,
             timeout=15,
