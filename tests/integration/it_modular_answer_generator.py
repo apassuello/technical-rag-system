@@ -25,10 +25,10 @@ from src.core.interfaces import Document, Answer
 
 
 def _check_ollama_available() -> bool:
-    """Check if Ollama is available for testing."""
+    """Check if llama-server is available for testing."""
     try:
         import requests
-        response = requests.get("http://localhost:11434/api/tags", timeout=2)
+        response = requests.get("http://localhost:11434/v1/models", timeout=2)
         return response.status_code == 200
     except (ImportError, requests.RequestException, TimeoutError):
         # requests not installed, connection failed, or timeout
@@ -74,14 +74,14 @@ class TestModularAnswerGenerator:
         # Create with legacy parameters
         generator = ComponentFactory.create_generator(
             "adaptive_modular",
-            model_name="llama3.2",
+            model_name="qwen2.5-1.5b-instruct",
             temperature=0.5,
             max_tokens=256
         )
         
         # Verify configuration was applied
         info = generator.get_generator_info()
-        assert info['model_name'] == 'llama3.2'
+        assert info['model_name'] == 'qwen2.5-1.5b-instruct'
         assert info['temperature'] == 0.5
         assert info['max_tokens'] == 256
     
@@ -95,7 +95,7 @@ class TestModularAnswerGenerator:
         
         # Verify all sub-components are visible
         assert info['prompt_builder']['class'] == 'SimplePromptBuilder'
-        assert info['llm_client']['class'] == 'OllamaAdapter'
+        assert info['llm_client']['class'] in ('OllamaAdapter', 'OpenAIAdapter')
         assert info['response_parser']['class'] == 'MarkdownParser'
         assert info['confidence_scorer']['class'] == 'SemanticScorer'
     
@@ -110,9 +110,9 @@ class TestModularAnswerGenerator:
                 }
             },
             "llm_client": {
-                "type": "ollama",
+                "type": "local",
                 "config": {
-                    "model_name": "mistral",
+                    "model_name": "qwen2.5-1.5b-instruct",
                     "temperature": 0.3
                 }
             },
@@ -136,7 +136,7 @@ class TestModularAnswerGenerator:
         
         # Verify configuration was applied
         info = generator.get_generator_info()
-        assert info['model_name'] == 'mistral'
+        assert info['model_name'] == 'qwen2.5-1.5b-instruct'
         assert info['temperature'] == 0.3
     
     @pytest.mark.skipif(

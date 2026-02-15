@@ -236,7 +236,7 @@ def mock_config_manager():
     mock_manager.config.embedder.config = {"model": "test-model"}
     mock_manager.config.retriever.type = "unified"
     mock_manager.config.retriever.config = {"dense_weight": 0.7}
-    mock_manager.config.answer_generator.type = "ollama"
+    mock_manager.config.answer_generator.type = "local"
     mock_manager.config.answer_generator.config = {"model": "test-generator"}
     mock_manager.config.global_settings = {"environment": "development"}
     mock_manager.reload.return_value = None
@@ -433,7 +433,7 @@ def model_options():
 
     return {
         "simple": [
-            ModelOption("ollama", "llama3.2:3b", Decimal("0.000"), 1.5, 0.75),
+            ModelOption("local", "qwen2.5-1.5b-instruct", Decimal("0.000"), 1.5, 0.75),
             ModelOption("openai", "gpt-3.5-turbo", Decimal("0.002"), 0.8, 0.90),
         ],
         "medium": [
@@ -454,7 +454,7 @@ def epic1_config():
         "query_analyzer": {"type": "epic1"},
         "routing": {"strategy": "balanced", "cost_weight": 0.4, "quality_weight": 0.6},
         "model_mappings": {
-            "simple": {"provider": "ollama", "model": "llama3.2:3b"},
+            "simple": {"provider": "local", "model": "qwen2.5-1.5b-instruct"},
             "medium": {"provider": "mistral", "model": "mistral-small"},
             "complex": {"provider": "openai", "model": "gpt-4-turbo"},
         },
@@ -500,8 +500,8 @@ def sample_usage_records():
             "timestamp": base_time - timedelta(minutes=30),
         },
         {
-            "provider": "ollama",
-            "model": "llama3.2:3b",
+            "provider": "local",
+            "model": "qwen2.5-1.5b-instruct",
             "input_tokens": 100,
             "output_tokens": 50,
             "cost_usd": Decimal("0.000000"),

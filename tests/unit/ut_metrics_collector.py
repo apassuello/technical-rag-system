@@ -94,7 +94,7 @@ class TestMetricsCollector:
             {"source": "risc_v_guide.pdf", "relevance": 0.87, "page": 15}
         ]
         self.test_model_info = {
-            "model_name": "llama3.2:3b",
+            "model_name": "qwen2.5-1.5b-instruct",
             "temperature": 0.3,
             "max_tokens": 2048
         }
@@ -256,7 +256,7 @@ class TestMetricsCollector:
         assert gm["generation_time"] == generation_time
         
         # Verify model info
-        assert gm["model_used"] == "llama3.2:3b"
+        assert gm["model_used"] == "qwen2.5-1.5b-instruct"
         assert gm["temperature"] == 0.3
         assert gm["max_tokens"] == 2048
         
@@ -525,7 +525,7 @@ class TestMetricsCollector:
         """Test updating session metadata."""
         additional_metadata = {
             "parameter_config": {"bm25_k1": 1.2, "dense_weight": 0.8},
-            "system_config": {"model": "llama3.2:3b"},
+            "system_config": {"model": "qwen2.5-1.5b-instruct"},
             "test_run_id": "calibration_001"
         }
         
@@ -534,7 +534,7 @@ class TestMetricsCollector:
         # Verify metadata was updated
         metadata = self.collector.session_metadata
         assert metadata["parameter_config"] == {"bm25_k1": 1.2, "dense_weight": 0.8}
-        assert metadata["system_config"] == {"model": "llama3.2:3b"}
+        assert metadata["system_config"] == {"model": "qwen2.5-1.5b-instruct"}
         assert metadata["test_run_id"] == "calibration_001"
         
         # Verify original metadata preserved
@@ -764,7 +764,7 @@ class TestMetricsCollector:
                 0.89,
                 1.23,
                 citations=[{"source": "risc-v-spec.pdf", "relevance": 0.92}],
-                model_info={"model_name": "llama3.2:3b", "temperature": 0.3}
+                model_info={"model_name": "qwen2.5-1.5b-instruct", "temperature": 0.3}
             )
             
             expected = {

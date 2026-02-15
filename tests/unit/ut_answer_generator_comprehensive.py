@@ -77,7 +77,7 @@ class TestEpic1AnswerGeneratorComprehensive:
             },
             "fallback": {
                 "enabled": True,
-                "fallback_model": "ollama/llama3.2:3b"
+                "fallback_model": "local/qwen2.5-1.5b-instruct"
             },
             "cost_tracking": {
                 "enabled": True,
@@ -86,7 +86,7 @@ class TestEpic1AnswerGeneratorComprehensive:
                 "precision_places": 6
             },
             "model_mappings": {
-                "simple": {"provider": "ollama", "model": "llama3.2:3b"},
+                "simple": {"provider": "local", "model": "qwen2.5-1.5b-instruct"},
                 "medium": {"provider": "mistral", "model": "mistral-small"},
                 "complex": {"provider": "openai", "model": "gpt-4-turbo"}
             }
@@ -95,9 +95,9 @@ class TestEpic1AnswerGeneratorComprehensive:
         # Legacy single-model configuration for backward compatibility
         self.legacy_config = {
             "llm_client": {
-                "type": "ollama",
+                "type": "local",
                 "config": {
-                    "model_name": "llama3.2:3b",
+                    "model_name": "qwen2.5-1.5b-instruct",
                     "temperature": 0.7
                 }
             }
@@ -105,8 +105,8 @@ class TestEpic1AnswerGeneratorComprehensive:
         
         # Mock model options for routing tests
         self.mock_ollama_model = ModelOption(
-            provider="ollama",
-            model="llama3.2:3b", 
+            provider="local",
+            model="qwen2.5-1.5b-instruct", 
             estimated_cost=Decimal('0.00'),
             estimated_quality=0.75,
             estimated_latency_ms=1500.0,
@@ -159,8 +159,7 @@ class TestEpic1AnswerGeneratorComprehensive:
         """Test initialization in single-model backward compatibility mode."""
         # Use legacy single-model parameters
         generator = Epic1AnswerGenerator(
-            model_name="llama3.2:3b",
-            use_ollama=True,
+            model_name="qwen2.5-1.5b-instruct",
             temperature=0.7
         )
         
@@ -222,7 +221,7 @@ class TestEpic1AnswerGeneratorComprehensive:
         assert generator._should_enable_routing(config_disabled, {}) is False
         
         # Test legacy single-model parameters
-        legacy_kwargs = {"model_name": "llama3.2", "use_ollama": True}
+        legacy_kwargs = {"model_name": "qwen2.5-1.5b-instruct"}
         assert generator._should_enable_routing({}, legacy_kwargs) is False
         
         # Test multi-model indicators
@@ -253,7 +252,7 @@ class TestEpic1AnswerGeneratorComprehensive:
                 # CRITICAL: Mock availability checking to prevent real API calls
                 mock_router._get_cached_availability.return_value = {'available': True, 'timestamp': time.time()}
                 mock_router._attempt_model_request.return_value = MagicMock()  # Success response
-                mock_router.setup_availability_cache.return_value = {"ollama/llama3.2:3b": True}
+                mock_router.setup_availability_cache.return_value = {"local/qwen2.5-1.5b-instruct": True}
                 
                 # Cost-optimized should select Ollama (free)
                 mock_routing_decision = RoutingDecision(
@@ -289,7 +288,7 @@ class TestEpic1AnswerGeneratorComprehensive:
                     assert answer.metadata['routing']['strategy_used'] == "cost_optimized"
                     # Router may select cheapest available model (which could be Mistral if Ollama has issues)
                     provider = answer.metadata['routing']['selected_model']['provider']
-                    assert provider in ['ollama', 'mistral'], f"Expected low-cost provider, got {provider}"
+                    assert provider in ['local', 'mistral'], f"Expected low-cost provider, got {provider}"
                     # Cost should be low (free for Ollama, small for Mistral)
                     cost = Decimal(str(answer.metadata['cost_usd']))
                     assert cost <= Decimal('0.01'), f"Expected low cost <= $0.01, got ${cost}"
@@ -438,7 +437,7 @@ class TestEpic1AnswerGeneratorComprehensive:
                 # CRITICAL: Mock availability checking to prevent real API calls
                 mock_router._get_cached_availability.return_value = {'available': True, 'timestamp': time.time()}
                 mock_router._attempt_model_request.return_value = MagicMock()  # Success response
-                mock_router.setup_availability_cache.return_value = {"ollama/llama3.2:3b": True}
+                mock_router.setup_availability_cache.return_value = {"local/qwen2.5-1.5b-instruct": True}
                 
                 mock_routing_decision = RoutingDecision(
                     selected_model=self.mock_ollama_model,
@@ -468,7 +467,7 @@ class TestEpic1AnswerGeneratorComprehensive:
                         
                         # Simple queries should use cost-effective models
                         provider = answer.metadata['routing']['selected_model']['provider']
-                        assert provider in ['ollama', 'mistral'], f"Expected cost-effective provider for simple query, got {provider}"
+                        assert provider in ['local', 'mistral'], f"Expected cost-effective provider for simple query, got {provider}"
                         # Test passes if a cost-effective model was selected for simple queries
                         # The exact provider may vary based on availability and system logic
     
@@ -721,7 +720,7 @@ class TestEpic1AnswerGeneratorComprehensive:
                             
                             # Should have been degraded to free model
                             assert answer.metadata['routing']['strategy_used'] == "budget_degradation"
-                            assert answer.metadata['routing']['selected_model']['provider'] == "ollama"
+                            assert answer.metadata['routing']['selected_model']['provider'] == "local"
                             assert Decimal(str(answer.metadata['cost_usd'])) == Decimal('0.00')
     
     def test_cost_budget_hard_limit_enforcement(self):
@@ -803,7 +802,7 @@ class TestEpic1AnswerGeneratorComprehensive:
 
                             # Create a function to switch to successful adapter
                             def switch_to_model(model):
-                                if model.provider == 'ollama':
+                                if model.provider == 'local':
                                     generator.llm_client = mock_ollama_adapter
 
                             with patch.object(generator, '_switch_to_selected_model', side_effect=switch_to_model):
@@ -871,7 +870,7 @@ class TestEpic1AnswerGeneratorComprehensive:
                                 def switch_to_model(model):
                                     if model.provider == 'mistral':
                                         generator.llm_client = mock_mistral_adapter
-                                    elif model.provider == 'ollama':
+                                    elif model.provider == 'local':
                                         generator.llm_client = mock_ollama_adapter
 
                                 with patch.object(generator, '_switch_to_selected_model', side_effect=switch_to_model):
@@ -929,7 +928,7 @@ class TestEpic1AnswerGeneratorComprehensive:
 
                             # Create a function to switch to successful adapter
                             def switch_to_model(model):
-                                if model.provider == 'ollama':
+                                if model.provider == 'local':
                                     generator.llm_client = mock_ollama_adapter
 
                             with patch.object(generator, '_switch_to_selected_model', side_effect=switch_to_model):
@@ -986,8 +985,8 @@ class TestEpic1AnswerGeneratorComprehensive:
             mock_adapter_instance.generate.return_value = "Response from local Llama model"
             mock_adapter_instance.last_response_metadata = {
                 "usage": {"prompt_tokens": 50, "completion_tokens": 100},
-                "provider": "ollama",
-                "model": "llama3.2:3b"
+                "provider": "local",
+                "model": "qwen2.5-1.5b-instruct"
             }
             
             generator = Epic1AnswerGenerator()
@@ -997,12 +996,12 @@ class TestEpic1AnswerGeneratorComprehensive:
             assert adapter is not None
             
             # Verify get_adapter_class was called with correct provider
-            mock_get_adapter.assert_called_once_with('ollama')
+            mock_get_adapter.assert_called_once_with('local')
             
             # Verify adapter was instantiated with correct config
             mock_adapter_class.assert_called_once()
             call_args = mock_adapter_class.call_args
-            assert call_args[1]['model_name'] == "llama3.2:3b"
+            assert call_args[1]['model_name'] == "qwen2.5-1.5b-instruct"
             assert 'config' in call_args[1]
     
     def test_openai_adapter_integration(self):
@@ -1239,7 +1238,7 @@ class TestEpic1AnswerGeneratorComprehensive:
             
             # Mock availability checking methods
             mock_router.check_model_availability.return_value = True
-            mock_router.get_cached_availability.return_value = {'ollama/llama3.2:3b': True}
+            mock_router.get_cached_availability.return_value = {'local/qwen2.5-1.5b-instruct': True}
             
             generator = Epic1AnswerGenerator(config=self.multi_model_config)
             generator.adaptive_router = mock_router
@@ -1250,7 +1249,7 @@ class TestEpic1AnswerGeneratorComprehensive:
             
             # Test cached availability
             cached = mock_router.get_cached_availability()
-            assert 'ollama/llama3.2:3b' in cached
+            assert 'local/qwen2.5-1.5b-instruct' in cached
     
     def test_performance_metrics_collection(self):
         """Test performance metrics are collected correctly."""
@@ -1319,11 +1318,10 @@ class TestEpic1AnswerGeneratorComprehensive:
 
             # Initialize with legacy parameters
             generator = Epic1AnswerGenerator(
-                model_name="llama3.2:3b",
+                model_name="qwen2.5-1.5b-instruct",
                 temperature=0.8,
                 max_tokens=256,
-                use_ollama=True,
-                ollama_url="http://localhost:11434"
+                base_url="http://localhost:11434/v1"
             )
 
             # Should disable routing for backward compatibility
@@ -1347,9 +1345,9 @@ class TestEpic1AnswerGeneratorComprehensive:
         # Legacy config structure without routing
         legacy_structure_config = {
             "llm_client": {
-                "type": "ollama",
+                "type": "local",
                 "config": {
-                    "model_name": "llama3.2:3b",
+                    "model_name": "qwen2.5-1.5b-instruct",
                     "temperature": 0.7,
                     "max_tokens": 512
                 }
@@ -1457,7 +1455,7 @@ class TestEpic1AnswerGeneratorComprehensive:
     
     def test_get_generator_info_with_routing_disabled(self):
         """Test get_generator_info with routing disabled."""
-        generator = Epic1AnswerGenerator(model_name="llama3.2")
+        generator = Epic1AnswerGenerator(model_name="qwen2.5-1.5b-instruct")
         
         info = generator.get_generator_info()
         
@@ -1478,7 +1476,7 @@ class TestEpic1AnswerGeneratorComprehensive:
                 mock_router.get_routing_stats.return_value = {
                     'strategy_distribution': {'balanced': 0.6, 'cost_optimized': 0.4},
                     'avg_decision_quality': 0.85,
-                    'provider_selection_rate': {'ollama': 0.5, 'mistral': 0.3, 'openai': 0.2}
+                    'provider_selection_rate': {'local': 0.5, 'mistral': 0.3, 'openai': 0.2}
                 }
                 
                 generator = Epic1AnswerGenerator(config=self.multi_model_config)
@@ -1530,7 +1528,7 @@ class TestEpic1AnswerGeneratorComprehensive:
         
         # Mock cost tracker patterns
         mock_patterns = {
-            'provider_distribution': {'ollama': 0.5, 'mistral': 0.3, 'openai': 0.2},
+            'provider_distribution': {'local': 0.5, 'mistral': 0.3, 'openai': 0.2},
             'avg_cost_per_request': Decimal('0.004'),
             'peak_usage_hours': [9, 10, 11, 14, 15, 16]
         }
@@ -1572,12 +1570,12 @@ class TestEpic1AnswerGeneratorComprehensive:
         
         mock_cost_tracker.get_total_cost.return_value = Decimal('5.25')
         mock_cost_tracker.get_cost_by_provider.return_value = {
-            'ollama': Decimal('0.00'),
-            'mistral': Decimal('2.10'), 
+            'local': Decimal('0.00'),
+            'mistral': Decimal('2.10'),
             'openai': Decimal('3.15')
         }
         mock_cost_tracker.get_cost_by_model.return_value = {
-            'llama3.2:3b': Decimal('0.00'),
+            'qwen2.5-1.5b-instruct': Decimal('0.00'),
             'mistral-small': Decimal('2.10'),
             'gpt-4-turbo': Decimal('3.15')
         }
@@ -1758,20 +1756,20 @@ class TestEpic1AnswerGeneratorComprehensive:
         
         # Should modify decision to use cheapest model
         assert degraded_decision is not None
-        assert degraded_decision.selected_model.provider == "ollama"
-        assert degraded_decision.selected_model.model == "llama3.2:3b"
+        assert degraded_decision.selected_model.provider == "local"
+        assert degraded_decision.selected_model.model == "qwen2.5-1.5b-instruct"
         assert degraded_decision.degraded_due_to_budget is True
         assert degraded_decision.strategy_used == "budget_degradation"
-    
+
     def test_apply_budget_degradation_create_new_decision(self):
         """Test _apply_budget_degradation creates new decision when none exists."""
         generator = Epic1AnswerGenerator()
-        
+
         degraded_decision = generator._apply_budget_degradation(None)
-        
+
         # Should create new degraded decision
         assert degraded_decision is not None
-        assert degraded_decision.selected_model.provider == "ollama"
+        assert degraded_decision.selected_model.provider == "local"
         assert degraded_decision.strategy_used == "budget_degradation"
         assert degraded_decision.complexity_level == "degraded"
         assert degraded_decision.degraded_due_to_budget is True
@@ -1782,8 +1780,8 @@ class TestEpic1AnswerGeneratorComprehensive:
         
         cheapest = generator._get_cheapest_model()
         
-        assert cheapest.provider == "ollama"
-        assert cheapest.model == "llama3.2:3b"
+        assert cheapest.provider == "local"
+        assert cheapest.model == "qwen2.5-1.5b-instruct"
         assert cheapest.estimated_cost == Decimal('0.00')
         assert cheapest.confidence >= 0.7
 

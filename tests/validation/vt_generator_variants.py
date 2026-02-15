@@ -19,8 +19,8 @@ def adaptive_generator():
         "adaptive_modular",
         config={
             "llm_client": {
-                "type": "ollama",
-                "config": {"model_name": "llama3.2:3b", "base_url": "http://localhost:11434"},
+                "type": "local",
+                "config": {"model_name": "qwen2.5-1.5b-instruct", "base_url": "http://localhost:11434/v1"},
             },
         },
     )
@@ -33,8 +33,8 @@ def epic1_generator():
         "epic1",
         config={
             "llm_client": {
-                "type": "ollama",
-                "config": {"model_name": "llama3.2:3b", "base_url": "http://localhost:11434"},
+                "type": "local",
+                "config": {"model_name": "qwen2.5-1.5b-instruct", "base_url": "http://localhost:11434/v1"},
             },
             "routing": {
                 "enabled": True,

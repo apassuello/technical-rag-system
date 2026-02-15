@@ -43,8 +43,8 @@ class TestEpic1AnswerGeneratorFixes:
         
         # Simple test models
         self.mock_ollama_model = ModelOption(
-            provider='ollama',
-            model='llama3.2:3b',
+            provider='local',
+            model='qwen2.5-1.5b-instruct',
             estimated_cost=Decimal('0.0'),
             estimated_quality=0.7,
             estimated_latency_ms=100.0
@@ -69,7 +69,7 @@ class TestEpic1AnswerGeneratorFixes:
             },
             "fallback": {
                 "enabled": True,
-                "fallback_model": "ollama/llama3.2:3b"
+                "fallback_model": "local/qwen2.5-1.5b-instruct"
             }
         }
 
@@ -85,8 +85,8 @@ class TestEpic1AnswerGeneratorFixes:
             mock_adapter_instance.generate.return_value = "Test response"
             mock_adapter_instance.last_response_metadata = {
                 "usage": {"prompt_tokens": 50, "completion_tokens": 100},
-                "provider": "ollama",
-                "model": "llama3.2:3b"
+                "provider": "local",
+                "model": "qwen2.5-1.5b-instruct"
             }
             
             generator = Epic1AnswerGenerator()
@@ -96,7 +96,7 @@ class TestEpic1AnswerGeneratorFixes:
             assert adapter is not None
             
             # Verify factory was called
-            mock_get_adapter.assert_called_once_with('ollama')
+            mock_get_adapter.assert_called_once_with('local')
             mock_adapter_class.assert_called_once()
     
     def test_routing_with_simple_fallback_fixed(self):
@@ -187,9 +187,9 @@ class TestEpic1AnswerGeneratorFixes:
         # Legacy single-model configuration
         legacy_config = {
             "llm_client": {
-                "type": "ollama",
+                "type": "local",
                 "config": {
-                    "model_name": "llama3.2:3b",
+                    "model_name": "qwen2.5-1.5b-instruct",
                     "temperature": 0.7
                 }
             }

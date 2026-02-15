@@ -42,8 +42,8 @@ def test_epic1_basic():
             'strategy': 'balanced',
             'model_mappings': {
                 'simple': {
-                    'provider': 'ollama',
-                    'model': 'llama3.2:3b',
+                    'provider': 'local',
+                    'model': 'qwen2.5-1.5b-instruct',
                     'max_cost_per_query': 0.001,
                     'avg_latency_ms': 500
                 },

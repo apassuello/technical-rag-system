@@ -335,8 +335,8 @@ def test_cost_tracking():
         # Record some test usage
         test_usage = [
             {
-                'provider': 'ollama',
-                'model': 'llama3.2:3b',
+                'provider': 'local',
+                'model': 'qwen2.5-1.5b-instruct',
                 'input_tokens': 100,
                 'output_tokens': 50,
                 'cost_usd': Decimal('0.000000'),

@@ -294,7 +294,7 @@ class TestGeneratorCreation:
         
         generator = ComponentFactory.create_generator(
             "adaptive_modular",  # New modular implementation
-            model_name="llama3.2",
+            model_name="qwen2.5-1.5b-instruct",
             temperature=0.5,
             max_tokens=512
         )

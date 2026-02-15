@@ -76,7 +76,7 @@ def component_test_data():
                 "device": "cpu",
             },
             "retriever": {"similarity_top_k": 5, "fusion_method": "rrf"},
-            "generator": {"model": "llama3.2:3b", "temperature": 0.1},
+            "generator": {"model": "qwen2.5-1.5b-instruct", "temperature": 0.1},
         },
     }
 

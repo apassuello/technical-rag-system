@@ -1,6 +1,6 @@
 """
-Local prompt optimization testing with Ollama for back-and-forth iterations.
-Uses local Ollama for responsive testing and Google Gemma for validation.
+Local prompt optimization testing with llama-server for back-and-forth iterations.
+Uses local llama-server for responsive testing and Google Gemma for validation.
 """
 
 import sys
@@ -21,19 +21,18 @@ from src.shared_utils.generation.chain_of_thought_engine import ChainOfThoughtEn
 
 
 class PromptOptimizationTester:
-    """Interactive prompt optimization testing with local Ollama."""
+    """Interactive prompt optimization testing with local llama-server."""
 
     def __init__(self):
         """Initialize the testing environment."""
         print("🚀 Initializing Prompt Optimization Testing Environment")
         print("=" * 60)
 
-        # Initialize Ollama RAG system for local testing
-        print("🦙 Setting up Ollama RAG system for local testing...")
+        # Initialize local LLM RAG system for local testing
+        print("🦙 Setting up local LLM RAG system for testing...")
         self.ollama_rag = RAGWithGeneration(
-            model_name="llama3.2:3b",
-            use_ollama=True,
-            ollama_url="http://localhost:11434",
+            model_name="qwen2.5-1.5b-instruct",
+            base_url="http://localhost:11434/v1",
             enable_adaptive_prompts=True,
             enable_chain_of_thought=True,
         )
@@ -43,7 +42,6 @@ class PromptOptimizationTester:
         self.hf_rag = RAGWithGeneration(
             model_name="google/gemma-2-2b-it",
             api_token=os.getenv("HF_API_TOKEN", ""),
-            use_ollama=False,
             enable_adaptive_prompts=True,
             enable_chain_of_thought=True,
         )
@@ -125,8 +123,8 @@ class PromptOptimizationTester:
         print(f"{'-'*40}")
 
         baseline_rag = RAGWithGeneration(
-            model_name="llama3.2:3b",
-            use_ollama=True,
+            model_name="qwen2.5-1.5b-instruct",
+            base_url="http://localhost:11434/v1",
             enable_adaptive_prompts=False,
             enable_chain_of_thought=False,
         )
@@ -140,8 +138,8 @@ class PromptOptimizationTester:
         print(f"{'-'*40}")
 
         adaptive_rag = RAGWithGeneration(
-            model_name="llama3.2:3b",
-            use_ollama=True,
+            model_name="qwen2.5-1.5b-instruct",
+            base_url="http://localhost:11434/v1",
             enable_adaptive_prompts=True,
             enable_chain_of_thought=False,
         )
@@ -155,8 +153,8 @@ class PromptOptimizationTester:
         print(f"{'-'*40}")
 
         cot_rag = RAGWithGeneration(
-            model_name="llama3.2:3b",
-            use_ollama=True,
+            model_name="qwen2.5-1.5b-instruct",
+            base_url="http://localhost:11434/v1",
             enable_adaptive_prompts=False,
             enable_chain_of_thought=True,
         )
@@ -413,22 +411,22 @@ class PromptOptimizationTester:
 
 def main():
     """Run the prompt optimization testing."""
-    print("🧠 Prompt Optimization Testing with Local Ollama")
+    print("🧠 Prompt Optimization Testing with Local llama-server")
     print("=" * 60)
 
-    # Check if Ollama is running
+    # Check if llama-server is running
     import requests
 
     try:
-        response = requests.get("http://localhost:11434/api/tags", timeout=5)
+        response = requests.get("http://localhost:11434/v1/models", timeout=5)
         if response.status_code == 200:
-            print("✅ Ollama server is running")
+            print("✅ llama-server is running")
         else:
-            print("❌ Ollama server not responding properly")
+            print("❌ llama-server not responding properly")
             return
     except Exception as e:
-        print(f"❌ Cannot connect to Ollama server: {e}")
-        print("Please start Ollama server with: ollama serve")
+        print(f"❌ Cannot connect to llama-server: {e}")
+        print("Please start llama-server")
         return
 
     # Initialize and run tester
