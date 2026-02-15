@@ -548,8 +548,8 @@ class TestEpic1MLAnalyzerIntegration:
         if 'model_recommendation' in result.metadata:
             recommendation = result.metadata['model_recommendation']
             assert isinstance(recommendation, str)
-            # Should suggest valid model names
-            assert any(model in recommendation for model in ['llama', 'mistral', 'gpt', 'claude'])
+            # Should suggest valid model/provider names
+            assert any(model in recommendation for model in ['llama', 'mistral', 'gpt', 'claude', 'local', 'qwen'])
             
     def test_epic1_answer_generator_integration(self):
         """Test integration with Epic1AnswerGenerator."""
@@ -848,8 +848,8 @@ class TestEpic1MLAnalyzerUtilityMethods:
         assert isinstance(medium_rec, str)
         assert isinstance(complex_rec, str)
         
-        # Should contain model names
-        assert any(model in simple_rec for model in ['llama', 'mistral', 'gpt'])
+        # Should contain model/provider names
+        assert any(model in simple_rec for model in ['llama', 'mistral', 'gpt', 'local', 'qwen'])
         
     def test_convert_to_query_analysis(self):
         """Test conversion from AnalysisResult to QueryAnalysis."""

@@ -10,8 +10,8 @@ class TestProviderConfigs:
     def test_all_providers_defined(self):
         assert set(PROVIDERS.keys()) == {"local", "openai", "anthropic", "mistral", "huggingface"}
 
-    def test_local_uses_openai_adapter(self):
-        assert LOCAL.adapter_type == "openai"
+    def test_local_uses_llama_adapter(self):
+        assert LOCAL.adapter_type == "local"
         assert LOCAL.api_key_env is None
         assert LOCAL.is_free is True
 
