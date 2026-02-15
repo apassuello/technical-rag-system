@@ -605,6 +605,7 @@ class Epic1AnswerGenerator(AnswerGenerator):
                 'type': LOCAL.adapter_type,
                 'config': {
                     'model_name': LOCAL.model,
+                    'api_key': LOCAL.api_key,
                     'base_url': LOCAL.base_url
                 }
             }

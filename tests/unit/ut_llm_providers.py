@@ -26,3 +26,15 @@ class TestProviderConfigs:
     def test_provider_config_is_frozen(self):
         with pytest.raises(AttributeError):
             LOCAL.model = "something-else"
+
+    def test_invalid_provider_env_falls_back(self, monkeypatch):
+        """Verify graceful fallback on bad LLM_PROVIDER."""
+        monkeypatch.setenv("LLM_PROVIDER", "nonexistent")
+        import importlib
+        import config.llm_providers as mod
+        importlib.reload(mod)
+        assert mod.DEFAULT_PROVIDER_NAME == "local"
+        assert mod.DEFAULT is mod.LOCAL
+        # Restore
+        monkeypatch.delenv("LLM_PROVIDER")
+        importlib.reload(mod)

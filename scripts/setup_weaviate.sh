@@ -15,7 +15,6 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 WEAVIATE_URL="http://localhost:8080"
-OLLAMA_URL="http://localhost:11434"
 MAX_WAIT_TIME=180  # Maximum wait time in seconds
 
 # Logging functions
@@ -113,15 +112,14 @@ setup_weaviate() {
     log_info "Stopping any existing containers..."
     $DOCKER_COMPOSE down
     
-    # Start Weaviate and Ollama
-    log_info "Starting Weaviate and Ollama services..."
-    $DOCKER_COMPOSE up -d weaviate ollama
-    
-    # Wait for services to be ready
+    # Start Weaviate
+    log_info "Starting Weaviate service..."
+    $DOCKER_COMPOSE up -d weaviate
+
+    # Wait for service to be ready
     wait_for_service "$WEAVIATE_URL/v1/.well-known/ready" "Weaviate"
-    wait_for_service "$OLLAMA_URL/api/version" "Ollama"
-    
-    log_success "Epic 2 services started successfully"
+
+    log_success "Weaviate service started successfully"
 }
 
 # Validate Weaviate installation
@@ -153,16 +151,6 @@ validate_weaviate() {
     if [ -z "$schema_response" ]; then
         log_error "Weaviate schema endpoint failed"
         return 1
-    fi
-    
-    # Test Ollama
-    local ollama_version
-    ollama_version=$(curl -s "$OLLAMA_URL/api/version" | grep -o '"version"' || echo "")
-    
-    if [ -z "$ollama_version" ]; then
-        log_warning "Ollama validation failed (non-critical for Weaviate testing)"
-    else
-        log_success "Ollama is responding correctly"
     fi
     
     log_success "Weaviate validation completed successfully"
@@ -216,13 +204,11 @@ show_status() {
     log_info "Service Health:"
     echo "Weaviate Ready: $(curl -s "$WEAVIATE_URL/v1/.well-known/ready" 2>/dev/null || echo "❌ Failed")"
     echo "Weaviate Live:  $(curl -s "$WEAVIATE_URL/v1/.well-known/live" 2>/dev/null || echo "❌ Failed")"
-    echo "Ollama Version: $(curl -s "$OLLAMA_URL/api/version" 2>/dev/null | grep -o '"version":"[^"]*"' || echo "❌ Failed")"
     echo ""
-    
+
     log_info "Access URLs:"
     echo "Weaviate API:    $WEAVIATE_URL"
     echo "Weaviate Schema: $WEAVIATE_URL/v1/schema"
-    echo "Ollama API:      $OLLAMA_URL"
     echo ""
 }
 
@@ -233,7 +219,7 @@ show_usage() {
     echo "Epic 2 Weaviate Setup Script"
     echo ""
     echo "Options:"
-    echo "  setup     Set up and start Weaviate + Ollama services"
+    echo "  setup     Set up and start Weaviate service"
     echo "  validate  Validate existing Weaviate installation"
     echo "  test      Test Epic 2 integration with Weaviate"
     echo "  status    Show current service status"
@@ -262,11 +248,10 @@ restart_services() {
     log_info "Restarting Epic 2 services..."
     cd "$PROJECT_ROOT"
     $DOCKER_COMPOSE restart
-    
-    # Wait for services to be ready
+
+    # Wait for service to be ready
     wait_for_service "$WEAVIATE_URL/v1/.well-known/ready" "Weaviate"
-    wait_for_service "$OLLAMA_URL/api/version" "Ollama"
-    
+
     log_success "Services restarted successfully"
 }
 

@@ -99,4 +99,10 @@ PROVIDERS = {
 }
 
 DEFAULT_PROVIDER_NAME = os.getenv("LLM_PROVIDER", "local")
+if DEFAULT_PROVIDER_NAME not in PROVIDERS:
+    import logging as _logging
+    _logging.getLogger(__name__).warning(
+        "Unknown LLM_PROVIDER '%s', falling back to 'local'", DEFAULT_PROVIDER_NAME
+    )
+    DEFAULT_PROVIDER_NAME = "local"
 DEFAULT = PROVIDERS[DEFAULT_PROVIDER_NAME]
