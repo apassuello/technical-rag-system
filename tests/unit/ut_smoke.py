@@ -3,14 +3,8 @@
 Simple test to validate Epic1QueryAnalyzer functionality.
 """
 
-import sys
-from pathlib import Path
 import time
 import pytest
-
-# Add project to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.components.query_processors.analyzers import Epic1QueryAnalyzer
 

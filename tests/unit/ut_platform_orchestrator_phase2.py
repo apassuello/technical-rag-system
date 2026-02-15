@@ -8,13 +8,8 @@ both legacy (Phase 1) and unified (Phase 2) retriever architectures.
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
-import sys
 import tempfile
 import yaml
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Document, Answer

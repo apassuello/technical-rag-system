@@ -13,7 +13,6 @@ Features:
 - Performance analysis and optimization insights
 """
 
-import sys
 import time
 import json
 import logging
@@ -22,9 +21,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 
-# Add project root to path
+# Project root for data file access
 project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.core.interfaces import Document, Answer
 from src.core.component_factory import ComponentFactory

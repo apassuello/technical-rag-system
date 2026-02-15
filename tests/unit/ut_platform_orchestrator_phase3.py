@@ -12,13 +12,8 @@ This test suite validates Phase 3 Platform Orchestrator enhancements:
 import pytest
 import tempfile
 import yaml
-import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.core.platform_orchestrator import PlatformOrchestrator
 from src.core.interfaces import Answer

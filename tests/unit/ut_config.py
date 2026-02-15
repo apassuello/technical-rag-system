@@ -5,15 +5,10 @@ Tests the ComponentConfig, PipelineConfig, and ConfigManager classes.
 """
 
 import pytest
-import sys
 import os
 import tempfile
 from pathlib import Path
 import yaml
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.core.config import (
     ComponentConfig,

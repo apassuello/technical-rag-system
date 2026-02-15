@@ -36,13 +36,6 @@ import pytest
 pytestmark = [pytest.mark.integration, pytest.mark.requires_ml, pytest.mark.slow, pytest.mark.performance]
 import numpy as np
 import time
-import sys
-from pathlib import Path
-
-# Add project paths
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
-sys.path.append(str(project_root.parent))
 
 from src.shared_utils.embeddings.generator import generate_embeddings
 

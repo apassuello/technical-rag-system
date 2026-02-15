@@ -6,13 +6,7 @@ This script validates the Epic1QueryAnalyzer implementation
 with various query types and complexities.
 """
 
-import sys
-from pathlib import Path
 import time
-
-# Add project to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.components.query_processors.analyzers import Epic1QueryAnalyzer
 

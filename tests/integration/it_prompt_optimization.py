@@ -3,16 +3,10 @@ Local prompt optimization testing with llama-server for back-and-forth iteration
 Uses local llama-server for responsive testing and Google Gemma for validation.
 """
 
-import sys
 import os
 from pathlib import Path
 import time
 import json
-
-# Add project paths
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
-sys.path.append(str(project_root.parent))
 
 from src.core.platform_orchestrator import PlatformOrchestrator
 from src.shared_utils.generation.prompt_templates import TechnicalPromptTemplates, QueryType

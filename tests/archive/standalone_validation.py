@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 
 # Add tools directory directly to path (bypass package imports)
-project_root = Path(__file__).parent.parent.parent.parent
+project_root = Path(__file__).parent.parent.parent
 tools_path = project_root / "src" / "components" / "query_processors" / "tools"
 sys.path.insert(0, str(tools_path))
 sys.path.insert(0, str(project_root / "src"))

@@ -22,12 +22,6 @@ import time
 import tempfile
 from typing import List, Dict, Any, Optional
 from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
-
-# Import system under test - use consistent src-prefixed imports
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.components.retrievers.modular_unified_retriever import ModularUnifiedRetriever
 from src.core.interfaces import Document, RetrievalResult, Embedder

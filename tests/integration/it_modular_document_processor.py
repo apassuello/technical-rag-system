@@ -6,13 +6,11 @@ This script tests the basic functionality of the modular document processor
 to ensure all components work together correctly.
 """
 
-import sys
 from pathlib import Path
 import pytest
 
-# Add project root to path
+# Project root for data file access
 project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.components.processors.document_processor import create_pdf_processor
 

@@ -6,14 +6,8 @@ This script validates that the Epic 1 component fixes are working correctly
 by testing the improved vocabulary, clause detection, and feature extraction.
 """
 
-import sys
 import time
-from pathlib import Path
 from typing import Dict, List, Tuple
-
-# Add project to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.append(str(project_root))
 
 from src.components.query_processors.analyzers.utils import TechnicalTermManager, SyntacticParser
 from src.components.query_processors.analyzers.components import FeatureExtractor, ComplexityClassifier

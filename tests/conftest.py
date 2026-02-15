@@ -20,6 +20,18 @@ if str(SRC_PATH) not in sys.path:
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+@pytest.fixture(scope="session")
+def project_root():
+    """Canonical project root — use this instead of computing Path(__file__).parent chains."""
+    return PROJECT_ROOT
+
+
+@pytest.fixture(scope="session")
+def src_path():
+    """Path to src/ directory."""
+    return SRC_PATH
+
+
 # Eagerly import ComponentFactory so the reference survives any test patches
 from src.core.component_factory import ComponentFactory as _RealComponentFactory
 
