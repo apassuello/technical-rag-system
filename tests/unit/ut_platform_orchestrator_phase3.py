@@ -193,6 +193,7 @@ class TestFactoryIntegration(TestPlatformOrchestratorPhase3):
 class TestConfigurationValidation(TestPlatformOrchestratorPhase3):
     """Test enhanced configuration validation."""
     
+    @pytest.mark.filterwarnings("ignore:Component validation warnings:UserWarning")
     def test_invalid_component_type_error(self, temp_config_file):
         """Test initialization with invalid component type."""
         
