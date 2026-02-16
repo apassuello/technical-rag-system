@@ -1,0 +1,140 @@
+/* ---------------------------------------------------------------------------
+   visualizations.css -- Chart containers, architecture diagram, timeline
+   --------------------------------------------------------------------------- */
+
+/* -- Chart containers ----------------------------------------------------- */
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-5);
+}
+
+.chart-container--half  { max-width: 600px; }
+.chart-container--third { max-width: 420px; }
+.chart-container--full  { max-width: 100%; }
+
+.chart-container canvas {
+  width: 100% !important;
+  max-height: 400px;
+}
+
+.chart-container--radar canvas    { max-height: 350px; }
+.chart-container--doughnut canvas { max-height: 300px; }
+.chart-container--bar canvas      { max-height: 400px; }
+
+.chart-title {
+  font-family: var(--font-display);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-base);
+  color: var(--text-primary);
+  margin-bottom: var(--sp-4);
+}
+
+/* -- Architecture diagram ------------------------------------------------- */
+
+.arch-diagram {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: minmax(80px, auto);
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+}
+
+.arch-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  background: var(--bg-surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-4) var(--sp-3);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.arch-box:hover {
+  border-color: var(--border-active);
+  background: var(--bg-elevated);
+}
+
+.arch-box.active {
+  border-color: var(--accent);
+}
+
+.arch-box__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.arch-box__port {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.arch-connector {
+  border-left: 1px dashed var(--border);
+  height: var(--sp-6);
+  margin-left: 50%;
+}
+
+.arch-connector--horizontal {
+  border-left: none;
+  border-top: 1px dashed var(--border);
+  width: var(--sp-6);
+  height: 0;
+  margin-left: 0;
+}
+
+/* -- Reasoning timeline --------------------------------------------------- */
+
+.timeline {
+  padding-left: var(--sp-6);
+  border-left: 2px solid var(--border);
+}
+
+.timeline__step {
+  position: relative;
+  padding-bottom: var(--sp-5);
+}
+
+.timeline__step::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--sp-6) - 5px);
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-primary);
+}
+
+.timeline__step--pending::before {
+  background: var(--text-muted);
+}
+
+.timeline__step--error::before {
+  background: var(--error);
+}
+
+/* -- Responsive ----------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  .chart-container--half,
+  .chart-container--third {
+    max-width: 100%;
+  }
+
+  .arch-diagram {
+    grid-template-columns: 1fr;
+  }
+}
