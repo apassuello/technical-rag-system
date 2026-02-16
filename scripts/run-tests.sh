@@ -167,9 +167,13 @@ fi
 # ---------------------------------------------------------------------------
 COV_THRESHOLD=70
 
+# Exclude markers for services with known issues (weaviate v3→v4, spacy model)
+MARKER_EXCLUDE="not requires_weaviate and not requires_spacy"
+
 PYTEST_ARGS=(
     "${TESTPATHS[@]}"
     --override-ini="addopts=--strict-markers --strict-config --tb=short"
+    -m "$MARKER_EXCLUDE"
     -rfEsx
 )
 
