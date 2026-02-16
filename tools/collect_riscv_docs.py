@@ -39,7 +39,7 @@ except ImportError:
 class RISCVDocCollector:
     """Automated RISC-V documentation collector for Epic 2 demo corpus."""
 
-    def __init__(self, base_dir: str = "data/riscv_comprehensive_corpus"):
+    def __init__(self, base_dir: str = "data/riscv_corpus"):
         """Initialize collector with organized directory structure."""
         self.base_dir = Path(base_dir)
         self.session = requests.Session()
@@ -681,7 +681,7 @@ def main():
     parser.add_argument("--all", action="store_true", help="Run all collection phases")
     parser.add_argument(
         "--output-dir",
-        default="data/riscv_comprehensive_corpus",
+        default="data/riscv_corpus",
         help="Output directory for collected documents",
     )
     parser.add_argument(

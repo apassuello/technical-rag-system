@@ -36,7 +36,7 @@ def get_test_documents() -> List[Path]:
     print("📄 Selecting RISC-V corpus documents for testing...")
 
     project_root = Path(__file__).parent.parent.parent
-    corpus_base = project_root / "data" / "riscv_comprehensive_corpus"
+    corpus_base = project_root / "data" / "riscv_corpus"
 
     # Check if corpus directory exists
     if not corpus_base.exists():
