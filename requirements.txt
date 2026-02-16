@@ -23,6 +23,7 @@ weaviate-client>=4.15.0,<5.0.0
 
 # Document Processing (Essential only)
 PyMuPDF>=1.23.0
+pdfplumber>=0.10.0
 
 # Text Processing (Core only)
 nltk>=3.8.0
@@ -33,6 +34,10 @@ python-dotenv>=1.0.0
 typing-extensions>=4.4.0
 pydantic>=2.0.0,<3.0.0  # Data validation and settings management
 pyyaml>=6.0.0  # YAML configuration parsing
+psutil>=5.9.0  # System monitoring (DynamicBatchProcessor, memory monitor)
+rank-bm25>=0.2.2  # BM25 sparse retrieval
+requests>=2.31.0  # HTTP client (LLM adapters)
+tqdm>=4.65.0  # Progress bars (training)
 
 # Epic 2 Graph Processing (Lightweight)
 networkx>=3.0,<4.0.0
@@ -41,8 +46,10 @@ spacy>=3.7.0,<3.8.0  # model: python -m spacy download en_core_web_sm==3.7.1
 # HuggingFace API Integration (Essential for cloud deployment)
 huggingface-hub>=0.16.0
 
-# Visualization (Lightweight)
+# Visualization
 plotly>=5.17.0,<6.0.0
+matplotlib>=3.7.0  # Evaluation framework plots
+seaborn>=0.12.0  # Statistical visualization (evaluation_framework)
 
 # Epic 1 Multi-Model Integration
 openai>=1.0.0  # Official OpenAI Python client
@@ -56,13 +63,13 @@ pytest>=7.4.0,<8.0.0  # Testing framework
 pytest-cov>=4.1.0  # Coverage reporting
 pytest-xdist>=3.3.0  # Parallel test execution
 pytest-asyncio>=0.21.0  # Async test support
+pytest-timeout>=2.2.0  # Test timeouts (pytest.ini: timeout=600)
 
 # RAG Evaluation
 ragas>=0.1.0  # RAG evaluation framework with quality metrics
 
 # Optional dependencies for local development only
 # accelerate>=0.20.0  # Uncomment for local GPU acceleration
-# pdfplumber>=0.10.0  # Uncomment for advanced PDF parsing
 # fastapi>=0.104.0    # Uncomment for API server
 # uvicorn>=0.24.0     # Uncomment for API server
 # ollama>=0.5.0       # Uncomment for local LLM

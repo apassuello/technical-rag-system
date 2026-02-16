@@ -90,6 +90,9 @@ pytest tests/unit \
   -m 'not requires_ml and not requires_ollama and not requires_postgres and not requires_redis and not integration' \
   --override-ini='addopts=--strict-markers --strict-config --tb=short' -x -q
 
+# Full demo (processes PDFs, queries, compares configs)
+python demo.py
+
 # Streamlit UI (requires Ollama for real LLM answers)
 streamlit run app.py
 ```

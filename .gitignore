@@ -79,6 +79,7 @@ models/
 # Cache
 .cache/
 cache/
+data/.demo_cache/
 
 # Temporary files
 tmp/
@@ -125,6 +126,9 @@ STREAMLIT_*.md
 comprehensive_test_results_*.json
 epic2_portfolio_assessment_*.txt
 *.log
+
+# Planning drafts
+docs/plans/
 
 # Claude session artifacts (entire directory)
 .claude/
