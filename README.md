@@ -1,703 +1,248 @@
+[![CI](https://github.com/apassuello/technical-rag-system/actions/workflows/ci.yml/badge.svg)](https://github.com/apassuello/technical-rag-system/actions/workflows/ci.yml)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 # Technical Documentation RAG System
 
-[![Tests](https://img.shields.io/badge/tests-2555%20functions-brightgreen.svg)](./tests/)
-[![Code Quality](https://img.shields.io/badge/type%20hints-86.6%25-brightgreen.svg)](./src/)
-![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![K8s Tests](https://github.com/apassuello/technical-rag-system/actions/workflows/k8s-testing.yml/badge.svg)](https://github.com/apassuello/technical-rag-system/actions/workflows/k8s-testing.yml)
-[![Helm Tests](https://github.com/apassuello/technical-rag-system/actions/workflows/helm-testing.yml/badge.svg)](https://github.com/apassuello/technical-rag-system/actions/workflows/helm-testing.yml)
+Config-driven retrieval-augmented generation with multi-model routing,
+hybrid search, and agent-based query processing.
 
-A comprehensive Retrieval-Augmented Generation (RAG) system for technical documentation with multi-model routing, hybrid retrieval, and K8s deployment infrastructure. Demonstrates ML engineering discipline from embedded systems background with 86.6% type hint coverage and 120K+ lines of test code.
+## What This Is
 
-**🚀 [Try Live Demo on HuggingFace Spaces](https://huggingface.co/spaces/ArthyP/enhanced-rag-demo)** | *Earlier version - current code adds Epic 1 & 2 enhancements*
+A retrieval-augmented generation system for technical documentation. You write a
+YAML config, and `PlatformOrchestrator` assembles a pipeline from five component
+slots: document processor, embedder, retriever, answer generator, and query
+processor. Each slot has multiple implementations, so the same codebase supports
+20+ configurations — from a mock-LLM smoke test to a multi-provider routing
+system with neural reranking.
 
-## Epic 1: Multi-Model Intelligence
+The system is organized into four epics. Epic 1 adds multi-model intelligence
+with complexity-based routing across LLM providers. Epic 2 adds hybrid search
+(FAISS + BM25), fusion strategies, and neural reranking. Epic 5 adds a ReAct
+agent with tool use and working memory. Epic 8 built microservices and Helm
+charts, then was archived in favor of the monolith.
 
-### Query Processing Architecture
-Multi-model routing system with ML-based query complexity analysis:
+This is a portfolio project. It has ~2,700 passing tests at 63% code coverage.
+Some components (Weaviate backend, cache service) are partially implemented and
+gated behind test markers. The system runs locally without external services — a
+mock LLM adapter handles answer generation when Ollama is unavailable.
 
-- **Multi-Provider Integration**: Intelligent routing between OpenAI, Mistral, and Ollama models
-- **ML-Based Classification**: Query complexity analysis with 5-dimensional feature assessment
-- **Cost Optimization**: Real-time cost tracking with $0.001 precision using thread-safe Decimal types
-- **Reliability**: Comprehensive fallback chains (OpenAI → Mistral → Ollama → Mock)
-
-### Implementation Patterns
-- **Bridge Pattern**: PyTorch models integrated without breaking existing interfaces
-- **Multi-Level Fallbacks**: ML models → heuristic analysis → conservative defaults
-- **Test Coverage**: 296 test functions with unit, integration, and validation scenarios
-
-## Epic 2: Advanced Retrieval Systems
-
-### Hybrid Retrieval Implementation
-Multi-strategy retrieval combining dense and sparse methods:
-
-- **Vector Search**: FAISS IndexFlatIP with 2,538 document chunks (384-dimensional embeddings)
-- **Sparse Retrieval**: BM25 algorithm for keyword-based document matching
-- **Fusion Strategies**: RRF (Reciprocal Rank Fusion) and graph-enhanced fusion
-- **Neural Reranking**: Cross-encoder models for precision improvement
-- **System Integration**: All retrieval components operational with comprehensive testing
-
-### Technical Implementation
-- **Score Normalization**: Automatic calibration preventing score compression
-- **Graph Enhancement**: Document relationship analysis with proportional scaling
-- **Performance**: 0.35ms average query time on 2,538 indexed chunks
-
-## 🚀 System Features
-
-- **6-Component Modular Architecture**: Platform Orchestrator, Document Processor, Embedder, Retriever, Answer Generator, Query Processor
-- **Epic 1 Multi-Model Intelligence**: 
-  - **Advanced ML routing** with 99.5% query classification accuracy
-  - **Cost-aware optimization** with real-time budget management
-  - **Multi-provider integration** (OpenAI, Mistral, Ollama) with intelligent fallbacks
-- **Epic 2 Advanced Retrieval**: 
-  - **Neural reranking** with cross-encoder models for precision improvement
-  - **Graph-enhanced fusion** with validated 48.7% MRR improvement  
-  - **Advanced analytics** and real-time performance monitoring
-- **Multiple Deployment Options**: HuggingFace Spaces, Local, Docker
-- **Quality Engineering Standards**: 147 test cases, comprehensive validation, production monitoring
-
-## 📁 Project Structure
+## Architecture
 
 ```
-project-1-technical-rag/
-├── src/                       # Source code
-│   ├── components/           # Core RAG components
-│   ├── core/                # Platform orchestrator & factory
-│   └── training/            # Training infrastructure
-├── tests/                     # Test suites
-│   ├── epic1/               # Epic 1 specific tests
-│   ├── epic2_validation/    # Epic 2 validation tests
-│   └── diagnostic/          # System diagnostics
-├── docs/                      # Documentation
-│   ├── epic1/               # Epic 1 documentation & reports
-│   ├── epic2/               # Epic 2 documentation
-│   └── architecture/        # System architecture docs
-├── scripts/                   # Utility scripts
-│   ├── epic1_training/      # Training scripts
-│   ├── epic1_validation/    # Validation scripts
-│   ├── debug/              # Debug utilities
-│   ├── fixes/              # Fix scripts
-│   └── analysis/           # Analysis tools
-├── data/                      # Data files
-│   ├── training/           # Training datasets
-│   └── analysis/           # Analysis results
-├── models/                    # Trained models
-│   └── epic1/              # Epic 1 trained models
-├── config/                    # Configuration files
-├── app.py                     # Main application
-├── streamlit_app.py          # Streamlit UI
-└── requirements.txt          # Python dependencies
+config/*.yaml
+     │
+     ▼
+┌─────────────────────────────────┐
+│      PlatformOrchestrator       │
+│   (config → component slots)    │
+└──┬──────┬──────┬──────┬──────┬──┘
+   │      │      │      │      │
+   ▼      ▼      ▼      ▼      ▼
+┌─────┐┌─────┐┌─────┐┌─────┐┌─────┐
+│Proc ││Embed││Retr ││GenAI││Query│
+│essor││der  ││iever││     ││Proc │
+└─────┘└─────┘└──┬──┘└─────┘└─────┘
+                 │
+        ┌────────┼────────┐
+        ▼        ▼        ▼
+     vector   sparse   fusion
+     index    (BM25)   + rerank
+     (FAISS)
 ```
 
-## 📚 Documentation
+| Slot | Implementations | Config key |
+|------|----------------|------------|
+| Document Processor | `hybrid_pdf` | `document_processor` |
+| Embedder | `modular` (sentence-transformers) | `embedder` |
+| Retriever | `modular_unified` → FAISS + BM25 + fusion + reranker | `retriever` |
+| Answer Generator | `adaptive_modular`, `epic1` (multi-model routing) | `answer_generator` |
+| Query Processor | `intelligent` (Epic 5 agent-based) | `query_processor` |
 
-Comprehensive guides organized by topic:
+**LLM adapters** (under answer generator): `mock`, `ollama`, `openai`, `mistral`,
+`anthropic`, `huggingface`, `local`.
 
-### **🚀 [Deployment Guides](./docs/deployment/)**
-Production deployment options with complete automation:
-- **[AWS ECS Fargate](./docs/deployment/aws-ecs/)** (RECOMMENDED) - $3.20/day, 31 days on $100 budget
-  - [Quick Start](./docs/deployment/aws-ecs/README.md) - 30-minute setup
-  - [Detailed Plan](./docs/deployment/aws-ecs/deployment-plan.md) - 11 Mermaid diagrams
-- **[AWS EKS](./docs/deployment/aws-eks/)** - Production Kubernetes with full features
-- **[Local Docker](./docs/deployment/)** - FREE development environment
+The config-driven design means you can A/B compare retrieval strategies, swap LLM
+providers, or run the full pipeline with zero external dependencies — all by
+changing a YAML file.
 
-### **🤖 [Integration Guides](./docs/integration/)**
-External model and service integrations:
-- **[GPT-OSS Integration](./docs/integration/gpt-oss/)** - OpenAI's open-source models
-  - 3 integration approaches (HuggingFace, Native, Ollama)
-  - Cost analysis and optimization strategies
-
-### **🎭 [Demo Guides](./docs/demos/)**
-Complete demonstration preparation:
-- **[Epic 8 Demo](./docs/demos/epic8/)** - Full platform demo
-  - 5 demo modes (Full Stack, ECS, Docker, Architecture, Code)
-  - [15-minute quick demo](./docs/demos/epic8/README.md) script
-
-### **🏗️ [Architecture Documentation](./docs/architecture/)**
-System design and technical specifications:
-- Component architecture and design patterns
-- Epic specifications (Epic 1, Epic 2, Epic 8)
-- Performance analysis and validation reports
-
-### **📊 Quick Links**
-- **Deploy to AWS Now**: [`cd deployment/ecs && ./deploy.sh setup`](./deployment/ecs/)
-- **Check Deployment Costs**: [`./deployment/ecs/check-costs.sh`](./deployment/ecs/check-costs.sh)
-- **Run Local Demo**: [`docker-compose up`](./docker-compose.yml)
-
----
-
-## 📋 Prerequisites
-
-### Required Dependencies
-- Python 3.11+
-- PyTorch 2.0+ (with MPS support for Apple Silicon)
-- 4GB+ RAM for basic operation
-- 8GB+ RAM for Epic 2 features
-
-### Optional Dependencies
-- Ollama (for local LLM inference)
-- Docker (for containerized deployment)
-- CUDA GPU (for accelerated inference)
-
-## 🛠️ Installation
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/yourusername/technical-rag-system.git
-cd technical-rag-system/project-1-technical-rag
-```
-
-### 2. Create Virtual Environment
-```bash
-conda create -n technical-rag-system python=3.11
-conda activate technical-rag-system
-```
-
-### 3. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Install Ollama (Optional - for Production LLM)
-
-The system includes a MockLLMAdapter for testing without external dependencies. For production use with real LLM inference, install Ollama:
-
-#### macOS/Linux
-```bash
-curl https://ollama.ai/install.sh | sh
-```
-
-#### Windows
-Download and install from: https://ollama.ai/download/windows
-
-#### Pull Required Model
-```bash
-ollama pull llama3.2:3b
-```
-
-#### Verify Installation
-```bash
-ollama list
-# Should show llama3.2:3b in the list
-```
-
-## 🧪 Testing Without Ollama
-
-The system includes a MockLLMAdapter that allows running tests without external dependencies:
+## Quick Start
 
 ```bash
-# Run tests with mock adapter
-python test_mock_adapter.py
-
-# Use mock configuration for testing
-python tests/run_comprehensive_tests.py config/test_mock_default.yaml
+git clone https://github.com/apassuello/technical-rag-system.git
+cd technical-rag-system
+./setup.sh
 ```
 
-## 🚀 Quick Start
+Then try it:
 
-### 1. Basic Usage (with Mock LLM)
-```python
+```bash
+source .venv/bin/activate
+
+python -c "
 from src.core.platform_orchestrator import PlatformOrchestrator
-
-# Initialize with mock configuration for testing
-orchestrator = PlatformOrchestrator("config/test_mock_default.yaml")
-
-# Process a query
-result = orchestrator.process_query("What is RISC-V?")
-print(f"Answer: {result.answer}")
-print(f"Confidence: {result.confidence}")
-```
-
-### 2. Production Usage (with Ollama)
-```python
-# Initialize with production configuration
-orchestrator = PlatformOrchestrator("config/default.yaml")
-
-# Index documents
-orchestrator.index_documents("data/documents/")
-
-# Process queries
-result = orchestrator.process_query("Explain RISC-V pipeline architecture")
-```
-
-### 3. Epic 2 Features
-```python
-# Use advanced Epic 2 configuration
-orchestrator = PlatformOrchestrator("config/advanced_test.yaml")
-
-# Epic 2 provides:
-# - Neural reranking for better relevance
-# - Graph-enhanced document relationships
-# - Advanced analytics
-### 3. Epic 2 Enhanced Features
-```python
-# Use Epic 2 with graph enhancement (validated 48.7% MRR improvement)
-orchestrator = PlatformOrchestrator("config/epic2_graph_calibrated.yaml")
-
-# Process query with advanced features
-result = orchestrator.process_query("Explain RISC-V pipeline architecture")
-
-# Epic 2 provides:
-# - Neural reranking: Cross-encoder model for precision improvement
-# - Graph enhancement: Document relationship analysis (48.7% MRR boost)
-# - Score discrimination: 114,923% improvement over baseline
-# - Advanced analytics: Real-time performance monitoring
-
-print(f"Answer: {result.answer}")
-print(f"Confidence: {result.confidence}")
-print(f"Sources: {result.sources}")
-```
-
-### 4. Epic 1 Multi-Model Intelligence
-```python
-# Epic 1 with trained models (99.5% accuracy)
-epic1_orchestrator = PlatformOrchestrator("config/epic1_multi_model.yaml")
-
-# Process query with intelligent routing
-result = epic1_orchestrator.process_query("Explain neural network optimization techniques")
-
-# Epic 1 features:
-# - 99.5% query complexity classification
-# - Intelligent model selection (OpenAI/Mistral/Ollama)
-# - Real-time cost tracking and optimization
-# - <25ms routing decisions
-# - 100% fallback reliability
-
-print(f"Selected Model: {result.metadata['selected_model']}")
-print(f"Complexity: {result.metadata['complexity_level']}")  
-print(f"Cost: ${result.metadata['cost_usd']:.4f}")
-print(f"Routing Time: {result.metadata['routing_time_ms']}ms")
-```
-
-### 5. Configuration Comparison
-```python
-# Basic Configuration (baseline)
-basic_orchestrator = PlatformOrchestrator("config/default.yaml")
-# - Single model (Ollama)
-# - Basic complexity analysis
-
-# Epic 1 Configuration (multi-model intelligence)
-epic1_orchestrator = PlatformOrchestrator("config/epic1_multi_model.yaml")
-# - Intelligent multi-model routing (99.5% accuracy)
-# - Cost-aware optimization ($0.001 precision)
-# - Advanced ML-based complexity analysis
-
-# Epic 2 Configuration (advanced retrieval)  
-epic2_orchestrator = PlatformOrchestrator("config/epic2_graph_calibrated.yaml")
-# - GraphEnhancedRRFFusion + NeuralReranker
-# - 48.7% MRR improvement validated
-# - 114,923% score discrimination improvement
-
-# Combined Epic 1 + Epic 2 (full system)
-full_orchestrator = PlatformOrchestrator("config/epic1_epic2_combined.yaml")
-# - 99.5% query classification + 48.7% MRR improvement
-# - Multi-model intelligence + advanced retrieval
-# - Well-tested with comprehensive monitoring
-```
-
-## 📁 Configuration
-
-### Configuration Files
-
-- `config/default.yaml` - Basic RAG configuration (single model)
-- `config/epic1_multi_model.yaml` - Epic 1 multi-model intelligence (99.5% accuracy)
-- `config/epic2_graph_calibrated.yaml` - Epic 2 advanced retrieval (48.7% MRR improvement)
-- `config/epic1_epic2_combined.yaml` - Full system with both Epic 1 + Epic 2
-- `config/test_mock_default.yaml` - Testing without external dependencies
-- `config/epic2_hf_api.yaml` - HuggingFace API deployment
-
-### Key Configuration Options
-
-```yaml
-# Epic 1 Multi-Model Configuration
-answer_generator:
-  type: "epic1"  # Epic 1 multi-model intelligence
-  config:
-    routing:
-      enabled: true
-      query_analyzer:
-        type: "epic1_ml_adapter"  # 99.5% accuracy ML models
-        model_dir: "models/epic1"
-      routing_strategy: "balanced"  # cost_optimized, quality_first, balanced
-    
-    # Multi-model adapters
-    llm_adapters:
-      openai:
-        api_key: "${OPENAI_API_KEY}"
-        models: ["gpt-3.5-turbo", "gpt-4-turbo"]
-      mistral:
-        api_key: "${MISTRAL_API_KEY}"  
-        models: ["mistral-small", "mistral-large"]
-      ollama:
-        base_url: "http://localhost:11434"
-        models: ["llama3.2:3b", "llama3.2:8b"]
-    
-    # Cost tracking
-    cost_tracking:
-      enabled: true
-      precision: 0.001  # $0.001 accuracy
-      daily_budget: 10.00  # $10 daily limit
-
-# Traditional Single Model Configuration (baseline)
-answer_generator:
-  type: "adaptive_modular"
-  config:
-    llm_client:
-      type: "ollama"
-      config:
-        model_name: "llama3.2:3b"
-        base_url: "http://localhost:11434"
-```
-
-## 🐳 Docker Deployment
-
-```bash
-# Build Docker image
-docker-compose build
-
-# Run with Docker
-docker-compose up
-```
-
-## 📊 Performance Benchmarks
-### **Epic 1 Production Metrics (Multi-Model Intelligence)**
-- **Classification Accuracy**: 99.5% (214/215 correct on external test dataset)
-- **Baseline Improvement**: +41.4 percentage points (58.1% → 99.5%)
-- **Routing Latency**: <25ms average (target <50ms) - EXCEPTIONAL
-- **Cost Tracking Precision**: $0.001 accuracy with real-time optimization
-- **Reliability**: 100% fallback success rate (zero downtime guaranteed)
-- **Memory Efficiency**: <1.4GB total usage (30% under 2GB budget)
-
-### **Epic 2 Production Metrics (Advanced Retrieval)**
-- **MRR Performance**: 0.892 (EXCELLENT - 48.7% improvement)
-- **NDCG@5 Quality**: 0.770 (EXCELLENT - 33.7% improvement) 
-- **Score Discrimination**: 114,923% improvement (0.000768 → 0.887736 range)
-- **System Integration**: 100% operational across all components
-
-### **Combined System Performance**
-- **Document Processing**: 657K chars/sec with 100% metadata preservation
-- **Embedding Generation**: 50.0x batch speedup with MPS acceleration
-- **Query Classification**: 99.5% accuracy with multi-view ML analysis
-- **Model Routing**: <25ms intelligent selection with cost optimization
-- **Retrieval Quality**: 48.7% MRR improvement with graph enhancement
-- **Answer Generation**: <2s for 95% of queries (100% success rate)
-- **Architecture Compliance**: 100% modular (all 6 components)
-
-## 🧪 Unified Test Infrastructure - Enterprise Ready
-
-### **Complete Test Infrastructure with 100% Epic 8 Success Rate**
-
-The system features a **unified test infrastructure** with **100% Epic 8 test success** and comprehensive coverage across all components:
-
-#### **Quick Start - Test Execution Commands**
-```bash
-# Fast basic tests (Priority 1 only) - ~2-3 minutes
-./test_all_working.sh basic
-
-# Standard development tests (Priority 1-2) - ~5-10 minutes  
-./test_all_working.sh working
-
-# Epic-specific testing
-./test_all_working.sh epic8    # Epic 8 microservices only (100% success rate)
-./test_all_working.sh epic1    # Epic 1 components only
-
-# Coverage analysis with automatic report opening
-./test_all_working.sh coverage
-
-# Comprehensive testing (all categories) - ~15-30 minutes
-./test_all_working.sh comprehensive
-
-# Generate beautiful HTML test report
-./test_all_working.sh report
-```
-
-#### **Advanced Python Interface**
-```bash
-# Basic tests with specific epic filtering
-python run_unified_tests.py --level basic --epics epic8
-
-# Working tests with result saving
-python run_unified_tests.py --level working --save-results test_results.json
-
-# Comprehensive testing without coverage (faster)
-python run_unified_tests.py --level comprehensive --no-coverage
-
-# Custom epic combinations
-python run_unified_tests.py --level working --epics epic1 epic8
-```
-
-#### **Key Infrastructure Features**
-- ✅ **100% Epic 8 Test Success**: All 48 Epic 8 tests passing
-- ✅ **PYTHONPATH Resolution**: Eliminates ModuleNotFoundError issues
-- ✅ **Real-Time Visibility**: Live test progress (no hidden execution)
-- ✅ **Professional HTML Reports**: Dashboard with statistics and progress bars
-- ✅ **Smart Test Discovery**: Automatic discovery of 1199+ tests across all categories
-- ✅ **Swiss Engineering Quality**: Comprehensive error handling and timeout management
-
-#### **Legacy Test Commands (Still Supported)**
-```bash
-# Run comprehensive test suite (8,000+ test lines)
-python tests/run_comprehensive_tests.py
-
-# Run Epic-specific test suites
-python test_runner.py epic1 all    # Epic 1: Multi-model system (296 tests)
-python test_runner.py epic8 all    # Epic 8: Cloud-native services
-
-# Run coverage analysis
-./scripts/coverage_comprehensive.sh      # Full system coverage
-./scripts/coverage_epic_specific.sh 1   # Epic 1 coverage  
-./scripts/coverage_epic_specific.sh 8   # Epic 8 coverage
-```
-
-#### **Test Coverage Achievements**
-| Component | Coverage | Tests | Status |
-|-----------|----------|-------|--------|
-| **Epic 1 Multi-Model** | 80-99% | 296 tests | ✅ Well-Tested |
-| **Epic 2 Calibration** | 97.4% | 112/115 passing | ✅ Comprehensive |
-| **Retrieval Systems** | 75-90% | All components | ✅ Complete |
-| **Training Pipeline** | 99.5% | Accuracy validated | ✅ Validated |
-| **Core Infrastructure** | 85%+ | All components | ✅ Robust |
-
-#### **Coverage Quality Metrics**
-- **Total Test Lines**: 8,000+ comprehensive test lines  
-- **Test Cases**: 200+ scenarios across all priority areas
-- **Overall Pass Rate**: 95%+ across all test suites
-- **Epic 1 ML Components**: 80-99% coverage (well-tested)
-- **Epic 2 Systems**: 97.4% success rate (comprehensive validation)
-- **Performance Validation**: 7.5M+ params/sec processing verified
-
-#### **Test Organization**
-```bash
-tests/
-├── epic1/                    # Epic 1: Multi-Model (296 tests, 95%+ pass rate)
-├── epic8/                    # Epic 8: Cloud-Native (93.3% success after alignment)  
-├── unit/                     # Component unit tests (calibration, core systems)
-├── integration/              # System integration tests
-└── training_pipeline/        # 99.5% accuracy validation tests
-```
-
-#### **Swiss Engineering Standards**
-- **Evidence-Based Testing**: 1,800+ test execution results documented
-- **Performance Benchmarking**: Real-world performance validation
-- **Production Readiness**: Comprehensive quality gates and monitoring
-- **Enterprise Quality**: Suitable for Swiss technology market deployment
-
-### **Quick Test Validation**
-```bash
-# Smoke test (10 seconds)
-python test_runner.py smoke
-
-# Core validation (2 minutes)  
-python test_runner.py epic1 integration
-
-# Full validation (10 minutes)
-python test_runner.py epic1 all && python test_runner.py epic8 all
-```
-
-## 🌐 Deployment Options
-
-### Local Development
-```bash
-streamlit run streamlit_app.py
-```
-
-### HuggingFace Spaces
-```bash
-# Prepare for HF deployment
-python scripts/prepare_hf_deployment.py
-
-# Uses HuggingFace API to avoid local model requirements
-```
-
-### Production Server
-```bash
-# With proper configuration
-gunicorn app:app --workers 4 --bind 0.0.0.0:8000
-### **🚀 HuggingFace Spaces Deployment (Recommended)**
-
-The system is optimized for HuggingFace Spaces with automatic environment detection:
-
-1. **Create New Space**: Create a new Streamlit app on [HuggingFace Spaces](https://huggingface.co/spaces)
-
-2. **Upload Files**: Upload the following files to your space:
-   ```
-   app.py                    # Main entry point (HF Spaces optimized)
-   streamlit_epic2_demo.py   # Epic 2 demo application
-   requirements.txt          # HF-optimized dependencies
-   config/                   # Configuration files
-   src/                      # Core system
-   ```
-
-3. **Set Environment Variables** (in Space settings):
-   ```bash
-   HF_TOKEN=your_huggingface_token_here  # For API access
-   ```
-
-4. **Automatic Configuration**: The app automatically detects:
-   - HuggingFace Spaces environment
-   - Available API tokens
-   - Memory constraints
-   - Recommends optimal configuration
-
-**Features in HF Spaces:**
-- 📈 Full Epic 2 capabilities with 48.7% MRR improvement
-- 🔧 Automatic environment detection and configuration
-- 💾 Memory-optimized dependencies (<16GB usage)
-- 🌐 Global accessibility with zero setup required
-
-### **💻 Local Development**
-
-For full local capabilities with Ollama:
-
-```bash
-# Install Ollama and model
-brew install ollama
-ollama pull llama3.2:3b
-
-# Run Epic 2 demo
+orch = PlatformOrchestrator('config/basic.yaml')
+print(orch.health_service.get_system_health())
+"
+
+# Run unit tests
+pytest tests/unit \
+  -m 'not requires_ml and not requires_ollama and not requires_postgres and not requires_redis and not integration' \
+  --override-ini='addopts=--strict-markers --strict-config --tb=short' -x -q
+
+# Streamlit UI (requires Ollama for real LLM answers)
 streamlit run app.py
 ```
 
-### **🐳 Docker Deployment**
+Note: the first `PlatformOrchestrator` call downloads the embedding model (~22MB).
 
-```bash
-# Build and run with Docker
-docker-compose up
+## Feature Epics
+
+### Epic 1: Multi-Model Intelligence
+
+Complexity-based query routing across LLM providers with cost tracking.
+
+- 5-dimensional complexity analysis (vocabulary, structure, domain, reasoning, context)
+- 3 routing strategies: `cost_optimized`, `quality_first`, `balanced`
+- 8 LLM adapters with fallback chains
+- Thread-safe Decimal cost tracking ($0.001 precision)
+
+Key files: `src/components/generators/routing/`, `src/components/generators/llm_adapters/`,
+`src/components/generators/epic1_answer_generator.py`
+Config: `config/epic1_multi_model.yaml`
+
+### Epic 2: Advanced Retrieval
+
+Hybrid search combining dense and sparse methods with learned fusion.
+
+- FAISS `IndexFlatIP` for dense vector search (384-dim embeddings)
+- BM25 for keyword matching with configurable stop words
+- 4 fusion strategies: RRF, weighted, graph-enhanced RRF, score-aware
+- Neural reranking via cross-encoder models
+- Score normalization and calibration
+
+Key files: `src/components/retrievers/`, `src/components/calibration/`
+Configs: `config/epic2_graph_enhanced_mock.yaml`, `config/epic2_score_aware_mock.yaml`
+
+### Epic 5: Agent-Based RAG
+
+ReAct agent loop with tool use, working memory, and planning.
+
+- Tool registry with typed parameters
+- Working memory for multi-turn context
+- ReasoningStep trace (THOUGHT → ACTION → OBSERVATION)
+- LangChain integration via `langchain_classic`
+
+Key files: `src/components/query_processors/`
+Config: `config/epic5_agents.yaml`, `config/epic5_tools.yaml`
+
+### Epic 8: Cloud-Native (Archived)
+
+Built as 5 microservices with Helm charts and K8s manifests. Archived after
+deciding the monolith serves the portfolio better. The code remains in `services/`
+as a demonstration of knowing when *not* to distribute.
+
+Key files: `services/api-gateway/`
+
+## Configuration
+
+A trimmed `basic.yaml` showing the structure:
+
+```yaml
+document_processor:
+  type: "hybrid_pdf"
+  config:
+    chunk_size: 512
+
+embedder:
+  type: "modular"
+  config:
+    model:
+      type: "sentence_transformer"
+      config:
+        model_name: "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+
+retriever:
+  type: "modular_unified"
+  config:
+    vector_index: { type: "faiss" }
+    sparse:       { type: "bm25" }
+    fusion:       { type: "rrf" }
+    reranker:     { type: "identity" }
+
+answer_generator:
+  type: "adaptive_modular"
+  config:
+    llm_client: { type: "mock" }  # no API keys needed
 ```
 
-## 🔧 Troubleshooting
+Representative configs:
 
-### "Model 'llama3.2' not found"
-- **Cause**: Ollama not installed or model not pulled
-- **Solution**: Follow Ollama installation steps above or use mock configuration
+| Config | LLM | Retrieval | Use case |
+|--------|-----|-----------|----------|
+| `basic.yaml` | mock | FAISS + BM25 + RRF | Testing, CI |
+| `test.yaml` | mock | FAISS + BM25 | Integration tests |
+| `local.yaml` | ollama | FAISS + BM25 + RRF | Local dev |
+| `epic1_multi_model.yaml` | multi-provider routing | FAISS + BM25 | Multi-model evaluation |
+| `epic2_graph_enhanced_mock.yaml` | mock | FAISS + BM25 + graph RRF + neural reranker | Retrieval experiments |
+| `epic2_score_aware_mock.yaml` | mock | FAISS + BM25 + score-aware fusion | Score calibration |
 
-### "Connection refused on localhost:11434"
-- **Cause**: Ollama service not running
-- **Solution**: Start Ollama with `ollama serve`
+## Testing
 
-### High Memory Usage
-- **Cause**: Large models loaded in memory
-- **Solution**: Use smaller models or increase system RAM
+```bash
+# Fast unit tests (~30s, no ML deps)
+pytest tests/unit \
+  -m "not requires_ml and not requires_ollama and not requires_postgres and not requires_redis and not integration" \
+  --override-ini="addopts=--strict-markers --strict-config --tb=short" -x -q
 
-### Tests Failing
-- **Cause**: Missing dependencies or Ollama not running
-- **Solution**: Use test_mock configurations or install Ollama
+# Full suite with coverage
+pytest tests/unit tests/integration tests/validation \
+  -m "not requires_ml and not requires_ollama" -v --tb=short \
+  --cov=src --cov-report=term-missing --cov-fail-under=70
+```
 
-## 📚 Documentation & Validation
+Current baseline: ~2,700 passing, ~229 known failures (isolated behind markers).
+Coverage: 63% overall.
 
-### **Epic 1 Multi-Model Intelligence Documentation**
-- [Epic 1 Master Documentation Hub](docs/epic1/README.md) - Complete Epic 1 navigation and overview
-- [Epic 1 System Architecture](docs/epic1/architecture/EPIC1_SYSTEM_ARCHITECTURE.md) - Bridge pattern and multi-model design
-- [Epic 1 ML Architecture](docs/epic1/architecture/EPIC1_ML_ARCHITECTURE.md) - 99.5% accuracy ML system details
-- [Epic 1 Implementation Guide](docs/epic1/implementation/EPIC1_IMPLEMENTATION_GUIDE.md) - Complete code implementation
-- [Epic 1 Validation Results](docs/epic1/testing/EPIC1_VALIDATION_RESULTS.md) - 99.5% accuracy validation evidence
+Test file naming: `ut_` (unit), `it_` (integration), `vt_` (validation).
 
-### **Epic 2 Advanced Retrieval Documentation**
-- [Epic 2 Master Status](docs/epic2/EPIC2_MASTER_STATUS.md) - 100% validation with 48.7% MRR improvement analysis
-- [Epic 2 Calibration System API](docs/api/CALIBRATION_SYSTEM_API.md) - 641-line comprehensive API documentation
-- [Architecture Overview](docs/architecture/MASTER-ARCHITECTURE.md) - System design and components
-- [Component Documentation](docs/architecture/components/) - Individual component specifications
-- [Test Documentation](docs/test/) - Enterprise-grade testing framework
+Markers: `requires_ml`, `requires_ollama`, `requires_weaviate`, `requires_spacy`,
+`requires_postgres`, `requires_redis`. Tests auto-skip when services are
+unavailable — no manual configuration needed.
 
-### **Epic 8 Cloud-Native Platform Documentation**
-- [Epic 8 Comprehensive Progress Report](docs/completion-reports/EPIC8_COMPREHENSIVE_PROGRESS_REPORT.md) - Complete Epic 8 status and achievements
-- [Epic 8 Architectural Compliance](docs/epics/epic8-architectural-compliance-assessment.md) - Production readiness assessment
-- [Platform Orchestrator Test Infrastructure](docs/architecture/components/platform-orchestrator-test-infrastructure-report.md) - Component testing validation
-- [Comprehensive Coverage Analysis](docs/analysis/COMPREHENSIVE_COVERAGE_ANALYSIS_2025.md) - System-wide coverage assessment
-- [Test Coverage Status](docs/test/TEST_COVERAGE_STATUS_UPDATE.md) - Current testing status and strategic component results
+## Project Structure
 
-### **Key Technical Achievements**
+```
+src/
+├── core/                  # PlatformOrchestrator, ComponentFactory, interfaces
+├── components/
+│   ├── processors/        # Document chunking and PDF handling
+│   ├── embedders/         # Sentence-transformer embeddings
+│   ├── retrievers/        # FAISS, BM25, fusion, reranking
+│   ├── generators/        # LLM adapters, routing, prompt building
+│   ├── query_processors/  # Agent-based query processing (Epic 5)
+│   └── calibration/       # Score normalization (Epic 2)
+├── training/              # Model training infrastructure
+└── evaluation/            # Retrieval quality metrics
+config/                    # YAML pipeline configurations
+tests/
+├── unit/                  # ut_*.py — fast, mocked
+├── integration/           # it_*.py — real components
+└── validation/            # vt_*.py — quality assertions
+services/                  # Archived microservices (Epic 8)
+```
 
-**Epic 1 Multi-Model Intelligence**:
-1. **99.5% Classification Accuracy**: Advanced ML-based query complexity analysis (41.4% improvement)
-2. **Bridge Architecture Innovation**: Seamless PyTorch model integration without breaking changes
-3. **<25ms Routing Performance**: Exceptional speed with intelligent cost-aware model selection
-4. **Production Reliability**: 100% fallback success rate with comprehensive error handling
+## Requirements
 
-**Epic 2 Advanced Retrieval**:
-1. **Score Compression Resolution**: Fixed critical GraphEnhancedRRFFusion scale mismatch issue
-2. **RAGAS Validation**: 48.7% MRR and 33.7% NDCG@5 improvements quantified
-3. **System Integration**: 100% Epic 2 component operational validation
-4. **Production Deployment**: HuggingFace Spaces ready with automated configuration
+- Python 3.11+
+- ~2 GB disk (dependencies + embedding model)
+- 4 GB RAM minimum
+- No GPU required (CPU inference works fine)
 
-## 🤝 Contributing
+Optional:
+- [Ollama](https://ollama.ai) for local LLM inference
+- Docker for containerized deployment
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Run tests to ensure quality
-4. Commit your changes (`git commit -m 'Add amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
+## License
 
-## 📄 License
-
-This project is part of the RAG Portfolio for ML Engineer positioning. All rights reserved.
-
-## 🙏 Acknowledgments
-
-- Built with Swiss engineering standards
-- Leverages state-of-the-art NLP models
-- Optimized for production deployment
-
----
-
-**Note**: This system can run in two modes:
-1. **Test Mode**: Uses MockLLMAdapter (no external dependencies needed)
-2. **Production Mode**: Uses Ollama or HuggingFace API (requires installation)
-
-For quick testing and development, use the mock configurations. For production deployment with real LLM capabilities, install Ollama following the instructions above.
-## 🏆 Portfolio Impact
-
-This RAG system demonstrates:
-
-### **Technical Expertise**
-
-**Epic 1 Multi-Model Intelligence**:
-- **Advanced ML Engineering**: 99.5% accuracy with trained PyTorch models and feature-based approaches
-- **System Architecture**: Bridge pattern innovation enabling seamless model integration
-- **Cost Optimization**: $0.001 precision tracking with real-time budget management and intelligent routing
-- **Production Reliability**: 100% fallback success with comprehensive error handling
-
-**Epic 2 Advanced Retrieval**:
-- **Complex Problem Solving**: Scale mismatch identification and 114,923% improvement in score discrimination
-- **Mathematical Optimization**: GraphEnhancedRRFFusion debugging with proportional scaling solutions
-- **Performance Engineering**: 48.7% MRR improvement through systematic component enhancement
-
-**Overall System Excellence**:
-- **Swiss Engineering Standards**: 147 test cases with systematic validation and quantified metrics
-- **Production Engineering**: Zero-downtime deployment with enterprise-grade monitoring
-- **Quality Assurance**: Comprehensive testing across all system layers
-
-### **Business Value**
-
-**Unique Portfolio Differentiation**:
-- **Epic 1**: 99.5% accuracy multi-model intelligence beyond basic RAG implementations
-- **Epic 2**: Advanced retrieval with quantified 48.7% improvement over baseline systems
-- **Combined**: Sophisticated end-to-end system demonstrating ML engineering mastery
-
-**Swiss Tech Market Positioning**:
-- **Quality Focus**: Swiss engineering standards with comprehensive validation
-- **Precision Engineering**: $0.001 cost tracking and 99.5% classification accuracy
-- **Reliability**: 100% fallback success ensuring robust system availability
-
-**Competitive Interview Assets**:
-- **Concrete Achievements**: 99.5% accuracy, 48.7% MRR improvement, <25ms routing
-- **Technical Depth**: Bridge architecture, advanced ML integration, cost optimization
-- **Production Experience**: HuggingFace deployment, comprehensive testing, monitoring
-
-## 🙏 Acknowledgments
-
-- **Swiss Engineering Standards**: Precision, reliability, and systematic validation
-- **Advanced NLP Models**: Leveraging state-of-the-art transformer architectures
-- **Production Optimization**: Apple Silicon MPS acceleration and memory efficiency
-- **Comprehensive Testing**: Enterprise-grade validation with RAGAS framework
-
----
-
-## 🚀 Quick Start Summary
-
-**HuggingFace Spaces (Recommended)**: Upload `app.py`, set `HF_TOKEN`, deploy  
-**Local Development**: `pip install -r requirements.txt`, `ollama pull llama3.2:3b`, `streamlit run app.py`  
-**Epic 2 Features**: Validated 48.7% MRR improvement with graph-enhanced fusion  
-
-**Status**: ✅ 100% modular architecture, ✅ HF Spaces optimized, ✅ Comprehensive validation
+MIT. Arthur Passuello.
