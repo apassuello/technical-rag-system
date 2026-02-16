@@ -4,7 +4,7 @@
 
 import { AppState, navigateTo } from './state.js';
 import { MOCK_DATA } from './data.js';
-import { submitQuery } from './api.js';
+import { submitQuery, compareConfigs } from './api.js';
 import {
   renderConfidenceGauge,
   renderBadge,
@@ -756,4 +756,617 @@ function showDocumentMetadata(doc) {
     row.appendChild(value);
     panel.appendChild(row);
   }
+}
+
+
+// ===========================================================================
+// ARCHITECTURE PAGE
+// ===========================================================================
+
+const SERVICES = [
+  { id: 'client', label: 'Client', desc: 'Web frontend or API consumer', components: ['Browser', 'curl', 'Python SDK'] },
+  { id: 'gateway', label: 'API Gateway', port: 8080, desc: 'Request routing, authentication, rate limiting', components: ['FastAPI', 'Uvicorn', 'CORS middleware'] },
+  { id: 'analyzer', label: 'Query Analyzer', port: 8082, desc: 'ML-based query complexity analysis with 5-view scoring', components: ['QueryAnalyzer', 'MLComplexityClassifier', 'ViewScorer'] },
+  { id: 'retriever', label: 'Retriever', port: 8083, desc: 'Hybrid document retrieval with fusion and reranking', components: ['FAISSRetriever', 'BM25Retriever', 'FusionStrategy', 'NeuralReranker'] },
+  { id: 'generator', label: 'Generator', port: 8081, desc: 'Answer generation with multi-model routing', components: ['LLMAdapter', 'PromptManager', 'ResponseFormatter'] },
+  { id: 'faiss', label: 'FAISS Index', desc: 'Dense vector similarity search', components: ['sentence-transformers', 'FAISS flat/IVF'] },
+  { id: 'bm25', label: 'BM25 Index', desc: 'Sparse keyword-based retrieval', components: ['rank-bm25', 'Tokenizer'] },
+  { id: 'analytics', label: 'Analytics', port: 8085, desc: 'Query logging, performance tracking, usage metrics', components: ['Prometheus', 'MLflow', 'QueryLogger'] },
+  { id: 'cache', label: 'Cache', port: 8084, desc: 'Response caching for repeated queries', components: ['Redis', 'LRU fallback'] },
+  { id: 'embedder', label: 'Embedder', desc: 'Text to vector embedding pipeline', components: ['SentenceTransformerEmbedder', 'HuggingFaceEmbedder'] },
+  { id: 'fusion', label: 'Fusion', desc: 'Score merging from multiple retrievers', components: ['WeightedAverage', 'ReciprocalRank', 'Ensemble', 'ScoreAware'] },
+  { id: 'reranker', label: 'Reranker', desc: 'Cross-encoder neural reranking', components: ['CrossEncoderReranker', 'NeuralReranker'] },
+];
+
+const DIAGRAM_ROWS = [
+  { services: ['client'], spans: [4] },
+  { services: ['gateway'], spans: [4] },
+  { services: ['analyzer', 'retriever', 'generator'], spans: [1, 1, 1] },
+  { services: ['faiss', 'bm25', 'analytics', 'cache'], spans: [1, 1, 1, 1] },
+  { services: ['embedder', 'fusion', 'reranker'], spans: [1, 1, 1] },
+];
+
+function findService(id) {
+  return SERVICES.find(s => s.id === id) || null;
+}
+
+export function renderArchitecturePage() {
+  const container = document.getElementById('architecture-content');
+  if (!container) return;
+  container.innerHTML = '';
+
+  container.appendChild(buildDiagramSection());
+  container.appendChild(buildRegistrySection());
+  container.appendChild(buildConfigViewerSection());
+}
+
+// -- System Diagram ---------------------------------------------------------
+
+function buildDiagramSection() {
+  const section = document.createElement('div');
+  section.className = 'section';
+
+  const title = document.createElement('h1');
+  title.className = 'page-title';
+  title.textContent = 'System Architecture';
+
+  const subtitle = document.createElement('p');
+  subtitle.className = 'page-subtitle';
+  subtitle.textContent = 'Microservices deployment with FastAPI';
+
+  section.appendChild(title);
+  section.appendChild(subtitle);
+
+  const diagram = document.createElement('div');
+  diagram.className = 'arch-diagram';
+
+  const detail = document.createElement('div');
+  detail.className = 'arch-detail';
+  detail.style.display = 'none';
+  detail.id = 'arch-detail';
+
+  let activeBox = null;
+
+  for (let rowIdx = 0; rowIdx < DIAGRAM_ROWS.length; rowIdx++) {
+    const rowDef = DIAGRAM_ROWS[rowIdx];
+
+    if (rowIdx > 0) {
+      const connectorRow = document.createElement('div');
+      connectorRow.className = 'arch-connector-row';
+      const connector = document.createElement('div');
+      connector.className = 'arch-connector';
+      connectorRow.appendChild(connector);
+      diagram.appendChild(connectorRow);
+    }
+
+    for (let i = 0; i < rowDef.services.length; i++) {
+      const serviceId = rowDef.services[i];
+      const span = rowDef.spans[i];
+      const svc = findService(serviceId);
+      if (!svc) continue;
+
+      const box = document.createElement('div');
+      box.className = 'arch-box';
+      box.dataset.serviceId = svc.id;
+
+      if (span > 1) {
+        const startCol = Math.floor((4 - span) / 2) + 1;
+        box.style.gridColumn = startCol + ' / span ' + span;
+      }
+
+      const label = document.createElement('span');
+      label.className = 'arch-box__label';
+      label.textContent = svc.label;
+      box.appendChild(label);
+
+      if (svc.port) {
+        const port = document.createElement('span');
+        port.className = 'arch-box__port';
+        port.textContent = ':' + svc.port;
+        box.appendChild(port);
+      }
+
+      box.addEventListener('click', () => {
+        if (activeBox) activeBox.classList.remove('active');
+        if (activeBox === box) {
+          activeBox = null;
+          detail.style.display = 'none';
+          return;
+        }
+        box.classList.add('active');
+        activeBox = box;
+        showServiceDetail(detail, svc);
+      });
+
+      diagram.appendChild(box);
+    }
+  }
+
+  section.appendChild(diagram);
+  section.appendChild(detail);
+  return section;
+}
+
+function showServiceDetail(panel, svc) {
+  panel.innerHTML = '';
+  panel.style.display = 'block';
+
+  const titleRow = document.createElement('div');
+  titleRow.className = 'arch-detail__title';
+  titleRow.textContent = svc.label + (svc.port ? ' :' + svc.port : '');
+
+  const desc = document.createElement('div');
+  desc.className = 'arch-detail__desc';
+  desc.textContent = svc.desc;
+
+  const compRow = document.createElement('div');
+  compRow.className = 'arch-detail__components';
+  for (const comp of svc.components) {
+    compRow.appendChild(renderBadge(comp, 'muted'));
+  }
+
+  panel.appendChild(titleRow);
+  panel.appendChild(desc);
+  panel.appendChild(compRow);
+}
+
+// -- Component Registry -----------------------------------------------------
+
+function buildRegistrySection() {
+  const section = document.createElement('div');
+  section.className = 'section';
+
+  const title = document.createElement('h3');
+  title.className = 'section-title';
+  title.textContent = 'Component Registry';
+  section.appendChild(title);
+
+  const registry = document.createElement('div');
+  registry.className = 'component-registry';
+
+  const reg = MOCK_DATA.componentRegistry;
+
+  const topCategories = [
+    { name: 'Processors', items: reg.processors },
+    { name: 'Embedders', items: reg.embedders },
+    { name: 'Retrievers', items: reg.retrievers },
+    { name: 'Generators', items: reg.generators },
+    { name: 'Query Processors', items: reg.queryProcessors },
+  ];
+
+  for (const cat of topCategories) {
+    const node = buildRegistryTreeNode(cat.name, cat.items);
+    renderTreeNode(registry, node, 0);
+  }
+
+  const subComponentCategories = [
+    { name: 'Query Analyzers', items: reg.subComponents.queryAnalyzers },
+    { name: 'LLM Adapters', items: reg.subComponents.llmAdapters },
+    { name: 'Fusion Strategies', items: reg.subComponents.fusionStrategies },
+    { name: 'Rerankers', items: reg.subComponents.rerankers },
+    { name: 'Tools', items: reg.subComponents.tools },
+    { name: 'Memory', items: reg.subComponents.memory },
+  ];
+
+  const subChildren = subComponentCategories.map(cat => buildRegistryTreeNode(cat.name, cat.items));
+  const totalSubCount = subComponentCategories.reduce((sum, cat) => sum + cat.items.length, 0);
+
+  renderTreeNode(registry, {
+    name: 'Sub-Components (' + totalSubCount + ')',
+    children: subChildren,
+  }, 0);
+
+  section.appendChild(registry);
+  return section;
+}
+
+function buildRegistryTreeNode(categoryName, items) {
+  const children = items.map(item => ({
+    name: item.type,
+    children: null,
+    metadata: Object.assign(
+      {},
+      item.class ? { class: item.class } : {},
+      item.description ? { info: item.description } : {}
+    ),
+  }));
+
+  return {
+    name: categoryName + ' (' + items.length + ')',
+    children,
+  };
+}
+
+// -- Config Viewer ----------------------------------------------------------
+
+function buildConfigViewerSection() {
+  const section = document.createElement('div');
+  section.className = 'section';
+
+  const title = document.createElement('h3');
+  title.className = 'section-title';
+  title.textContent = 'Configuration Files';
+  section.appendChild(title);
+
+  const viewer = document.createElement('div');
+  viewer.className = 'config-viewer';
+
+  const select = document.createElement('select');
+  select.className = 'config-select';
+
+  const configs = MOCK_DATA.configs;
+
+  for (let i = 0; i < configs.length; i++) {
+    const option = document.createElement('option');
+    option.value = String(i);
+    option.textContent = configs[i].name;
+    select.appendChild(option);
+  }
+
+  const display = document.createElement('div');
+  display.id = 'config-display';
+
+  select.addEventListener('change', () => {
+    renderConfigDisplay(display, configs[parseInt(select.value, 10)]);
+  });
+
+  viewer.appendChild(select);
+  viewer.appendChild(display);
+  section.appendChild(viewer);
+
+  if (configs.length > 0) {
+    renderConfigDisplay(display, configs[0]);
+  }
+
+  return section;
+}
+
+function renderConfigDisplay(container, config) {
+  container.innerHTML = '';
+
+  const nameEl = document.createElement('h4');
+  nameEl.style.cssText = 'font-family: var(--font-display); font-weight: var(--fw-semibold); font-size: var(--fs-lg); color: var(--text-primary); margin-bottom: var(--sp-2);';
+  nameEl.textContent = config.name;
+  container.appendChild(nameEl);
+
+  const descEl = document.createElement('p');
+  descEl.style.cssText = 'color: var(--text-secondary); font-size: var(--fs-sm); margin-bottom: var(--sp-4);';
+  descEl.textContent = config.description;
+  container.appendChild(descEl);
+
+  const features = {};
+  config.features.forEach((feature, idx) => {
+    features['feature_' + (idx + 1)] = feature;
+  });
+
+  renderConfigBlock(container, config.name, features);
+}
+
+
+// ===========================================================================
+// PERFORMANCE PAGE
+// ===========================================================================
+
+export function renderPerformancePage() {
+  const container = document.getElementById('performance-content');
+  if (!container) return;
+  container.innerHTML = '';
+
+  container.appendChild(buildModelAccuracyHero());
+  container.appendChild(buildFeatureImportanceSection());
+  container.appendChild(buildFusionComparisonSection());
+  container.appendChild(buildTrainingDatasetExplorer());
+  container.appendChild(buildCostStrategySection());
+  container.appendChild(buildConfigComparisonTool());
+}
+
+// -- Model Accuracy Hero ----------------------------------------------------
+
+function buildModelAccuracyHero() {
+  const section = document.createElement('section');
+  section.className = 'section';
+
+  const metrics = MOCK_DATA.modelMetrics;
+
+  const hero = document.createElement('div');
+  hero.className = 'perf-hero';
+
+  const heroValue = document.createElement('div');
+  heroValue.className = 'perf-hero__value';
+  heroValue.textContent = (metrics.val_accuracy * 100).toFixed(2) + '%';
+
+  const heroLabel = document.createElement('div');
+  heroLabel.className = 'perf-hero__label';
+  heroLabel.textContent = 'Classification Accuracy (Validation)';
+
+  hero.appendChild(heroValue);
+  hero.appendChild(heroLabel);
+  section.appendChild(hero);
+
+  const grid = document.createElement('div');
+  grid.className = 'grid metrics-grid';
+
+  const metricCols = [
+    ['Validation MAE', metrics.val_mae.toFixed(3), ''],
+    ['Validation R\u00B2', metrics.val_r2.toFixed(3), ''],
+    ['Validation Accuracy', (metrics.val_accuracy * 100).toFixed(2), '%'],
+    ['Test MAE', metrics.test_mae.toFixed(3), ''],
+    ['Test R\u00B2', metrics.test_r2.toFixed(3), ''],
+    ['Test Accuracy', (metrics.test_accuracy * 100).toFixed(2), '%'],
+  ];
+
+  for (const [label, value, unit] of metricCols) {
+    const col = document.createElement('div');
+    col.className = 'col-4';
+    renderMetricCard(col, label, value, unit);
+    grid.appendChild(col);
+  }
+
+  section.appendChild(grid);
+  return section;
+}
+
+// -- Feature Importance -----------------------------------------------------
+
+function buildFeatureImportanceSection() {
+  const section = document.createElement('div');
+  section.className = 'section';
+
+  const title = document.createElement('h2');
+  title.className = 'section-title';
+  title.textContent = 'Feature Importance';
+  section.appendChild(title);
+
+  const chartContainer = document.createElement('div');
+  chartContainer.id = 'feature-importance';
+  chartContainer.className = 'chart-container';
+  section.appendChild(chartContainer);
+
+  const importance = MOCK_DATA.modelMetrics.featureImportance;
+  const sorted = Object.entries(importance).sort((a, b) => b[1] - a[1]);
+
+  const labels = sorted.map(([key]) => key.charAt(0).toUpperCase() + key.slice(1));
+  const dataAsPercent = sorted.map(([, val]) => +(val * 100).toFixed(2));
+
+  requestAnimationFrame(() => {
+    createHorizontalBarChart('feature-importance', labels, dataAsPercent);
+  });
+
+  return section;
+}
+
+// -- Fusion Method Comparison -----------------------------------------------
+
+function buildFusionComparisonSection() {
+  const section = document.createElement('div');
+  section.className = 'section';
+
+  const title = document.createElement('h2');
+  title.className = 'section-title';
+  title.textContent = 'Fusion Method Comparison';
+  section.appendChild(title);
+
+  const chartContainer = document.createElement('div');
+  chartContainer.id = 'fusion-comparison';
+  chartContainer.className = 'chart-container';
+  section.appendChild(chartContainer);
+
+  const fusion = MOCK_DATA.modelMetrics.fusionComparison;
+  const wa = fusion.weighted_average;
+  const en = fusion.ensemble;
+
+  const chartLabels = [
+    'Accuracy (Val)', 'Accuracy (Test)',
+    'MAE (Val)', 'MAE (Test)',
+    'R\u00B2 (Val)', 'R\u00B2 (Test)',
+  ];
+
+  const datasets = [
+    { label: 'Weighted Average', data: [wa.val_accuracy, wa.test_accuracy, wa.val_mae, wa.test_mae, wa.val_r2, wa.test_r2] },
+    { label: 'Ensemble', data: [en.val_accuracy, en.test_accuracy, en.val_mae, en.test_mae, en.val_r2, en.test_r2] },
+  ];
+
+  requestAnimationFrame(() => {
+    createGroupedBarChart('fusion-comparison', chartLabels, datasets);
+  });
+
+  return section;
+}
+
+// -- Training Dataset Explorer ----------------------------------------------
+
+function buildTrainingDatasetExplorer() {
+  const section = document.createElement('div');
+  section.className = 'section';
+
+  const titleRow = document.createElement('div');
+  titleRow.className = 'result-section__title';
+  titleRow.textContent = 'Training Dataset Explorer';
+  titleRow.appendChild(document.createTextNode(' '));
+  titleRow.appendChild(renderBadge('20 of 679', 'muted'));
+  section.appendChild(titleRow);
+
+  const tableContainer = document.createElement('div');
+  const headers = ['Query', 'Complexity', 'Confidence', 'Relevance'];
+
+  const rows = MOCK_DATA.trainingQueries.map((q) => {
+    const truncated = q.query.length > 60 ? q.query.substring(0, 60) + '...' : q.query;
+    const variant = { simple: 'accent', medium: 'warning', complex: 'error' }[q.complexity_level] || 'muted';
+    return [truncated, renderBadge(q.complexity_level, variant), q.confidence.toFixed(2), q.domain_relevance.toFixed(2)];
+  });
+
+  const radarWrapper = document.createElement('div');
+  radarWrapper.className = 'training-radar-container hidden';
+
+  const radarQueryLabel = document.createElement('div');
+  radarQueryLabel.className = 'training-radar__query';
+  radarWrapper.appendChild(radarQueryLabel);
+
+  const radarContainer = document.createElement('div');
+  radarContainer.id = 'training-radar';
+  radarContainer.className = 'chart-container chart-container--half';
+  radarWrapper.appendChild(radarContainer);
+
+  renderDataTable(tableContainer, headers, rows, {
+    onRowClick: (_row, index) => {
+      const q = MOCK_DATA.trainingQueries[index];
+      if (!q) return;
+
+      radarQueryLabel.textContent = q.query;
+      radarWrapper.classList.remove('hidden');
+
+      createRadarChart('training-radar',
+        ['Technical', 'Linguistic', 'Task', 'Semantic', 'Computational'],
+        [{ label: 'View Scores', data: [q.view_scores.technical, q.view_scores.linguistic, q.view_scores.task, q.view_scores.semantic, q.view_scores.computational] }]
+      );
+    },
+  });
+
+  section.appendChild(tableContainer);
+  section.appendChild(radarWrapper);
+  return section;
+}
+
+// -- Cost Strategy Comparison -----------------------------------------------
+
+function buildCostStrategySection() {
+  const section = document.createElement('div');
+  section.className = 'section';
+
+  const title = document.createElement('h2');
+  title.className = 'section-title';
+  title.textContent = 'Cost Strategy Comparison';
+  section.appendChild(title);
+
+  const chartContainer = document.createElement('div');
+  chartContainer.id = 'cost-comparison';
+  chartContainer.className = 'chart-container';
+  section.appendChild(chartContainer);
+
+  requestAnimationFrame(() => {
+    createCostComparisonChart('cost-comparison', ['Cost Optimized', 'Balanced', 'Quality First'], [0.0003, 0.0036, 0.0475]);
+  });
+
+  const costNote = document.createElement('div');
+  costNote.className = 'cost-note';
+  costNote.textContent = '200x cost difference between strategies';
+  section.appendChild(costNote);
+
+  return section;
+}
+
+// -- Config Comparison Tool -------------------------------------------------
+
+function buildConfigComparisonTool() {
+  const section = document.createElement('div');
+  section.className = 'section';
+
+  const title = document.createElement('h2');
+  title.className = 'section-title';
+  title.textContent = 'Configuration Comparison';
+  section.appendChild(title);
+
+  const inputRow = document.createElement('div');
+  inputRow.className = 'config-compare-input';
+
+  const textarea = document.createElement('textarea');
+  textarea.rows = 2;
+  textarea.placeholder = 'Enter a query to compare across configurations...';
+  textarea.value = 'Explain RISC-V privilege levels';
+  inputRow.appendChild(textarea);
+
+  const compareBtn = document.createElement('button');
+  compareBtn.className = 'btn btn--accent';
+  compareBtn.textContent = 'Compare';
+  compareBtn.addEventListener('click', () => {
+    const query = textarea.value.trim();
+    if (query) compareConfigs(query);
+  });
+  inputRow.appendChild(compareBtn);
+
+  section.appendChild(inputRow);
+
+  const resultsArea = document.createElement('div');
+  resultsArea.id = 'config-compare-results';
+  section.appendChild(resultsArea);
+
+  AppState.on('compareResults', (result) => {
+    if (!result || !result.results) return;
+    renderConfigCompareResults(resultsArea, result.results);
+  });
+
+  return section;
+}
+
+function renderConfigCompareResults(container, results) {
+  container.innerHTML = '';
+
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+
+  for (const r of results) {
+    const col = document.createElement('div');
+    col.className = 'col-4';
+
+    const card = document.createElement('div');
+    card.className = 'card config-result-card';
+
+    const header = document.createElement('div');
+    header.className = 'config-result-card__header';
+    header.textContent = r.config;
+    card.appendChild(header);
+
+    const modelRow = document.createElement('div');
+    modelRow.style.marginBottom = 'var(--sp-3)';
+    modelRow.appendChild(renderBadge(r.model, 'info'));
+    card.appendChild(modelRow);
+
+    card.appendChild(buildCompareRow('Confidence', (r.confidence * 100).toFixed(1) + '%'));
+
+    const gaugeTrack = document.createElement('div');
+    gaugeTrack.className = 'gauge__track';
+    gaugeTrack.style.marginBottom = 'var(--sp-3)';
+    const gaugeFill = document.createElement('div');
+    gaugeFill.className = 'gauge__fill';
+    gaugeFill.style.width = (r.confidence * 100) + '%';
+    gaugeTrack.appendChild(gaugeFill);
+    card.appendChild(gaugeTrack);
+
+    card.appendChild(buildCompareRow('Top Score', r.topScore.toFixed(2)));
+    card.appendChild(buildCompareRow('Timing', r.timing + 'ms'));
+    card.appendChild(buildCompareRow('Cost', '$' + r.cost.toFixed(4)));
+
+    const preview = document.createElement('div');
+    preview.className = 'config-result-card__preview';
+    preview.textContent = r.answerPreview.length > 160 ? r.answerPreview.substring(0, 160) + '...' : r.answerPreview;
+    card.appendChild(preview);
+
+    const badgesRow = document.createElement('div');
+    badgesRow.className = 'config-result-card__badges';
+    badgesRow.appendChild(renderBadge(r.fusion, 'accent'));
+    badgesRow.appendChild(renderBadge(r.reranker, 'muted'));
+    card.appendChild(badgesRow);
+
+    col.appendChild(card);
+    grid.appendChild(col);
+  }
+
+  container.appendChild(grid);
+}
+
+function buildCompareRow(label, value) {
+  const row = document.createElement('div');
+  row.className = 'config-result-card__row';
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'config-result-card__label';
+  labelEl.textContent = label;
+
+  const valueEl = document.createElement('span');
+  valueEl.className = 'config-result-card__value';
+  valueEl.textContent = value;
+
+  row.appendChild(labelEl);
+  row.appendChild(valueEl);
+  return row;
 }
