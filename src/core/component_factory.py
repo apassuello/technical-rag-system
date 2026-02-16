@@ -956,6 +956,20 @@ class ComponentFactory:
                     # Create a default generator if not provided
                     generator = cls.create_generator('adaptive_modular')
 
+                # Normalize nested config format used by test.yaml, default.yaml, etc:
+                # {analyzer: {implementation: "epic1_ml", config: {...}}}
+                # → {analyzer_type: "epic1_ml", analyzer_config: {...}}
+                for _sub in ('analyzer', 'selector', 'assembler'):
+                    _nested = kwargs.get(_sub)
+                    if isinstance(_nested, dict):
+                        kwargs.pop(_sub)
+                        _impl = _nested.get('implementation') or _nested.get('type', '')
+                        if _impl:
+                            kwargs.setdefault(f'{_sub}_type', _impl)
+                        _sub_cfg = _nested.get('config', {})
+                        if _sub_cfg:
+                            kwargs.setdefault(f'{_sub}_config', _sub_cfg)
+
                 # Build config from remaining kwargs
                 config = QueryProcessorConfig(
                     analyzer_type=kwargs.pop('analyzer_type', 'rule_based'),
