@@ -59,7 +59,10 @@ class TestAnalyzerContract:
         "rule_based",
         "nlp",
         "epic1",
-        pytest.param("epic1_ml", marks=pytest.mark.requires_ml),
+        pytest.param("epic1_ml", marks=[
+            pytest.mark.requires_ml,
+            pytest.mark.xfail(reason="Needs locally-trained Epic1 model weights", strict=False),
+        ]),
     ])
     def test_simple_query_scores_below_complex(self, analyzer_type):
         """Simple queries should score lower complexity than complex ones."""

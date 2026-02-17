@@ -182,6 +182,7 @@ class TestErrorRecoveryScenarios:
         finally:
             os.unlink(invalid_doc)
 
+    @pytest.mark.requires_ollama
     def test_memory_pressure_recovery(self, orchestrator, create_test_documents):
         """Test indexing and querying a large document."""
         large_content = (
@@ -201,6 +202,7 @@ class TestErrorRecoveryScenarios:
         health = orchestrator.get_system_health()
         assert health["status"] == "healthy"
 
+    @pytest.mark.requires_ollama
     def test_sequential_multi_query(self, orchestrator, create_test_documents):
         """Test handling multiple sequential queries on indexed content."""
         docs = create_test_documents(RISCV_OVERVIEW, RISCV_EXTENSIONS, RISCV_APPLICATIONS)

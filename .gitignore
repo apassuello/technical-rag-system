@@ -71,9 +71,8 @@ logs/
 !data/riscv_corpus/**/*.pdf
 !tests/integration/fixtures/*.pdf
 
-# Model files
-models/
-!src/components/embedders/models/
+# Model files (root-level ML weights directory only)
+/models/
 *.bin
 *.safetensors
 
