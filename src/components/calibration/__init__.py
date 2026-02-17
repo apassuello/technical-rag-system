@@ -6,14 +6,15 @@ docs/implementation_specs/calibration-system-spec.md for data-driven
 parameter optimization and confidence calibration.
 """
 
-from .calibration_manager import CalibrationManager
 from src.shared_utils.metrics import MetricsCollector
+
+from .calibration_manager import CalibrationManager
 from .optimization_engine import OptimizationEngine
 from .parameter_registry import ParameterRegistry
 
 __all__ = [
     "CalibrationManager",
-    "ParameterRegistry", 
+    "ParameterRegistry",
     "MetricsCollector",
     "OptimizationEngine"
 ]

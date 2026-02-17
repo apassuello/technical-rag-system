@@ -13,14 +13,14 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class WeaviateConnectionConfig:
     """Configuration for Weaviate connection."""
-    
+
     url: str = "http://localhost:8080"
     grpc_port: int = 50051
     api_key: Optional[str] = None
     timeout: int = 30
     startup_period: int = 5
     additional_headers: Dict[str, str] = field(default_factory=dict)
-    
+
     def __post_init__(self):
         """Validate connection configuration."""
         if not self.url:
@@ -34,7 +34,7 @@ class WeaviateConnectionConfig:
 @dataclass
 class WeaviateSchemaConfig:
     """Configuration for Weaviate schema."""
-    
+
     class_name: str = "TechnicalDocument"
     description: str = "Technical documentation chunks with embeddings"
     vector_index_config: Dict[str, Any] = field(default_factory=lambda: {
@@ -75,7 +75,7 @@ class WeaviateSchemaConfig:
             "description": "When this chunk was processed"
         }
     ])
-    
+
     def __post_init__(self):
         """Validate schema configuration."""
         if not self.class_name:
@@ -89,7 +89,7 @@ class WeaviateSchemaConfig:
 @dataclass
 class WeaviateSearchConfig:
     """Configuration for Weaviate search operations."""
-    
+
     hybrid_search_enabled: bool = True
     alpha: float = 0.7  # Balance between vector and keyword search (0=keyword, 1=vector)
     fusion_type: str = "rankedFusion"  # or "relativeScoreFusion"
@@ -98,7 +98,7 @@ class WeaviateSearchConfig:
     autocut: int = 1  # Enable autocut
     certainty_threshold: float = 0.7
     distance_threshold: Optional[float] = None
-    
+
     def __post_init__(self):
         """Validate search configuration."""
         if not 0 <= self.alpha <= 1:
@@ -116,7 +116,7 @@ class WeaviateSearchConfig:
 @dataclass
 class WeaviateBatchConfig:
     """Configuration for Weaviate batch operations."""
-    
+
     batch_size: int = 100
     num_workers: int = 1
     connection_error_retries: int = 3
@@ -125,7 +125,7 @@ class WeaviateBatchConfig:
     dynamic_batch_size: bool = True
     min_batch_size: int = 10
     max_batch_size: int = 1000
-    
+
     def __post_init__(self):
         """Validate batch configuration."""
         if self.batch_size <= 0:
@@ -145,19 +145,19 @@ class WeaviateBatchConfig:
 @dataclass
 class WeaviateBackendConfig:
     """Complete configuration for Weaviate backend."""
-    
+
     connection: WeaviateConnectionConfig = field(default_factory=WeaviateConnectionConfig)
     schema: WeaviateSchemaConfig = field(default_factory=WeaviateSchemaConfig)
     search: WeaviateSearchConfig = field(default_factory=WeaviateSearchConfig)
     batch: WeaviateBatchConfig = field(default_factory=WeaviateBatchConfig)
-    
+
     # Backend-specific settings
     auto_create_schema: bool = True
     enable_backup: bool = True
     backup_interval_hours: int = 24
     max_retries: int = 3
     retry_delay_seconds: float = 1.0
-    
+
     def __post_init__(self):
         """Validate complete backend configuration."""
         if self.max_retries < 0:
@@ -166,7 +166,7 @@ class WeaviateBackendConfig:
             raise ValueError("Retry delay cannot be negative")
         if self.backup_interval_hours <= 0:
             raise ValueError("Backup interval must be positive")
-    
+
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> 'WeaviateBackendConfig':
         """Create configuration from dictionary."""
@@ -174,13 +174,13 @@ class WeaviateBackendConfig:
         schema_config = WeaviateSchemaConfig(**config_dict.get('schema', {}))
         search_config = WeaviateSearchConfig(**config_dict.get('search', {}))
         batch_config = WeaviateBatchConfig(**config_dict.get('batch', {}))
-        
+
         # Extract backend-specific settings
         backend_settings = {
             k: v for k, v in config_dict.items()
             if k not in ['connection', 'schema', 'search', 'batch']
         }
-        
+
         return cls(
             connection=connection_config,
             schema=schema_config,
@@ -188,7 +188,7 @@ class WeaviateBackendConfig:
             batch=batch_config,
             **backend_settings
         )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         return {

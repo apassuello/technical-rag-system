@@ -41,11 +41,11 @@ class WeightsConfig:
 
 class ScoreNormalizer:
     """Handles score normalization using various methods."""
-    
+
     def __init__(self, config: NormalizationConfig):
         """
         Initialize score normalizer.
-        
+
         Args:
             config: Normalization configuration
         """
@@ -54,20 +54,20 @@ class ScoreNormalizer:
             "normalizations": 0,
             "outliers_clipped": 0
         }
-    
+
     def normalize(self, scores: List[float]) -> List[float]:
         """
         Normalize scores using configured method.
-        
+
         Args:
             scores: Raw scores to normalize
-            
+
         Returns:
             Normalized scores
         """
         if not scores:
             return scores
-        
+
         scores_array = np.array(scores)
 
         # Pass-through: return input unchanged
@@ -77,7 +77,7 @@ class ScoreNormalizer:
         # Clip outliers if enabled
         if self.config.clip_outliers:
             scores_array = self._clip_outliers(scores_array)
-        
+
         # Apply normalization method
         if self.config.method == "min_max":
             normalized = self._min_max_normalize(scores_array)
@@ -90,59 +90,59 @@ class ScoreNormalizer:
         else:
             logger.warning(f"Unknown normalization method: {self.config.method}")
             normalized = scores_array
-        
+
         self.stats["normalizations"] += 1
         return normalized.tolist()
-    
+
     def _clip_outliers(self, scores: np.ndarray) -> np.ndarray:
         """Clip outliers based on z-score threshold."""
         if len(scores) < 2:
             return scores
-        
+
         mean_score = np.mean(scores)
         std_score = np.std(scores)
-        
+
         if std_score == 0:
             return scores
-        
+
         z_scores = np.abs((scores - mean_score) / std_score)
         outlier_mask = z_scores > self.config.outlier_threshold
-        
+
         if np.any(outlier_mask):
             # Clip outliers to threshold values
             upper_bound = mean_score + self.config.outlier_threshold * std_score
             lower_bound = mean_score - self.config.outlier_threshold * std_score
-            
+
             scores = np.clip(scores, lower_bound, upper_bound)
             self.stats["outliers_clipped"] += np.sum(outlier_mask)
-        
+
         return scores
-    
+
     def _min_max_normalize(self, scores: np.ndarray) -> np.ndarray:
         """Min-max normalization to [0, 1] range."""
         min_score = np.min(scores)
         max_score = np.max(scores)
-        
+
         if max_score == min_score:
             return np.ones_like(scores) * 0.5
-        
+
         return (scores - min_score) / (max_score - min_score)
-    
+
     def _z_score_normalize(self, scores: np.ndarray) -> np.ndarray:
         """Z-score normalization (mean=0, std=1)."""
         mean_score = np.mean(scores)
         std_score = np.std(scores)
-        
+
         if std_score == 0:
             return np.zeros_like(scores)
-        
+
         return (scores - mean_score) / std_score
-    
+
     def _softmax_normalize(self, scores: np.ndarray) -> np.ndarray:
         """Softmax normalization."""
         exp_scores = np.exp(scores - np.max(scores))  # Subtract max for numerical stability
         return exp_scores / np.sum(exp_scores)
-    
+
     def _sigmoid_normalize(self, scores: np.ndarray) -> np.ndarray:
         """Sigmoid normalization to [0, 1] range."""
         return 1 / (1 + np.exp(-scores))
@@ -150,7 +150,7 @@ class ScoreNormalizer:
 
 class BaseFusionStrategy(ABC):
     """Abstract base class for score fusion strategies."""
-    
+
     @abstractmethod
     def fuse(
         self,
@@ -161,13 +161,13 @@ class BaseFusionStrategy(ABC):
     ) -> List[float]:
         """
         Fuse retrieval and neural scores.
-        
+
         Args:
             retrieval_scores: Original retrieval scores
             neural_scores: Neural reranking scores
             query: The search query
             documents: List of documents
-            
+
         Returns:
             Fused scores
         """
@@ -176,17 +176,17 @@ class BaseFusionStrategy(ABC):
 
 class WeightedFusion(BaseFusionStrategy):
     """Weighted fusion of retrieval and neural scores."""
-    
+
     def __init__(self, weights: WeightsConfig):
         """
         Initialize weighted fusion.
-        
+
         Args:
             weights: Weight configuration
         """
         self.weights = weights
         self.stats = {"fusions": 0}
-    
+
     def fuse(
         self,
         retrieval_scores: List[float],
@@ -198,7 +198,7 @@ class WeightedFusion(BaseFusionStrategy):
         if len(retrieval_scores) != len(neural_scores):
             logger.warning("Score length mismatch in weighted fusion")
             return retrieval_scores
-        
+
         fused_scores = []
         for ret_score, neural_score in zip(retrieval_scores, neural_scores):
             # Basic weighted combination
@@ -208,10 +208,10 @@ class WeightedFusion(BaseFusionStrategy):
                 # Future: add graph_score and temporal_score
             )
             fused_scores.append(fused_score)
-        
+
         self.stats["fusions"] += 1
         return fused_scores
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get fusion statistics."""
         return self.stats.copy()
@@ -219,18 +219,18 @@ class WeightedFusion(BaseFusionStrategy):
 
 class AdaptiveFusion(BaseFusionStrategy):
     """Adaptive fusion that adjusts weights based on query and context."""
-    
+
     def __init__(self, adaptation_window: int = 50):
         """
         Initialize adaptive fusion.
-        
+
         Args:
             adaptation_window: Number of queries to remember for adaptation
         """
         self.adaptation_window = adaptation_window
         self.stats = {"fusions": 0, "adaptations": 0}
         self.query_history = []
-    
+
     def fuse(
         self,
         retrieval_scores: List[float],
@@ -241,18 +241,18 @@ class AdaptiveFusion(BaseFusionStrategy):
         """Fuse scores using adaptive weights."""
         # Determine adaptive weights based on query characteristics
         weights = self._compute_adaptive_weights(query, retrieval_scores, neural_scores)
-        
+
         fused_scores = []
         for ret_score, neural_score in zip(retrieval_scores, neural_scores):
             fused_score = weights["retrieval"] * ret_score + weights["neural"] * neural_score
             fused_scores.append(fused_score)
-        
+
         # Update query history for future adaptations
         self._update_query_history(query, weights)
-        
+
         self.stats["fusions"] += 1
         return fused_scores
-    
+
     def _compute_adaptive_weights(
         self,
         query: str,
@@ -263,12 +263,12 @@ class AdaptiveFusion(BaseFusionStrategy):
         # Default weights
         retrieval_weight = 0.3
         neural_weight = 0.7
-        
+
         # Adapt based on score distributions
         if retrieval_scores and neural_scores:
             ret_variance = np.var(retrieval_scores)
             neural_variance = np.var(neural_scores)
-            
+
             # If neural scores have higher variance, trust them more
             if neural_variance > ret_variance * 1.5:
                 neural_weight = 0.8
@@ -276,19 +276,19 @@ class AdaptiveFusion(BaseFusionStrategy):
             elif ret_variance > neural_variance * 1.5:
                 neural_weight = 0.5
                 retrieval_weight = 0.5
-        
+
         # Adapt based on query characteristics
         query_lower = query.lower()
-        
+
         # Technical queries might benefit more from neural reranking
         technical_terms = ["protocol", "implementation", "api", "configuration", "architecture"]
         if any(term in query_lower for term in technical_terms):
             neural_weight = min(0.9, neural_weight + 0.1)
             retrieval_weight = 1.0 - neural_weight
             self.stats["adaptations"] += 1
-        
+
         return {"retrieval": retrieval_weight, "neural": neural_weight}
-    
+
     def _update_query_history(self, query: str, weights: Dict[str, float]):
         """Update query history for future adaptations."""
         self.query_history.append({
@@ -296,11 +296,11 @@ class AdaptiveFusion(BaseFusionStrategy):
             "weights": weights,
             "timestamp": time.time()
         })
-        
+
         # Keep only recent history
         if len(self.query_history) > self.adaptation_window:
             self.query_history = self.query_history[-self.adaptation_window:]
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get fusion statistics."""
         return self.stats.copy()
@@ -309,11 +309,11 @@ class AdaptiveFusion(BaseFusionStrategy):
 class ScoreFusion:
     """
     Main score fusion component for neural reranking.
-    
+
     Combines retrieval scores with neural reranking scores using
     configurable strategies including weighted and adaptive fusion.
     """
-    
+
     def __init__(
         self,
         method: str = "weighted",
@@ -322,7 +322,7 @@ class ScoreFusion:
     ):
         """
         Initialize score fusion.
-        
+
         Args:
             method: Fusion method ("weighted" or "adaptive")
             weights: Weight configuration for weighted fusion
@@ -331,9 +331,9 @@ class ScoreFusion:
         self.method = method
         self.weights = weights or WeightsConfig()
         self.normalization = normalization or NormalizationConfig()
-        
+
         self.normalizer = ScoreNormalizer(self.normalization)
-        
+
         # Initialize fusion strategy
         if method == "weighted":
             self.strategy = WeightedFusion(self.weights)
@@ -342,14 +342,14 @@ class ScoreFusion:
         else:
             logger.warning(f"Unknown fusion method: {method}, using weighted")
             self.strategy = WeightedFusion(self.weights)
-        
+
         self.stats = {
             "total_fusions": 0,
             "method": method
         }
-        
+
         logger.info(f"ScoreFusion initialized with method: {method}")
-    
+
     def fuse_scores(
         self,
         retrieval_scores: List[float],
@@ -359,37 +359,37 @@ class ScoreFusion:
     ) -> List[float]:
         """
         Fuse retrieval and neural scores.
-        
+
         Args:
             retrieval_scores: Original retrieval scores
             neural_scores: Neural reranking scores
             query: The search query
             documents: List of documents
-            
+
         Returns:
             Fused scores
         """
         try:
             if not retrieval_scores or not neural_scores:
                 return retrieval_scores or neural_scores or []
-            
+
             # Retrieval scores are already absolute [0, ~0.85] from ScoreAwareFusion.
             # Neural scores are raw cross-encoder logits — sigmoid maps them to [0, 1].
             # We do NOT normalize retrieval scores (pass-through preserves absolute signal).
             norm_retrieval = retrieval_scores
             norm_neural = self.normalizer.normalize(neural_scores)
-            
+
             # Apply fusion strategy
             fused_scores = self.strategy.fuse(norm_retrieval, norm_neural, query, documents)
-            
+
             self.stats["total_fusions"] += 1
             return fused_scores
-            
+
         except Exception as e:
             logger.error(f"Score fusion failed: {e}")
             # Fallback to retrieval scores
             return retrieval_scores
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get fusion statistics."""
         stats = self.stats.copy()
@@ -398,7 +398,7 @@ class ScoreFusion:
             "strategy": self.strategy.get_stats() if hasattr(self.strategy, 'get_stats') else {}
         })
         return stats
-    
+
     def reset_stats(self) -> None:
         """Reset fusion statistics."""
         self.stats = {

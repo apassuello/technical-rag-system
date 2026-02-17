@@ -73,6 +73,7 @@ logs/
 
 # Model files
 models/
+!src/components/embedders/models/
 *.bin
 *.safetensors
 

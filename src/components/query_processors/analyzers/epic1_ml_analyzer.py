@@ -62,29 +62,29 @@ logger = logging.getLogger(__name__)
 class Epic1MLAnalyzer(BaseQueryAnalyzer):
     """
     Epic 1 ML Analyzer - Multi-View Query Complexity Analysis Orchestrator.
-    
+
     This orchestrator coordinates 5 specialized ML views to analyze query complexity
     from multiple perspectives, providing comprehensive analysis for intelligent
     multi-model routing.
-    
+
     Views:
     1. Technical: SciBERT + technical vocabulary analysis
-    2. Linguistic: DistilBERT + syntactic pattern analysis  
+    2. Linguistic: DistilBERT + syntactic pattern analysis
     3. Task: DeBERTa-v3 + Bloom's taxonomy classification
     4. Semantic: Sentence-BERT + semantic relationship analysis
     5. Computational: T5-small + computational pattern analysis
-    
+
     Performance Targets:
     - Classification accuracy: >85% (vs 58.1% rule-based)
     - Analysis time: <50ms total routing overhead
     - Memory usage: <2GB with all models loaded
     - Reliability: 100% (algorithmic fallbacks)
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         Initialize Epic1MLAnalyzer with ML infrastructure and view coordination.
-        
+
         Args:
             config: Configuration dictionary with parameters:
                 - memory_budget_gb: Memory budget for ML models (default: 2.0)
@@ -96,23 +96,23 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         """
         # Call parent constructor first
         super().__init__(config)
-        
+
         # Access config from parent (stored as _config)
         config = self._config
-        
+
         # Core configuration - ALWAYS set these
         self.memory_budget_gb = config.get('memory_budget_gb', 2.0)
         self.enable_performance_monitoring = config.get('enable_performance_monitoring', True)
         self.parallel_execution = config.get('parallel_execution', True)
         self.fallback_strategy = config.get('fallback_strategy', 'algorithmic')
         self.confidence_threshold = config.get('confidence_threshold', 0.6)
-        
+
         # Performance tracking - ALWAYS initialize
         self._analysis_count = 0
         self._total_analysis_time = 0.0
         self._error_count = 0
         self._view_performance = {}
-        
+
         # Initialize core containers - ALWAYS create these
         self.views = {}
         self.trained_view_models = None
@@ -121,7 +121,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         self.model_manager = None
         self.performance_monitor = None
         self.memory_monitor = None
-        
+
         # View weights for meta-classification (sum to 1.0)
         self.view_weights = config.get('view_weights', {
             'technical': 0.25,      # Technical complexity often drives model choice
@@ -130,58 +130,58 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             'semantic': 0.20,      # Semantic complexity affects reasoning needs
             'computational': 0.10   # Computational needs least predictive for LLM routing
         })
-        
+
         # Validate view weights
         weight_sum = sum(self.view_weights.values())
         if abs(weight_sum - 1.0) > 0.001:
             logger.warning(f"View weights sum to {weight_sum:.3f}, normalizing to 1.0")
             for view in self.view_weights:
                 self.view_weights[view] /= weight_sum
-        
+
         # Skip heavy ML infrastructure initialization to avoid hanging
         # Models will be loaded lazily when needed
         logger.info("Skipping heavy ML infrastructure - using lightweight initialization")
-        
+
         # Initialize basic components
         self.model_manager = None
         self.performance_monitor = None
         self.memory_monitor = None
         self.complexity_classifier = None
         self.model_recommender = None
-        
+
         # Initialize views dict (empty initially)
         self.views = {}
-        
+
         # Load trained models if available (this is lightweight)
         try:
             self._load_trained_models()
         except Exception as e:
             logger.warning(f"Failed to load trained models: {e}")
             self.trained_view_models = {}
-        
+
         logger.info(f"Initialized Epic1MLAnalyzer with {len(self.views)} views, "
                    f"memory budget: {self.memory_budget_gb}GB, "
                    f"trained models: {'loaded' if self.trained_view_models else 'not available'}")
-    
+
     def configure(self, config: Dict[str, Any]) -> None:
         """
         Configure Epic1MLAnalyzer with ML-specific settings.
-        
+
         Args:
             config: Configuration dictionary with ML analysis parameters
         """
         # Call parent configure method
         super().configure(config)
-        
+
         # Update ML-specific configuration (use _config from parent)
         # No need to update again as parent already did this
-        
+
         # Reconfigure core settings
         if 'memory_budget_gb' in config:
             self.memory_budget_gb = config['memory_budget_gb']
             # Note: ModelManager doesn't support runtime memory budget changes
             # Would need to recreate the ModelManager for this change
-        
+
         if 'view_weights' in config:
             new_weights = config['view_weights']
             # Validate weights sum to 1.0
@@ -191,16 +191,16 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 for view in new_weights:
                     new_weights[view] /= weight_sum
             self.view_weights = new_weights
-        
+
         if 'parallel_execution' in config:
             self.parallel_execution = config['parallel_execution']
-        
+
         if 'fallback_strategy' in config:
             self.fallback_strategy = config['fallback_strategy']
-        
+
         if 'confidence_threshold' in config:
             self.confidence_threshold = config['confidence_threshold']
-        
+
         # Reconfigure individual views if configurations provided
         if 'views' in config:
             view_configs = config['views']
@@ -222,40 +222,40 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                                 self.views[view_name] = SemanticComplexityView(view_config)
                             elif view_name == 'computational':
                                 self.views[view_name] = ComputationalComplexityView(view_config)
-                            
+
                             # Reset model manager for the view
                             if hasattr(self, 'model_manager'):
                                 self.views[view_name].set_model_manager(self.model_manager)
-                                
+
                     except Exception as e:
                         logger.warning(f"Failed to reconfigure {view_name} view: {e}")
-        
+
         # Reconfigure meta-classifier
         if 'meta_classifier' in config:
             try:
                 self.complexity_classifier = ComplexityClassifier(config['meta_classifier'])
             except Exception as e:
                 logger.warning(f"Failed to reconfigure meta-classifier: {e}")
-        
+
         # Reconfigure model recommender
         if 'model_recommender' in config:
             try:
                 self.model_recommender = ModelRecommender(config['model_recommender'])
             except Exception as e:
                 logger.warning(f"Failed to reconfigure model recommender: {e}")
-        
+
         logger.info("Reconfigured Epic1MLAnalyzer with updated settings")
-    
+
     def get_supported_features(self) -> List[str]:
         """
         Get list of features supported by Epic1MLAnalyzer.
-        
+
         Returns:
             List of supported feature names
         """
         return [
             "complexity_classification",
-            "technical_term_extraction", 
+            "technical_term_extraction",
             "entity_recognition",
             "syntactic_analysis",
             "bloom_taxonomy_classification",
@@ -270,14 +270,14 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             "parallel_execution",
             "memory_management"
         ]
-    
+
     def _analyze_query(self, query: str) -> QueryAnalysis:
         """
         Implement BaseQueryAnalyzer interface to perform ML-powered query analysis.
-        
+
         Args:
             query: User query string
-            
+
         Returns:
             QueryAnalysis with extracted characteristics from ML analysis
         """
@@ -285,7 +285,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         try:
             # Get predictions using trained models directly
             prediction_result = self._get_trained_model_predictions(query)
-            
+
             if prediction_result:
                 # Create AnalysisResult from prediction
                 from .ml_views.view_result import (
@@ -294,7 +294,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                     ComplexityLevel,
                     ViewResult,
                 )
-                
+
                 # Create view results
                 view_results = {}
                 view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
@@ -309,7 +309,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                             features={'trained_model_score': prediction_result['view_scores'][view_name]},
                             metadata={'trained_model_used': True}
                         )
-                
+
                 ml_result = AnalysisResult(
                     query=query,
                     view_results=view_results,
@@ -336,7 +336,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                     confidence=0.5,
                     metadata={'analyzer': 'Epic1MLAnalyzer', 'fallback': True}
                 )
-            
+
         except Exception as e:
             logger.error(f"Sync ML analysis failed: {e}")
             # Complete fallback
@@ -350,17 +350,17 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 confidence=0.3,
                 metadata={'analyzer': 'Epic1MLAnalyzer', 'error': str(e)}
             )
-        
+
         # Convert AnalysisResult to QueryAnalysis format
         return self._convert_to_query_analysis(ml_result)
-    
+
     def _convert_to_query_analysis(self, ml_result: AnalysisResult) -> QueryAnalysis:
         """
         Convert ML analysis result to QueryAnalysis format expected by QueryProcessor.
-        
+
         Args:
             ml_result: AnalysisResult from ML analysis
-            
+
         Returns:
             QueryAnalysis with standard format
         """
@@ -368,19 +368,19 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             # Extract technical terms from view results
             technical_terms = []
             entities = []
-            
+
             # Technical terms from TechnicalComplexityView
             if 'technical' in ml_result.view_results:
                 tech_view = ml_result.view_results['technical']
                 if hasattr(tech_view, 'features') and tech_view.features:
                     technical_terms.extend(tech_view.features.get('technical_terms_found', []))
-            
+
             # Entities from LinguisticComplexityView
             if 'linguistic' in ml_result.view_results:
-                ling_view = ml_result.view_results['linguistic'] 
+                ling_view = ml_result.view_results['linguistic']
                 if hasattr(ling_view, 'features') and ling_view.features:
                     entities.extend(ling_view.features.get('entities_found', []))
-            
+
             # Determine intent category based on TaskComplexityView
             intent_category = "general"
             if 'task' in ml_result.view_results:
@@ -388,7 +388,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 if hasattr(task_view, 'metadata') and task_view.metadata:
                     task_type = task_view.metadata.get('task_type', 'general')
                     intent_category = task_type
-            
+
             # Determine suggested k based on complexity
             complexity_score = ml_result.final_score or 0.5
             if complexity_score < 0.3:
@@ -397,7 +397,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 suggested_k = 5  # Medium complexity
             else:
                 suggested_k = 8  # Complex queries benefit from more context
-            
+
             # Build comprehensive metadata
             analysis_metadata = {
                 'analyzer': 'Epic1MLAnalyzer',
@@ -409,7 +409,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 'view_breakdown': {name: v.score for name, v in ml_result.view_results.items()},
                 'original_ml_metadata': ml_result.metadata
             }
-            
+
             return QueryAnalysis(
                 query=ml_result.query,
                 complexity_score=complexity_score,
@@ -422,14 +422,14 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 final_score=ml_result.final_score,
                 metadata=analysis_metadata
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to convert ML analysis result to QueryAnalysis: {e}")
-            # Return conservative fallback  
+            # Return conservative fallback
             fallback_query = ml_result.query
             if hasattr(ml_result, 'query'):
                 fallback_query = ml_result.query
-            
+
             return QueryAnalysis(
                 query=fallback_query,
                 complexity_score=0.5,
@@ -445,7 +445,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                     'fallback_analysis': True
                 }
             )
-    
+
     def _initialize_ml_infrastructure(self) -> None:
         """Initialize the underlying ML infrastructure."""
         try:
@@ -458,24 +458,24 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 model_timeout_seconds=self._config.get('model_timeout_seconds', 30.0),
                 max_concurrent_loads=self._config.get('max_concurrent_loads', 2)
             )
-            
+
             # Note: ModelManager creates its own MemoryMonitor and PerformanceMonitor
             # We can access them through the model_manager if needed
             self.performance_monitor = None  # Not created separately
             self.memory_monitor = None  # Not created separately
-            
+
             logger.debug("ML infrastructure initialized successfully")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize ML infrastructure: {e}")
             raise
-    
+
     def _initialize_views(self) -> None:
         """Initialize all 5 specialized ML views."""
         try:
             # Initialize all views with their specific configurations
             view_configs = self._config.get('views', {})
-            
+
             self.views = {
                 'technical': TechnicalComplexityView(
                     config=view_configs.get('technical', {})
@@ -493,55 +493,55 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                     config=view_configs.get('computational', {})
                 )
             }
-            
+
             # Set model manager for all views
             for view_name, view in self.views.items():
                 view.set_model_manager(self.model_manager)
                 logger.debug(f"Initialized {view_name} view with model manager")
-            
+
             logger.info(f"Initialized {len(self.views)} ML views successfully")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize ML views: {e}")
             raise
-    
+
     def _initialize_meta_classifier(self) -> None:
         """Initialize the meta-classifier for combining view results."""
         try:
             # Use existing ComplexityClassifier with ML-optimized configuration
             classifier_config = self._config.get('meta_classifier', {})
-            
+
             # Adjust thresholds for ML-based classification (more confident boundaries)
             classifier_config.setdefault('thresholds', {
                 'simple': 0.30,   # Lower threshold - ML is more discriminative
                 'complex': 0.70   # Higher threshold - ML captures nuance better
             })
-            
+
             self.complexity_classifier = ComplexityClassifier(config=classifier_config)
-            
+
             # Initialize model recommender
             recommender_config = self._config.get('model_recommender', {})
             self.model_recommender = ModelRecommender(config=recommender_config)
-            
+
             logger.debug("Meta-classifier and model recommender initialized")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize meta-classifier: {e}")
             raise
-    
+
     def _load_trained_models(self) -> None:
         """Load trained view models and MetaClassifier if available."""
         models_dir = Path("models/epic1")
-        
+
         if not models_dir.exists():
             logger.warning(f"Models directory not found: {models_dir}")
             return
-        
+
         try:
             # Load trained view models
             self.trained_view_models = {}
             view_model_loaded = False
-            
+
             # Load models for the 5 standard view names
             view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
             for view_name in view_names:
@@ -560,26 +560,26 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                         logger.warning(f"Failed to load {view_name} model: {e}")
                 else:
                     logger.debug(f"Model file not found: {model_path}")
-            
+
             # Load MetaClassifier
             meta_classifier_path = models_dir / "meta_classifier.pkl"
             scaler_path = models_dir / "meta_classifier_scaler.pkl"
             calibrator_path = models_dir / "confidence_calibrator.pkl"
-            
+
             if meta_classifier_path.exists() and scaler_path.exists():
                 self.trained_meta_classifier = joblib.load(meta_classifier_path)
                 self.meta_feature_scaler = joblib.load(scaler_path)
-                
+
                 if calibrator_path.exists():
                     self.confidence_calibrator = joblib.load(calibrator_path)
                 else:
                     self.confidence_calibrator = None
-                
+
                 logger.info("Loaded trained MetaClassifier with scaler and calibrator")
             else:
                 logger.warning("MetaClassifier not found, using default weighted combination")
                 self.trained_meta_classifier = None
-            
+
             # Load fusion models
             try:
                 neural_fusion_path = models_dir / "fusion" / "neural_fusion_model.pth"
@@ -588,24 +588,24 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                     logger.info("Loaded neural fusion model successfully")
                 else:
                     self.neural_fusion_model = None
-                    
+
                 self.ensemble_models = self._load_ensemble_models()
                 if self.ensemble_models:
                     logger.info(f"Loaded {len(self.ensemble_models)} ensemble models")
-                    
+
             except Exception as e:
                 logger.warning(f"Failed to load fusion models: {e}")
                 self.neural_fusion_model = None
                 self.ensemble_models = {}
-            
+
             if view_model_loaded or hasattr(self, 'trained_meta_classifier') or self.neural_fusion_model or self.ensemble_models:
                 logger.info(f"Successfully loaded trained models from {models_dir}")
-                
+
         except Exception as e:
             logger.error(f"Error loading trained models: {e}")
             self.trained_view_models = {}
             self.trained_meta_classifier = None
-    
+
     def _load_simple_view_model(self, model_path: Path):
         """Load a simple view model matching the training architecture."""
         try:
@@ -618,10 +618,10 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                         nn.Linear(hidden_dim // 2, hidden_dim // 4), nn.ReLU(), nn.Dropout(0.2),
                         nn.Linear(hidden_dim // 4, 1), nn.Sigmoid()
                     )
-                
+
                 def forward(self, features):
                     return self.network(features).squeeze()
-            
+
             model = SimpleViewModel()
             # weights_only=True prevents arbitrary code execution during unpickling.
             # Checkpoint contains model_state_dict (tensors only); if optimizers or
@@ -635,7 +635,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         except Exception as e:
             logger.error(f"Failed to load view model {model_path}: {e}")
             return None
-    
+
     def _load_fusion_model(self, model_path: Path) -> torch.nn.Module:
         """Load neural fusion model matching the training architecture."""
         try:
@@ -652,37 +652,37 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         except Exception as e:
             logger.error(f"Failed to load neural fusion model from {model_path}: {e}")
             return None
-    
+
     def _load_ensemble_models(self) -> Dict[str, Any]:
         """Load ensemble classification and regression models."""
         import joblib
         ensemble_models = {}
-        
+
         models_dir = Path("models/epic1")
         try:
             # Load classification model
-            clf_path = models_dir / "fusion" / "ensemble_classification_model.pkl" 
+            clf_path = models_dir / "fusion" / "ensemble_classification_model.pkl"
             if clf_path.exists():
                 ensemble_models['classification'] = joblib.load(clf_path)
                 logger.info(f"Loaded ensemble classification model from {clf_path}")
-            
-            # Load regression model  
+
+            # Load regression model
             reg_path = models_dir / "fusion" / "ensemble_regression_model.pkl"
             if reg_path.exists():
                 ensemble_models['regression'] = joblib.load(reg_path)
                 logger.info(f"Loaded ensemble regression model from {reg_path}")
-                
+
             # Load scaler
             scaler_path = models_dir / "fusion" / "ensemble_scaler.pkl"
             if scaler_path.exists():
                 ensemble_models['scaler'] = joblib.load(scaler_path)
                 logger.info(f"Loaded ensemble scaler from {scaler_path}")
-                
+
         except Exception as e:
             logger.error(f"Error loading ensemble models: {e}")
-            
+
         return ensemble_models
-    
+
     async def analyze_async(self, query: str, mode: str = 'hybrid') -> 'AnalysisResult':
         """
         Perform comprehensive ML-powered query analysis using trained models (async version).
@@ -696,27 +696,27 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
         """
         start_time = time.time()
         self._analysis_count += 1
-        
+
         try:
-            
+
             # Check if we should use trained models
             use_trained_models = (
-                mode in ['ml', 'hybrid'] and 
-                self.trained_view_models and 
+                mode in ['ml', 'hybrid'] and
+                self.trained_view_models and
                 len(self.trained_view_models) > 0
             )
-            
+
             if use_trained_models:
                 # Use trained ML models for analysis
                 return await self._analyze_with_trained_models(query, mode, start_time)
             else:
                 # Fallback to Epic 1 infrastructure
                 return await self._analyze_with_epic1_fallback(query, mode, start_time)
-            
+
         except Exception as e:
             logger.error(f"Analysis failed for query '{query}': {e}")
             return self._create_error_result(query, str(e), start_time)
-    
+
     async def _analyze_with_trained_models(self, query: str, mode: str, start_time: float) -> 'AnalysisResult':
         """Perform analysis using trained PyTorch models and fusion."""
         from .ml_views.view_result import (
@@ -724,22 +724,22 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             AnalysisResult,
             ViewResult,
         )
-        
+
         # Get predictions from the trained predictor (epic1_predictor.py approach)
         prediction_result = self._get_trained_model_predictions(query)
-        
+
         if not prediction_result:
             # If trained model prediction failed, fallback
             return await self._analyze_with_epic1_fallback(query, mode, start_time)
-        
+
         # Create view results from trained model predictions
         view_results = {}
         view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
-        
+
         for view_name in view_names:
             if view_name in prediction_result['view_scores']:
                 view_score = prediction_result['view_scores'][view_name]
-                
+
                 # Create ViewResult for each view
                 view_results[view_name] = ViewResult(
                     view_name=view_name,
@@ -754,13 +754,13 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                         'model_version': prediction_result.get('metadata', {}).get('model_version', 'epic1_v1.0')
                     }
                 )
-        
+
         # Create final complexity level
         final_complexity = self._score_to_complexity_level(prediction_result['complexity_score'])
-        
+
         # Calculate analysis time
         total_latency_ms = (time.time() - start_time) * 1000
-        
+
         # Create comprehensive result
         result = AnalysisResult(
             query=query,
@@ -783,19 +783,19 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 'meta_classification': prediction_result.get('metadata', {}).get('meta_classification', {})
             }
         )
-        
+
         return result
-    
+
     async def _analyze_with_epic1_fallback(self, query: str, mode: str, start_time: float) -> 'AnalysisResult':
         """Fallback to Epic 1 infrastructure when trained models unavailable."""
         from .ml_views.view_result import (
             AnalysisResult,
         )
-        
+
         # Use Epic 1 infrastructure views if available
         view_results = {}
         method_breakdown = {}
-        
+
         if self.views:
             # Try to use individual views
             for view_name, view in self.views.items():
@@ -803,19 +803,19 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                     # Use algorithmic mode for fallback
                     view_result = await view.analyze(query, mode='algorithmic')
                     view_results[view_name] = view_result
-                    
+
                     # Track method used
                     method = view_result.method.value
                     method_breakdown[method] = method_breakdown.get(method, 0) + 1
-                    
+
                 except Exception as e:
                     logger.warning(f"View {view_name} failed: {e}")
-        
+
         # Calculate final score from view results
         if view_results:
             scores = [result.score for result in view_results.values()]
             confidences = [result.confidence for result in view_results.values()]
-            
+
             # Weighted average using configured weights
             final_score = 0.0
             total_weight = 0.0
@@ -823,12 +823,12 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 weight = self.view_weights.get(view_name, 0.2)
                 final_score += result.score * weight
                 total_weight += weight
-            
+
             if total_weight > 0:
                 final_score = final_score / total_weight
             else:
                 final_score = sum(scores) / len(scores)
-            
+
             # Average confidence
             avg_confidence = sum(confidences) / len(confidences)
         else:
@@ -836,13 +836,13 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             final_score = 0.5
             avg_confidence = 0.3
             method_breakdown = {'algorithmic': 1}
-        
+
         # Create final complexity level
         final_complexity = self._score_to_complexity_level(final_score)
-        
+
         # Calculate analysis time
         total_latency_ms = (time.time() - start_time) * 1000
-        
+
         result = AnalysisResult(
             query=query,
             view_results=view_results,
@@ -862,9 +862,9 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 'model_recommendation': self._get_model_recommendation(final_score)
             }
         )
-        
+
         return result
-    
+
     def _get_trained_model_predictions(self, query: str) -> Optional[Dict[str, Any]]:
         """Get predictions using the trained model approach (like epic1_predictor.py)."""
         try:
@@ -872,32 +872,32 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
 
             import numpy as np
             import torch
-            
+
             # Use the same feature extraction approach as in epic1_predictor.py
             view_scores = {}
             view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
-            
+
             for view_name in view_names:
                 if view_name in self.trained_view_models:
                     # Extract features for this view (simplified approach)
                     features = self._extract_view_features(query, view_name)
-                    
+
                     # Get prediction from trained model
                     model = self.trained_view_models[view_name]
                     model.eval()
-                    
+
                     with torch.no_grad():
                         features_tensor = torch.FloatTensor(features).unsqueeze(0)
                         prediction = model(features_tensor).item()
-                    
+
                     view_scores[view_name] = prediction
-            
+
             if not view_scores:
                 return None
-            
+
             # Apply fusion using the trained method (MetaClassifier or weighted average)
             final_score, fusion_method_used = self._apply_fusion_with_metadata(view_scores)
-            
+
             # Determine complexity level
             if final_score < 0.35:
                 complexity_level = 'simple'
@@ -905,12 +905,12 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                 complexity_level = 'medium'
             else:
                 complexity_level = 'complex'
-            
+
             # Calculate confidence based on view consistency
             scores = list(view_scores.values())
             consistency = max(0.0, 1.0 - (np.std(scores) * 2))
             confidence = 0.6 + (consistency * 0.3)  # Base + consistency bonus
-            
+
             return {
                 'complexity_score': final_score,
                 'complexity_level': complexity_level,
@@ -927,11 +927,11 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                     }
                 }
             }
-            
+
         except Exception as e:
             logger.error(f"Trained model prediction failed: {e}")
             return None
-    
+
     def _extract_view_features(self, query: str, view_name: str) -> np.ndarray:
         """Extract features for a specific view (matching training approach)."""
         # Use the same feature extraction as in epic1_predictor.py SimpleViewDataset
@@ -947,30 +947,30 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             query.count(' ') / len(query) if query else 0,
         ]
         return np.array(features, dtype=np.float32)
-    
+
     def _apply_fusion_with_metadata(self, view_scores: Dict[str, float]) -> Tuple[float, str]:
         """Apply fusion and return both score and method used."""
         # First get weighted average score (this gives us the continuous score)
         weighted_score = self._apply_weighted_average_fusion(view_scores)
-        
+
         # Try to use trained MetaClassifier for class validation/override
         if (hasattr(self, 'trained_meta_classifier') and self.trained_meta_classifier is not None and
             hasattr(self, 'meta_feature_scaler') and self.meta_feature_scaler is not None):
-            
+
             try:
                 # Create meta-features (15-dimensional feature vector)
                 meta_features = self._create_meta_features(view_scores)
-                
+
                 # Scale features
                 scaled_features = self.meta_feature_scaler.transform([meta_features])
-                
+
                 # Predict using trained MetaClassifier
                 prediction = self.trained_meta_classifier.predict_proba(scaled_features)[0]
                 predicted_class = prediction.argmax()  # 0=simple, 1=medium, 2=complex
-                
+
                 # Get class from weighted average
                 weighted_class = 0 if weighted_score < 0.35 else (1 if weighted_score < 0.7 else 2)
-                
+
                 # If MetaClassifier agrees with weighted average, use weighted score
                 if predicted_class == weighted_class:
                     logger.debug(f"MetaClassifier agrees: class={predicted_class}, score={weighted_score:.4f}")
@@ -979,20 +979,20 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
                     # MetaClassifier disagrees - use its class prediction but map to appropriate score range
                     if predicted_class == 0:  # simple
                         adjusted_score = min(0.34, weighted_score)  # Cap at simple range
-                    elif predicted_class == 1:  # medium  
+                    elif predicted_class == 1:  # medium
                         adjusted_score = max(0.35, min(0.69, weighted_score))  # Force into medium range
                     else:  # complex
                         adjusted_score = max(0.70, weighted_score)  # Force into complex range
-                    
+
                     logger.debug(f"MetaClassifier override: {weighted_class}→{predicted_class}, score={weighted_score:.4f}→{adjusted_score:.4f}")
                     return adjusted_score, 'metaclassifier'
-                
+
             except Exception as e:
                 logger.warning(f"MetaClassifier fusion failed: {e}, falling back to weighted average")
-        
+
         # Fallback to weighted average fusion
         return weighted_score, 'weighted_average'
-    
+
     def _apply_weighted_average_fusion(self, view_scores: Dict[str, float]) -> float:
         """Apply weighted average fusion using trained weights."""
         fusion_weights = {
@@ -1002,49 +1002,49 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             'semantic': 0.20000875562698767,
             'computational': 0.20001429463317463
         }
-        
+
         # Calculate weighted average
         weighted_sum = 0.0
         total_weight = 0.0
-        
+
         for view_name, score in view_scores.items():
             if view_name in fusion_weights:
                 weight = fusion_weights[view_name]
                 weighted_sum += score * weight
                 total_weight += weight
-        
+
         if total_weight > 0:
             return weighted_sum / total_weight
         else:
             return sum(view_scores.values()) / len(view_scores)
-    
+
     def _apply_fusion(self, view_scores: Dict[str, float]) -> float:
         """Apply fusion using the best available trained method (MetaClassifier first, then weighted average)."""
-        
+
         # Try to use trained MetaClassifier if available
         if (hasattr(self, 'trained_meta_classifier') and self.trained_meta_classifier is not None and
             hasattr(self, 'meta_feature_scaler') and self.meta_feature_scaler is not None):
-            
+
             try:
                 # Create meta-features (15-dimensional feature vector)
                 meta_features = self._create_meta_features(view_scores)
-                
+
                 # Scale features
                 scaled_features = self.meta_feature_scaler.transform([meta_features])
-                
+
                 # Predict using trained MetaClassifier
                 prediction = self.trained_meta_classifier.predict_proba(scaled_features)[0]
-                
+
                 # Convert classification probabilities to regression score
                 # Classes are typically [simple, medium, complex] -> map to continuous score
                 score = (prediction[1] * 0.5) + (prediction[2] * 1.0)  # medium=0.5, complex=1.0
-                
+
                 logger.debug(f"MetaClassifier fusion: {score:.4f} (probs: {prediction})")
                 return min(1.0, max(0.0, score))
-                
+
             except Exception as e:
                 logger.warning(f"MetaClassifier fusion failed: {e}, falling back to weighted average")
-        
+
         # Fallback to weighted average fusion
         fusion_weights = {
             'technical': 0.19999032962292654,
@@ -1053,48 +1053,48 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             'semantic': 0.20000875562698767,
             'computational': 0.20001429463317463
         }
-        
+
         # Calculate weighted average
         weighted_sum = 0.0
         total_weight = 0.0
-        
+
         for view_name, score in view_scores.items():
             if view_name in fusion_weights:
                 weight = fusion_weights[view_name]
                 weighted_sum += score * weight
                 total_weight += weight
-        
+
         if total_weight > 0:
             return min(1.0, max(0.0, weighted_sum))
         else:
             # Final fallback to simple average
             return sum(view_scores.values()) / len(view_scores)
-    
+
     def _create_meta_features(self, view_scores: Dict[str, float]) -> List[float]:
         """Create 15-dimensional meta-feature vector for MetaClassifier."""
         # Get view scores in standard order
         view_names = ['technical', 'linguistic', 'task', 'semantic', 'computational']
         scores = [view_scores.get(name, 0.0) for name in view_names]
-        
+
         # Basic statistics
         mean_score = sum(scores) / len(scores)
         std_score = (sum((s - mean_score) ** 2 for s in scores) / len(scores)) ** 0.5
         min_score = min(scores)
         max_score = max(scores)
         range_score = max_score - min_score
-        
+
         # Cross-view differences
         tech_ling_diff = abs(scores[0] - scores[1])  # technical vs linguistic
         task_sem_diff = abs(scores[2] - scores[3])   # task vs semantic
-        
+
         # Complexity indicators
         high_complexity_views = sum(1 for s in scores if s > 0.7)
         low_complexity_views = sum(1 for s in scores if s < 0.3)
-        
+
         # Create 15-dimensional feature vector
         meta_features = [
             scores[0],  # technical
-            scores[1],  # linguistic  
+            scores[1],  # linguistic
             scores[2],  # task
             scores[3],  # semantic
             scores[4],  # computational
@@ -1109,20 +1109,20 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             low_complexity_views,
             len([s for s in scores if s > mean_score])  # above-average views
         ]
-        
+
         return meta_features
-    
+
     def _score_to_complexity_level(self, score: float) -> 'ComplexityLevel':
         """Convert score to complexity level."""
         from .ml_views.view_result import ComplexityLevel
-        
+
         if score < 0.35:
             return ComplexityLevel.SIMPLE
         elif score < 0.70:
             return ComplexityLevel.MEDIUM
         else:
             return ComplexityLevel.COMPLEX
-    
+
     def _get_model_recommendation(self, complexity_score: float) -> str:
         """Get model recommendation based on complexity score."""
         if complexity_score < 0.35:
@@ -1131,7 +1131,7 @@ class Epic1MLAnalyzer(BaseQueryAnalyzer):
             return f"local:{LOCAL.model}"
         else:
             return "mistral:mistral-medium"
-    
+
     def _create_error_result(self, query: str, error: str, start_time: float) -> 'AnalysisResult':
         """Create error result for failed analysis."""
         from .ml_views.view_result import AnalysisResult, ComplexityLevel
@@ -1234,7 +1234,7 @@ class NeuralFusionModel(nn.Module):
             nn.Linear(hidden_dim // 2, hidden_dim // 4), nn.ReLU(), nn.Dropout(0.1),
             nn.Linear(hidden_dim // 4, 3), nn.Softmax(dim=1)
         )
-    
+
     def forward(self, view_predictions):
         shared_features = self.shared_layers(view_predictions)
         regression_output = self.regression_head(shared_features).squeeze()

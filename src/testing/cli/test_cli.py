@@ -28,12 +28,12 @@ from src.testing.utils.logging_config import setup_cli_logging
 
 class TestCLI:
     """Command-line interface for unified test execution."""
-    
+
     def __init__(self):
         self.orchestrator = TestOrchestrator()
         self.discovery = TestDiscovery()
         self.report_manager = ReportManager()
-        
+
     def create_parser(self) -> argparse.ArgumentParser:
         """Create the main argument parser with subcommands."""
         parser = argparse.ArgumentParser(
@@ -50,20 +50,20 @@ Examples:
   %(prog)s epic2 smoke --verbose       # Run Epic 2 smoke tests with verbose output
             """
         )
-        
+
         # Global options
         parser.add_argument(
-            '--version', 
-            action='version', 
+            '--version',
+            action='version',
             version='Test Runner 1.0.0'
         )
         parser.add_argument(
-            '--list-suites', 
+            '--list-suites',
             action='store_true',
             help='List all available test suites and exit'
         )
         parser.add_argument(
-            '--config', 
+            '--config',
             type=Path,
             default=Path('config/testing.yaml'),
             help='Path to test configuration file'
@@ -79,7 +79,7 @@ Examples:
             action='store_true',
             help='Suppress output except for errors'
         )
-        
+
         # Output options
         output_group = parser.add_argument_group('Output Options')
         output_group.add_argument(
@@ -98,7 +98,7 @@ Examples:
             '--report-name',
             help='Custom name for report files'
         )
-        
+
         # Execution options
         exec_group = parser.add_argument_group('Execution Options')
         exec_group.add_argument(
@@ -123,7 +123,7 @@ Examples:
             action='store_true',
             help='Stop execution on first failure'
         )
-        
+
         # Filtering options
         filter_group = parser.add_argument_group('Filtering Options')
         filter_group.add_argument(
@@ -143,14 +143,14 @@ Examples:
             '--since',
             help='Run tests for files changed since commit/branch'
         )
-        
+
         # Main command structure
         subparsers = parser.add_subparsers(
             dest='suite',
             help='Test suite to run',
             metavar='SUITE'
         )
-        
+
         # Epic 1 tests
         epic1_parser = subparsers.add_parser(
             'epic1',
@@ -161,7 +161,7 @@ Examples:
             choices=['unit', 'integration', 'regression', 'smoke', 'performance', 'ml_infrastructure', 'phase2', 'all'],
             help='Type of Epic 1 tests to run'
         )
-        
+
         # Epic 2 tests
         epic2_parser = subparsers.add_parser(
             'epic2',
@@ -172,7 +172,7 @@ Examples:
             choices=['unit', 'integration', 'smoke', 'validation', 'all'],
             help='Type of Epic 2 tests to run'
         )
-        
+
         # Original/Legacy tests
         legacy_parser = subparsers.add_parser(
             'legacy',
@@ -183,7 +183,7 @@ Examples:
             choices=['unit', 'integration', 'diagnostic', 'component', 'all'],
             help='Type of legacy tests to run'
         )
-        
+
         # Diagnostic tests
         diagnostic_parser = subparsers.add_parser(
             'diagnostic',
@@ -196,7 +196,7 @@ Examples:
             default='all',
             help='Type of diagnostic tests to run'
         )
-        
+
         # All tests
         all_parser = subparsers.add_parser(
             'all',
@@ -208,29 +208,29 @@ Examples:
             choices=['epic1', 'epic2', 'legacy', 'diagnostic'],
             help='Exclude specific test suites'
         )
-        
+
         return parser
-    
+
     async def run(self, args: argparse.Namespace) -> int:
         """Execute the test runner with parsed arguments."""
         try:
             # Setup logging
             setup_cli_logging(args.verbose, args.quiet)
-            
+
             # Handle list-suites
             if args.list_suites:
                 self._list_suites()
                 return 0
-            
+
             # Validate arguments
             if not args.suite:
                 print("Error: No test suite specified. Use --help for usage information.")
                 return 1
-            
+
             # Configure test execution
             config = await self._load_config(args.config)
             execution_config = self._build_execution_config(args)
-            
+
             # Discover tests
             test_plan = await self.discovery.discover_tests(
                 suite=args.suite,
@@ -238,17 +238,17 @@ Examples:
                 filters=self._build_filters(args),
                 config=config
             )
-            
+
             if not test_plan.tests:
                 print(f"No tests found matching criteria for suite '{args.suite}'")
                 return 0
-            
+
             # Execute tests
             results = await self.orchestrator.execute_tests(
                 test_plan,
                 execution_config
             )
-            
+
             # Generate reports
             await self.report_manager.generate_reports(
                 results,
@@ -256,10 +256,10 @@ Examples:
                 output_dir=args.output_dir,
                 report_name=args.report_name
             )
-            
+
             # Return appropriate exit code
             return 0 if results.success else 1
-            
+
         except KeyboardInterrupt:
             print("\nTest execution interrupted by user")
             return 130
@@ -269,7 +269,7 @@ Examples:
                 import traceback
                 traceback.print_exc()
             return 1
-    
+
     def _list_suites(self):
         """List all available test suites and their types."""
         suites = {
@@ -294,16 +294,16 @@ Examples:
                 'location': 'tests/diagnostic/'
             }
         }
-        
+
         print("Available Test Suites:")
         print("=" * 50)
-        
+
         for suite_name, info in suites.items():
             print(f"\n{suite_name.upper()}:")
             print(f"  Description: {info['description']}")
             print(f"  Location: {info['location']}")
             print(f"  Types: {', '.join(info['types'])}")
-    
+
     async def _load_config(self, config_path: Path) -> Dict[str, Any]:
         """Load test configuration from file."""
         # Implementation would load YAML/JSON config
@@ -317,7 +317,7 @@ Examples:
                 'exclude_patterns': ['__pycache__', '*.pyc']
             }
         }
-    
+
     def _build_execution_config(self, args: argparse.Namespace) -> Dict[str, Any]:
         """Build execution configuration from CLI arguments."""
         return {
@@ -328,7 +328,7 @@ Examples:
             'verbose': args.verbose,
             'quiet': args.quiet
         }
-    
+
     def _build_filters(self, args: argparse.Namespace) -> Dict[str, Any]:
         """Build test filters from CLI arguments."""
         return {
@@ -344,7 +344,7 @@ def main():
     cli = TestCLI()
     parser = cli.create_parser()
     args = parser.parse_args()
-    
+
     # Run the async main function
     exit_code = asyncio.run(cli.run(args))
     sys.exit(exit_code)

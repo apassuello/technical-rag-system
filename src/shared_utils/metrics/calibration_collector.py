@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from config.llm_providers import LOCAL
+
 from .base_metrics_collector import BaseMetricsCollector, InMemoryMetricsStorage
 from .data_models import CalibrationQueryMetrics, SessionMetadata
 
@@ -33,23 +34,23 @@ class QueryMetrics(CalibrationQueryMetrics):
 class MetricsCollector(BaseMetricsCollector):
     """
     Gathers performance metrics during test runs following calibration-system-spec.md.
-    
+
     Collects comprehensive metrics for calibration analysis including retrieval quality,
     generation performance, and validation results.
-    
+
     This implementation maintains exact API compatibility with the original calibration
     metrics collector while leveraging the new shared metrics infrastructure.
     """
-    
+
     def __init__(self) -> None:
         """Initialize metrics collector with calibration-specific configuration."""
         session_metadata_obj = SessionMetadata()
         storage = InMemoryMetricsStorage(max_query_metrics=10000)
         super().__init__(session_metadata_obj, storage)
-        
+
         # Maintain direct access to query metrics for legacy compatibility
         self.query_metrics: List[CalibrationQueryMetrics] = []
-        
+
         # Maintain backward compatibility with dict-like session_metadata
         self.session_metadata = {
             "session_id": session_metadata_obj.session_id,
@@ -61,7 +62,7 @@ class MetricsCollector(BaseMetricsCollector):
     def start_query_collection(self, query_id: str, query_text: str) -> CalibrationQueryMetrics:
         """Start collecting metrics for a query."""
         metrics = CalibrationQueryMetrics(query_id=query_id, query_text=query_text)
-        
+
         # Initialize default structure following calibration spec
         metrics.retrieval_metrics = {
             "documents_retrieved": 0,
@@ -73,7 +74,7 @@ class MetricsCollector(BaseMetricsCollector):
             "sparse_results_count": 0,
             "fusion_results_count": 0
         }
-        
+
         metrics.generation_metrics = {
             "confidence_score": 0.0,
             "answer_length": 0,
@@ -82,7 +83,7 @@ class MetricsCollector(BaseMetricsCollector):
             "model_used": "",
             "temperature": 0.0
         }
-        
+
         metrics.validation_results = {
             "meets_expectations": False,
             "confidence_in_range": False,
@@ -90,22 +91,22 @@ class MetricsCollector(BaseMetricsCollector):
             "has_citations": False,
             "answer_quality_score": 0.0
         }
-        
+
         metrics.performance_metrics = {
             "total_time": 0.0,
             "memory_peak_mb": 0,
             "cpu_usage_percent": 0.0
         }
-        
+
         self.query_metrics.append(metrics)
         if self.storage:
             self.storage.store_query_metrics(metrics)
-        
+
         logger.debug(f"Started metrics collection for query: {query_id}")
         return metrics
 
     def collect_retrieval_metrics(
-        self, 
+        self,
         query_metrics: CalibrationQueryMetrics,
         retrieval_results: List[Tuple[int, float]],
         dense_results: Optional[List[Tuple[int, float]]] = None,
@@ -113,7 +114,7 @@ class MetricsCollector(BaseMetricsCollector):
         retrieval_time: float = 0.0
     ) -> None:
         """Collect retrieval-specific metrics."""
-        
+
         if retrieval_results:
             scores = [score for _, score in retrieval_results]
             query_metrics.retrieval_metrics.update({
@@ -135,7 +136,7 @@ class MetricsCollector(BaseMetricsCollector):
             })
 
         if sparse_results:
-            sparse_scores = [score for _, score in sparse_results] 
+            sparse_scores = [score for _, score in sparse_results]
             query_metrics.retrieval_metrics.update({
                 "sparse_results_count": len(sparse_results),
                 "avg_bm25_score": np.mean(sparse_scores) if sparse_scores else 0.0,
@@ -154,7 +155,7 @@ class MetricsCollector(BaseMetricsCollector):
         model_info: Optional[Dict[str, Any]] = None
     ) -> None:
         """Collect answer generation metrics."""
-        
+
         query_metrics.generation_metrics.update({
             "confidence_score": confidence_score,
             "answer_length": len(answer) if answer else 0,
@@ -181,12 +182,12 @@ class MetricsCollector(BaseMetricsCollector):
 
     def collect_validation_results(
         self,
-        query_metrics: CalibrationQueryMetrics, 
+        query_metrics: CalibrationQueryMetrics,
         expected_behavior: Dict[str, Any],
         actual_results: Dict[str, Any]
     ) -> None:
         """Collect validation results against expected behavior."""
-        
+
         # Basic validation checks
         meets_expectations = True
         validation_details = {}
@@ -195,7 +196,7 @@ class MetricsCollector(BaseMetricsCollector):
         expected_min_conf = expected_behavior.get("min_confidence", 0.0)
         expected_max_conf = expected_behavior.get("max_confidence", 1.0)
         actual_confidence = actual_results.get("confidence", 0.0)
-        
+
         confidence_in_range = expected_min_conf <= actual_confidence <= expected_max_conf
         validation_details["confidence_check"] = {
             "expected_range": [expected_min_conf, expected_max_conf],
@@ -209,7 +210,7 @@ class MetricsCollector(BaseMetricsCollector):
         # Check required terms
         required_terms = expected_behavior.get("must_contain_terms", [])
         answer_text = actual_results.get("answer", "").lower()
-        
+
         contains_required_terms = all(term.lower() in answer_text for term in required_terms)
         validation_details["required_terms_check"] = {
             "required_terms": required_terms,
@@ -220,7 +221,7 @@ class MetricsCollector(BaseMetricsCollector):
         if required_terms and not contains_required_terms:
             meets_expectations = False
 
-        # Check forbidden terms  
+        # Check forbidden terms
         forbidden_terms = expected_behavior.get("must_not_contain", [])
         contains_forbidden_terms = any(term.lower() in answer_text for term in forbidden_terms)
         validation_details["forbidden_terms_check"] = {
@@ -236,7 +237,7 @@ class MetricsCollector(BaseMetricsCollector):
         has_citations = len(actual_results.get("citations", [])) > 0
         expected_citations = expected_behavior.get("min_citations", 0)
         sufficient_citations = len(actual_results.get("citations", [])) >= expected_citations
-        
+
         validation_details["citations_check"] = {
             "expected_min": expected_citations,
             "actual_count": len(actual_results.get("citations", [])),
@@ -262,11 +263,11 @@ class MetricsCollector(BaseMetricsCollector):
         """Calculate composite answer quality score."""
         checks = [
             validation_details.get("confidence_check", {}).get("passed", False),
-            validation_details.get("required_terms_check", {}).get("passed", False), 
+            validation_details.get("required_terms_check", {}).get("passed", False),
             validation_details.get("forbidden_terms_check", {}).get("passed", False),
             validation_details.get("citations_check", {}).get("passed", False)
         ]
-        
+
         return sum(checks) / len(checks) if checks else 0.0
 
     def collect_performance_metrics(
@@ -277,7 +278,7 @@ class MetricsCollector(BaseMetricsCollector):
         cpu_usage_percent: Optional[float] = None
     ) -> None:
         """Collect performance metrics."""
-        
+
         query_metrics.performance_metrics.update({
             "total_time": total_time,
             "memory_peak_mb": memory_peak_mb or 0,
@@ -336,7 +337,7 @@ class MetricsCollector(BaseMetricsCollector):
 
         # Performance aggregates
         total_times = [q.performance_metrics.get("total_time", 0) for q in self.query_metrics]
-        
+
         aggregate["performance_aggregates"] = {
             "avg_total_time": np.mean(total_times) if total_times else 0,
             "p95_total_time": np.percentile(total_times, 95) if total_times else 0,
@@ -384,7 +385,7 @@ class MetricsCollector(BaseMetricsCollector):
             return "No metrics collected yet."
 
         aggregates = self.calculate_aggregate_metrics()
-        
+
         summary = [
             "Metrics Collection Summary",
             "=" * 40,
@@ -417,7 +418,7 @@ class MetricsCollector(BaseMetricsCollector):
     def _serialize_session_metadata(self) -> Dict[str, Any]:
         """
         Serialize session metadata for export.
-        
+
         Overrides base class method to handle dict-based session_metadata
         used for backward compatibility.
         """
@@ -432,16 +433,16 @@ class MetricsCollector(BaseMetricsCollector):
 if __name__ == "__main__":
     # Test the metrics collector
     collector = MetricsCollector()
-    
+
     # Simulate collecting metrics for a query
     metrics = collector.start_query_collection("TEST001", "What is RISC-V?")
-    
+
     collector.collect_retrieval_metrics(
-        metrics, 
+        metrics,
         [(0, 0.95), (1, 0.87), (2, 0.73)],
         retrieval_time=0.12
     )
-    
+
     collector.collect_generation_metrics(
         metrics,
         "RISC-V is an open-source instruction set architecture...",
@@ -450,7 +451,7 @@ if __name__ == "__main__":
         [{"source": "risc-v-spec.pdf", "relevance": 0.92}],
         {"model_name": LOCAL.model, "temperature": 0.3}
     )
-    
+
     expected = {
         "min_confidence": 0.7,
         "must_contain_terms": ["instruction set", "open-source"],
@@ -461,8 +462,8 @@ if __name__ == "__main__":
         "answer": "RISC-V is an open-source instruction set architecture...",
         "citations": [{"source": "risc-v-spec.pdf"}]
     }
-    
+
     collector.collect_validation_results(metrics, expected, actual)
     collector.collect_performance_metrics(metrics, 1.45, 256.0, 45.2)
-    
+
     logger.info(collector.get_metrics_summary())

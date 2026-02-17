@@ -35,23 +35,23 @@ logger = logging.getLogger(__name__)
 class SemanticComplexityView(HybridView):
     """
     Semantic Complexity View using Sentence-BERT + Semantic Pattern Analysis.
-    
+
     This view specializes in analyzing the semantic complexity of queries by:
     1. Algorithmic analysis using semantic keywords and conceptual patterns
     2. ML analysis using Sentence-BERT for semantic relationship understanding
     3. Hybrid combination with configurable weighting
-    
+
     Performance Targets:
     - Algorithmic analysis: <3ms
     - ML analysis: <18ms (with model loaded)
     - Hybrid analysis: <22ms total
     - Accuracy: >80% semantic complexity classification
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         Initialize Semantic Complexity View.
-        
+
         Args:
             config: Configuration dictionary with optional parameters:
                 - algorithmic_weight: Weight for algorithmic analysis (default: 0.4)
@@ -64,20 +64,20 @@ class SemanticComplexityView(HybridView):
         config = config or {}
         config.setdefault('algorithmic_weight', 0.4)
         config.setdefault('ml_weight', 0.6)
-        
+
         super().__init__(
             view_name='semantic',
             ml_model_name=config.get('sentence_bert_model_name', 'sentence-transformers/all-MiniLM-L6-v2'),
             config=config
         )
-        
+
         # Configuration
         self.min_concept_count = self.config.get('min_concept_count', 3)
         self.enable_relationship_analysis = self.config.get('enable_relationship_analysis', True)
-        
+
         logger.info(f"Initialized SemanticComplexityView with weights: "
                    f"algorithmic={self.algorithmic_weight:.2f}, ml={self.ml_weight:.2f}")
-    
+
     def _initialize_algorithmic_components(self) -> None:
         """Initialize algorithmic components for fast semantic analysis."""
         try:
@@ -129,7 +129,7 @@ class SemanticComplexityView(HybridView):
                     'description': 'Cognitive and mental processes'
                 }
             }
-            
+
             # Semantic relationship patterns
             self.relationship_patterns = {
                 'causal': [
@@ -149,29 +149,29 @@ class SemanticComplexityView(HybridView):
                     r'sequence', r'temporal', r'chronological'
                 ]
             }
-            
+
             # Conceptual depth indicators
             self.depth_indicators = {
                 'surface': ['what', 'when', 'where', 'who', 'which', 'list', 'name'],
                 'intermediate': ['how', 'why', 'describe', 'explain', 'compare', 'contrast'],
                 'deep': ['analyze', 'synthesize', 'evaluate', 'theorize', 'conceptualize', 'philosophize']
             }
-            
+
             # Compile patterns for efficiency
             self._compile_semantic_patterns()
-            
+
             logger.debug("Initialized algorithmic components for semantic analysis")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize algorithmic components: {e}")
             raise
-    
+
     def _initialize_ml_components(self) -> None:
         """Initialize ML components for Sentence-BERT analysis."""
         try:
             # Sentence-BERT will be lazy-loaded via ModelManager
             self._sentence_bert_model = None
-            
+
             # Semantic complexity anchors for similarity comparison
             self.semantic_anchors = {
                 'high_complexity': [
@@ -196,7 +196,7 @@ class SemanticComplexityView(HybridView):
                     "Name the different types of data structures."
                 ]
             }
-            
+
             # Semantic domain anchors for conceptual clustering
             self.domain_anchors = {
                 'abstract_theoretical': [
@@ -215,20 +215,20 @@ class SemanticComplexityView(HybridView):
                     "step-by-step instructions and guidelines"
                 ]
             }
-            
+
             # Cached embeddings for semantic anchors
             self._anchor_embeddings = {}
-            
+
             logger.debug("Initialized ML components for Sentence-BERT analysis")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize ML components: {e}")
             raise
-    
+
     def _compile_semantic_patterns(self) -> None:
         """Compile regex patterns for efficient matching."""
         self._compiled_relationship_patterns = {}
-        
+
         for relationship_type, patterns in self.relationship_patterns.items():
             compiled_patterns = []
             for pattern in patterns:
@@ -237,7 +237,7 @@ class SemanticComplexityView(HybridView):
                 except re.error as e:
                     logger.warning(f"Invalid regex pattern '{pattern}': {e}")
             self._compiled_relationship_patterns[relationship_type] = compiled_patterns
-    
+
     def _analyze_algorithmic(self, query: str) -> Dict[str, Any]:
         """
         Perform fast algorithmic analysis using semantic keywords and patterns.
@@ -267,17 +267,17 @@ class SemanticComplexityView(HybridView):
 
             # 4. Multi-concept analysis
             concept_analysis = self._analyze_concept_density(query_lower, query_words)
-            
+
             # 5. Calculate semantic complexity score
             final_score = self._calculate_semantic_complexity_score(
                 category_analysis, relationship_analysis, depth_analysis, concept_analysis
             )
-            
+
             # 6. Calculate confidence
             confidence = self._calculate_algorithmic_confidence(
                 category_analysis, relationship_analysis, depth_analysis, concept_analysis
             )
-            
+
             # 7. Features for explainability
             features = {
                 'semantic_categories': category_analysis,
@@ -287,7 +287,7 @@ class SemanticComplexityView(HybridView):
                 'query_word_count': len(query_words),
                 'unique_concepts': len(set(w for w in query_words if len(w) > 3))
             }
-            
+
             # 8. Metadata
             # Find dominant category
             dominant_category = 'unknown'
@@ -308,19 +308,19 @@ class SemanticComplexityView(HybridView):
                 'concept_density': concept_analysis.get('concept_density', 0.0),
                 'semantic_indicators': total_indicators
             }
-            
+
             logger.debug(f"Algorithmic semantic analysis: score={final_score:.3f}, "
                         f"confidence={confidence:.3f}, "
                         f"category={category_analysis.get('dominant_category', 'unknown')}, "
                         f"depth={depth_analysis.get('depth_level', 'intermediate')}")
-            
+
             return {
                 'score': max(0.0, min(1.0, final_score)),
                 'confidence': confidence,
                 'features': features,
                 'metadata': metadata
             }
-            
+
         except Exception as e:
             logger.error(f"Algorithmic semantic analysis failed: {e}")
             return {
@@ -329,7 +329,7 @@ class SemanticComplexityView(HybridView):
                 'features': {'error': str(e)},
                 'metadata': {'analysis_method': 'algorithmic_fallback'}
             }
-    
+
     def _analyze_semantic_categories(self, query: str) -> Dict[str, Any]:
         """Analyze semantic categories in the query."""
         # Return dict with category names as keys and their analysis as values
@@ -351,7 +351,7 @@ class SemanticComplexityView(HybridView):
             }
 
         return result
-    
+
     def _analyze_relationship_patterns(self, query: str) -> Dict[str, Any]:
         """Analyze relationship patterns in the query."""
         # Return dict with pattern type as keys, each containing matches count
@@ -369,7 +369,7 @@ class SemanticComplexityView(HybridView):
                 }
 
         return result
-    
+
     def _analyze_conceptual_depth(self, query: str) -> Dict[str, Any]:
         """Analyze conceptual depth of the query."""
         depth_scores = {
@@ -404,7 +404,7 @@ class SemanticComplexityView(HybridView):
             'intermediate_indicators': depth_scores['intermediate'],
             'deep_indicators': depth_scores['deep']
         }
-    
+
     def _analyze_concept_density(self, query: str, query_words: Set[str]) -> Dict[str, Any]:
         """Analyze density of concepts in the query."""
         # Count potential concepts (words longer than 3 characters, excluding common words)
@@ -412,15 +412,15 @@ class SemanticComplexityView(HybridView):
             'the', 'and', 'but', 'for', 'with', 'from', 'that', 'this', 'they', 'them',
             'what', 'when', 'where', 'which', 'who', 'how', 'why', 'can', 'will', 'would'
         }
-        
+
         potential_concepts = [
-            word for word in query_words 
+            word for word in query_words
             if len(word) > 3 and word not in common_words and word.isalpha()
         ]
-        
+
         concept_count = len(potential_concepts)
         concept_density = concept_count / max(len(query_words), 1)
-        
+
         # Identify domain-specific concepts (using simple heuristics)
         domain_concepts = [
             word for word in potential_concepts
@@ -429,11 +429,11 @@ class SemanticComplexityView(HybridView):
                 for keyword in category['keywords']
             )
         ]
-        
+
         complexity_boost = 0.0
         if concept_count >= self.min_concept_count:
             complexity_boost = min((concept_count - self.min_concept_count) * 0.1, 0.3)
-        
+
         return {
             'concept_count': concept_count,
             'concept_density': concept_density,
@@ -442,7 +442,7 @@ class SemanticComplexityView(HybridView):
             'complexity_boost': complexity_boost,
             'is_concept_rich': concept_count >= self.min_concept_count
         }
-    
+
     def _calculate_semantic_score(
         self, categories: Dict, relationships: Dict, depth: Dict
     ) -> float:
@@ -492,7 +492,7 @@ class SemanticComplexityView(HybridView):
         final_score = min(base_score + concept_boost, 1.0)
 
         return final_score
-    
+
     def _calculate_algorithmic_confidence(
         self, categories: Dict, relationships: Dict, depth: Dict, concepts: Dict
     ) -> float:
@@ -521,14 +521,14 @@ class SemanticComplexityView(HybridView):
             confidence += 0.1
 
         return min(confidence, 0.85)  # Cap algorithmic confidence at 85%
-    
+
     def _analyze_ml(self, query: str) -> Dict[str, Any]:
         """
         Perform ML analysis using Sentence-BERT for semantic understanding.
-        
+
         Args:
             query: Query text to analyze
-            
+
         Returns:
             Dictionary with score, confidence, features, and metadata
         """
@@ -537,34 +537,34 @@ class SemanticComplexityView(HybridView):
             if not self._sentence_bert_model:
                 if not self.model_manager:
                     raise ValueError("ModelManager not set - cannot load Sentence-BERT")
-                
+
                 # Load Sentence-BERT model through ModelManager
                 self._sentence_bert_model = self.model_manager.get_model(self.ml_model_name)
                 if not self._sentence_bert_model:
                     raise ValueError(f"Failed to load Sentence-BERT model: {self.ml_model_name}")
-            
+
             # 1. Generate query embedding
             query_embedding = self._get_query_embedding(query)
-            
+
             # 2. Compare with semantic complexity anchors
             anchor_similarities = self._compute_anchor_similarities(query_embedding)
-            
+
             # 3. Domain classification using semantic clustering
             domain_analysis = self._analyze_semantic_domains(query, query_embedding)
-            
+
             # 4. Semantic relationship analysis using embeddings
             semantic_relationships = self._analyze_semantic_relationships(query, query_embedding)
-            
+
             # 5. Calculate complexity score based on ML analysis
             complexity_score = self._calculate_ml_complexity_score(
                 anchor_similarities, domain_analysis, semantic_relationships
             )
-            
+
             # 6. Estimate confidence based on ML analysis quality
             confidence = self._calculate_ml_confidence(
                 query_embedding, anchor_similarities, domain_analysis, semantic_relationships
             )
-            
+
             # 7. Extract ML features for explainability
             features = {
                 'query_embedding_norm': float(np.linalg.norm(query_embedding)),
@@ -573,7 +573,7 @@ class SemanticComplexityView(HybridView):
                 'semantic_relationships': semantic_relationships,
                 'embedding_dimensionality': query_embedding.shape[0] if hasattr(query_embedding, 'shape') else len(query_embedding)
             }
-            
+
             # 8. ML-specific metadata
             metadata = {
                 'analysis_method': 'ml_sentence_bert',
@@ -585,17 +585,17 @@ class SemanticComplexityView(HybridView):
                 'primary_semantic_domain': domain_analysis.get('primary_domain', 'unknown'),
                 'semantic_coherence': semantic_relationships.get('coherence_score', 0.0)
             }
-            
+
             logger.debug(f"ML semantic analysis: score={complexity_score:.3f}, "
                         f"confidence={confidence:.3f}, model={self.ml_model_name}")
-            
+
             return {
                 'score': complexity_score,
                 'confidence': confidence,
                 'features': features,
                 'metadata': metadata
             }
-            
+
         except Exception as e:
             logger.error(f"ML semantic analysis failed: {e}")
             return {
@@ -604,7 +604,7 @@ class SemanticComplexityView(HybridView):
                 'features': {'error': str(e)},
                 'metadata': {'analysis_method': 'ml_fallback', 'error': str(e)}
             }
-    
+
     def _get_query_embedding(self, query: str) -> np.ndarray:
         """Get Sentence-BERT embedding for query."""
         try:
@@ -619,36 +619,36 @@ class SemanticComplexityView(HybridView):
                 with torch.no_grad():
                     outputs = self._sentence_bert_model(**inputs)
                     embedding = outputs.last_hidden_state.mean(dim=1).squeeze().numpy()
-            
+
             return embedding
-            
+
         except Exception as e:
             logger.error(f"Failed to get Sentence-BERT embedding: {e}")
             # Return zero embedding as fallback
             return np.zeros(384)  # Standard MiniLM embedding size
-    
+
     def _compute_anchor_similarities(self, query_embedding: np.ndarray) -> Dict[str, float]:
         """Compute similarities to semantic complexity anchors."""
         similarities = {}
-        
+
         try:
             for complexity_level, anchor_texts in self.semantic_anchors.items():
                 level_similarities = []
-                
+
                 for anchor_text in anchor_texts:
                     # Get or compute anchor embedding
                     if anchor_text not in self._anchor_embeddings:
                         self._anchor_embeddings[anchor_text] = self._get_query_embedding(anchor_text)
-                    
+
                     anchor_embedding = self._anchor_embeddings[anchor_text]
-                    
+
                     # Compute cosine similarity
                     similarity = self._cosine_similarity(query_embedding, anchor_embedding)
                     level_similarities.append(similarity)
-                
+
                 # Use maximum similarity for this complexity level
                 similarities[complexity_level] = max(level_similarities) if level_similarities else 0.0
-            
+
         except Exception as e:
             logger.warning(f"Failed to compute anchor similarities: {e}")
             similarities = {
@@ -656,29 +656,29 @@ class SemanticComplexityView(HybridView):
                 'medium_complexity': 0.5,
                 'low_complexity': 0.7
             }
-        
+
         return similarities
-    
+
     def _analyze_semantic_domains(self, query: str, embedding: np.ndarray) -> Dict[str, Any]:
         """Analyze semantic domains using embeddings."""
         try:
             domain_similarities = {}
-            
+
             for domain, anchor_texts in self.domain_anchors.items():
                 domain_sims = []
-                
+
                 for anchor_text in anchor_texts:
                     # Get or compute domain anchor embedding
                     domain_key = f"domain_{anchor_text}"
                     if domain_key not in self._anchor_embeddings:
                         self._anchor_embeddings[domain_key] = self._get_query_embedding(anchor_text)
-                    
+
                     anchor_embedding = self._anchor_embeddings[domain_key]
                     similarity = self._cosine_similarity(embedding, anchor_embedding)
                     domain_sims.append(similarity)
-                
+
                 domain_similarities[domain] = max(domain_sims) if domain_sims else 0.0
-            
+
             # Find primary domain
             if domain_similarities:
                 primary_domain = max(domain_similarities.items(), key=lambda x: x[1])[0]
@@ -686,13 +686,13 @@ class SemanticComplexityView(HybridView):
             else:
                 primary_domain = 'concrete_practical'
                 domain_confidence = 0.5
-            
+
             return {
                 'domain_similarities': domain_similarities,
                 'primary_domain': primary_domain,
                 'domain_confidence': domain_confidence
             }
-            
+
         except Exception as e:
             logger.warning(f"Semantic domain analysis failed: {e}")
             return {
@@ -700,21 +700,21 @@ class SemanticComplexityView(HybridView):
                 'primary_domain': 'concrete_practical',
                 'domain_confidence': 0.5
             }
-    
+
     def _analyze_semantic_relationships(self, query: str, embedding: np.ndarray) -> Dict[str, Any]:
         """Analyze semantic relationships using embedding properties."""
         try:
             # 1. Embedding magnitude (often correlates with semantic complexity)
             embedding_magnitude = float(np.linalg.norm(embedding))
-            
+
             # 2. Embedding dispersion (spread of values)
             embedding_std = float(np.std(embedding))
             embedding_mean = float(np.mean(embedding))
-            
+
             # 3. High-activation dimensions (semantic richness indicator)
             activation_threshold = np.percentile(np.abs(embedding), 85)
             high_activations = int(np.sum(np.abs(embedding) > activation_threshold))
-            
+
             # 4. Coherence score (heuristic based on embedding properties)
             coherence_score = min(
                 (embedding_magnitude / 15.0) * 0.4 +  # Magnitude component
@@ -722,7 +722,7 @@ class SemanticComplexityView(HybridView):
                 (embedding_std / 0.4) * 0.3,  # Distribution component
                 1.0
             )
-            
+
             return {
                 'embedding_magnitude': embedding_magnitude,
                 'embedding_std': embedding_std,
@@ -730,7 +730,7 @@ class SemanticComplexityView(HybridView):
                 'high_activations': high_activations,
                 'coherence_score': coherence_score
             }
-            
+
         except Exception as e:
             logger.warning(f"Semantic relationship analysis failed: {e}")
             return {
@@ -740,7 +740,7 @@ class SemanticComplexityView(HybridView):
                 'high_activations': 0,
                 'coherence_score': 0.5
             }
-    
+
     def _calculate_ml_complexity_score(
         self, anchor_similarities: Dict[str, float], domain_analysis: Dict[str, Any], relationships: Dict[str, Any]
     ) -> float:
@@ -752,68 +752,68 @@ class SemanticComplexityView(HybridView):
                 'medium_complexity': 0.6,
                 'low_complexity': 0.2
             }
-            
+
             # Weighted average of similarities
             weighted_similarity = sum(
                 anchor_similarities.get(level, 0.0) * weight
                 for level, weight in complexity_weights.items()
             ) / sum(complexity_weights.values())
-            
+
             # Domain complexity contribution
             domain_complexity_mapping = {
                 'abstract_theoretical': 0.9,
                 'relational_analytical': 0.7,
                 'concrete_practical': 0.4
             }
-            
+
             primary_domain = domain_analysis.get('primary_domain', 'concrete_practical')
             domain_complexity = domain_complexity_mapping.get(primary_domain, 0.5)
             domain_confidence = domain_analysis.get('domain_confidence', 0.5)
             domain_contribution = domain_complexity * domain_confidence * 0.2
-            
+
             # Relationship coherence contribution
             coherence_contribution = relationships.get('coherence_score', 0.5) * 0.2
-            
+
             # Combined score
             ml_score = min(
                 weighted_similarity * 0.6 + domain_contribution + coherence_contribution,
                 1.0
             )
-            
+
             return max(0.0, ml_score)
-            
+
         except Exception as e:
             logger.warning(f"ML complexity score calculation failed: {e}")
             return 0.5
-    
+
     def _calculate_ml_confidence(
-        self, embedding: np.ndarray, similarities: Dict[str, float], 
+        self, embedding: np.ndarray, similarities: Dict[str, float],
         domains: Dict[str, Any], relationships: Dict[str, Any]
     ) -> float:
         """Calculate confidence based on ML analysis quality."""
         try:
             # Base confidence from embedding quality
             embedding_quality = min(np.linalg.norm(embedding) / 20.0, 0.4)
-            
+
             # Confidence from similarity clarity
             max_similarity = max(similarities.values()) if similarities else 0.0
             similarity_confidence = max_similarity * 0.3
-            
+
             # Confidence from domain classification
             domain_confidence = domains.get('domain_confidence', 0.0) * 0.2
-            
+
             # Confidence from semantic coherence
             coherence_confidence = relationships.get('coherence_score', 0.0) * 0.1
-            
+
             # Combined confidence
             total_confidence = embedding_quality + similarity_confidence + domain_confidence + coherence_confidence
-            
+
             return min(max(total_confidence, 0.0), 0.95)  # Cap at 95% for ML analysis
-            
+
         except Exception as e:
             logger.warning(f"ML confidence calculation failed: {e}")
             return 0.6
-    
+
     def _cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
         """Calculate cosine similarity between two vectors."""
         try:

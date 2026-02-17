@@ -26,13 +26,13 @@ from .view_result import AnalysisResult, ViewResult
 
 __all__ = [
     'BaseView',
-    'AlgorithmicView', 
+    'AlgorithmicView',
     'MLView',
     'HybridView',
     'ViewResult',
     'AnalysisResult',
     'TechnicalComplexityView',
-    'LinguisticComplexityView', 
+    'LinguisticComplexityView',
     'TaskComplexityView',
     'SemanticComplexityView',
     'ComputationalComplexityView'

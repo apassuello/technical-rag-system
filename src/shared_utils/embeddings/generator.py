@@ -37,14 +37,14 @@ def generate_embeddings(
     cached_embeddings = []
     texts_to_compute = []
     compute_indices = []
-    
+
     for i, key in enumerate(cache_keys):
         if key in _embedding_cache:
             cached_embeddings.append((i, _embedding_cache[key]))
         else:
             texts_to_compute.append(texts[i])
             compute_indices.append(i)
-    
+
     # Load model if needed
     if model_name not in _model_cache:
         model = SentenceTransformer(model_name)
@@ -54,7 +54,7 @@ def generate_embeddings(
         _model_cache[model_name] = model
     else:
         model = _model_cache[model_name]
-    
+
     # Compute new embeddings
     if texts_to_compute:
         with torch.no_grad():
@@ -64,22 +64,22 @@ def generate_embeddings(
                 convert_to_numpy=True,
                 normalize_embeddings=False
             ).astype(np.float32)
-        
+
         # Cache new embeddings
         for i, text in enumerate(texts_to_compute):
             key = f"{model_name}:{text}"
             _embedding_cache[key] = new_embeddings[i]
-    
+
     # Reconstruct full embedding array
     result = np.zeros((len(texts), 384), dtype=np.float32)
-    
+
     # Fill cached embeddings
     for idx, embedding in cached_embeddings:
         result[idx] = embedding
-    
+
     # Fill newly computed embeddings
     if texts_to_compute:
         for i, original_idx in enumerate(compute_indices):
             result[original_idx] = new_embeddings[i]
-    
+
     return result

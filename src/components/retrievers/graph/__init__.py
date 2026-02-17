@@ -22,7 +22,7 @@ from .relationship_mapper import RelationshipMapper
 
 __all__ = [
     "DocumentGraphBuilder",
-    "EntityExtractor", 
+    "EntityExtractor",
     "RelationshipMapper",
     "GraphRetriever",
     "GraphAnalytics",

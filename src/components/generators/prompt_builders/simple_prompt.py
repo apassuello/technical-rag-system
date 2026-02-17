@@ -22,28 +22,28 @@ logger = logging.getLogger(__name__)
 class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
     """
     Simple template-based prompt builder.
-    
+
     Features:
     - Configurable prompt templates
     - Context length management
     - Citation instruction injection
     - Clear role definitions
-    
+
     Configuration:
     - max_context_length: Maximum characters for context (default: 4000)
     - include_instructions: Include detailed instructions (default: True)
     - citation_style: How to format citations (default: "inline")
     """
-    
+
     # Default prompt template
     DEFAULT_TEMPLATE = dedent("""
     You are a helpful assistant answering questions based on the provided context.
-    
+
     Context Documents:
     {context}
-    
+
     Question: {query}
-    
+
     Instructions:
     - Answer based ONLY on the provided context
     - Be concise and direct
@@ -51,20 +51,20 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
     - ALWAYS include citations in your answer using the format [Document X] where X is the document number
     - Every factual claim must be followed by a citation like [Document 1] or [Document 2]
     - Multiple citations can be combined like [Document 1, Document 2]
-    
+
     Answer:
     """).strip()
-    
+
     # Minimal template without instructions
     MINIMAL_TEMPLATE = dedent("""
     Context: {context}
-    
+
     Question: {query}
-    
+
     Answer based on the context:
     """).strip()
-    
-    def __init__(self, 
+
+    def __init__(self,
                  max_context_length: int = 4000,
                  include_instructions: bool = True,
                  citation_style: str = "inline",
@@ -72,7 +72,7 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
                  config: Optional[Dict[str, Any]] = None):
         """
         Initialize simple prompt builder.
-        
+
         Args:
             max_context_length: Maximum characters for context
             include_instructions: Include detailed instructions
@@ -88,14 +88,14 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
             'template': template,
             **(config or {})
         }
-        
+
         super().__init__(builder_config)
-        
+
         # Set configuration
         self.max_context_length = builder_config['max_context_length']
         self.include_instructions = builder_config['include_instructions']
         self.citation_style = builder_config['citation_style']
-        
+
         # Select template
         if builder_config['template']:
             self.template = builder_config['template']
@@ -103,49 +103,49 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
             self.template = self.DEFAULT_TEMPLATE
         else:
             self.template = self.MINIMAL_TEMPLATE
-    
+
     def build_prompt(self, query: str, context: List[Document]) -> str:
         """
         Build a prompt from query and context documents.
-        
+
         Args:
             query: User query string
             context: List of relevant context documents
-            
+
         Returns:
             Formatted prompt string
-            
+
         Raises:
             ValueError: If query is empty or context is invalid
         """
         if not query.strip():
             raise ValueError("Query cannot be empty")
-        
+
         if not context:
             # Handle empty context gracefully
             context_text = "No relevant context documents found."
         else:
             # Format context documents
             context_text = self._format_context(context)
-        
+
         # Build prompt from template
         prompt = self.template.format(
             context=context_text,
             query=query.strip()
         )
-        
+
         # Add citation instructions if needed
         if self.citation_style != "none" and "citation" not in prompt.lower():
             prompt = self._add_citation_instructions(prompt)
-        
+
         logger.debug(f"Built prompt with {len(context)} documents, length: {len(prompt)}")
-        
+
         return prompt
-    
+
     def get_template(self) -> str:
         """Return the prompt template being used."""
         return self.template
-    
+
     def get_builder_info(self) -> Dict[str, Any]:
         """Get information about the prompt builder."""
         return {
@@ -157,20 +157,20 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
             'template_length': len(self.template),
             'template_preview': self.template[:100] + '...' if len(self.template) > 100 else self.template
         }
-    
+
     def _format_context(self, documents: List[Document]) -> str:
         """
         Format context documents into a readable string.
-        
+
         Args:
             documents: List of documents
-            
+
         Returns:
             Formatted context string
         """
         formatted_docs = []
         total_length = 0
-        
+
         for i, doc in enumerate(documents, 1):
             # Format document with citation marker
             doc_header = f"[Document {i}]"
@@ -179,7 +179,7 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
             if doc.metadata.get('page') or doc.metadata.get('start_page'):
                 page = doc.metadata.get('page') or doc.metadata.get('start_page')
                 doc_header += f" (Page {page})"
-            
+
             # Check if adding this document would exceed limit
             doc_text = f"{doc_header}\n{doc.content}\n"
             if total_length + len(doc_text) > self.max_context_length:
@@ -189,19 +189,19 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
                     truncated = doc_text[:remaining] + "\n[Truncated...]"
                     formatted_docs.append(truncated)
                 break
-            
+
             formatted_docs.append(doc_text)
             total_length += len(doc_text)
-        
+
         return "\n".join(formatted_docs).strip()
-    
+
     def _add_citation_instructions(self, prompt: str) -> str:
         """
         Add citation instructions to the prompt.
-        
+
         Args:
             prompt: Original prompt
-            
+
         Returns:
             Prompt with citation instructions
         """
@@ -210,7 +210,7 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
             "footnote": "\nInclude footnote-style citations at the end of your answer.",
             "none": ""
         }
-        
+
         instruction = citation_instructions.get(self.citation_style, "")
         if instruction:
             # Add before the final "Answer:" line if present
@@ -218,22 +218,22 @@ class SimplePromptBuilder(PromptBuilder, ConfigurableComponent):
                 prompt = prompt.replace("\nAnswer:", f"{instruction}\n\nAnswer:")
             else:
                 prompt += instruction
-        
+
         return prompt
-    
+
     def set_template(self, template: str) -> None:
         """
         Set a custom prompt template.
-        
+
         Args:
             template: New template with {context} and {query} placeholders
-            
+
         Raises:
             ValueError: If template is missing required placeholders
         """
         if "{context}" not in template or "{query}" not in template:
             raise ValueError("Template must contain {context} and {query} placeholders")
-        
+
         self.template = template
         self.config['template'] = template
         logger.info("Updated prompt template")

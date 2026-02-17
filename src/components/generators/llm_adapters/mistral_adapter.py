@@ -55,13 +55,13 @@ except ImportError:
         def decorator(func):
             return func
         return decorator
-    
+
     def stop_after_attempt(*args, **kwargs):
         return None
-    
+
     def wait_exponential(*args, **kwargs):
         return None
-    
+
     def retry_if_exception_type(*args, **kwargs):
         return None
 
@@ -79,7 +79,7 @@ logger = logging.getLogger(__name__)
 class MistralAdapter(BaseLLMAdapter):
     """
     Mistral AI LLM adapter with support for cost-effective models.
-    
+
     This adapter provides:
     - Authentication via API key
     - Token usage tracking and cost calculation
@@ -87,13 +87,13 @@ class MistralAdapter(BaseLLMAdapter):
     - Comprehensive error handling with Mistral-specific mappings
     - Rate limit handling with exponential backoff
     - Optimized for cost-effective medium-complexity queries
-    
+
     Supported Models:
     - mistral-tiny: Ultra-fast for simple queries (deprecated but supported)
     - mistral-small: Cost-effective for medium complexity queries
     - mistral-medium: Balanced performance for complex queries
     - mistral-large: High-performance for most complex queries
-    
+
     Configuration Example:
     {
         "model_name": "mistral-small",
@@ -104,7 +104,7 @@ class MistralAdapter(BaseLLMAdapter):
         "timeout": 30.0
     }
     """
-    
+
     # Current Mistral pricing per 1K tokens (as of January 2025)
     MODEL_PRICING = {
         'mistral-tiny': {
@@ -128,7 +128,7 @@ class MistralAdapter(BaseLLMAdapter):
             'output': Decimal('0.0240')   # $0.024 per 1K output tokens
         }
     }
-    
+
     # Model context limits (tokens)
     MODEL_LIMITS = {
         'mistral-tiny': 32000,
@@ -137,10 +137,10 @@ class MistralAdapter(BaseLLMAdapter):
         'mistral-medium': 32000,
         'mistral-large': 32000
     }
-    
+
     # API endpoints
     DEFAULT_BASE_URL = "https://api.mistral.ai/v1"
-    
+
     def __init__(self,
                  model_name: str = MISTRAL.model,
                  api_key: Optional[str] = None,
@@ -151,7 +151,7 @@ class MistralAdapter(BaseLLMAdapter):
                  timeout: float = 120.0):
         """
         Initialize Mistral adapter with production configuration.
-        
+
         Args:
             model_name: Mistral model to use (default: mistral-small)
             api_key: Mistral API key (or set MISTRAL_API_KEY env var)
@@ -160,7 +160,7 @@ class MistralAdapter(BaseLLMAdapter):
             max_retries: Maximum retry attempts for failed requests
             retry_delay: Initial delay between retries (seconds)
             timeout: Request timeout in seconds
-            
+
         Raises:
             ImportError: If mistralai package is not installed
             AuthenticationError: If API key is not provided
@@ -169,12 +169,12 @@ class MistralAdapter(BaseLLMAdapter):
             raise ImportError(
                 "Mistral AI package not installed. Install with: pip install mistralai"
             )
-        
+
         if not REQUESTS_AVAILABLE:
             raise ImportError(
                 "Requests package not installed. Install with: pip install requests"
             )
-        
+
         # Merge config with defaults
         adapter_config = {
             'api_key': api_key or os.getenv('MISTRAL_API_KEY'),
@@ -183,30 +183,30 @@ class MistralAdapter(BaseLLMAdapter):
             'track_costs': True,
             **(config or {})
         }
-        
+
         super().__init__(model_name, adapter_config, max_retries, retry_delay)
-        
+
         # Validate API key
         if not adapter_config['api_key']:
             raise AuthenticationError("Mistral API key is required. Set MISTRAL_API_KEY environment variable.")
-        
+
         # Initialize Mistral client
         self.client = Mistral(api_key=adapter_config['api_key'])
         self.timeout = adapter_config['timeout']
         self.track_costs = adapter_config['track_costs']
-        
+
         # Cost tracking with detailed breakdown
         self._total_cost = Decimal('0.00')
         self._input_tokens = 0
         self._output_tokens = 0
         self.cost_history = []
-        
+
         # Validate model pricing is available
         if model_name not in self.MODEL_PRICING:
             logger.warning(f"Pricing not available for model {model_name}, cost tracking disabled")
-        
+
         logger.info(f"Initialized Mistral adapter with model: {model_name}, cost tracking: {self.track_costs}")
-    
+
     @retry(
         retry=retry_if_exception_type(RateLimitError),
         stop=stop_after_attempt(5),
@@ -215,14 +215,14 @@ class MistralAdapter(BaseLLMAdapter):
     def _make_request(self, prompt: str, params: GenerationParams) -> Dict[str, Any]:
         """
         Make a request to Mistral API with retry logic for rate limits.
-        
+
         Args:
             prompt: The prompt to send to the model
             params: Generation parameters
-            
+
         Returns:
             Raw response from Mistral API with cost tracking
-            
+
         Raises:
             RateLimitError: If rate limit is exceeded (triggers retry)
             AuthenticationError: If API key is invalid (no retry)
@@ -238,13 +238,13 @@ class MistralAdapter(BaseLLMAdapter):
                     "role": msg["role"],
                     "content": msg["content"]
                 })
-            
+
             # Prepare request parameters
             chat_params = {
                 'model': self.model_name,
                 'messages': messages
             }
-            
+
             # Add generation parameters if they're not None
             if params.temperature is not None:
                 chat_params['temperature'] = params.temperature
@@ -254,16 +254,16 @@ class MistralAdapter(BaseLLMAdapter):
                 chat_params['top_p'] = params.top_p
             if params.stop_sequences:
                 chat_params['stop'] = params.stop_sequences
-            
+
             # Make API request using official client
             logger.debug(f"Making Mistral request to {self.model_name}")
             start_time = time.time()
-            
+
             response = self.client.chat.complete(**chat_params)
-            
+
             request_time = time.time() - start_time
             logger.debug(f"Mistral request completed in {request_time:.2f}s")
-            
+
             # Convert response to dictionary format for consistent handling
             response_dict = {
                 'id': response.id,
@@ -286,14 +286,14 @@ class MistralAdapter(BaseLLMAdapter):
                 'created': getattr(response, 'created', int(time.time())),
                 'request_time': request_time
             }
-            
+
             # Track token usage and costs with detailed breakdown
             if self.track_costs:
                 cost_breakdown = self._track_usage_with_breakdown(response_dict['usage'])
                 response_dict['cost_breakdown'] = cost_breakdown
-            
+
             return response_dict
-            
+
         except Exception as e:
             # Handle Mistral-specific errors
             error_str = str(e).lower()
@@ -309,57 +309,57 @@ class MistralAdapter(BaseLLMAdapter):
             else:
                 logger.error(f"Unexpected Mistral error: {str(e)}")
                 raise LLMError(f"Mistral API error: {str(e)}")
-    
+
     def _parse_response(self, response: Dict[str, Any]) -> str:
         """
         Parse Mistral response to extract generated text.
-        
+
         Args:
             response: Raw response from Mistral API
-            
+
         Returns:
             Generated text content
-            
+
         Raises:
             LLMError: If response format is invalid
         """
         try:
             if not response.get('choices'):
                 raise LLMError("No choices in Mistral response")
-            
+
             choice = response['choices'][0]
             message = choice.get('message', {})
             content = message.get('content', '')
-            
+
             if not content:
                 raise LLMError("Empty content in Mistral response")
-            
+
             # Log finish reason for debugging
             finish_reason = choice.get('finish_reason')
             if finish_reason == 'length':
                 logger.warning("Mistral response truncated due to max_tokens limit")
             elif finish_reason == 'stop':
                 logger.debug("Mistral response completed normally")
-            
+
             return content.strip()
-            
+
         except KeyError as e:
             raise LLMError(f"Invalid Mistral response format: missing {str(e)}")
-    
+
     def generate_streaming(self, prompt: str, params: GenerationParams) -> Iterator[str]:
         """
         Generate a streaming response from Mistral.
-        
+
         Note: Mistral API supports streaming, but this implementation uses
         non-streaming for simplicity. Can be enhanced to support true streaming.
-        
+
         Args:
             prompt: The prompt to send to the model
             params: Generation parameters
-            
+
         Yields:
             Generated text chunks
-            
+
         Raises:
             LLMError: If streaming generation fails
         """
@@ -368,11 +368,11 @@ class MistralAdapter(BaseLLMAdapter):
         logger.info("Using simulated streaming for Mistral (full response)")
         response = self.generate(prompt, params)
         yield response
-    
+
     def _get_provider_name(self) -> str:
         """Return the provider name."""
         return "Mistral"
-    
+
     def _validate_model(self) -> bool:
         """
         Check if the configured model exists and is accessible.
@@ -396,33 +396,33 @@ class MistralAdapter(BaseLLMAdapter):
         except Exception as e:
             logger.error(f"Model validation failed: {str(e)}")
             return False
-    
+
     def _supports_streaming(self) -> bool:
         """Mistral supports streaming, but using simulated for now."""
         return False  # Set to True when real streaming is implemented
-    
+
     def _get_max_tokens(self) -> Optional[int]:
         """Get maximum token limit for the current model."""
         return self.MODEL_LIMITS.get(self.model_name)
-    
+
     def _handle_http_error(self, response: requests.Response) -> None:
         """
         Handle HTTP error responses from Mistral API.
-        
+
         Args:
             response: HTTP response object
-            
+
         Raises:
             Appropriate LLMError subclass
         """
         status_code = response.status_code
-        
+
         try:
             error_data = response.json()
             error_message = error_data.get('message', response.text)
         except json.JSONDecodeError:
             error_message = response.text
-        
+
         if status_code == 401:
             raise AuthenticationError(f"Mistral authentication failed: {error_message}")
         elif status_code == 404:
@@ -433,19 +433,19 @@ class MistralAdapter(BaseLLMAdapter):
             raise LLMError(f"Mistral server error ({status_code}): {error_message}")
         else:
             raise LLMError(f"Mistral API error ({status_code}): {error_message}")
-    
+
     def _handle_mistral_error(self, error: Exception) -> None:
         """
         Map Mistral-specific errors to standard adapter errors.
-        
+
         Args:
             error: Mistral exception
-            
+
         Raises:
             Appropriate LLMError subclass
         """
         error_str = str(error).lower()
-        
+
         if 'unauthorized' in error_str or 'invalid api key' in error_str:
             raise AuthenticationError(f"Mistral authentication failed: {str(error)}")
         elif 'model not found' in error_str or 'does not exist' in error_str:
@@ -454,34 +454,34 @@ class MistralAdapter(BaseLLMAdapter):
             raise RateLimitError(f"Mistral rate limit exceeded: {str(error)}")
         else:
             raise LLMError(f"Mistral error: {str(error)}")
-    
+
     def _track_usage(self, usage: Dict[str, int]) -> None:
         """
         Track token usage and calculate costs (legacy method).
-        
+
         Args:
             usage: Usage statistics from Mistral response
         """
         self._track_usage_with_breakdown(usage)
-        
+
     def _track_usage_with_breakdown(self, usage: Dict[str, int]) -> Dict[str, Any]:
         """
         Track token usage and calculate costs with detailed breakdown.
-        
+
         Args:
             usage: Usage statistics from Mistral response
-            
+
         Returns:
             Detailed cost breakdown dictionary
         """
         prompt_tokens = usage.get('prompt_tokens', 0)
         completion_tokens = usage.get('completion_tokens', 0)
         total_tokens = usage.get('total_tokens', prompt_tokens + completion_tokens)
-        
+
         # Update totals
         self._input_tokens += prompt_tokens
         self._output_tokens += completion_tokens
-        
+
         # Calculate costs if pricing available
         cost_breakdown = {
             'input_tokens': prompt_tokens,
@@ -493,49 +493,49 @@ class MistralAdapter(BaseLLMAdapter):
             'model': self.model_name,
             'timestamp': time.time()
         }
-        
+
         if self.model_name in self.MODEL_PRICING:
             pricing = self.MODEL_PRICING[self.model_name]
-            
+
             # Calculate cost per 1K tokens with Decimal precision (matching OpenAI format)
             input_cost = (Decimal(str(prompt_tokens)) / Decimal('1000')) * pricing['input']
             output_cost = (Decimal(str(completion_tokens)) / Decimal('1000')) * pricing['output']
             total_cost = input_cost + output_cost
-            
+
             # Round to 6 decimal places for maximum precision
             from decimal import ROUND_HALF_UP
             input_cost = input_cost.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
             output_cost = output_cost.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
             total_cost = total_cost.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
-            
+
             self._total_cost += total_cost
-            
+
             # Update breakdown with calculated costs
             cost_breakdown.update({
                 'input_cost_usd': float(input_cost),
                 'output_cost_usd': float(output_cost),
                 'total_cost_usd': float(total_cost)
             })
-            
+
             # Add to history
             self.cost_history.append(cost_breakdown.copy())
-            
+
             logger.debug(
                 f"Mistral usage: {prompt_tokens} input + {completion_tokens} output tokens, "
                 f"cost: ${float(total_cost):.6f}"
             )
-        
+
         return cost_breakdown
-    
+
     def get_model_info(self) -> Dict[str, Any]:
         """
         Get comprehensive information about the model and usage.
-        
+
         Returns:
             Dictionary with model information, usage stats, and costs
         """
         base_info = super().get_model_info()
-        
+
         # Add Mistral-specific information
         base_info.update({
             'max_context_tokens': self.MODEL_LIMITS.get(self.model_name),
@@ -548,23 +548,23 @@ class MistralAdapter(BaseLLMAdapter):
                 'output': float(self.MODEL_PRICING.get(self.model_name, {}).get('output', 0))
             }
         })
-        
+
         return base_info
-    
+
     def get_cost_breakdown(self) -> Dict[str, Any]:
         """
         Get detailed cost breakdown for this adapter.
-        
+
         Returns:
             Dictionary with detailed cost information
         """
         if self.model_name not in self.MODEL_PRICING:
             return {'error': 'Pricing not available for this model'}
-        
+
         pricing = self.MODEL_PRICING[self.model_name]
         input_cost = (Decimal(str(self._input_tokens)) / 1000) * pricing['input']
         output_cost = (Decimal(str(self._output_tokens)) / 1000) * pricing['output']
-        
+
         return {
             'model': self.model_name,
             'total_requests': self._request_count,
@@ -580,11 +580,11 @@ class MistralAdapter(BaseLLMAdapter):
                 'output': float(pricing['output'])
             }
         }
-    
+
     def get_cost_summary(self) -> Dict[str, Any]:
         """
         Get comprehensive cost tracking summary with analytics.
-        
+
         Returns:
             Dictionary with cost analytics and recommendations
         """
@@ -597,12 +597,12 @@ class MistralAdapter(BaseLLMAdapter):
                 'average_tokens_per_request': 0.0,
                 'cost_breakdown': {'input': 0.0, 'output': 0.0}
             }
-        
+
         total_requests = len(self.cost_history)
         total_tokens = sum(c['total_tokens'] for c in self.cost_history)
         total_input_cost = sum(c['input_cost_usd'] for c in self.cost_history)
         total_output_cost = sum(c['output_cost_usd'] for c in self.cost_history)
-        
+
         return {
             'total_cost_usd': float(self._total_cost),
             'total_requests': total_requests,
@@ -619,30 +619,30 @@ class MistralAdapter(BaseLLMAdapter):
                 'output': float(self.MODEL_PRICING.get(self.model_name, self.MODEL_PRICING['mistral-small'])['output'])
             }
         }
-    
+
     def estimate_cost(self, prompt: str, max_output_tokens: int = 500) -> Dict[str, Any]:
         """
         Estimate cost for a prompt before making the API call.
-        
+
         Args:
             prompt: Input prompt text
             max_output_tokens: Estimated output token count
-            
+
         Returns:
             Cost estimation breakdown
         """
         # Rough estimation for token counting (4 chars per token average)
         # Mistral doesn't provide a tokenizer library like OpenAI's tiktoken
         input_tokens = len(prompt) // 4
-        
+
         # Get pricing
         pricing = self.MODEL_PRICING.get(self.model_name, self.MODEL_PRICING['mistral-small'])
-        
+
         # Calculate estimated costs
         input_cost = (Decimal(str(input_tokens)) / Decimal('1000')) * pricing['input']
         output_cost = (Decimal(str(max_output_tokens)) / Decimal('1000')) * pricing['output']
         total_cost = input_cost + output_cost
-        
+
         return {
             'estimated_input_tokens': input_tokens,
             'estimated_output_tokens': max_output_tokens,
@@ -659,10 +659,10 @@ class MistralAdapter(BaseLLMAdapter):
 def create_mistral_adapter(**kwargs) -> MistralAdapter:
     """
     Factory function for creating Mistral adapter instances.
-    
+
     Args:
         **kwargs: Configuration parameters for the adapter
-        
+
     Returns:
         Configured Mistral adapter instance
     """

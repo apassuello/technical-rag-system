@@ -14,18 +14,18 @@ Key Components:
 Example usage:
 
     from src.shared_utils.metrics import MetricsCollector
-    
+
     # Create metrics collector
     collector = MetricsCollector()
-    
+
     # Start collecting metrics for a query
     metrics = collector.start_query_collection("Q001", "What is RISC-V?")
-    
+
     # Collect various metrics
     collector.collect_retrieval_metrics(metrics, retrieval_results, retrieval_time=0.12)
     collector.collect_generation_metrics(metrics, answer, confidence, generation_time)
     collector.collect_performance_metrics(metrics, total_time, memory_mb, cpu_percent)
-    
+
     # Get summary and export
     logger.info(collector.get_metrics_summary())
     collector.export_metrics(Path("metrics.json"))
@@ -59,18 +59,18 @@ logger = logging.getLogger(__name__)
 __all__ = [
     # Base classes
     'BaseMetricsCollector',
-    'MetricsStorage', 
+    'MetricsStorage',
     'InMemoryMetricsStorage',
-    
+
     # Data models
     'BaseQueryMetrics',
     'CalibrationQueryMetrics',
-    'AnalyticsQueryMetrics', 
+    'AnalyticsQueryMetrics',
     'SystemMetrics',
     'SessionMetadata',
     'ComponentMetrics',
     'MetricsConverter',
-    
+
     # Concrete implementations
     'MetricsCollector',  # Main calibration metrics collector
     'QueryMetrics',      # Legacy alias for backward compatibility

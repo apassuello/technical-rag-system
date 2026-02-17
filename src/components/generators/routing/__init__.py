@@ -14,7 +14,7 @@ Architecture Notes:
 
 Available Components:
 - AdaptiveRouter: Main routing orchestrator
-- RoutingStrategy: Strategy pattern implementations  
+- RoutingStrategy: Strategy pattern implementations
 - ModelSelector: Model selection logic
 - FallbackManager: Reliability and failover handling
 """
@@ -33,7 +33,7 @@ __all__ = [
     'RoutingDecision',
     'RoutingStrategy',
     'CostOptimizedStrategy',
-    'QualityFirstStrategy', 
+    'QualityFirstStrategy',
     'BalancedStrategy',
     'ModelOption'
 ]

@@ -24,21 +24,21 @@ logger = logging.getLogger(__name__)
 class MockLLMAdapter(BaseLLMAdapter):
     """
     Mock adapter for testing without external LLM dependencies.
-    
+
     Features:
     - Deterministic responses for testing
     - Proper citation formatting
     - Configurable response patterns
     - No external dependencies
     - Fast response times
-    
+
     Configuration:
     - response_pattern: Type of response to generate (default: "technical")
     - include_citations: Whether to include citations (default: True)
     - simulate_errors: Whether to simulate errors (default: False)
     - fixed_response: Use a fixed response instead of patterns (optional)
     """
-    
+
     # Predefined response patterns for different test scenarios
     RESPONSE_PATTERNS = {
         "technical": {
@@ -87,7 +87,7 @@ class MockLLMAdapter(BaseLLMAdapter):
             ]
         }
     }
-    
+
     def __init__(self,
                  model_name: str = "mock-model",
                  response_pattern: str = "technical",
@@ -97,7 +97,7 @@ class MockLLMAdapter(BaseLLMAdapter):
                  config: Optional[Dict[str, Any]] = None):
         """
         Initialize mock adapter.
-        
+
         Args:
             model_name: Mock model name for identification
             response_pattern: Type of response pattern to use
@@ -113,37 +113,37 @@ class MockLLMAdapter(BaseLLMAdapter):
             'fixed_response': fixed_response,
             **(config or {})
         }
-        
+
         super().__init__(model_name, adapter_config)
-        
+
         self.response_pattern = adapter_config['response_pattern']
         self.include_citations = adapter_config['include_citations']
         self.simulate_errors = adapter_config['simulate_errors']
         self.fixed_response = adapter_config.get('fixed_response')
-        
+
         logger.info(f"Initialized Mock adapter with pattern '{response_pattern}'")
-    
+
     def _make_request(self, prompt: str, params: GenerationParams) -> Dict[str, Any]:
         """
         Generate a mock response without external calls.
-        
+
         Args:
             prompt: The prompt to respond to
             params: Generation parameters (mostly ignored for mock)
-            
+
         Returns:
             Mock response in expected format
         """
         # Simulate errors if configured
         if self.simulate_errors and random.random() < 0.1:
             raise LLMError("Simulated mock error for testing")
-        
+
         # Generate response text
         if self.fixed_response:
             response_text = self.fixed_response
         else:
             response_text = self._generate_response(prompt, params)
-        
+
         # Build mock response structure
         response = {
             "model": self.model_name,
@@ -157,47 +157,47 @@ class MockLLMAdapter(BaseLLMAdapter):
             "eval_count": len(response_text.split()),
             "eval_duration": 500000
         }
-        
+
         return response
-    
+
     def _parse_response(self, response: Dict[str, Any]) -> str:
         """
         Extract text from mock response.
-        
+
         Args:
             response: Mock response dict
-            
+
         Returns:
             Response text
         """
         return response.get("response", "")
-    
+
     def _get_provider_name(self) -> str:
         """Return the provider name."""
         return "Mock"
-    
+
     def _validate_model(self) -> bool:
         """Mock models are always valid."""
         return True
-    
+
     def _supports_streaming(self) -> bool:
         """Mock adapter can simulate streaming."""
         return True
-    
+
     def generate_streaming(self, prompt: str, params: GenerationParams) -> Iterator[str]:
         """
         Generate a mock streaming response.
-        
+
         Args:
             prompt: The prompt to respond to
             params: Generation parameters
-            
+
         Yields:
             Response chunks
         """
         # Get full response
         full_response = self._generate_response(prompt, params)
-        
+
         # Simulate streaming by yielding word by word
         words = full_response.split()
         for i, word in enumerate(words):
@@ -205,22 +205,22 @@ class MockLLMAdapter(BaseLLMAdapter):
                 yield word + " "
             else:
                 yield word
-    
+
     def _generate_response(self, prompt: str, params: GenerationParams) -> str:
         """
         Generate a response based on the configured pattern.
-        
+
         Args:
             prompt: The user's prompt
             params: Generation parameters
-            
+
         Returns:
             Generated response text
         """
         # Extract topic from prompt (simple heuristic)
         prompt_lower = prompt.lower()
         topic = "the requested information"
-        
+
         # Try to extract a more specific topic
         if "risc-v" in prompt_lower:
             topic = "RISC-V"
@@ -233,13 +233,13 @@ class MockLLMAdapter(BaseLLMAdapter):
             parts = prompt_lower.split("what is")
             if len(parts) > 1:
                 topic = parts[1].strip().rstrip("?").strip()
-        
+
         # Get pattern configuration
         pattern_config = self.RESPONSE_PATTERNS.get(
-            self.response_pattern, 
+            self.response_pattern,
             self.RESPONSE_PATTERNS["technical"]
         )
-        
+
         # Generate response based on pattern
         if self.response_pattern == "simple":
             description = random.choice(pattern_config["descriptions"])
@@ -248,12 +248,12 @@ class MockLLMAdapter(BaseLLMAdapter):
                 description=description,
                 doc_num=random.randint(1, 5) if self.include_citations else ""
             )
-            
+
         elif self.response_pattern == "detailed":
             description = random.choice(pattern_config["descriptions"])
             points = random.sample(pattern_config["points"], 3)
             conclusion = random.choice(pattern_config["conclusions"])
-            
+
             response = pattern_config["template"].format(
                 topic=topic,
                 description=description,
@@ -266,7 +266,7 @@ class MockLLMAdapter(BaseLLMAdapter):
                 doc3=3 if self.include_citations else "",
                 doc4=4 if self.include_citations else ""
             )
-            
+
         else:  # technical (default)
             description = random.choice(pattern_config["descriptions"])
             detail = random.choice(pattern_config["details"])
@@ -276,17 +276,17 @@ class MockLLMAdapter(BaseLLMAdapter):
                 detail=detail,
                 doc_num=random.randint(1, 5) if self.include_citations else ""
             )
-        
+
         # Remove citation markers if not including citations
         if not self.include_citations:
             response = response.replace(" [Document ]", "").replace(" []", "")
-        
+
         return response
-    
+
     def get_model_info(self) -> Dict[str, Any]:
         """
         Get mock model information.
-        
+
         Returns:
             Model info dict
         """

@@ -317,7 +317,7 @@ class ParameterRegistry:
         self.register_parameter(
             Parameter(
                 name="epic1_syntactic_weight",
-                component="query_complexity_analyzer", 
+                component="query_complexity_analyzer",
                 path="query_processor.config.analyzer.config.complexity_classifier.weights.syntactic",
                 current=0.25,
                 min_value=0.10,

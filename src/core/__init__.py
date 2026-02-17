@@ -19,7 +19,7 @@ from .query_processor import QueryProcessor
 __all__ = [
     # Data types
     'Document',
-    'RetrievalResult', 
+    'RetrievalResult',
     'Answer',
     # Interfaces
     'DocumentProcessor',

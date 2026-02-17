@@ -9,12 +9,13 @@ from decimal import Decimal
 from typing import List
 
 from config.llm_providers import LOCAL
+
 from .routing_strategies import ModelOption
 
 
 class ModelRegistry:
     """Registry of available models with their capabilities and costs."""
-    
+
     def __init__(self):
         """Initialize model registry with available models."""
         self.models = {
@@ -97,28 +98,28 @@ class ModelRegistry:
                 ),
             ]
         }
-    
+
     def get_all_models(self) -> List[ModelOption]:
         """Get all available models."""
         all_models = []
         for tier_models in self.models.values():
             all_models.extend(tier_models)
         return all_models
-    
+
     def get_models_for_complexity(self, complexity: str) -> List[ModelOption]:
         """Get models appropriate for complexity level."""
         return self.models.get(complexity.lower(), self.models['medium'])
-    
+
     def get_models_within_budget(self, max_cost: Decimal) -> List[ModelOption]:
         """Get models within cost budget."""
         return [m for m in self.get_all_models() if m.estimated_cost <= max_cost]
-    
+
     def get_model_by_provider(self, provider: str, model_name: str = None) -> List[ModelOption]:
         """Get models from specific provider."""
         all_models = self.get_all_models()
         provider_models = [m for m in all_models if m.provider == provider]
-        
+
         if model_name:
             provider_models = [m for m in provider_models if m.model == model_name]
-        
+
         return provider_models
