@@ -533,18 +533,22 @@ function createResultSection(titleText) {
 
 const CATEGORY_COLORS = ['#00d46a', '#60a5fa', '#f59e0b'];
 
-export function renderCorpusPage() {
+export async function renderCorpusPage() {
   const container = document.getElementById('corpus-content');
   if (!container) return;
-  container.innerHTML = '';
+  container.innerHTML = '<div class="loading">Loading corpus data...</div>';
 
-  container.appendChild(buildCorpusHeader());
-  container.appendChild(buildCorpusChartsRow());
-  container.appendChild(buildDocumentTree());
-  container.appendChild(buildMetadataPanel());
+  const data = await fetchWithFallback('corpus', null);
+  const corpus = data ?? MOCK_DATA.corpus;
+
+  container.innerHTML = '';
+  container.appendChild(buildCorpusHeader(corpus));
+  container.appendChild(buildCorpusChartsRow(corpus));
+  container.appendChild(buildDocumentTree(corpus));
+  container.appendChild(buildMetadataPanel(corpus));
 }
 
-function buildCorpusHeader() {
+function buildCorpusHeader(corpus) {
   const header = document.createElement('div');
   header.className = 'section';
 
@@ -552,20 +556,19 @@ function buildCorpusHeader() {
   title.className = 'page-title';
   title.textContent = 'Corpus Explorer';
 
+  const totalDocs = corpus.totalDocuments ?? corpus.totalDocuments;
+  const catCount = (corpus.categories || []).length;
+
   const subtitle = document.createElement('p');
   subtitle.className = 'page-subtitle';
-  subtitle.textContent =
-    MOCK_DATA.corpus.totalDocuments +
-    ' RISC-V technical documents across ' +
-    MOCK_DATA.corpus.categories.length +
-    ' categories';
+  subtitle.textContent = totalDocs + ' RISC-V technical documents across ' + catCount + ' categories';
 
   header.appendChild(title);
   header.appendChild(subtitle);
   return header;
 }
 
-function buildCorpusChartsRow() {
+function buildCorpusChartsRow(corpus) {
   const row = document.createElement('div');
   row.className = 'grid corpus-charts';
 
@@ -583,7 +586,7 @@ function buildCorpusChartsRow() {
   doughnutContainer.className = 'chart-container chart-container--half';
   leftCol.appendChild(doughnutContainer);
 
-  const categories = MOCK_DATA.corpus.categories;
+  const categories = corpus.categories || [];
   const labels = categories.map((c) => c.name);
   const data = categories.map((c) => c.count);
 
@@ -596,7 +599,7 @@ function buildCorpusChartsRow() {
   const legend = document.createElement('div');
   legend.className = 'legend-items';
 
-  const total = MOCK_DATA.corpus.totalDocuments;
+  const total = corpus.totalDocuments || 1;
   categories.forEach((cat, i) => {
     const item = document.createElement('div');
     item.className = 'legend-item';
@@ -632,7 +635,7 @@ function buildCorpusChartsRow() {
   rightCol.appendChild(barContainer);
 
   const subcats = [];
-  for (const cat of MOCK_DATA.corpus.categories) {
+  for (const cat of (corpus.categories || [])) {
     for (const sub of cat.subcategories) {
       subcats.push({ name: sub.name + ' (' + cat.name + ')', count: sub.documents.length });
     }
@@ -648,7 +651,7 @@ function buildCorpusChartsRow() {
   return row;
 }
 
-function buildDocumentTree() {
+function buildDocumentTree(corpus) {
   const section = document.createElement('div');
   section.className = 'section';
 
@@ -661,7 +664,7 @@ function buildDocumentTree() {
   treeContainer.className = 'doc-tree';
   treeContainer.id = 'doc-tree';
 
-  for (const cat of MOCK_DATA.corpus.categories) {
+  for (const cat of (corpus.categories || [])) {
     const catNode = buildCategoryNode(cat);
     renderTreeNode(treeContainer, catNode, 0);
   }
@@ -693,7 +696,7 @@ function buildCategoryNode(category) {
   };
 }
 
-function buildMetadataPanel() {
+function buildMetadataPanel(corpus) {
   const panel = document.createElement('div');
   panel.className = 'doc-metadata';
   panel.id = 'doc-metadata';
@@ -718,7 +721,7 @@ function buildMetadataPanel() {
       if (!nameSpan) return;
 
       const fileName = nameSpan.textContent;
-      const docData = findDocumentByFile(fileName);
+      const docData = findDocumentByFile(fileName, corpus);
       if (docData) {
         showDocumentMetadata(docData);
       }
@@ -728,8 +731,8 @@ function buildMetadataPanel() {
   return panel;
 }
 
-function findDocumentByFile(fileName) {
-  for (const cat of MOCK_DATA.corpus.categories) {
+function findDocumentByFile(fileName, corpus) {
+  for (const cat of (corpus.categories || [])) {
     for (const sub of cat.subcategories) {
       for (const doc of sub.documents) {
         if (doc.file === fileName) {
@@ -810,19 +813,25 @@ function findService(id) {
   return SERVICES.find(s => s.id === id) || null;
 }
 
-export function renderArchitecturePage() {
+export async function renderArchitecturePage() {
   const container = document.getElementById('architecture-content');
   if (!container) return;
-  container.innerHTML = '';
+  container.innerHTML = '<div class="loading">Loading architecture data...</div>';
 
-  container.appendChild(buildDiagramSection());
-  container.appendChild(buildRegistrySection());
-  container.appendChild(buildConfigViewerSection());
+  const [componentsData, configsData] = await Promise.all([
+    fetchWithFallback('components', null),
+    fetchWithFallback('configs', null),
+  ]);
+
+  container.innerHTML = '';
+  container.appendChild(buildDiagramSection(componentsData));
+  container.appendChild(buildRegistrySection(componentsData));
+  container.appendChild(buildConfigViewerSection(configsData));
 }
 
 // -- System Diagram ---------------------------------------------------------
 
-function buildDiagramSection() {
+function buildDiagramSection(componentsData) {
   const section = document.createElement('div');
   section.className = 'section';
 
@@ -902,6 +911,22 @@ function buildDiagramSection() {
     }
   }
 
+  // Overlay health badges from live data
+  if (componentsData && componentsData.active) {
+    const activeNames = new Set(Object.keys(componentsData.active));
+    diagram.querySelectorAll('.arch-box').forEach(box => {
+      const svcId = box.dataset.serviceId;
+      // Map diagram service IDs to component slot names
+      const slotMap = { analyzer: 'query_processor', retriever: 'retriever', generator: 'answer_generator', embedder: 'embedder' };
+      const slot = slotMap[svcId];
+      if (slot && activeNames.has(slot)) {
+        const dot = document.createElement('span');
+        dot.className = 'arch-health-dot arch-health-dot--' + (componentsData.active[slot].healthy ? 'ok' : 'err');
+        box.appendChild(dot);
+      }
+    });
+  }
+
   section.appendChild(diagram);
   section.appendChild(detail);
   return section;
@@ -932,7 +957,7 @@ function showServiceDetail(panel, svc) {
 
 // -- Component Registry -----------------------------------------------------
 
-function buildRegistrySection() {
+function buildRegistrySection(componentsData) {
   const section = document.createElement('div');
   section.className = 'section';
 
@@ -943,6 +968,25 @@ function buildRegistrySection() {
 
   const registry = document.createElement('div');
   registry.className = 'component-registry';
+
+  // Use live factory data if available, fall back to mock
+  if (componentsData && componentsData.available) {
+    const available = componentsData.available;
+    for (const [category, types] of Object.entries(available)) {
+      if (!Array.isArray(types)) continue;
+      const items = types.map(t => ({
+        type: typeof t === 'string' ? t : (t.type || String(t)),
+        children: null,
+        metadata: {},
+      }));
+      renderTreeNode(registry, {
+        name: category + ' (' + items.length + ')',
+        children: items,
+      }, 0);
+    }
+    section.appendChild(registry);
+    return section;
+  }
 
   const reg = MOCK_DATA.componentRegistry;
 
@@ -999,7 +1043,7 @@ function buildRegistryTreeNode(categoryName, items) {
 
 // -- Config Viewer ----------------------------------------------------------
 
-function buildConfigViewerSection() {
+function buildConfigViewerSection(configsData) {
   const section = document.createElement('div');
   section.className = 'section';
 
@@ -1014,7 +1058,8 @@ function buildConfigViewerSection() {
   const select = document.createElement('select');
   select.className = 'config-select';
 
-  const configs = MOCK_DATA.configs;
+  // Use API data if available, fall back to mock
+  const configs = (configsData && configsData.configs) ? configsData.configs : MOCK_DATA.configs;
 
   for (let i = 0; i < configs.length; i++) {
     const option = document.createElement('option');
@@ -1049,10 +1094,12 @@ function renderConfigDisplay(container, config) {
   nameEl.textContent = config.name;
   container.appendChild(nameEl);
 
-  const descEl = document.createElement('p');
-  descEl.className = 'config-display__desc';
-  descEl.textContent = config.description;
-  container.appendChild(descEl);
+  if (config.description) {
+    const descEl = document.createElement('p');
+    descEl.className = 'config-display__desc';
+    descEl.textContent = config.description;
+    container.appendChild(descEl);
+  }
 
   const features = {};
   config.features.forEach((feature, idx) => {
@@ -1067,30 +1114,33 @@ function renderConfigDisplay(container, config) {
 // PERFORMANCE PAGE
 // ===========================================================================
 
-export function renderPerformancePage() {
-  // Clean up previous listeners before re-render
+export async function renderPerformancePage() {
   _perfCleanups.forEach(fn => fn());
   _perfCleanups = [];
 
   const container = document.getElementById('performance-content');
   if (!container) return;
-  container.innerHTML = '';
+  container.innerHTML = '<div class="loading">Loading training metrics...</div>';
 
-  container.appendChild(buildModelAccuracyHero());
-  container.appendChild(buildFeatureImportanceSection());
-  container.appendChild(buildFusionComparisonSection());
-  container.appendChild(buildTrainingDatasetExplorer());
+  const data = await fetchWithFallback('metrics/training', null);
+  const metrics = data?.modelMetrics ?? MOCK_DATA.modelMetrics;
+  const queries = data?.trainingQueries ?? MOCK_DATA.trainingQueries;
+  const totalQueries = data?.totalTrainingQueries ?? 679;
+
+  container.innerHTML = '';
+  container.appendChild(buildModelAccuracyHero(metrics));
+  container.appendChild(buildFeatureImportanceSection(metrics));
+  container.appendChild(buildFusionComparisonSection(metrics));
+  container.appendChild(buildTrainingDatasetExplorer(queries, totalQueries));
   container.appendChild(buildCostStrategySection());
   container.appendChild(buildConfigComparisonTool());
 }
 
 // -- Model Accuracy Hero ----------------------------------------------------
 
-function buildModelAccuracyHero() {
+function buildModelAccuracyHero(metrics) {
   const section = document.createElement('section');
   section.className = 'section';
-
-  const metrics = MOCK_DATA.modelMetrics;
 
   const hero = document.createElement('div');
   hero.className = 'perf-hero';
@@ -1132,7 +1182,7 @@ function buildModelAccuracyHero() {
 
 // -- Feature Importance -----------------------------------------------------
 
-function buildFeatureImportanceSection() {
+function buildFeatureImportanceSection(metrics) {
   const section = document.createElement('div');
   section.className = 'section';
 
@@ -1146,7 +1196,7 @@ function buildFeatureImportanceSection() {
   chartContainer.className = 'chart-container';
   section.appendChild(chartContainer);
 
-  const importance = MOCK_DATA.modelMetrics.featureImportance;
+  const importance = metrics.featureImportance || {};
   const sorted = Object.entries(importance).sort((a, b) => b[1] - a[1]);
 
   const labels = sorted.map(([key]) => key.charAt(0).toUpperCase() + key.slice(1));
@@ -1162,7 +1212,7 @@ function buildFeatureImportanceSection() {
 
 // -- Fusion Method Comparison -----------------------------------------------
 
-function buildFusionComparisonSection() {
+function buildFusionComparisonSection(metrics) {
   const section = document.createElement('div');
   section.className = 'section';
 
@@ -1176,7 +1226,7 @@ function buildFusionComparisonSection() {
   chartContainer.className = 'chart-container';
   section.appendChild(chartContainer);
 
-  const fusion = MOCK_DATA.modelMetrics.fusionComparison;
+  const fusion = metrics.fusionComparison || MOCK_DATA.modelMetrics.fusionComparison;
   const wa = fusion.weighted_average;
   const en = fusion.ensemble;
 
@@ -1201,7 +1251,7 @@ function buildFusionComparisonSection() {
 
 // -- Training Dataset Explorer ----------------------------------------------
 
-function buildTrainingDatasetExplorer() {
+function buildTrainingDatasetExplorer(queries, totalQueries) {
   const section = document.createElement('div');
   section.className = 'section';
 
@@ -1209,13 +1259,13 @@ function buildTrainingDatasetExplorer() {
   titleRow.className = 'result-section__title';
   titleRow.textContent = 'Training Dataset Explorer';
   titleRow.appendChild(document.createTextNode(' '));
-  titleRow.appendChild(renderBadge('20 of 679', 'muted'));
+  titleRow.appendChild(renderBadge(queries.length + ' of ' + totalQueries, 'muted'));
   section.appendChild(titleRow);
 
   const tableContainer = document.createElement('div');
   const headers = ['Query', 'Complexity', 'Confidence', 'Relevance'];
 
-  const rows = MOCK_DATA.trainingQueries.map((q) => {
+  const rows = queries.map((q) => {
     const truncated = q.query.length > 60 ? q.query.substring(0, 60) + '...' : q.query;
     const variant = { simple: 'accent', medium: 'warning', complex: 'error' }[q.complexity_level] || 'muted';
     return [truncated, renderBadge(q.complexity_level, variant), q.confidence.toFixed(2), q.domain_relevance.toFixed(2)];
@@ -1235,7 +1285,7 @@ function buildTrainingDatasetExplorer() {
 
   renderDataTable(tableContainer, headers, rows, {
     onRowClick: (_row, index) => {
-      const q = MOCK_DATA.trainingQueries[index];
+      const q = queries[index];
       if (!q) return;
 
       radarQueryLabel.textContent = q.query;

@@ -98,6 +98,10 @@
 .arch-box__label { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--text-primary); font-weight: var(--fw-medium); }
 .arch-box__port { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); }
 
+.arch-health-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-top: var(--sp-1); }
+.arch-health-dot--ok { background: var(--accent); }
+.arch-health-dot--err { background: var(--error, #ef4444); }
+
 .arch-connector-row { grid-column: 1 / -1; display: flex; justify-content: center; padding: var(--sp-1) 0; }
 .arch-connector { width: 1px; height: 20px; border-left: 1px dashed var(--border); }
 
