@@ -539,141 +539,21 @@ export const MOCK_DATA = {
   },
 
   // -----------------------------------------------------------------------
-  // 7. Query/response mocks — three full examples
-  // -----------------------------------------------------------------------
-  queryMocks: {
-    simple: {
-      query: "What are the base RISC-V integer instruction formats?",
-      strategy: "cost_optimized",
-      answer: "RISC-V defines six base instruction formats for the 32-bit encoding: R-type for register-register operations (ADD, SUB, SLL), I-type for immediate and load operations (ADDI, LW, JALR), S-type for store operations (SW, SB), B-type for conditional branches (BEQ, BNE), U-type for upper-immediate operations (LUI, AUIPC), and J-type for unconditional jumps (JAL). All formats keep the source register specifiers (rs1, rs2) and destination register (rd) at fixed bit positions to simplify decoding.",
-      confidence: 0.92,
-      model: "local/all-MiniLM-L6-v2",
-      processingTime: { analysis: 45, retrieval: 120, generation: 180 },
-      complexity: {
-        overall: 0.25,
-        label: "simple",
-        scores: { technical: 0.30, linguistic: 0.20, semantic: 0.15, computational: 0.10, task: 0.50 }
-      },
-      sources: [
-        { title: "RISC-V Instruction Set Manual Volume I: Unprivileged ISA", score: 0.94, snippet: "The RISC-V ISA keeps the source (rs1 and rs2) and destination (rd) register specifiers at the same position in all formats to simplify decoding. Except for the 5-bit immediates used in CSR instructions, immediates are always sign-extended.", file: "riscv-spec-unprivileged-v20250508.pdf", method: "hybrid" },
-        { title: "RISC-V ABIs Specification", score: 0.89, snippet: "RV32I provides six instruction formats (R/I/S/B/U/J), each encoding a 7-bit opcode, function code fields, and register specifiers in a fixed 32-bit word.", file: "riscv-abis-specification.pdf", method: "semantic" },
-        { title: "32-Bit RISC-V CPU Core on Logisim", score: 0.85, snippet: "The decoder identifies the instruction format from the opcode field (bits 6:0) and routes operands to the appropriate functional units based on the R, I, S, B, U, or J encoding.", file: "2312.01455v1.pdf", method: "bm25" },
-        { title: "WebRISC-V: A 64-bit RISC-V Pipeline Simulator", score: 0.78, snippet: "Each instruction format places the immediate bits in different positions but maintains consistent register specifier locations, enabling a simplified decode stage in the pipeline.", file: "2504.03722v1.pdf", method: "semantic" }
-      ],
-      cost: { model_cost: 0.0002, retrieval_cost: 0.0001, total: 0.0003 }
-    },
-
-    complex: {
-      query: "Compare RISC-V PMP versus ARM TrustZone security models in terms of hardware isolation, privilege levels, and side-channel resistance",
-      strategy: "quality_first",
-      answer: "RISC-V Physical Memory Protection (PMP) and ARM TrustZone take fundamentally different approaches to hardware security. PMP provides per-hart, region-based memory access control configured through CSRs in M-mode, supporting up to 64 regions with configurable read/write/execute permissions and address-matching modes (NAPOT, TOR). TrustZone, by contrast, creates a binary Secure/Non-Secure world partition enforced by the bus fabric, where the NS bit propagates with every transaction. In terms of privilege levels, RISC-V offers three rings (M/S/U) with PMP rules evaluated per ring, while ARM TrustZone overlays its two-world model onto the existing EL0-EL3 exception levels. Regarding side-channel resistance, neither architecture provides inherent protection in the ISA itself. However, RISC-V research demonstrates that PMP's configurable granularity can be combined with temporal partitioning (fence.t proposals) to reduce cache-based side channels, whereas TrustZone relies on cache partitioning and TrustZone-aware cache controllers to mitigate cross-world leakage.",
-      confidence: 0.87,
-      model: "openai/gpt-4",
-      processingTime: { analysis: 85, retrieval: 250, generation: 1200 },
-      complexity: {
-        overall: 0.82,
-        label: "complex",
-        scores: { technical: 0.90, linguistic: 0.70, semantic: 0.85, computational: 0.30, task: 0.95 }
-      },
-      sources: [
-        { title: "RISC-V Instruction Set Manual Volume II: Privileged Architecture", score: 0.96, snippet: "PMP entries are statically prioritized; the lowest-numbered PMP entry that matches any byte of an access determines whether that access succeeds or fails. M-mode accesses are checked against PMP only when the L bit is set.", file: "riscv-spec-privileged-v20250508.pdf", method: "hybrid" },
-        { title: "A Survey on RISC-V Security: Hardware and Architecture", score: 0.93, snippet: "Unlike ARM TrustZone's binary world separation, RISC-V PMP provides fine-grained memory protection configurable at arbitrary granularity, allowing M-mode software to isolate S-mode and U-mode with flexible region definitions.", file: "2107.04175v1.pdf", method: "hybrid" },
-        { title: "Side-Channel Attacks on RISC-V Processors: Current Progress, Challenges, and Opportunities", score: 0.91, snippet: "Cache side-channel attacks on RISC-V processors mirror those on other architectures. Spectre-style transient execution attacks have been demonstrated on BOOM and other out-of-order RISC-V cores.", file: "2106.08877v1.pdf", method: "semantic" },
-        { title: "Trusted Hart for Mobile RISC-V Security", score: 0.88, snippet: "The Trusted Hart model proposes a dedicated security hart that provides isolation guarantees analogous to TrustZone's Secure World but leverages RISC-V's PMP and ePMP extensions for finer-grained control.", file: "2211.10299v2.pdf", method: "semantic" },
-        { title: "Translating Common Security Assertions Across Processor Designs: A RISC-V Case Study", score: 0.84, snippet: "Security properties such as privilege escalation prevention, memory isolation, and information flow control can be formally specified and verified across different RISC-V implementations using assertion-based verification.", file: "2502.10194v1.pdf", method: "bm25" }
-      ],
-      cost: { model_cost: 0.045, retrieval_cost: 0.0025, total: 0.0475 }
-    },
-
-    agent: {
-      query: "How many registers does RV32I define, and what is 2^5?",
-      strategy: "balanced",
-      answer: "RV32I defines 32 general-purpose registers (x0-x31), where x0 is hardwired to zero. The value 2^5 = 32, which directly corresponds to the register count: the 5-bit register specifier fields in RISC-V instructions can encode exactly 2^5 = 32 distinct register addresses.",
-      confidence: 0.95,
-      model: "mistral/mistral-medium",
-      processingTime: { analysis: 60, retrieval: 180, generation: 800 },
-      complexity: {
-        overall: 0.45,
-        label: "medium",
-        scores: { technical: 0.60, linguistic: 0.30, semantic: 0.40, computational: 0.70, task: 0.50 }
-      },
-      sources: [
-        { title: "RISC-V Instruction Set Manual Volume I: Unprivileged ISA", score: 0.96, snippet: "RV32I was designed to be sufficient to form a compiler target and to support modern operating system environments. The ISA was also designed to reduce the hardware required in a minimal implementation. RV32I contains 40 unique instructions. The base integer ISA has a little-endian memory system and uses 32 x registers, each 32 bits wide.", file: "riscv-spec-unprivileged-v20250508.pdf", method: "hybrid" }
-      ],
-      cost: { model_cost: 0.0034, retrieval_cost: 0.0002, total: 0.0036 },
-      reasoningSteps: [
-        { type: "THOUGHT", content: "The user wants to know the register count for RV32I and calculate 2^5. I'll search the documentation first, then use the calculator to verify the math." },
-        { type: "ACTION", content: "Searching knowledge base for 'RV32I registers'", tool: "search_documents", input: "RV32I register count general-purpose" },
-        { type: "OBSERVATION", content: "Found: RV32I contains 40 unique instructions and uses 32 x registers (x0-x31), each 32 bits wide. Register x0 is hardwired to the constant 0." },
-        { type: "THOUGHT", content: "I found that RV32I has 32 general-purpose registers. Now I need to calculate 2^5 using the calculator tool." },
-        { type: "ACTION", content: "Calculating 2^5", tool: "calculator", input: "2**5" },
-        { type: "OBSERVATION", content: "Result: 32" },
-        { type: "THOUGHT", content: "2^5 = 32, which matches the register count. This makes architectural sense: RISC-V uses 5-bit fields to encode register specifiers, so 2^5 = 32 is the maximum number of registers addressable with that encoding." },
-        { type: "FINAL_ANSWER", content: "RV32I defines 32 general-purpose registers (x0-x31), where x0 is hardwired to zero. The value 2^5 = 32, which directly corresponds to the register count: the 5-bit register specifier fields in RISC-V instructions can encode exactly 2^5 = 32 distinct register addresses." }
-      ]
-    }
-  },
-
-  // -----------------------------------------------------------------------
-  // 8. Config comparison — same query through 3 strategies
-  // -----------------------------------------------------------------------
-  configComparison: {
-    query: "Explain RISC-V privilege levels",
-    results: [
-      {
-        config: "cost_optimized",
-        model: "local/all-MiniLM-L6-v2",
-        confidence: 0.78,
-        topScore: 0.91,
-        timing: 320,
-        cost: 0.0002,
-        fusion: "weighted_average",
-        reranker: "none",
-        answerPreview: "RISC-V defines three privilege levels: Machine (M), Supervisor (S), and User (U). Machine mode has the highest privilege and is the only mandatory level. Supervisor mode provides virtual memory support for operating systems, while User mode runs application code with restricted access."
-      },
-      {
-        config: "balanced",
-        model: "mistral/mistral-medium",
-        confidence: 0.88,
-        topScore: 0.93,
-        timing: 890,
-        cost: 0.0036,
-        fusion: "reciprocal_rank",
-        reranker: "cross_encoder",
-        answerPreview: "The RISC-V architecture implements a hierarchical privilege model with three distinct levels. Machine mode (M-mode) is the highest privilege level with full hardware access, mandatory in all implementations. Supervisor mode (S-mode) manages virtual memory via the Sv39/Sv48 page tables and handles traps from user code. User mode (U-mode) provides application isolation with restricted CSR access."
-      },
-      {
-        config: "quality_first",
-        model: "openai/gpt-4",
-        confidence: 0.94,
-        topScore: 0.95,
-        timing: 2100,
-        cost: 0.0475,
-        fusion: "ensemble",
-        reranker: "neural",
-        answerPreview: "RISC-V's privilege architecture provides three levels of execution privilege, each designed for specific system software layers. M-mode operates with unrestricted access to all hardware resources and CSRs, serving as the root of trust. S-mode introduces virtual address translation (Sv32/Sv39/Sv48/Sv57) and trap delegation via medeleg/mideleg CSRs. U-mode enforces the principle of least privilege for application code."
-      }
-    ]
-  },
-
-  // -----------------------------------------------------------------------
-  // 9. Example queries for query page
+  // 7. Example queries for query page
   // -----------------------------------------------------------------------
   exampleQueries: [
-    { label: "Instruction Formats", query: "What are the base RISC-V integer instruction formats?", type: "simple" },
-    { label: "Memory Model", query: "How does the RISC-V weak memory ordering model work?", type: "simple" },
-    { label: "Extensions", query: "What standard extensions are available in RISC-V?", type: "simple" },
-    { label: "Privilege Levels", query: "Explain RISC-V privilege levels", type: "simple" },
-    { label: "Vector Extension", query: "What is the RISC-V vector extension and what operations does it support?", type: "medium" },
-    { label: "PMP Configuration", query: "How does RISC-V handle privilege levels and memory protection?", type: "medium" },
-    { label: "Security Comparison", query: "Compare RISC-V PMP versus ARM TrustZone security models in terms of hardware isolation, privilege levels, and side-channel resistance", type: "complex" },
-    { label: "Vector Processing", query: "Analyze the performance implications of RISC-V vector extension vs ARM SVE for ML workloads", type: "complex" },
-    { label: "Register Calculator", query: "How many registers does RV32I define, and what is 2^5?", type: "agent" },
-    { label: "Code Analysis", query: "Analyze the RISC-V instruction decoder function and calculate the number of supported formats", type: "agent" }
+    { label: "Instruction Formats", query: "What are the base RISC-V integer instruction formats?" },
+    { label: "Memory Model", query: "How does the RISC-V weak memory ordering model work?" },
+    { label: "Extensions", query: "What standard extensions are available in RISC-V?" },
+    { label: "Privilege Levels", query: "Explain RISC-V privilege levels" },
+    { label: "Vector Extension", query: "What is the RISC-V vector extension and what operations does it support?" },
+    { label: "PMP Configuration", query: "How does RISC-V handle privilege levels and memory protection?" },
+    { label: "Security Comparison", query: "Compare RISC-V PMP versus ARM TrustZone security models in terms of hardware isolation, privilege levels, and side-channel resistance" },
+    { label: "Vector Processing", query: "Analyze the performance implications of RISC-V vector extension vs ARM SVE for ML workloads" },
   ],
 
   // -----------------------------------------------------------------------
-  // 10. System stats for landing page
+  // 8. System stats for landing page
   // -----------------------------------------------------------------------
   systemStats: {
     documents: 73,
