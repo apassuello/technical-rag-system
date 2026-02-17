@@ -31,23 +31,23 @@ try:
     )
 except ImportError:
     logger.warning("Statistical validation module not available - using mock validation")
-    
+
     def validate_individual_entry(datapoint):
         return {'quality_score': 0.8, 'quality_flags': []}
-    
+
     def validate_category_distribution(datapoints):
         return {'balance_score': 0.8, 'well_balanced': True}
-        
+
     def validate_dataset_coverage(datapoints):
         return {'overall_coverage': 0.8}
-        
+
     def calculate_overall_dataset_health(validation_results):
         return {'overall_health_score': 0.8, 'ready_for_training': True}
 
 
 class ComplexityLevel(Enum):
     SIMPLE = "simple"
-    MEDIUM = "medium" 
+    MEDIUM = "medium"
     COMPLEX = "complex"
 
 
@@ -110,7 +110,7 @@ class DatasetGenerationConfig:
     max_retries: int = 3
     quality_threshold: float = 0.7
     output_dir: Path = Path("data/training")
-    
+
     def __post_init__(self):
         # Validate configuration
         if self.total_samples < 0:
@@ -136,7 +136,7 @@ class DatasetGenerationConfig:
 
 class ClaudeDatasetGenerator:
     """Main class for generating training datasets using Claude."""
-    
+
     def __init__(self, config: DatasetGenerationConfig):
         self.config = config
         # Don't create directory here - already done in __post_init__
@@ -152,7 +152,7 @@ class ClaudeDatasetGenerator:
             'quality_failed': 0,
             'retries_used': 0
         }
-        
+
     def _load_prompt_templates(self) -> Dict[str, str]:
         """Load Claude generation prompt templates."""
         # In practice, these would be loaded from files
@@ -165,13 +165,13 @@ class ClaudeDatasetGenerator:
             'academic_domain': self._get_domain_prompt('academic'),
             'general_domain': self._get_domain_prompt('general')
         }
-    
+
     def _get_system_prompt(self) -> str:
         """Get the system prompt for Claude."""
         return """You are an expert in query complexity analysis and machine learning data generation. You will generate training data for a multi-view ML system that analyzes query complexity across 5 orthogonal dimensions:
 
 1. **Technical Complexity**: Domain-specific terminology, jargon, technical depth
-2. **Linguistic Complexity**: Sentence structure, vocabulary, readability  
+2. **Linguistic Complexity**: Sentence structure, vocabulary, readability
 3. **Task Complexity**: Cognitive load based on Bloom's taxonomy
 4. **Semantic Complexity**: Conceptual relationships, abstraction level
 5. **Computational Complexity**: Algorithm/implementation complexity
@@ -192,7 +192,7 @@ Your task is to generate realistic queries with detailed complexity assessments 
 
 **Characteristics:**
 - Short, direct questions
-- Common vocabulary, minimal jargon  
+- Common vocabulary, minimal jargon
 - Single-step tasks (Knowledge/Comprehension in Bloom's)
 - Clear, concrete concepts
 - Minimal computational complexity
@@ -203,7 +203,7 @@ Your task is to generate realistic queries with detailed complexity assessments 
 - Task: 0.1-0.3 (recall, understanding)
 - Semantic: 0.1-0.3 (concrete, direct concepts)
 - Computational: 0.0-0.3 (basic operations)"""
-        
+
         elif complexity == 'medium':
             return """Generate medium complexity queries for users with some domain knowledge:
 
@@ -220,7 +220,7 @@ Your task is to generate realistic queries with detailed complexity assessments 
 - Task: 0.3-0.7 (application, analysis)
 - Semantic: 0.3-0.7 (relationships, some abstraction)
 - Computational: 0.3-0.7 (algorithms, optimization)"""
-        
+
         else:  # complex
             return """Generate complex queries requiring deep expertise:
 
@@ -245,10 +245,10 @@ Your task is to generate realistic queries with detailed complexity assessments 
 
 **Domains to cover:**
 - Software engineering, algorithms, system design
-- DevOps, infrastructure, performance optimization  
+- DevOps, infrastructure, performance optimization
 - Machine learning, data engineering
 - Security, networking, databases"""
-        
+
         elif domain == 'academic':
             return """Focus on research/academic queries:
 
@@ -257,7 +257,7 @@ Your task is to generate realistic queries with detailed complexity assessments 
 - Research methodologies, experimental design
 - Academic writing, literature review
 - Statistical analysis, data interpretation"""
-        
+
         else:  # general
             return """Focus on general knowledge queries:
 
@@ -270,47 +270,47 @@ Your task is to generate realistic queries with detailed complexity assessments 
     def generate_dataset(self) -> Tuple[List[TrainingDataPoint], Dict[str, Any]]:
         """Generate complete training dataset."""
         logger.info(f"Starting dataset generation: {self.config.total_samples} samples")
-        
+
         all_datapoints = []
         generation_plan = self._create_generation_plan()
-        
+
         # Generate in batches for each complexity/domain combination
         for batch_spec in generation_plan:
             batch_datapoints = self._generate_batch(batch_spec)
             all_datapoints.extend(batch_datapoints)
-            
+
             logger.info(f"Generated batch: {len(batch_datapoints)} samples "
                        f"({batch_spec['complexity']}/{batch_spec['domain']})")
-        
+
         # Validate and improve dataset
         validated_dataset = self._validate_and_improve_dataset(all_datapoints)
-        
+
         # Generate final report
         final_report = self._generate_final_report(validated_dataset)
-        
+
         # Save dataset
         self._save_dataset(validated_dataset, final_report)
-        
+
         logger.info(f"Dataset generation complete: {len(validated_dataset)} final samples")
         return validated_dataset, final_report
-    
+
     def _create_generation_plan(self) -> List[Dict[str, Any]]:
         """Create detailed generation plan with batch specifications."""
         plan = []
-        
+
         # Calculate samples per combination
         complexity_totals = self.config.complexity_distribution
         domain_totals = self.config.domain_distribution
-        
+
         for complexity, complexity_count in complexity_totals.items():
             complexity_ratio = complexity_count / self.config.total_samples
-            
+
             for domain, domain_count in domain_totals.items():
                 domain_ratio = domain_count / self.config.total_samples
-                
+
                 # Calculate samples for this combination
                 combo_samples = int(complexity_ratio * domain_ratio * self.config.total_samples)
-                
+
                 if combo_samples > 0:
                     # Split into batches respecting batch_size limit
                     num_batches = max(1, (combo_samples + self.config.batch_size - 1) // self.config.batch_size)
@@ -323,7 +323,7 @@ Your task is to generate realistic queries with detailed complexity assessments 
 
                         # Ensure batch doesn't exceed batch_size
                         batch_samples = min(batch_samples, self.config.batch_size)
-                        
+
                         plan.append({
                             'complexity': complexity,
                             'domain': domain,
@@ -331,31 +331,31 @@ Your task is to generate realistic queries with detailed complexity assessments 
                             'batch_index': batch_idx,
                             'total_batches': num_batches
                         })
-        
+
         logger.info(f"Created generation plan: {len(plan)} batches")
         return plan
-    
+
     def _generate_batch(self, batch_spec: Dict[str, Any]) -> List[TrainingDataPoint]:
         """Generate a single batch of training data."""
         complexity = batch_spec['complexity']
         domain = batch_spec['domain']
         num_samples = batch_spec['samples']
-        
+
         # Build Claude prompt
         prompt = self._build_claude_prompt(complexity, domain, num_samples)
-        
+
         # Generate with retries
         for retry in range(self.config.max_retries):
             try:
                 # In practice, this would call Claude API
                 response = self._call_claude_api(prompt)
-                
+
                 # Parse response into TrainingDataPoint objects
                 datapoints = self._parse_claude_response(response, batch_spec)
-                
+
                 # Validate batch quality
                 quality_passed = self._validate_batch_quality(datapoints)
-                
+
                 if quality_passed:
                     self.generation_stats['total_generated'] += len(datapoints)
                     self.generation_stats['quality_passed'] += len(datapoints)
@@ -371,13 +371,13 @@ Your task is to generate realistic queries with detailed complexity assessments 
         # If all retries failed, use fallback
         logger.error("Max retries reached, generating fallback batch")
         return self._generate_fallback_batch(batch_spec)
-    
+
     def _build_claude_prompt(self, complexity: str, domain: str, num_samples: int) -> str:
         """Build complete Claude prompt for batch generation."""
         system_prompt = self.prompt_templates['system_prompt']
         complexity_prompt = self.prompt_templates[f'{complexity}_prompt']
         domain_prompt = self.prompt_templates[f'{domain}_domain']
-        
+
         task_prompt = f"""
 Generate {num_samples} training datapoints for:
 - **Complexity Level**: {complexity}
@@ -397,32 +397,32 @@ For each query, provide a complete TrainingDataPoint following this exact JSON s
 4. **Balanced Distribution**: Generate diverse queries within complexity level
 5. **Self-Validation**: Check your work for consistency before output
 """
-        
+
         return f"{system_prompt}\n\n{task_prompt}"
-    
+
     def _call_claude_api(self, prompt: str) -> str:
         """Call Claude API (mock implementation)."""
         # In practice, this would use the Anthropic API
         logger.info("Calling Claude API (mock implementation)")
-        
+
         # Mock response - in reality, this would be Claude's JSON response
         mock_response = self._generate_mock_response(prompt)
         return json.dumps(mock_response)
-    
+
     def _generate_mock_response(self, prompt: str) -> List[Dict[str, Any]]:
         """Generate mock Claude response for testing."""
         # Extract complexity and domain from prompt for realistic mock data
         complexity = "medium"  # Would parse from prompt
         domain = "technical"   # Would parse from prompt
         num_samples = 5       # Would parse from prompt
-        
+
         mock_datapoints = []
-        
+
         for i in range(num_samples):
             # Generate realistic mock data
             base_score = 0.5 if complexity == "medium" else (0.2 if complexity == "simple" else 0.8)
             variance = 0.1
-            
+
             mock_datapoint = {
                 "query_text": f"How do I implement a {domain} solution for problem {i+1}?",
                 "expected_complexity_score": base_score + np.random.normal(0, variance/2),
@@ -473,7 +473,7 @@ For each query, provide a complete TrainingDataPoint following this exact JSON s
                             "creativity_required": np.random.uniform(0.2, 0.7)
                         },
                         "reasoning": "Task complexity based on Bloom's taxonomy analysis",
-                        "expected_distribution": "normal", 
+                        "expected_distribution": "normal",
                         "difficulty_factors": ["multi_step_process", "application_knowledge"]
                     },
                     "semantic": {
@@ -523,34 +523,34 @@ For each query, provide a complete TrainingDataPoint following this exact JSON s
                     "difficulty_subcategory": f"{domain}_{complexity}"
                 }
             }
-            
+
             # Ensure scores are in valid range
             for view_data in mock_datapoint["view_scores"].values():
                 view_data["complexity_score"] = np.clip(view_data["complexity_score"], 0.0, 1.0)
                 view_data["confidence"] = np.clip(view_data["confidence"], 0.0, 1.0)
-            
+
             mock_datapoint["expected_complexity_score"] = np.clip(mock_datapoint["expected_complexity_score"], 0.0, 1.0)
-            
+
             mock_datapoints.append(mock_datapoint)
-        
+
         return mock_datapoints
-    
+
     def _parse_claude_response(self, response: str, batch_spec: Dict[str, Any]) -> List[TrainingDataPoint]:
         """Parse Claude JSON response into TrainingDataPoint objects."""
         try:
             data = json.loads(response)
             if not isinstance(data, list):
                 data = [data]  # Handle single datapoint response
-            
+
             datapoints = []
             for item in data:
                 # Convert dictionaries to proper objects
                 view_scores = {}
                 for view_name, view_data in item["view_scores"].items():
                     view_scores[view_name] = ViewScore(**view_data)
-                
+
                 metadata = TrainingMetadata(**item["metadata"])
-                
+
                 datapoint = TrainingDataPoint(
                     query_text=item["query_text"],
                     expected_complexity_score=item["expected_complexity_score"],
@@ -559,40 +559,40 @@ For each query, provide a complete TrainingDataPoint following this exact JSON s
                     metadata=metadata,
                     extracted_features=item.get("extracted_features")
                 )
-                
+
                 datapoints.append(datapoint)
-            
+
             return datapoints
-            
+
         except Exception as e:
             logger.error(f"Failed to parse Claude response: {e}")
             return self._generate_fallback_batch(batch_spec)
-    
+
     def _validate_batch_quality(self, datapoints: List[TrainingDataPoint]) -> bool:
         """Validate batch quality before accepting."""
         if not datapoints:
             return False
-        
+
         quality_scores = []
         for dp in datapoints:
             validation_result = validate_individual_entry(dp)
             quality_scores.append(validation_result['quality_score'])
-        
+
         avg_quality = statistics.mean(quality_scores)
         return avg_quality >= self.config.quality_threshold
-    
+
     def _generate_fallback_batch(self, batch_spec: Dict[str, Any]) -> List[TrainingDataPoint]:
         """Generate fallback batch when Claude generation fails."""
         logger.warning("Generating fallback batch with basic template")
-        
+
         # Use mock generation as fallback
         mock_response = self._generate_mock_response("")
         return self._parse_claude_response(json.dumps(mock_response), batch_spec)
-    
+
     def _validate_and_improve_dataset(self, datapoints: List[TrainingDataPoint]) -> List[TrainingDataPoint]:
         """Validate complete dataset and improve quality."""
         logger.info(f"Validating dataset with {len(datapoints)} samples")
-        
+
         # Individual validation
         validated_datapoints = []
         for dp in datapoints:
@@ -602,18 +602,18 @@ For each query, provide a complete TrainingDataPoint following this exact JSON s
                 self.generation_stats['quality_passed'] += 1
             else:
                 self.generation_stats['quality_failed'] += 1
-        
+
         # Category-level validation
         category_validation = validate_category_distribution(validated_datapoints)
         if not category_validation['well_balanced']:
             logger.warning("Dataset not well balanced, consider regenerating some categories")
-        
+
         # Coverage validation
         validate_dataset_coverage(validated_datapoints)
 
         logger.info(f"Dataset validation complete: {len(validated_datapoints)} samples passed quality check")
         return validated_datapoints
-    
+
     def _generate_final_report(self, datapoints: List[TrainingDataPoint]) -> Dict[str, Any]:
         """Generate comprehensive final report."""
         validation_results = {
@@ -621,9 +621,9 @@ For each query, provide a complete TrainingDataPoint following this exact JSON s
             'complexity_distribution': validate_category_distribution(datapoints),
             'coverage_analysis': validate_dataset_coverage(datapoints)
         }
-        
+
         health_assessment = calculate_overall_dataset_health(validation_results)
-        
+
         report = {
             'generation_stats': self.generation_stats,
             'dataset_summary': {
@@ -636,9 +636,9 @@ For each query, provide a complete TrainingDataPoint following this exact JSON s
             'recommendations': health_assessment.get('recommendations', []),
             'ready_for_training': health_assessment.get('ready_for_training', False)
         }
-        
+
         return report
-    
+
     def _calculate_complexity_distribution(self, datapoints: List[TrainingDataPoint]) -> Dict[str, int]:
         """Calculate actual complexity distribution."""
         distribution = {}
@@ -646,7 +646,7 @@ For each query, provide a complete TrainingDataPoint following this exact JSON s
             level = dp.expected_complexity_level
             distribution[level] = distribution.get(level, 0) + 1
         return distribution
-    
+
     def _calculate_domain_distribution(self, datapoints: List[TrainingDataPoint]) -> Dict[str, int]:
         """Calculate actual domain distribution."""
         distribution = {}
@@ -654,23 +654,23 @@ For each query, provide a complete TrainingDataPoint following this exact JSON s
             domain = dp.metadata.domain
             distribution[domain] = distribution.get(domain, 0) + 1
         return distribution
-    
+
     def _save_dataset(self, datapoints: List[TrainingDataPoint], report: Dict[str, Any]) -> None:
         """Save dataset and report to files."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
+
         # Save dataset as JSON
         dataset_file = self.config.output_dir / f"epic1_dataset_{timestamp}.json"
         dataset_data = [asdict(dp) for dp in datapoints]
-        
+
         with open(dataset_file, 'w') as f:
             json.dump(dataset_data, f, indent=2, default=str)
-        
+
         # Save report
         report_file = self.config.output_dir / f"generation_report_{timestamp}.json"
         with open(report_file, 'w') as f:
             json.dump(report, f, indent=2, default=str)
-        
+
         logger.info(f"Dataset saved to: {dataset_file}")
         logger.info(f"Report saved to: {report_file}")
 
@@ -684,10 +684,10 @@ def main():
         batch_size=10,
         output_dir=Path("data/training/test")
     )
-    
+
     generator = ClaudeDatasetGenerator(config)
     datapoints, report = generator.generate_dataset()
-    
+
     logger.info(f"Generated {len(datapoints)} training samples")
     logger.info(f"Dataset ready for training: {report['ready_for_training']}")
     logger.info(f"Overall health score: {report['dataset_summary']['quality_metrics']['overall_health_score']:.3f}")

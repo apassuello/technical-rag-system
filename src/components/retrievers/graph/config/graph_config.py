@@ -57,17 +57,17 @@ class GraphRetrievalConfig:
     subgraph_radius: int = 2
     score_aggregation: str = "weighted_average"
     enable_path_scoring: bool = True
-    
+
     def __post_init__(self):
         """Validate configuration after initialization."""
         valid_algorithms = {"shortest_path", "random_walk", "subgraph_expansion"}
         for algo in self.algorithms:
             if algo not in valid_algorithms:
                 raise ValueError(f"Unknown algorithm: {algo}")
-        
+
         if self.max_path_length <= 0:
             raise ValueError("max_path_length must be positive")
-            
+
         valid_aggregations = {"max", "average", "weighted_average"}
         if self.score_aggregation not in valid_aggregations:
             raise ValueError(f"Invalid score_aggregation: {self.score_aggregation}")
@@ -88,7 +88,7 @@ class GraphAnalyticsConfig:
 class GraphConfig:
     """
     Main configuration class for graph-based retrieval.
-    
+
     This class aggregates all graph-related configuration and provides
     methods for creating configurations from dictionaries and YAML files.
     """
@@ -98,20 +98,20 @@ class GraphConfig:
     relationship_detection: RelationshipDetectionConfig = field(default_factory=RelationshipDetectionConfig)
     retrieval: GraphRetrievalConfig = field(default_factory=GraphRetrievalConfig)
     analytics: GraphAnalyticsConfig = field(default_factory=GraphAnalyticsConfig)
-    
+
     # Performance settings
     max_memory_mb: int = 500
     enable_caching: bool = True
     cache_size: int = 1000
-    
+
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "GraphConfig":
         """
         Create GraphConfig from dictionary.
-        
+
         Args:
             config_dict: Configuration dictionary
-            
+
         Returns:
             GraphConfig instance
         """
@@ -121,7 +121,7 @@ class GraphConfig:
             max_memory_mb = config_dict.get("max_memory_mb", 500)
             enable_caching = config_dict.get("enable_caching", True)
             cache_size = config_dict.get("cache_size", 1000)
-            
+
             # Create sub-configurations
             builder_config = GraphBuilderConfig()
             if "builder" in config_dict:
@@ -135,7 +135,7 @@ class GraphConfig:
                     enable_pruning=builder_dict.get("enable_pruning", True),
                     pruning_threshold=builder_dict.get("pruning_threshold", 0.1)
                 )
-            
+
             entity_config = EntityExtractionConfig()
             if "entity_extraction" in config_dict:
                 entity_dict = config_dict["entity_extraction"].get("config", {})
@@ -148,7 +148,7 @@ class GraphConfig:
                     custom_patterns=entity_dict.get("custom_patterns", {}),
                     enable_custom_entities=entity_dict.get("enable_custom_entities", True)
                 )
-            
+
             relationship_config = RelationshipDetectionConfig()
             if "relationship_detection" in config_dict:
                 rel_dict = config_dict["relationship_detection"].get("config", {})
@@ -160,7 +160,7 @@ class GraphConfig:
                     enable_bidirectional=rel_dict.get("enable_bidirectional", True),
                     weight_decay_factor=rel_dict.get("weight_decay_factor", 0.9)
                 )
-            
+
             retrieval_config = GraphRetrievalConfig()
             if "retrieval" in config_dict:
                 ret_dict = config_dict["retrieval"]
@@ -173,7 +173,7 @@ class GraphConfig:
                     score_aggregation=ret_dict.get("score_aggregation", "weighted_average"),
                     enable_path_scoring=ret_dict.get("enable_path_scoring", True)
                 )
-            
+
             analytics_config = GraphAnalyticsConfig()
             if "analytics" in config_dict:
                 analytics_dict = config_dict["analytics"]
@@ -185,7 +185,7 @@ class GraphConfig:
                     visualization_max_nodes=analytics_dict.get("visualization_max_nodes", 100),
                     metrics_retention_hours=analytics_dict.get("metrics_retention_hours", 24)
                 )
-            
+
             return cls(
                 enabled=enabled,
                 builder=builder_config,
@@ -197,16 +197,16 @@ class GraphConfig:
                 enable_caching=enable_caching,
                 cache_size=cache_size
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to create GraphConfig from dict: {str(e)}")
             # Return default configuration on error
             return cls()
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert GraphConfig to dictionary.
-        
+
         Returns:
             Configuration dictionary
         """
@@ -265,52 +265,52 @@ class GraphConfig:
             "enable_caching": self.enable_caching,
             "cache_size": self.cache_size
         }
-    
+
     def validate(self) -> List[str]:
         """
         Validate configuration and return list of issues.
-        
+
         Returns:
             List of validation error messages
         """
         issues = []
-        
+
         # Validate builder config
         if self.builder.max_graph_size <= 0:
             issues.append("builder.max_graph_size must be positive")
-        
+
         if not self.builder.node_types:
             issues.append("builder.node_types cannot be empty")
-        
+
         if not self.builder.relationship_types:
             issues.append("builder.relationship_types cannot be empty")
-        
+
         # Validate entity extraction config
         if self.entity_extraction.confidence_threshold < 0 or self.entity_extraction.confidence_threshold > 1:
             issues.append("entity_extraction.confidence_threshold must be between 0 and 1")
-        
+
         if self.entity_extraction.batch_size <= 0:
             issues.append("entity_extraction.batch_size must be positive")
-        
+
         # Validate relationship detection config
         if self.relationship_detection.similarity_threshold < 0 or self.relationship_detection.similarity_threshold > 1:
             issues.append("relationship_detection.similarity_threshold must be between 0 and 1")
-        
+
         if self.relationship_detection.max_relationships_per_node <= 0:
             issues.append("relationship_detection.max_relationships_per_node must be positive")
-        
+
         # Validate retrieval config
         if not self.retrieval.algorithms:
             issues.append("retrieval.algorithms cannot be empty")
-        
+
         if self.retrieval.max_graph_results <= 0:
             issues.append("retrieval.max_graph_results must be positive")
-        
+
         # Validate performance settings
         if self.max_memory_mb <= 0:
             issues.append("max_memory_mb must be positive")
-        
+
         if self.cache_size <= 0:
             issues.append("cache_size must be positive")
-        
+
         return issues

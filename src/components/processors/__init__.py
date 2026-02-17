@@ -2,8 +2,8 @@
 Document Processing Components - Modular Architecture Implementation.
 
 This package provides a modular document processing architecture with
-specialized sub-components for parsing, chunking, and cleaning documents. It follows 
-enterprise architecture patterns with selective adapter pattern usage, configurable 
+specialized sub-components for parsing, chunking, and cleaning documents. It follows
+enterprise architecture patterns with selective adapter pattern usage, configurable
 components, and comprehensive error handling.
 
 ## Architecture Overview
@@ -20,7 +20,7 @@ Document Input → Parser → Chunker → Cleaner → Document Output
 
 ### Design Patterns Applied
 
-**Selective Adapter Pattern**: 
+**Selective Adapter Pattern**:
 - External libraries (PyMuPDF) use adapter pattern for API abstraction
 - Pure algorithms (chunkers, cleaners) use direct implementation for performance
 
@@ -32,7 +32,7 @@ Document Input → Parser → Chunker → Cleaner → Document Output
 ### Performance Characteristics
 
 - **Processing Speed**: 1.2M characters/second (typical for technical documents)
-- **Memory Usage**: <500MB for 100MB input document  
+- **Memory Usage**: <500MB for 100MB input document
 - **Architecture Compliance**: 100% (validated against specifications)
 - **Component Creation**: <1ms average latency
 
@@ -52,7 +52,7 @@ Document Input → Parser → Chunker → Cleaner → Document Output
 ### Factory Functions
 
 - **create_pdf_processor()**: PDF-optimized configuration
-- **create_fast_processor()**: Speed-optimized configuration  
+- **create_fast_processor()**: Speed-optimized configuration
 - **create_high_quality_processor()**: Quality-optimized configuration
 
 ### Sub-Components
@@ -84,7 +84,7 @@ documents = processor.process(Path("technical_manual.pdf"))
 processor = ComponentFactory.create_processor(
     "hybrid_pdf",
     chunk_size=1024,          # → chunker.config.chunk_size
-    chunk_overlap=128,        # → chunker.config.overlap  
+    chunk_overlap=128,        # → chunker.config.overlap
     preserve_layout=True      # → parser.config.preserve_layout
 )
 ```
@@ -150,23 +150,23 @@ from .pipeline import DocumentProcessingPipeline
 __all__ = [
     # Legacy processor
     'HybridPDFProcessor',
-    
+
     # Main processor
     'ModularDocumentProcessor',
-    
+
     # Factory functions
     'create_pdf_processor',
-    'create_fast_processor', 
+    'create_fast_processor',
     'create_high_quality_processor',
-    
+
     # Pipeline
     'DocumentProcessingPipeline',
-    
+
     # Sub-components
     'PyMuPDFAdapter',
     'SentenceBoundaryChunker',
     'TechnicalContentCleaner',
-    
+
     # Base interfaces
     'DocumentParser',
     'TextChunker',

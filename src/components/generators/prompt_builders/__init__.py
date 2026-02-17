@@ -27,13 +27,13 @@ BUILDER_REGISTRY = {
 def get_builder_class(builder_type: str):
     """
     Get prompt builder class by type.
-    
+
     Args:
         builder_type: Builder type name
-        
+
     Returns:
         Builder class
-        
+
     Raises:
         ValueError: If builder type not found
     """

@@ -38,15 +38,15 @@ logger = logging.getLogger(__name__)
 class BaseView(ABC):
     """
     Abstract base class for all view implementations.
-    
+
     Defines the common interface that all view types must implement,
     ensuring consistency across the multi-view analysis system.
     """
-    
+
     def __init__(self, view_name: str, config: Optional[Dict[str, Any]] = None):
         """
         Initialize base view.
-        
+
         Args:
             view_name: Name of this view (e.g., 'technical', 'linguistic')
             config: Configuration dictionary for this view
@@ -54,19 +54,19 @@ class BaseView(ABC):
         self.view_name = view_name
         self.config = config or {}
         self.model_manager: Optional[ModelManager] = None
-        
+
         # Performance tracking
         self._analysis_count = 0
         self._total_analysis_time = 0.0
         self._error_count = 0
-        
+
         logger.debug(f"Initialized {self.__class__.__name__} for view '{view_name}'")
-    
+
     def set_model_manager(self, model_manager: ModelManager) -> None:
         """Set the model manager for ML operations."""
         self.model_manager = model_manager
         logger.debug(f"Model manager set for view '{self.view_name}'")
-    
+
     @abstractmethod
     def analyze(self, query: str, mode: str = 'auto') -> ViewResult:
         """
@@ -80,11 +80,11 @@ class BaseView(ABC):
             ViewResult with complexity analysis
         """
         pass
-    
+
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get performance statistics for this view."""
         avg_time = self._total_analysis_time / self._analysis_count if self._analysis_count > 0 else 0.0
-        
+
         return {
             'view_name': self.view_name,
             'analysis_count': self._analysis_count,
@@ -93,15 +93,15 @@ class BaseView(ABC):
             'error_count': self._error_count,
             'error_rate': self._error_count / self._analysis_count if self._analysis_count > 0 else 0.0
         }
-    
+
     def _record_analysis(self, analysis_time_ms: float, success: bool = True) -> None:
         """Record analysis performance metrics."""
         self._analysis_count += 1
         self._total_analysis_time += analysis_time_ms
-        
+
         if not success:
             self._error_count += 1
-    
+
     async def _measure_analysis_time(self, analysis_func: Callable) -> tuple[Any, float]:
         """Measure analysis time and return result with timing."""
         start_time = time.time()
@@ -112,20 +112,20 @@ class BaseView(ABC):
         except Exception as e:
             analysis_time_ms = (time.time() - start_time) * 1000
             raise e
-    
+
     def get_fallback_result(self, error: Exception, analysis_time_ms: float = 0.0) -> ViewResult:
         """
         Get fallback result when analysis fails.
-        
+
         Args:
             error: The exception that caused the failure
             analysis_time_ms: Time spent before failure
-            
+
         Returns:
             ViewResult with fallback values
         """
         self._record_analysis(analysis_time_ms, success=False)
-        
+
         return ViewResult.create_error_result(
             view_name=self.view_name,
             error_message=str(error),
@@ -136,29 +136,29 @@ class BaseView(ABC):
 class AlgorithmicView(BaseView):
     """
     Base class for fast algorithmic-only analysis views.
-    
+
     Provides infrastructure for views that use only rule-based or
     heuristic approaches without ML models.
     """
-    
+
     def __init__(self, view_name: str, config: Optional[Dict[str, Any]] = None):
         """Initialize algorithmic view."""
         super().__init__(view_name, config)
         self._initialize_algorithmic_components()
-    
+
     def _initialize_algorithmic_components(self) -> None:
         """Initialize algorithmic components specific to this view."""
         # Override in subclasses to initialize specific algorithmic tools
         pass
-    
+
     async def analyze(self, query: str, mode: str = 'auto') -> ViewResult:
         """
         Analyze query using algorithmic approach.
-        
+
         Args:
             query: Query text to analyze
             mode: Analysis mode (ignored for algorithmic views)
-            
+
         Returns:
             ViewResult with algorithmic analysis
         """
@@ -166,9 +166,9 @@ class AlgorithmicView(BaseView):
             result, analysis_time_ms = await self._measure_analysis_time(
                 lambda: self._analyze_algorithmic(query)
             )
-            
+
             self._record_analysis(analysis_time_ms, success=True)
-            
+
             return ViewResult(
                 view_name=self.view_name,
                 score=result['score'],
@@ -178,19 +178,19 @@ class AlgorithmicView(BaseView):
                 features=result.get('features', {}),
                 metadata=result.get('metadata', {})
             )
-            
+
         except Exception as e:
             logger.error(f"Algorithmic analysis failed for view '{self.view_name}': {e}")
             return self.get_fallback_result(e)
-    
+
     @abstractmethod
     def _analyze_algorithmic(self, query: str) -> Dict[str, Any]:
         """
         Perform algorithmic analysis of the query.
-        
+
         Args:
             query: Query text to analyze
-            
+
         Returns:
             Dictionary with 'score', 'confidence', 'features', 'metadata'
         """
@@ -200,20 +200,20 @@ class AlgorithmicView(BaseView):
 class MLView(BaseView):
     """
     Base class for ML-primary analysis views with algorithmic fallback.
-    
+
     Provides infrastructure for views that primarily use ML models
     but can fall back to algorithmic approaches when needed.
     """
-    
+
     def __init__(
-        self, 
-        view_name: str, 
+        self,
+        view_name: str,
         ml_model_name: str,
         config: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize ML view.
-        
+
         Args:
             view_name: Name of this view
             ml_model_name: Name of the ML model to use
@@ -222,58 +222,58 @@ class MLView(BaseView):
         super().__init__(view_name, config)
         self.ml_model_name = ml_model_name
         self._ml_model = None
-        
+
         # Initialize both ML and algorithmic components
         self._initialize_ml_components()
         self._initialize_algorithmic_fallback()
-    
+
     def _initialize_ml_components(self) -> None:
         """Initialize ML-specific components."""
         # Override in subclasses to set up ML-specific tools
         pass
-    
+
     def _initialize_algorithmic_fallback(self) -> None:
         """Initialize algorithmic fallback components."""
         # Override in subclasses to set up fallback analysis
         pass
-    
+
     async def analyze(self, query: str, mode: str = 'auto') -> ViewResult:
         """
         Analyze query using ML approach with algorithmic fallback.
-        
+
         Args:
             query: Query text to analyze
             mode: Analysis mode ('ml', 'algorithmic', 'auto')
-            
+
         Returns:
             ViewResult with analysis
         """
         if mode == 'algorithmic':
             return await self._analyze_with_fallback(query)
-        
+
         # Try ML analysis first
         try:
             return await self._analyze_with_ml(query)
         except Exception as e:
             logger.warning(f"ML analysis failed for view '{self.view_name}', using fallback: {e}")
             return await self._analyze_with_fallback(query)
-    
+
     async def _analyze_with_ml(self, query: str) -> ViewResult:
         """Analyze using ML model."""
         # Ensure model is loaded
         if not self._ml_model and self.model_manager:
             self._ml_model = await self.model_manager.load_model(self.ml_model_name)
-        
+
         if not self._ml_model:
             raise ValueError(f"ML model '{self.ml_model_name}' not available")
-        
+
         try:
             result, analysis_time_ms = await self._measure_analysis_time(
                 lambda: self._analyze_ml(query)
             )
-            
+
             self._record_analysis(analysis_time_ms, success=True)
-            
+
             return ViewResult(
                 view_name=self.view_name,
                 score=result['score'],
@@ -283,20 +283,20 @@ class MLView(BaseView):
                 features=result.get('features', {}),
                 metadata=result.get('metadata', {})
             )
-            
+
         except Exception as e:
             logger.error(f"ML analysis failed for view '{self.view_name}': {e}")
             raise
-    
+
     async def _analyze_with_fallback(self, query: str) -> ViewResult:
         """Analyze using algorithmic fallback."""
         try:
             result, analysis_time_ms = await self._measure_analysis_time(
                 lambda: self._analyze_algorithmic_fallback(query)
             )
-            
+
             self._record_analysis(analysis_time_ms, success=True)
-            
+
             return ViewResult(
                 view_name=self.view_name,
                 score=result['score'],
@@ -306,32 +306,32 @@ class MLView(BaseView):
                 features=result.get('features', {}),
                 metadata={**result.get('metadata', {}), 'fallback_reason': 'ml_unavailable'}
             )
-            
+
         except Exception as e:
             logger.error(f"Fallback analysis failed for view '{self.view_name}': {e}")
             return self.get_fallback_result(e)
-    
+
     @abstractmethod
     def _analyze_ml(self, query: str) -> Dict[str, Any]:
         """
         Perform ML analysis of the query.
-        
+
         Args:
             query: Query text to analyze
-            
+
         Returns:
             Dictionary with 'score', 'confidence', 'features', 'metadata'
         """
         pass
-    
+
     @abstractmethod
     def _analyze_algorithmic_fallback(self, query: str) -> Dict[str, Any]:
         """
         Perform algorithmic fallback analysis.
-        
+
         Args:
             query: Query text to analyze
-            
+
         Returns:
             Dictionary with 'score', 'confidence', 'features', 'metadata'
         """
@@ -341,11 +341,11 @@ class MLView(BaseView):
 class HybridView(BaseView):
     """
     Base class for balanced algorithmic + ML combination views.
-    
+
     Provides infrastructure for views that combine both algorithmic
     and ML approaches to achieve optimal accuracy and reliability.
     """
-    
+
     def __init__(
         self,
         view_name: str,
@@ -354,7 +354,7 @@ class HybridView(BaseView):
     ):
         """
         Initialize hybrid view.
-        
+
         Args:
             view_name: Name of this view
             ml_model_name: Name of the ML model to use
@@ -363,31 +363,31 @@ class HybridView(BaseView):
         super().__init__(view_name, config)
         self.ml_model_name = ml_model_name
         self._ml_model = None
-        
+
         # Weighting configuration
         self.algorithmic_weight = self.config.get('algorithmic_weight', 0.4)
         self.ml_weight = self.config.get('ml_weight', 0.6)
-        
+
         # Normalize weights
         total_weight = self.algorithmic_weight + self.ml_weight
         if total_weight > 0:
             self.algorithmic_weight /= total_weight
             self.ml_weight /= total_weight
-        
+
         # Initialize components
         self._initialize_algorithmic_components()
         self._initialize_ml_components()
-    
+
     def _initialize_algorithmic_components(self) -> None:
         """Initialize algorithmic components."""
         # Override in subclasses
         pass
-    
+
     def _initialize_ml_components(self) -> None:
         """Initialize ML components."""
         # Override in subclasses
         pass
-    
+
     def analyze(self, query: str, mode: str = 'auto') -> ViewResult:
         """
         Analyze query using hybrid approach (synchronous wrapper).
@@ -424,7 +424,7 @@ class HybridView(BaseView):
             return await self._analyze_ml_only(query)
         else:  # hybrid or auto
             return await self._analyze_hybrid(query)
-    
+
     def _analyze_hybrid_sync(self, query: str) -> ViewResult:
         """Perform hybrid analysis combining both approaches (synchronous)."""
         start_time = time.time()
@@ -500,7 +500,7 @@ class HybridView(BaseView):
             analysis_time_ms = (time.time() - start_time) * 1000
             logger.error(f"Hybrid analysis failed for view '{self.view_name}': {e}")
             return self.get_fallback_result(e, analysis_time_ms)
-    
+
     def _analyze_algorithmic_sync(self, query: str) -> ViewResult:
         """Analyze using only algorithmic approach (synchronous)."""
         start_time = time.time()
@@ -547,7 +547,7 @@ class HybridView(BaseView):
         except Exception as e:
             logger.error(f"Algorithmic analysis failed for view '{self.view_name}': {e}")
             return self.get_fallback_result(e)
-    
+
     def _analyze_ml_sync(self, query: str) -> ViewResult:
         """Analyze using only ML approach (synchronous)."""
         start_time = time.time()
@@ -608,7 +608,7 @@ class HybridView(BaseView):
         except Exception as e:
             logger.warning(f"ML analysis failed for view '{self.view_name}', using algorithmic fallback: {e}")
             return await self._analyze_algorithmic_only(query)
-    
+
     async def _get_algorithmic_result(self, query: str) -> Optional[Dict[str, Any]]:
         """Get algorithmic analysis result."""
         try:
@@ -616,32 +616,32 @@ class HybridView(BaseView):
         except Exception as e:
             logger.warning(f"Algorithmic analysis failed for view '{self.view_name}': {e}")
             return None
-    
+
     async def _get_ml_result(self, query: str) -> Optional[Dict[str, Any]]:
         """Get ML analysis result."""
         try:
             if not self._ml_model and self.model_manager:
                 self._ml_model = await self.model_manager.load_model(self.ml_model_name)
-            
+
             if self._ml_model:
                 return self._analyze_ml(query)
         except Exception as e:
             logger.warning(f"ML analysis failed for view '{self.view_name}': {e}")
-        
+
         return None
-    
+
     def _combine_results(
-        self, 
-        algorithmic_result: Optional[Dict[str, Any]], 
+        self,
+        algorithmic_result: Optional[Dict[str, Any]],
         ml_result: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         Combine algorithmic and ML results.
-        
+
         Args:
             algorithmic_result: Result from algorithmic analysis
             ml_result: Result from ML analysis
-            
+
         Returns:
             Combined result dictionary
         """
@@ -672,21 +672,21 @@ class HybridView(BaseView):
                 self.algorithmic_weight * algorithmic_result['score'] +
                 self.ml_weight * ml_result['score']
             )
-            
+
             # Confidence is based on agreement between methods
             score_difference = abs(algorithmic_result['score'] - ml_result['score'])
             agreement_factor = 1.0 - min(score_difference, 0.5)  # Penalty for disagreement
-            
+
             combined_confidence = (
                 self.algorithmic_weight * algorithmic_result['confidence'] +
                 self.ml_weight * ml_result['confidence']
             ) * agreement_factor
-            
+
             # Combine features
             combined_features = {}
             combined_features.update(algorithmic_result.get('features', {}))
             combined_features.update(ml_result.get('features', {}))
-            
+
             # Combine metadata
             combined_metadata = {
                 'algorithmic_score': algorithmic_result['score'],
@@ -700,35 +700,35 @@ class HybridView(BaseView):
             }
             combined_metadata.update(algorithmic_result.get('metadata', {}))
             combined_metadata.update(ml_result.get('metadata', {}))
-            
+
             return {
                 'score': combined_score,
                 'confidence': combined_confidence,
                 'features': combined_features,
                 'metadata': combined_metadata
             }
-    
+
     @abstractmethod
     def _analyze_algorithmic(self, query: str) -> Dict[str, Any]:
         """
         Perform algorithmic analysis.
-        
+
         Args:
             query: Query text to analyze
-            
+
         Returns:
             Dictionary with 'score', 'confidence', 'features', 'metadata'
         """
         pass
-    
+
     @abstractmethod
     def _analyze_ml(self, query: str) -> Dict[str, Any]:
         """
         Perform ML analysis.
-        
+
         Args:
             query: Query text to analyze
-            
+
         Returns:
             Dictionary with 'score', 'confidence', 'features', 'metadata'
         """

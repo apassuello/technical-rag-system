@@ -19,8 +19,8 @@ import numpy as np
 
 try:
     import weaviate
-    from weaviate.classes.init import Auth, AdditionalConfig, Timeout
-    from weaviate.classes.config import Property, DataType, Configure
+    from weaviate.classes.config import Configure, DataType, Property
+    from weaviate.classes.init import AdditionalConfig, Auth, Timeout
     from weaviate.classes.query import MetadataQuery
     from weaviate.exceptions import WeaviateBaseError as WeaviateException
     WEAVIATE_AVAILABLE = True

@@ -5,7 +5,7 @@ from . import embedders, generators, processors, query_processors, retrievers
 
 __all__ = [
     'processors',
-    'embedders', 
+    'embedders',
     'retrievers',
     'generators',
     'query_processors'

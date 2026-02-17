@@ -8,7 +8,7 @@ orchestrates the query execution workflow through configurable sub-components.
 Key Components:
 - QueryProcessor: Main orchestrator interface
 - QueryAnalyzer: Extract query characteristics and optimize parameters
-- ContextSelector: Select optimal documents within token limits  
+- ContextSelector: Select optimal documents within token limits
 - ResponseAssembler: Format consistent responses with citations
 
 Architecture:
@@ -22,12 +22,12 @@ Usage Example:
     from src.components.query_processors.analyzers import NLPAnalyzer
     from src.components.query_processors.selectors import MMRSelector
     from src.components.query_processors.assemblers import RichAssembler
-    
+
     # Create sub-components
     analyzer = NLPAnalyzer()
-    selector = MMRSelector() 
+    selector = MMRSelector()
     assembler = RichAssembler()
-    
+
     # Create query processor
     processor = ModularQueryProcessor(
         retriever=retriever,
@@ -36,7 +36,7 @@ Usage Example:
         selector=selector,
         assembler=assembler
     )
-    
+
     # Process query
     answer = processor.process("What is RISC-V?")
 

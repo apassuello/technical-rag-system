@@ -27,13 +27,13 @@ SCORER_REGISTRY = {
 def get_scorer_class(scorer_type: str):
     """
     Get confidence scorer class by type.
-    
+
     Args:
         scorer_type: Scorer type name
-        
+
     Returns:
         Scorer class
-        
+
     Raises:
         ValueError: If scorer type not found
     """

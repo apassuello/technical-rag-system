@@ -42,11 +42,11 @@ except ImportError as e:
 class AdaptiveAnswerGenerator(AnswerGenerator):
     """
     Adapter for existing adaptive answer generation system.
-    
+
     This class wraps the advanced answer generation capabilities including
     adaptive prompts, chain-of-thought reasoning, and multiple LLM providers
     to provide an AnswerGenerator interface.
-    
+
     Features:
     - Multiple LLM providers (HuggingFace, Ollama, Inference APIs)
     - Adaptive prompt optimization based on context quality
@@ -54,7 +54,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
     - Technical documentation specialization
     - Confidence scoring and calibration
     - Streaming response support
-    
+
     Example:
         generator = AdaptiveAnswerGenerator(
             model_name="sshleifer/distilbart-cnn-12-6",
@@ -63,7 +63,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         )
         answer = generator.generate("What is RISC-V?", context_documents)
     """
-    
+
     def __init__(
         self,
         model_name: str = "sshleifer/distilbart-cnn-12-6",
@@ -79,7 +79,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
     ):
         """
         Initialize the adaptive answer generator.
-        
+
         Args:
             model_name: Model identifier for the LLM
             api_token: API token for HuggingFace (if needed)
@@ -106,51 +106,51 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         self.enable_adaptive_prompts = enable_adaptive_prompts
         self.enable_chain_of_thought = enable_chain_of_thought
         self.confidence_threshold = confidence_threshold
-        
+
         # Initialize the appropriate generator
         self._initialize_generator()
-        
+
         # Initialize prompt engines if enabled and available
         self.prompt_templates = TechnicalPromptTemplates() if TechnicalPromptTemplates else None
         self.adaptive_engine = None
         self.cot_engine = None
-        
+
         if self.enable_adaptive_prompts and AdaptivePromptEngine:
             self.adaptive_engine = AdaptivePromptEngine()
         elif self.enable_adaptive_prompts:
             logger.warning("Adaptive prompts requested but AdaptivePromptEngine not available")
             self.enable_adaptive_prompts = False
-        
+
         if self.enable_chain_of_thought and ChainOfThoughtEngine:
             self.cot_engine = ChainOfThoughtEngine()
         elif self.enable_chain_of_thought:
             logger.warning("Chain of thought requested but ChainOfThoughtEngine not available")
             self.enable_chain_of_thought = False
-    
+
     def generate(self, query: str, context: List[Document]) -> Answer:
         """
         Generate an answer from query and context documents.
-        
+
         This method uses adaptive prompting and multiple generation strategies
         to produce high-quality answers for technical documentation queries.
-        
+
         Args:
             query: User query string
             context: List of relevant context documents
-            
+
         Returns:
             Answer object with generated text, sources, confidence, and metadata
-            
+
         Raises:
             ValueError: If query is empty or context is invalid
             RuntimeError: If answer generation fails
         """
         if not query.strip():
             raise ValueError("Query cannot be empty")
-        
+
         if not context:
             raise ValueError("Context documents cannot be empty")
-        
+
         try:
             # Generate answer using adaptive prompts if enabled
             if self.enable_adaptive_prompts and self.adaptive_engine:
@@ -160,29 +160,29 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             else:
                 # Use standard interface directly
                 response = self._generate_standard(query, context)
-            
+
             # If response is already an Answer object, enhance it with adapter metadata
             if isinstance(response, Answer):
                 if not response.metadata:
                     response.metadata = {}
                 response.metadata.update(self._get_adapter_metadata(query))
                 return response
-            
+
             # Legacy path: Extract answer information from dict response
             answer_text = self._extract_answer_text(response)
             confidence = self._extract_confidence(response)
             metadata = self._extract_metadata(response, query)
-            
+
             return Answer(
                 text=answer_text,
                 sources=context,
                 confidence=confidence,
                 metadata=metadata
             )
-            
+
         except Exception as e:
             raise RuntimeError(f"Answer generation failed: {str(e)}") from e
-    
+
     def _initialize_generator(self) -> None:
         """Initialize the appropriate LLM generator based on configuration."""
         if self.use_ollama and OllamaAnswerGenerator:
@@ -213,14 +213,14 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
                 temperature=self.temperature,
                 max_tokens=self.max_tokens
             )
-    
+
     def _documents_to_chunks(self, documents: List[Document]) -> List[Dict]:
         """
         Convert Document objects to chunk format expected by generators.
-        
+
         Args:
             documents: List of Document objects
-            
+
         Returns:
             List of chunk dictionaries
         """
@@ -240,29 +240,29 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             }
             chunks.append(chunk)
         return chunks
-    
+
     def _generate_with_adaptive_prompts(self, query: str, context: List[Document], chunks: List[Dict]) -> Answer:
         """
         Generate answer using adaptive prompts.
-        
+
         Args:
             query: User query
             context: Context documents
             chunks: Context chunks for analysis
-            
+
         Returns:
             Generated Answer object
         """
         # Analyze context quality for adaptive prompting
         context_quality = self._analyze_context_quality(chunks)
-        
+
         # Get adaptive prompt
         prompt_info = self.adaptive_engine.get_adaptive_prompt(
             query=query,
             context_chunks=chunks,
             quality_score=context_quality
         )
-        
+
         # Generate with custom prompt if available
         if hasattr(self.generator, 'generate_with_custom_prompt'):
             # Convert back to chunks for custom prompt generation
@@ -301,21 +301,21 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
         else:
             # Fallback to standard generation
             return self._generate_standard(query, context)
-    
+
     def _generate_standard(self, query: str, context_docs: List[Document]) -> Answer:
         """
         Generate answer using standard prompts.
-        
+
         Args:
             query: User query
             context_docs: Context documents
-            
+
         Returns:
             Generated Answer object
         """
         # Generate using the underlying generator with Documents (adapter pattern)
         response = self.generator.generate(query, context_docs)
-        
+
         # Convert response to Answer object if needed
         if isinstance(response, Answer):
             return response
@@ -339,28 +339,28 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
                 confidence=0.8,
                 metadata=self._get_adapter_metadata(query)
             )
-    
+
     def _analyze_context_quality(self, chunks: List[Dict]) -> float:
         """
         Analyze the quality of context chunks.
-        
+
         Args:
             chunks: Context chunks to analyze
-            
+
         Returns:
             Quality score between 0.0 and 1.0
         """
         if not chunks:
             return 0.0
-        
+
         # Simple quality analysis based on chunk metadata
         total_score = 0.0
         for chunk in chunks:
             score = chunk.get("quality_score", 0.8)  # Default score
             total_score += score
-        
+
         return total_score / len(chunks)
-    
+
     def _extract_answer_text(self, response: Dict) -> str:
         """Extract answer text from generation response."""
         if isinstance(response, GeneratedAnswer):
@@ -369,7 +369,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             return response.get("answer", response.get("generated_text", ""))
         else:
             return str(response)
-    
+
     def _extract_confidence(self, response: Dict) -> float:
         """Extract confidence score from generation response."""
         if isinstance(response, GeneratedAnswer):
@@ -378,7 +378,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             return response.get("confidence", 0.8)  # Default confidence
         else:
             return 0.8
-    
+
     def _extract_metadata(self, response: Dict, query: str) -> Dict[str, Any]:
         """Extract metadata from generation response."""
         metadata = {
@@ -390,21 +390,21 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             "chain_of_thought_enabled": self.enable_chain_of_thought,
             "query_length": len(query)
         }
-        
+
         # Add response-specific metadata
         if isinstance(response, dict):
             # Add generation metadata
             metadata.update({
-                k: v for k, v in response.items() 
+                k: v for k, v in response.items()
                 if k in ["generation_time", "token_count", "prompt_tokens", "completion_tokens"]
             })
-            
+
             # Add adaptive prompt info if available
             if "adaptive_prompt_info" in response:
                 metadata["adaptive_prompt_type"] = response["adaptive_prompt_info"].get("type", "unknown")
-        
+
         return metadata
-    
+
     def _get_provider_name(self) -> str:
         """Get the name of the current LLM provider."""
         if self.use_ollama:
@@ -413,7 +413,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             return "inference_providers"
         else:
             return "huggingface"
-    
+
     def _get_adapter_metadata(self, query: str) -> Dict[str, Any]:
         """Get metadata about the adapter configuration."""
         return {
@@ -424,11 +424,11 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
             "query_length": len(query),
             "adapter_pattern": "unified_interface"
         }
-    
+
     def get_generator_info(self) -> Dict[str, Any]:
         """
         Get information about the current generator configuration.
-        
+
         Returns:
             Dictionary with generator configuration and capabilities
         """
@@ -447,7 +447,7 @@ class AdaptiveAnswerGenerator(AnswerGenerator):
                 "technical_specialization": True
             }
         }
-    
+
     def supports_streaming(self) -> bool:
         """Check if the generator supports streaming responses."""
         return hasattr(self.generator, 'generate_answer_stream')

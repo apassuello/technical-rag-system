@@ -11,12 +11,11 @@ Extends OpenAIAdapter with sensible defaults for local inference:
 import logging
 import os
 import time
-from decimal import Decimal
 from typing import Any, Dict, Optional
 
 try:
-    from openai import OpenAI
     import tiktoken
+    from openai import OpenAI
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
@@ -30,6 +29,7 @@ except ImportError:
     REQUESTS_AVAILABLE = False
 
 from config.llm_providers import LOCAL
+
 from .openai_adapter import OpenAIAdapter
 
 logger = logging.getLogger(__name__)

@@ -16,8 +16,8 @@ import yaml
 
 from config.llm_providers import LOCAL
 from src.core.platform_orchestrator import PlatformOrchestrator
-
 from src.shared_utils.metrics import MetricsCollector, QueryMetrics
+
 from .optimization_engine import (
     OptimizationEngine,
     OptimizationResult,
@@ -680,7 +680,7 @@ class CalibrationManager:
                 <p>Total Optimizations: {data['calibration_summary']['total_optimizations']}</p>
                 <p>Parameters Optimized: {data['calibration_summary']['parameters_optimized']}</p>
             </div>
-            
+
             <div class="section">
                 <h2>Optimization Results</h2>
         """
@@ -703,7 +703,7 @@ class CalibrationManager:
 
         html += """
             </div>
-            
+
             <div class="section">
                 <h2>Current Parameter Configuration</h2>
                 <table class="param-table">
@@ -728,7 +728,7 @@ class CalibrationManager:
         html += """
                 </table>
             </div>
-            
+
             <div class="section">
                 <h2>Recommendations</h2>
         """
