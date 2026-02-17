@@ -61,8 +61,7 @@ retriever:
         score_weight: 0.8      # α - preserve semantic/BM25 scores (high importance)
         rank_weight: 0.15      # β - reduced from 0.2 to minimize rank component impact
         overlap_weight: 0.05   # γ - reduced from 0.1 to focus on score preservation
-        normalize_scores: true # Enable score normalization
-        k: 30                  # Fixed: reduced from 60 to increase score discriminative power
+        k: 10                  # Rank discrimination for 2 result lists
     
     # Backup: Graph Enhanced Fusion (comment out score_aware and uncomment this to revert)
     # fusion:

@@ -51,14 +51,14 @@ retriever:
         filter_stop_words: true
         stop_word_sets: ["english_common"]
     
-    # Basic fusion (no graph enhancement)
+    # Score-aware fusion preserves absolute quality signal from dense + sparse
     fusion:
-      type: "rrf"
+      type: "score_aware"
       config:
-        k: 30  # Fixed: reduced from 60 to increase score discriminative power
-        weights:
-          dense: 0.8  # Fixed: increased from 0.7 to favor working dense component
-          sparse: 0.2  # Fixed: reduced from 0.3 to reduce impact of biased BM25
+        score_weight: 0.8
+        rank_weight: 0.15
+        overlap_weight: 0.05
+        k: 10
     
     # Basic reranking (no neural models)
     reranker:

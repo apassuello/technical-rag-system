@@ -52,14 +52,14 @@ retriever:
         stop_word_sets: ["english_common"]
         preserve_technical_terms: true
     
-    # Basic RRF Fusion (default configuration)
+    # Score-aware fusion (preserves absolute cosine similarity signal)
     fusion:
-      type: "rrf"
+      type: "score_aware"
       config:
-        k: 60                    # RRF discriminative power
-        weights:
-          dense: 0.7             # Dense weight
-          sparse: 0.3            # Sparse weight
+        score_weight: 0.8
+        rank_weight: 0.15
+        overlap_weight: 0.05
+        k: 10
     
     # Basic Identity Reranker (no reranking)
     reranker:
