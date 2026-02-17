@@ -49,91 +49,21 @@ function renderPage(page) {
 // LLM settings panel
 // ---------------------------------------------------------------------------
 
-const CLOUD_PROVIDERS = new Set(['openai', 'anthropic', 'mistral', 'huggingface']);
-
-const MODEL_DEFAULTS = {
-  local: 'qwen2.5-1.5b-instruct',
-  ollama: 'mistral:latest',
-  openai: 'gpt-4o-mini',
-  anthropic: 'claude-3-haiku-20240307',
-  mistral: 'mistral-small-latest',
-  huggingface: 'mistralai/Mistral-7B-Instruct-v0.2',
-  mock: 'mock-model',
-};
-
 function initLLMSettings() {
-  const providerEl = document.getElementById('llm-provider');
-  const modelEl = document.getElementById('llm-model');
-  const keyEl = document.getElementById('llm-key');
-  const applyBtn = document.getElementById('llm-apply');
-  const statusEl = document.getElementById('llm-status');
+  const labelEl = document.getElementById('llm-label');
+  const dotEl = document.getElementById('llm-dot');
+  if (!labelEl) return;
 
-  if (!providerEl) return;
-
-  // Toggle API key visibility based on provider
-  function syncKeyVisibility() {
-    const isCloud = CLOUD_PROVIDERS.has(providerEl.value);
-    keyEl.style.display = isCloud ? '' : 'none';
-  }
-
-  providerEl.addEventListener('change', () => {
-    modelEl.value = MODEL_DEFAULTS[providerEl.value] || '';
-    syncKeyVisibility();
-  });
-
-  applyBtn.addEventListener('click', async () => {
-    const body = { provider: providerEl.value, model: modelEl.value };
-    if (keyEl.value) body.api_key = keyEl.value;
-
-    statusEl.textContent = '...';
-    statusEl.className = 'llm-status';
-
-    try {
-      const res = await fetch('/api/v1/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
-        statusEl.textContent = 'OK';
-        statusEl.className = 'llm-status llm-status--ok';
-      } else {
-        const data = await res.json().catch(() => ({}));
-        statusEl.textContent = 'ERR';
-        statusEl.className = 'llm-status llm-status--err';
-        console.error('Settings error:', data.detail || res.statusText);
-      }
-    } catch (e) {
-      statusEl.textContent = 'ERR';
-      statusEl.className = 'llm-status llm-status--err';
-      console.error('Settings fetch failed:', e);
-    }
-  });
-
-  // On boot: fetch current status and sync the UI
-  fetchAndSyncStatus(providerEl, modelEl, statusEl, syncKeyVisibility);
-}
-
-async function fetchAndSyncStatus(providerEl, modelEl, statusEl, syncKeyVisibility) {
-  try {
-    const res = await fetch('/api/v1/status');
-    if (!res.ok) return;
-    const data = await res.json();
-
+  fetch('/api/v1/status').then(r => r.json()).then(data => {
     if (data.llm) {
-      providerEl.value = data.llm.provider || 'mock';
-      modelEl.value = data.llm.model || '';
-      syncKeyVisibility();
+      labelEl.textContent = data.llm.provider + '/' + data.llm.model;
     }
-
     AppState.set('connectionStatus', 'connected');
-    statusEl.textContent = 'OK';
-    statusEl.className = 'llm-status llm-status--ok';
-  } catch {
+    dotEl.classList.add('llm-compact__dot--ok');
+  }).catch(() => {
     AppState.set('connectionStatus', 'disconnected');
-    statusEl.textContent = 'OFF';
-    statusEl.className = 'llm-status llm-status--err';
-  }
+    dotEl.classList.add('llm-compact__dot--err');
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -161,8 +91,58 @@ function initNavigation() {
 document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
   initLLMSettings();
+  initOfflineDetection();
 
   // Render the initial page
   const initialPage = AppState.get('activePage');
   renderPage(initialPage);
 });
+
+// ---------------------------------------------------------------------------
+// Offline detection and reconnection
+// ---------------------------------------------------------------------------
+
+async function initOfflineDetection() {
+  const connected = await checkConnection();
+  AppState.set('offline', !connected);
+
+  if (!connected) {
+    showOfflineNotice();
+    startReconnectionPolling();
+  }
+}
+
+let _reconnectTimer = null;
+
+function startReconnectionPolling() {
+  if (_reconnectTimer) return;
+  _reconnectTimer = setInterval(async () => {
+    const connected = await checkConnection();
+    if (connected) {
+      clearInterval(_reconnectTimer);
+      _reconnectTimer = null;
+      AppState.set('offline', false);
+      hideOfflineNotice();
+      // Re-render current page to pick up live data
+      const page = AppState.get('activePage');
+      renderedPages.delete(page);
+      renderPage(page);
+    }
+  }, 30000);
+}
+
+function showOfflineNotice() {
+  let notice = document.getElementById('offline-notice');
+  if (notice) return;
+  notice = document.createElement('div');
+  notice.id = 'offline-notice';
+  notice.className = 'offline-notice';
+  notice.textContent = 'Offline — showing cached data';
+  const main = document.querySelector('main');
+  if (main) main.insertBefore(notice, main.firstChild);
+}
+
+function hideOfflineNotice() {
+  const notice = document.getElementById('offline-notice');
+  if (notice) notice.remove();
+}

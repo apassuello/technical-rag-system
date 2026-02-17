@@ -149,6 +149,16 @@
 .config-result-card__gauge { margin-bottom: var(--sp-3); }
 
 
+/* == HEADER LLM COMPACT ==================================================== */
+
+.llm-compact { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); }
+.llm-compact__label { font-family: var(--font-mono); color: var(--text-secondary); }
+.llm-compact__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.llm-compact__dot--ok { background: var(--accent); }
+.llm-compact__dot--err { background: var(--error, #ef4444); }
+.llm-compact__link { font-size: var(--fs-xs); color: var(--accent); text-decoration: none; }
+.llm-compact__link:hover { text-decoration: underline; }
+
 /* == SETUP PAGE =========================================================== */
 
 .setup-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-6); margin-top: var(--sp-8); }

@@ -28,20 +28,10 @@
           <li><button class="nav-tab" data-page="setup">Setup</button></li>
         </ul>
       </nav>
-      <div class="llm-settings" id="llm-settings">
-        <select id="llm-provider" class="llm-select">
-          <option value="local">llama-server</option>
-          <option value="ollama">Ollama</option>
-          <option value="openai">OpenAI</option>
-          <option value="anthropic">Anthropic</option>
-          <option value="mistral">Mistral</option>
-          <option value="huggingface">HuggingFace</option>
-          <option value="mock">Mock</option>
-        </select>
-        <input type="text" id="llm-model" class="llm-input" placeholder="Model" />
-        <input type="password" id="llm-key" class="llm-input llm-key-input" placeholder="API key" />
-        <button id="llm-apply" class="llm-apply-btn">Apply</button>
-        <span id="llm-status" class="llm-status"></span>
+      <div class="llm-compact" id="llm-compact">
+        <span id="llm-label" class="llm-compact__label">mock/mock-model</span>
+        <span id="llm-dot" class="llm-compact__dot"></span>
+        <a href="#setup" class="llm-compact__link">Configure</a>
       </div>
     </div>
   </header>

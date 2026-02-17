@@ -350,8 +350,24 @@ function buildQueryInput(panel) {
     submitQuery(text, strategy);
   });
 
+  // Config profile selector
+  const configSelect = document.createElement('select');
+  configSelect.className = 'config-select query-config-select';
+  configSelect.innerHTML = '<option value="">Default Config</option>';
+
+  fetchConfigs().then(data => {
+    if (!data?.configs) return;
+    for (const cfg of data.configs) {
+      const opt = document.createElement('option');
+      opt.value = cfg.name;
+      opt.textContent = cfg.name.replace('.yaml', '');
+      configSelect.appendChild(opt);
+    }
+  });
+
   panel.appendChild(textarea);
   panel.appendChild(selector);
+  panel.appendChild(configSelect);
   panel.appendChild(submitBtn);
 }
 

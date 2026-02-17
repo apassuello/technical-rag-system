@@ -15,6 +15,7 @@ const AppState = (() => {
     selectedTrainingQuery: null,
     connectionStatus: 'disconnected',
     apiError: null,
+    offline: false,
   };
 
   /** @type {Map<string, Set<Function>>} */
