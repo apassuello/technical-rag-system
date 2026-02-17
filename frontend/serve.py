@@ -10,6 +10,7 @@ LLM provider is hot-swappable at runtime via POST /api/v1/settings.
     open http://localhost:8000
 """
 
+import argparse
 import asyncio
 import json as _json
 import logging
@@ -24,7 +25,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -180,6 +181,7 @@ runner: Optional[DemoRunner] = None
 query_processor: Any = None
 active_llm: dict = {"provider": "mock", "model": "mock-model", "base_url": ""}
 weaviate_available: bool = False
+_fresh_mode: bool = False  # --fresh: skip corpus indexing on startup
 
 
 @asynccontextmanager
@@ -211,15 +213,18 @@ async def lifespan(app: FastAPI):
             "Status: %s (%.1fs)", init_data["health_status"], init_data["init_time"]
         )
 
-        logger.info("Processing corpus...")
-        corpus_data = runner.process_corpus()
-        cached = " (cached)" if corpus_data.get("from_cache") else ""
-        logger.info(
-            "Corpus: %d chunks from %d files%s",
-            corpus_data["total_chunks"],
-            corpus_data["total_docs"],
-            cached,
-        )
+        if _fresh_mode:
+            logger.info("Fresh mode — skipping corpus indexing (use Setup page to index)")
+        else:
+            logger.info("Processing corpus...")
+            corpus_data = runner.process_corpus()
+            cached = " (cached)" if corpus_data.get("from_cache") else ""
+            logger.info(
+                "Corpus: %d chunks from %d files%s",
+                corpus_data["total_chunks"],
+                corpus_data["total_docs"],
+                cached,
+            )
 
         query_processor = runner._orch.get_component("query_processor")
 
@@ -486,6 +491,13 @@ async def handle_settings(req: SettingsRequest):
         raise HTTPException(400, detail=f"Unknown provider: {provider}")
 
     defaults = PROVIDER_DEFAULTS[provider]
+
+    # For local providers, re-detect to pick up correct model/URL
+    if provider in ("ollama", "local") and not req.model and not req.base_url:
+        detected = detect_llm_server()
+        if detected["provider"] == provider:
+            defaults = detected
+
     model = req.model or defaults.get("model", "")
     base_url = req.base_url or defaults.get("base_url", "")
 
@@ -631,6 +643,25 @@ async def handle_corpus():
     }
 
 
+@app.post("/api/v1/corpus/index")
+async def handle_corpus_index():
+    """Process and index the corpus. Called from Setup page or after upload."""
+    if not runner or not runner._orch:
+        raise HTTPException(503, detail="System not initialized")
+
+    try:
+        corpus_data = runner.process_corpus()
+        return {
+            "status": "ok",
+            "totalDocs": corpus_data.get("total_docs", 0),
+            "totalChunks": corpus_data.get("total_chunks", 0),
+            "fromCache": corpus_data.get("from_cache", False),
+        }
+    except Exception as e:
+        logger.error("Corpus indexing failed: %s", e, exc_info=True)
+        raise HTTPException(500, detail=f"Indexing failed: {e}")
+
+
 @app.get("/api/v1/components")
 async def handle_components():
     """Return active and available components."""
@@ -723,6 +754,40 @@ async def handle_config_activate(req: ConfigActivateRequest):
     except Exception as e:
         logger.error("Config activation failed: %s", e, exc_info=True)
         raise HTTPException(500, detail=f"Activation failed: {e}")
+
+
+@app.post("/api/v1/config/import")
+async def handle_config_import(request: Request):
+    """Import a YAML config, write it to a temp file, and activate it."""
+    global runner, query_processor
+
+    body = await request.body()
+    try:
+        config_data = yaml.safe_load(body.decode())
+    except Exception as e:
+        raise HTTPException(400, detail=f"Invalid YAML: {e}")
+
+    if not isinstance(config_data, dict):
+        raise HTTPException(400, detail="Config must be a YAML mapping")
+
+    # Merge with current LLM settings
+    if "answer_generator" in config_data:
+        llm_section = (
+            config_data.get("answer_generator", {})
+            .get("config", {})
+            .get("llm_client", {})
+        )
+        if llm_section.get("type") and llm_section["type"] != "mock":
+            provider = llm_section["type"]
+            model = llm_section.get("config", {}).get("model_name", "")
+            base_url = llm_section.get("config", {}).get("base_url", "")
+            try:
+                _swap_llm(provider, model, "", base_url)
+                active_llm.update(provider=provider, model=model, base_url=base_url)
+            except Exception as e:
+                logger.warning("LLM swap from import failed: %s", e)
+
+    return {"status": "ok"}
 
 
 @app.get("/api/v1/stats")
@@ -897,6 +962,16 @@ app.mount("/", StaticFiles(directory=str(_frontend_dir), html=True), name="front
 if __name__ == "__main__":
     import uvicorn
 
+    parser = argparse.ArgumentParser(description="RAG Demo Frontend Server")
+    parser.add_argument(
+        "--fresh", action="store_true",
+        help="Start with empty index (skip corpus processing). Use Setup page to index.",
+    )
+    parser.add_argument("--port", type=int, default=8000)
+    args = parser.parse_args()
+
+    _fresh_mode = args.fresh
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -912,4 +987,4 @@ if __name__ == "__main__":
     ):
         logging.getLogger(lib).setLevel(logging.WARNING)
 
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")
+    uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="warning")

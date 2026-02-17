@@ -49,22 +49,31 @@ function renderPage(page) {
 // LLM settings panel
 // ---------------------------------------------------------------------------
 
-function initLLMSettings() {
+function refreshLLMHeader() {
   const labelEl = document.getElementById('llm-label');
   const dotEl = document.getElementById('llm-dot');
   if (!labelEl) return;
 
   fetch('/api/v1/status').then(r => r.json()).then(data => {
     if (data.llm) {
-      labelEl.textContent = data.llm.provider + '/' + data.llm.model;
+      const label = data.llm.provider + '/' + data.llm.model;
+      if (label !== 'mock/mock-model') {
+        labelEl.textContent = label;
+        dotEl.className = 'llm-compact__dot llm-compact__dot--ok';
+        AppState.set('connectionStatus', 'connected');
+        return;
+      }
     }
-    AppState.set('connectionStatus', 'connected');
-    dotEl.classList.add('llm-compact__dot--ok');
+    // Backend still initializing — retry in 3s
+    setTimeout(refreshLLMHeader, 3000);
   }).catch(() => {
+    dotEl.className = 'llm-compact__dot llm-compact__dot--err';
     AppState.set('connectionStatus', 'disconnected');
-    dotEl.classList.add('llm-compact__dot--err');
   });
 }
+
+// Expose for Setup page to call after LLM settings change
+window._refreshLLMHeader = refreshLLMHeader;
 
 // ---------------------------------------------------------------------------
 // Navigation wiring
@@ -90,7 +99,7 @@ function initNavigation() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
-  initLLMSettings();
+  refreshLLMHeader();
   initOfflineDetection();
 
   // Render the initial page

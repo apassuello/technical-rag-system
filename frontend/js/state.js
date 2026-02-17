@@ -16,6 +16,7 @@ const AppState = (() => {
     connectionStatus: 'disconnected',
     apiError: null,
     offline: false,
+    vectorStore: localStorage.getItem('vectorStore') || 'faiss',
   };
 
   /** @type {Map<string, Set<Function>>} */

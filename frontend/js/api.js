@@ -114,6 +114,10 @@ async function uploadDocument(file) {
   }
 }
 
+async function indexCorpus() {
+  return dispatch('corpus/index', {});
+}
+
 async function fetchWithFallback(endpoint, fallbackData) {
   const result = await dispatch(endpoint, null, 'GET');
   return result ?? fallbackData;
@@ -132,5 +136,6 @@ export {
   activateConfig,
   startService,
   uploadDocument,
+  indexCorpus,
   fetchWithFallback,
 };

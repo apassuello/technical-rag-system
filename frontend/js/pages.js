@@ -4,7 +4,7 @@
 
 import { AppState, navigateTo } from './state.js';
 import { MOCK_DATA } from './data.js';
-import { submitQuery, compareConfigs, fetchStats, fetchServices, fetchConfigs, fetchComponents, fetchTrainingMetrics, fetchWithFallback, activateConfig, startService, uploadDocument } from './api.js';
+import { submitQuery, compareConfigs, fetchStats, fetchServices, fetchComponents, fetchTrainingMetrics, fetchWithFallback, startService, uploadDocument, indexCorpus } from './api.js';
 import {
   renderConfidenceGauge,
   renderBadge,
@@ -13,7 +13,6 @@ import {
   renderSourceCard,
   renderReasoningStep,
   renderTreeNode,
-  renderConfigBlock,
   renderPipelineTiming,
   renderCostBreakdown,
 } from './components.js';
@@ -345,29 +344,14 @@ function buildQueryInput(panel) {
   submitBtn.addEventListener('click', () => {
     const text = textarea.value.trim();
     if (!text) return;
+    AppState.set('currentQuery', text);
     const selected = panel.querySelector('input[name="strategy"]:checked');
     const strategy = selected ? selected.value : 'balanced';
     submitQuery(text, strategy);
   });
 
-  // Config profile selector
-  const configSelect = document.createElement('select');
-  configSelect.className = 'config-select query-config-select';
-  configSelect.innerHTML = '<option value="">Default Config</option>';
-
-  fetchConfigs().then(data => {
-    if (!data?.configs) return;
-    for (const cfg of data.configs) {
-      const opt = document.createElement('option');
-      opt.value = cfg.name;
-      opt.textContent = cfg.name.replace('.yaml', '');
-      configSelect.appendChild(opt);
-    }
-  });
-
   panel.appendChild(textarea);
   panel.appendChild(selector);
-  panel.appendChild(configSelect);
   panel.appendChild(submitBtn);
 }
 
@@ -802,31 +786,33 @@ function showDocumentMetadata(doc) {
 // ARCHITECTURE PAGE
 // ===========================================================================
 
-const SERVICES = [
-  { id: 'client', label: 'Client', desc: 'Web frontend or API consumer', components: ['Browser', 'curl', 'Python SDK'] },
-  { id: 'gateway', label: 'API Gateway', port: 8080, desc: 'Request routing, authentication, rate limiting', components: ['FastAPI', 'Uvicorn', 'CORS middleware'] },
-  { id: 'analyzer', label: 'Query Analyzer', port: 8082, desc: 'ML-based query complexity analysis with 5-view scoring', components: ['QueryAnalyzer', 'MLComplexityClassifier', 'ViewScorer'] },
-  { id: 'retriever', label: 'Retriever', port: 8083, desc: 'Hybrid document retrieval with fusion and reranking', components: ['FAISSRetriever', 'BM25Retriever', 'FusionStrategy', 'NeuralReranker'] },
-  { id: 'generator', label: 'Generator', port: 8081, desc: 'Answer generation with multi-model routing', components: ['LLMAdapter', 'PromptManager', 'ResponseFormatter'] },
-  { id: 'faiss', label: 'FAISS Index', desc: 'Dense vector similarity search', components: ['sentence-transformers', 'FAISS flat/IVF'] },
-  { id: 'bm25', label: 'BM25 Index', desc: 'Sparse keyword-based retrieval', components: ['rank-bm25', 'Tokenizer'] },
-  { id: 'analytics', label: 'Analytics', port: 8085, desc: 'Query logging, performance tracking, usage metrics', components: ['Prometheus', 'MLflow', 'QueryLogger'] },
-  { id: 'cache', label: 'Cache', port: 8084, desc: 'Response caching for repeated queries', components: ['Redis', 'LRU fallback'] },
-  { id: 'embedder', label: 'Embedder', desc: 'Text to vector embedding pipeline', components: ['SentenceTransformerEmbedder', 'HuggingFaceEmbedder'] },
-  { id: 'fusion', label: 'Fusion', desc: 'Score merging from multiple retrievers', components: ['WeightedAverage', 'ReciprocalRank', 'Ensemble', 'ScoreAware'] },
-  { id: 'reranker', label: 'Reranker', desc: 'Cross-encoder neural reranking', components: ['CrossEncoderReranker', 'NeuralReranker'] },
+const PIPELINE_STAGES = [
+  // Document processing pipeline
+  { id: 'pdf', label: 'PDF Corpus', desc: 'Source documents (RISC-V specs, manuals)', type: 'data' },
+  { id: 'processor', label: 'Document Processor', desc: 'PDF extraction and chunking', type: 'component', slot: 'processor' },
+  { id: 'embedder', label: 'Embedder', desc: 'Text to vector encoding (sentence-transformers)', type: 'component', slot: 'embedder' },
+  { id: 'index', label: 'Vector Index', desc: 'FAISS similarity search + BM25 sparse retrieval', type: 'storage' },
+
+  // Query pipeline
+  { id: 'query_input', label: 'Query', desc: 'User question input', type: 'data' },
+  { id: 'query_processor', label: 'Query Processor', desc: 'ML-based complexity analysis, 5-view scoring', type: 'component', slot: 'query_processor' },
+  { id: 'retriever', label: 'Retriever', desc: 'Hybrid search: dense + sparse with fusion and reranking', type: 'component', slot: 'retriever' },
+  { id: 'generator', label: 'Generator', desc: 'LLM-powered answer generation with source attribution', type: 'component', slot: 'answer_generator' },
+  { id: 'answer', label: 'Answer', desc: 'Generated response with sources and confidence', type: 'data' },
 ];
 
-const DIAGRAM_ROWS = [
-  { services: ['client'], spans: [4] },
-  { services: ['gateway'], spans: [4] },
-  { services: ['analyzer', 'retriever', 'generator'], spans: [1, 1, 1] },
-  { services: ['faiss', 'bm25', 'analytics', 'cache'], spans: [1, 1, 1, 1] },
-  { services: ['embedder', 'fusion', 'reranker'], spans: [1, 1, 1] },
+const PIPELINE_ROWS = [
+  { label: 'Document Pipeline', stages: ['pdf', 'processor', 'embedder', 'index'], flow: 'right' },
+  { label: 'Query Pipeline', stages: ['query_input', 'query_processor', 'retriever', 'generator', 'answer'], flow: 'right' },
 ];
 
-function findService(id) {
-  return SERVICES.find(s => s.id === id) || null;
+// Cross-pipeline connections (the indexed data feeds retrieval)
+const PIPELINE_LINKS = [
+  { from: 'index', to: 'retriever' },
+];
+
+function findStage(id) {
+  return PIPELINE_STAGES.find(s => s.id === id) || null;
 }
 
 export async function renderArchitecturePage() {
@@ -834,20 +820,16 @@ export async function renderArchitecturePage() {
   if (!container) return;
   container.innerHTML = '<div class="loading">Loading architecture data...</div>';
 
-  const [componentsData, configsData] = await Promise.all([
-    fetchWithFallback('components', null),
-    fetchWithFallback('configs', null),
-  ]);
+  const componentsData = await fetchWithFallback('components', null);
 
   container.innerHTML = '';
-  container.appendChild(buildDiagramSection(componentsData));
+  container.appendChild(buildPipelineDiagramSection(componentsData));
   container.appendChild(buildRegistrySection(componentsData));
-  container.appendChild(buildConfigViewerSection(configsData));
 }
 
-// -- System Diagram ---------------------------------------------------------
+// -- Pipeline Diagram -------------------------------------------------------
 
-function buildDiagramSection(componentsData) {
+function buildPipelineDiagramSection(componentsData) {
   const section = document.createElement('div');
   section.className = 'section';
 
@@ -857,13 +839,18 @@ function buildDiagramSection(componentsData) {
 
   const subtitle = document.createElement('p');
   subtitle.className = 'page-subtitle';
-  subtitle.textContent = 'Microservices deployment with FastAPI';
+  subtitle.textContent = 'Component pipeline architecture';
+
+  const orchestratorNote = document.createElement('p');
+  orchestratorNote.className = 'arch-orchestrator-note';
+  orchestratorNote.textContent = 'All components run inside PlatformOrchestrator — no separate microservices.';
 
   section.appendChild(title);
   section.appendChild(subtitle);
+  section.appendChild(orchestratorNote);
 
   const diagram = document.createElement('div');
-  diagram.className = 'arch-diagram';
+  diagram.className = 'arch-diagram arch-diagram--pipeline';
 
   const detail = document.createElement('div');
   detail.className = 'arch-detail';
@@ -872,43 +859,60 @@ function buildDiagramSection(componentsData) {
 
   let activeBox = null;
 
-  for (let rowIdx = 0; rowIdx < DIAGRAM_ROWS.length; rowIdx++) {
-    const rowDef = DIAGRAM_ROWS[rowIdx];
-
-    if (rowIdx > 0) {
-      const connectorRow = document.createElement('div');
-      connectorRow.className = 'arch-connector-row';
-      const connector = document.createElement('div');
-      connector.className = 'arch-connector';
-      connectorRow.appendChild(connector);
-      diagram.appendChild(connectorRow);
+  // Build health lookup from live component data
+  const healthMap = {};
+  if (componentsData && componentsData.active) {
+    for (const [slot, info] of Object.entries(componentsData.active)) {
+      healthMap[slot] = info.healthy;
     }
+  }
 
-    for (let i = 0; i < rowDef.services.length; i++) {
-      const serviceId = rowDef.services[i];
-      const span = rowDef.spans[i];
-      const svc = findService(serviceId);
-      if (!svc) continue;
+  for (let rowIdx = 0; rowIdx < PIPELINE_ROWS.length; rowIdx++) {
+    const rowDef = PIPELINE_ROWS[rowIdx];
+
+    const pipelineRow = document.createElement('div');
+    pipelineRow.className = 'pipeline-row';
+
+    const rowLabel = document.createElement('div');
+    rowLabel.className = 'pipeline-label';
+    rowLabel.textContent = rowDef.label;
+    pipelineRow.appendChild(rowLabel);
+
+    const stagesContainer = document.createElement('div');
+    stagesContainer.className = 'pipeline-stages';
+
+    for (let i = 0; i < rowDef.stages.length; i++) {
+      const stageId = rowDef.stages[i];
+      const stage = findStage(stageId);
+      if (!stage) continue;
+
+      // Arrow before each stage (except the first)
+      if (i > 0) {
+        const arrow = document.createElement('div');
+        arrow.className = 'pipeline-arrow';
+        arrow.innerHTML = '<svg width="24" height="16" viewBox="0 0 24 16"><path d="M0 8h20M16 2l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+        stagesContainer.appendChild(arrow);
+      }
 
       const box = document.createElement('div');
-      box.className = 'arch-box';
-      box.dataset.serviceId = svc.id;
-
-      if (span > 1) {
-        const startCol = Math.floor((4 - span) / 2) + 1;
-        box.style.gridColumn = startCol + ' / span ' + span;
-      }
+      box.className = 'arch-box arch-box--' + stage.type;
+      box.dataset.stageId = stage.id;
 
       const label = document.createElement('span');
       label.className = 'arch-box__label';
-      label.textContent = svc.label;
+      label.textContent = stage.label;
       box.appendChild(label);
 
-      if (svc.port) {
-        const port = document.createElement('span');
-        port.className = 'arch-box__port';
-        port.textContent = ':' + svc.port;
-        box.appendChild(port);
+      const typeTag = document.createElement('span');
+      typeTag.className = 'arch-box__type-tag';
+      typeTag.textContent = stage.type;
+      box.appendChild(typeTag);
+
+      // Health dot overlay for component stages
+      if (stage.slot && stage.slot in healthMap) {
+        const dot = document.createElement('span');
+        dot.className = 'arch-health-dot arch-health-dot--' + (healthMap[stage.slot] ? 'ok' : 'err');
+        box.appendChild(dot);
       }
 
       box.addEventListener('click', () => {
@@ -920,27 +924,46 @@ function buildDiagramSection(componentsData) {
         }
         box.classList.add('active');
         activeBox = box;
-        showServiceDetail(detail, svc);
+        showStageDetail(detail, stage, healthMap);
       });
 
-      diagram.appendChild(box);
+      stagesContainer.appendChild(box);
     }
-  }
 
-  // Overlay health badges from live data
-  if (componentsData && componentsData.active) {
-    const activeNames = new Set(Object.keys(componentsData.active));
-    diagram.querySelectorAll('.arch-box').forEach(box => {
-      const svcId = box.dataset.serviceId;
-      // Map diagram service IDs to component slot names
-      const slotMap = { analyzer: 'query_processor', retriever: 'retriever', generator: 'answer_generator', embedder: 'embedder' };
-      const slot = slotMap[svcId];
-      if (slot && activeNames.has(slot)) {
-        const dot = document.createElement('span');
-        dot.className = 'arch-health-dot arch-health-dot--' + (componentsData.active[slot].healthy ? 'ok' : 'err');
-        box.appendChild(dot);
+    pipelineRow.appendChild(stagesContainer);
+    diagram.appendChild(pipelineRow);
+
+    // Cross-pipeline link indicator between rows
+    if (rowIdx < PIPELINE_ROWS.length - 1) {
+      const linkRow = document.createElement('div');
+      linkRow.className = 'pipeline-cross-link';
+
+      // Find links between this row and the next
+      const currentStageIds = new Set(rowDef.stages);
+      const nextStageIds = new Set(PIPELINE_ROWS[rowIdx + 1].stages);
+      const relevantLinks = PIPELINE_LINKS.filter(
+        link => currentStageIds.has(link.from) && nextStageIds.has(link.to)
+      );
+
+      if (relevantLinks.length > 0) {
+        const linkLabel = document.createElement('span');
+        linkLabel.className = 'pipeline-cross-link__label';
+        linkLabel.textContent = relevantLinks.map(l => {
+          const fromStage = findStage(l.from);
+          const toStage = findStage(l.to);
+          return (fromStage ? fromStage.label : l.from) + ' \u2192 ' + (toStage ? toStage.label : l.to);
+        }).join(', ');
+
+        const linkArrow = document.createElement('div');
+        linkArrow.className = 'pipeline-cross-link__arrow';
+        linkArrow.innerHTML = '<svg width="16" height="24" viewBox="0 0 16 24"><path d="M8 0v20M2 16l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+
+        linkRow.appendChild(linkArrow);
+        linkRow.appendChild(linkLabel);
       }
-    });
+
+      diagram.appendChild(linkRow);
+    }
   }
 
   section.appendChild(diagram);
@@ -948,27 +971,34 @@ function buildDiagramSection(componentsData) {
   return section;
 }
 
-function showServiceDetail(panel, svc) {
+function showStageDetail(panel, stage, healthMap) {
   panel.innerHTML = '';
   panel.style.display = 'block';
 
   const titleRow = document.createElement('div');
   titleRow.className = 'arch-detail__title';
-  titleRow.textContent = svc.label + (svc.port ? ' :' + svc.port : '');
+  titleRow.textContent = stage.label;
+
+  if (stage.slot) {
+    titleRow.appendChild(document.createTextNode(' '));
+    titleRow.appendChild(renderBadge('slot: ' + stage.slot, 'muted'));
+  }
 
   const desc = document.createElement('div');
   desc.className = 'arch-detail__desc';
-  desc.textContent = svc.desc;
+  desc.textContent = stage.desc;
 
-  const compRow = document.createElement('div');
-  compRow.className = 'arch-detail__components';
-  for (const comp of svc.components) {
-    compRow.appendChild(renderBadge(comp, 'muted'));
+  const metaRow = document.createElement('div');
+  metaRow.className = 'arch-detail__components';
+  metaRow.appendChild(renderBadge(stage.type, stage.type === 'component' ? 'accent' : stage.type === 'storage' ? 'info' : 'muted'));
+
+  if (stage.slot && stage.slot in healthMap) {
+    metaRow.appendChild(renderBadge(healthMap[stage.slot] ? 'healthy' : 'unhealthy', healthMap[stage.slot] ? 'accent' : 'error'));
   }
 
   panel.appendChild(titleRow);
   panel.appendChild(desc);
-  panel.appendChild(compRow);
+  panel.appendChild(metaRow);
 }
 
 // -- Component Registry -----------------------------------------------------
@@ -1057,73 +1087,6 @@ function buildRegistryTreeNode(categoryName, items) {
   };
 }
 
-// -- Config Viewer ----------------------------------------------------------
-
-function buildConfigViewerSection(configsData) {
-  const section = document.createElement('div');
-  section.className = 'section';
-
-  const title = document.createElement('h3');
-  title.className = 'section-title';
-  title.textContent = 'Configuration Files';
-  section.appendChild(title);
-
-  const viewer = document.createElement('div');
-  viewer.className = 'config-viewer';
-
-  const select = document.createElement('select');
-  select.className = 'config-select';
-
-  // Use API data if available, fall back to mock
-  const configs = (configsData && configsData.configs) ? configsData.configs : MOCK_DATA.configs;
-
-  for (let i = 0; i < configs.length; i++) {
-    const option = document.createElement('option');
-    option.value = String(i);
-    option.textContent = configs[i].name;
-    select.appendChild(option);
-  }
-
-  const display = document.createElement('div');
-  display.id = 'config-display';
-
-  select.addEventListener('change', () => {
-    renderConfigDisplay(display, configs[parseInt(select.value, 10)]);
-  });
-
-  viewer.appendChild(select);
-  viewer.appendChild(display);
-  section.appendChild(viewer);
-
-  if (configs.length > 0) {
-    renderConfigDisplay(display, configs[0]);
-  }
-
-  return section;
-}
-
-function renderConfigDisplay(container, config) {
-  container.innerHTML = '';
-
-  const nameEl = document.createElement('h4');
-  nameEl.className = 'config-display__name';
-  nameEl.textContent = config.name;
-  container.appendChild(nameEl);
-
-  if (config.description) {
-    const descEl = document.createElement('p');
-    descEl.className = 'config-display__desc';
-    descEl.textContent = config.description;
-    container.appendChild(descEl);
-  }
-
-  const features = {};
-  config.features.forEach((feature, idx) => {
-    features['feature_' + (idx + 1)] = feature;
-  });
-
-  renderConfigBlock(container, config.name, features);
-}
 
 
 // ===========================================================================
@@ -1144,12 +1107,146 @@ export async function renderPerformancePage() {
   const totalQueries = data?.totalTrainingQueries ?? 679;
 
   container.innerHTML = '';
-  container.appendChild(buildModelAccuracyHero(metrics));
-  container.appendChild(buildFeatureImportanceSection(metrics));
-  container.appendChild(buildFusionComparisonSection(metrics));
-  container.appendChild(buildTrainingDatasetExplorer(queries, totalQueries));
-  container.appendChild(buildCostStrategySection());
+
+  // Runtime metrics first — what the user cares about during a session
+  container.appendChild(buildRuntimeMetricsSection());
   container.appendChild(buildConfigComparisonTool());
+
+  // Training metrics in a collapsible section
+  container.appendChild(buildTrainingSection(metrics, queries, totalQueries));
+}
+
+// -- Runtime Metrics --------------------------------------------------------
+
+function buildRuntimeMetricsSection() {
+  const section = document.createElement('div');
+  section.className = 'section';
+
+  const title = document.createElement('h1');
+  title.className = 'page-title';
+  title.textContent = 'Performance Dashboard';
+  section.appendChild(title);
+
+  const subtitle = document.createElement('p');
+  subtitle.className = 'page-subtitle';
+  subtitle.textContent = 'Live query and indexing metrics from this session';
+  section.appendChild(subtitle);
+
+  const grid = document.createElement('div');
+  grid.className = 'grid metrics-grid';
+
+  // Session stats from query history
+  const history = _queryHistory;
+  const avgTime = history.length > 0
+    ? Math.round(history.reduce((s, h) => s + h.total, 0) / history.length)
+    : 0;
+  const avgRetrieval = history.length > 0
+    ? Math.round(history.reduce((s, h) => s + h.retrieval, 0) / history.length)
+    : 0;
+  const avgGeneration = history.length > 0
+    ? Math.round(history.reduce((s, h) => s + h.generation, 0) / history.length)
+    : 0;
+
+  const cards = [
+    ['Queries This Session', String(history.length), ''],
+    ['Avg Response Time', String(avgTime), 'ms'],
+    ['Avg Retrieval', String(avgRetrieval), 'ms'],
+    ['Avg Generation', String(avgGeneration), 'ms'],
+  ];
+
+  for (const [label, value, unit] of cards) {
+    const col = document.createElement('div');
+    col.className = 'col-4';
+    renderMetricCard(col, label, value, unit);
+    grid.appendChild(col);
+  }
+
+  section.appendChild(grid);
+
+  // Query history table
+  if (history.length > 0) {
+    const histTitle = document.createElement('h3');
+    histTitle.className = 'section-title';
+    histTitle.textContent = 'Query History';
+    section.appendChild(histTitle);
+
+    const tableContainer = document.createElement('div');
+    const headers = ['Query', 'Complexity', 'Retrieval', 'Generation', 'Total'];
+    const rows = history.map(h => [
+      h.query.length > 50 ? h.query.substring(0, 50) + '...' : h.query,
+      renderBadge(h.complexity, { simple: 'accent', medium: 'warning', complex: 'error' }[h.complexity] || 'muted'),
+      h.retrieval + 'ms',
+      h.generation + 'ms',
+      h.total + 'ms',
+    ]);
+    renderDataTable(tableContainer, headers, rows);
+    section.appendChild(tableContainer);
+  } else {
+    const empty = document.createElement('div');
+    empty.className = 'setup-empty';
+    empty.textContent = 'No queries yet. Use the Query page to run queries and see performance data here.';
+    section.appendChild(empty);
+  }
+
+  // Indexing stats
+  fetchStats().then(stats => {
+    if (!stats) return;
+    const indexInfo = document.createElement('div');
+    indexInfo.className = 'perf-index-info';
+    indexInfo.innerHTML = '<span class="perf-index-info__label">Indexed:</span> '
+      + '<strong>' + (stats.chunks || 0) + '</strong> chunks from '
+      + '<strong>' + (stats.documents || 0) + '</strong> PDFs';
+    section.insertBefore(indexInfo, grid.nextSibling);
+  });
+
+  return section;
+}
+
+// Global query history tracker
+const _queryHistory = [];
+
+// Hook into query results to track history
+AppState.on('queryResult', (result) => {
+  if (!result) return;
+  _queryHistory.push({
+    query: AppState.get('currentQuery') || '(unknown)',
+    complexity: result.complexity?.label || 'medium',
+    retrieval: result.processingTime?.retrieval || 0,
+    generation: result.processingTime?.generation || 0,
+    total: (result.processingTime?.retrieval || 0) + (result.processingTime?.generation || 0) + (result.processingTime?.analysis || 0),
+    timestamp: Date.now(),
+  });
+});
+
+// -- Training Section (collapsible) -----------------------------------------
+
+function buildTrainingSection(metrics, queries, totalQueries) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'section';
+
+  const toggle = document.createElement('button');
+  toggle.className = 'training-toggle';
+  toggle.innerHTML = '<span class="training-toggle__icon">\u25B6</span> Training Metrics <span class="badge badge--muted">ML Model</span>';
+
+  const content = document.createElement('div');
+  content.className = 'training-content';
+  content.style.display = 'none';
+
+  toggle.addEventListener('click', () => {
+    const visible = content.style.display !== 'none';
+    content.style.display = visible ? 'none' : 'block';
+    toggle.querySelector('.training-toggle__icon').textContent = visible ? '\u25B6' : '\u25BC';
+  });
+
+  content.appendChild(buildModelAccuracyHero(metrics));
+  content.appendChild(buildFeatureImportanceSection(metrics));
+  content.appendChild(buildFusionComparisonSection(metrics));
+  content.appendChild(buildTrainingDatasetExplorer(queries, totalQueries));
+  content.appendChild(buildCostStrategySection());
+
+  wrapper.appendChild(toggle);
+  wrapper.appendChild(content);
+  return wrapper;
 }
 
 // -- Model Accuracy Hero ----------------------------------------------------
@@ -1489,8 +1586,8 @@ export function renderSetupPage() {
   grid.appendChild(buildServicesPanel());
   grid.appendChild(buildLLMPanel());
   grid.appendChild(buildVectorStorePanel());
-  grid.appendChild(buildConfigProfilePanel());
   grid.appendChild(buildDocumentPanel());
+  grid.appendChild(buildConfigExportPanel());
   grid.appendChild(buildComponentStatusPanel());
 
   container.appendChild(grid);
@@ -1690,6 +1787,7 @@ function buildLLMPanel() {
       if (res.ok) {
         statusEl.textContent = 'Applied';
         statusEl.className = 'setup-status setup-status--ok';
+        if (window._refreshLLMHeader) window._refreshLLMHeader();
       } else {
         statusEl.textContent = 'Failed';
         statusEl.className = 'setup-status setup-status--err';
@@ -1718,104 +1816,220 @@ function buildLLMPanel() {
 function buildVectorStorePanel() {
   const panel = createSetupPanel('Vector Store', 'Select backend for document storage');
 
+  const saved = localStorage.getItem('vectorStore') || 'faiss';
+
   const options = document.createElement('div');
   options.className = 'setup-radio-group';
 
-  const faissOpt = createRadioOption('vector-store', 'faiss', 'FAISS (In-Memory)', true);
-  const weavOpt = createRadioOption('vector-store', 'weaviate', 'Weaviate (Docker)', false);
+  const faissOpt = createRadioOption('vector-store', 'faiss', 'FAISS (In-Memory)', saved === 'faiss');
+  const weavOpt = createRadioOption('vector-store', 'weaviate', 'Weaviate (Docker)', saved === 'weaviate');
 
   options.appendChild(faissOpt);
   options.appendChild(weavOpt);
 
-  const note = document.createElement('div');
-  note.className = 'setup-note';
-  note.textContent = 'Weaviate backend has v3\u2192v4 migration pending. FAISS is recommended.';
+  const statusEl = document.createElement('div');
+  statusEl.className = 'setup-status';
+
+  // Check Weaviate availability
+  const weavNote = document.createElement('div');
+  weavNote.className = 'setup-note';
+  weavNote.textContent = 'Checking Weaviate status...';
+
+  fetchServices().then(data => {
+    const running = data?.weaviate?.running;
+    if (running) {
+      weavNote.textContent = 'Weaviate is running (Docker container detected)';
+      weavNote.className = 'setup-note setup-note--ok';
+    } else {
+      weavNote.textContent = 'Weaviate not detected. Start the Docker container: docker compose up -d';
+      weavNote.className = 'setup-note setup-note--warn';
+    }
+  });
+
+  // Handle selection change
+  options.addEventListener('change', (e) => {
+    const value = e.target.value;
+    localStorage.setItem('vectorStore', value);
+    AppState.set('vectorStore', value);
+    statusEl.textContent = 'Selected: ' + (value === 'faiss' ? 'FAISS' : 'Weaviate');
+    statusEl.className = 'setup-status setup-status--ok';
+
+    // If weaviate selected, check it's running
+    if (value === 'weaviate') {
+      fetchServices().then(data => {
+        if (!data?.weaviate?.running) {
+          statusEl.textContent = 'Weaviate not running — start Docker container first';
+          statusEl.className = 'setup-status setup-status--err';
+        }
+      });
+    }
+  });
 
   panel.appendChild(options);
-  panel.appendChild(note);
+  panel.appendChild(weavNote);
+  panel.appendChild(statusEl);
   return panel;
 }
 
-// -- Config Profile Panel ---------------------------------------------------
+// -- Config Export/Import Panel ----------------------------------------------
 
-function buildConfigProfilePanel() {
-  const panel = createSetupPanel('Configuration Profile', 'Switch pipeline configuration');
+function buildConfigExportPanel() {
+  const panel = createSetupPanel('Configuration', 'Export or import pipeline settings as YAML');
 
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = '<div class="loading">Loading configs...</div>';
+  const btnRow = document.createElement('div');
+  btnRow.className = 'setup-form-row';
 
-  fetchConfigs().then(data => {
-    wrapper.innerHTML = '';
-    if (!data || !data.configs) {
-      wrapper.innerHTML = '<div class="setup-empty">No configs found</div>';
-      return;
+  // Export button — downloads current settings as YAML
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'btn btn--accent';
+  exportBtn.textContent = 'Export YAML';
+  exportBtn.addEventListener('click', async () => {
+    const status = await fetch('/api/v1/status').then(r => r.json()).catch(() => null);
+    const vectorStore = localStorage.getItem('vectorStore') || 'faiss';
+    const config = {
+      answer_generator: {
+        type: 'adaptive_modular',
+        config: {
+          llm_client: {
+            type: status?.llm?.provider || 'mock',
+            config: { model_name: status?.llm?.model || 'mock-model' },
+          },
+        },
+      },
+      retriever: { type: 'modular_unified', config: { backend: vectorStore } },
+      query_processor: { type: 'modular' },
+    };
+    if (status?.llm?.base_url) {
+      config.answer_generator.config.llm_client.config.base_url = status.llm.base_url;
     }
 
-    const select = document.createElement('select');
-    select.className = 'config-select';
-
-    for (const cfg of data.configs) {
-      const opt = document.createElement('option');
-      opt.value = cfg.name;
-      opt.textContent = cfg.name;
-      if (data.active && cfg.name === data.active) opt.selected = true;
-      select.appendChild(opt);
-    }
-    wrapper.appendChild(select);
-
-    const featureArea = document.createElement('div');
-    featureArea.className = 'setup-features';
-    wrapper.appendChild(featureArea);
-
-    function showFeatures() {
-      featureArea.innerHTML = '';
-      const cfg = data.configs.find(c => c.name === select.value);
-      if (cfg && cfg.features) {
-        for (const f of cfg.features) {
-          const badge = document.createElement('span');
-          badge.className = 'badge badge--muted';
-          badge.textContent = f;
-          featureArea.appendChild(badge);
-        }
-      }
-    }
-    select.addEventListener('change', showFeatures);
-    showFeatures();
-
-    const warn = document.createElement('div');
-    warn.className = 'setup-note';
-    warn.textContent = 'Activating reinitializes the pipeline (~10-30s)';
-    wrapper.appendChild(warn);
-
-    const activateBtn = document.createElement('button');
-    activateBtn.className = 'btn btn--accent';
-    activateBtn.textContent = 'Activate';
-    activateBtn.addEventListener('click', async () => {
-      activateBtn.disabled = true;
-      activateBtn.textContent = 'Activating...';
-      const result = await activateConfig(select.value);
-      if (result && result.status === 'ok') {
-        activateBtn.textContent = 'Active';
-      } else {
-        activateBtn.textContent = 'Failed';
-        activateBtn.disabled = false;
-      }
-    });
-    wrapper.appendChild(activateBtn);
+    // Simple YAML serialization
+    const yaml = configToYaml(config);
+    const blob = new Blob([yaml], { type: 'text/yaml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'rag-config.yaml';
+    a.click();
+    URL.revokeObjectURL(a.href);
   });
 
-  panel.appendChild(wrapper);
+  // Import button — loads YAML and applies settings
+  const importBtn = document.createElement('button');
+  importBtn.className = 'btn';
+  importBtn.textContent = 'Import YAML';
+  const importInput = document.createElement('input');
+  importInput.type = 'file';
+  importInput.accept = '.yaml,.yml';
+  importInput.style.display = 'none';
+
+  importBtn.addEventListener('click', () => importInput.click());
+  importInput.addEventListener('change', async () => {
+    const file = importInput.files[0];
+    if (!file) return;
+    const text = await file.text();
+    const result = await fetch('/api/v1/config/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/yaml' },
+      body: text,
+    }).then(r => r.json()).catch(() => null);
+
+    const statusEl = panel.querySelector('.setup-status') || document.createElement('div');
+    statusEl.className = 'setup-status';
+    if (result?.status === 'ok') {
+      statusEl.textContent = 'Config imported and applied';
+      statusEl.className = 'setup-status setup-status--ok';
+      if (window._refreshLLMHeader) window._refreshLLMHeader();
+    } else {
+      statusEl.textContent = 'Import failed: ' + (result?.detail || 'unknown error');
+      statusEl.className = 'setup-status setup-status--err';
+    }
+    if (!panel.querySelector('.setup-status')) panel.appendChild(statusEl);
+  });
+
+  btnRow.appendChild(exportBtn);
+  btnRow.appendChild(importBtn);
+  btnRow.appendChild(importInput);
+  panel.appendChild(btnRow);
+
+  const note = document.createElement('div');
+  note.className = 'setup-note';
+  note.textContent = 'Export saves current LLM and vector store settings. Import applies a YAML config file.';
+  panel.appendChild(note);
+
   return panel;
+}
+
+function configToYaml(obj, indent) {
+  indent = indent || 0;
+  const pad = '  '.repeat(indent);
+  let out = '';
+  for (const [k, v] of Object.entries(obj)) {
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      out += pad + k + ':\n' + configToYaml(v, indent + 1);
+    } else {
+      out += pad + k + ': ' + JSON.stringify(v) + '\n';
+    }
+  }
+  return out;
 }
 
 // -- Document Management Panel ----------------------------------------------
 
 function buildDocumentPanel() {
-  const panel = createSetupPanel('Document Management', 'Upload PDFs to the corpus');
+  const panel = createSetupPanel('Document Management', 'Upload PDFs or index the full corpus');
 
+  // Index corpus button
+  const indexRow = document.createElement('div');
+  indexRow.className = 'setup-form-row';
+
+  const indexBtn = document.createElement('button');
+  indexBtn.className = 'btn btn--primary';
+  indexBtn.textContent = 'Index Corpus';
+
+  const indexStatus = document.createElement('span');
+  indexStatus.className = 'setup-index-status';
+
+  // Check current state and show it
+  fetchStats().then(stats => {
+    if (stats && stats.chunks > 0) {
+      indexStatus.textContent = stats.chunks + ' chunks indexed from ' + stats.documents + ' PDFs';
+      indexStatus.className = 'setup-index-status setup-index-status--ok';
+    } else if (stats) {
+      indexStatus.textContent = stats.documents + ' PDFs available, 0 indexed';
+    }
+  });
+
+  indexBtn.addEventListener('click', async () => {
+    indexBtn.disabled = true;
+    indexBtn.textContent = 'Indexing...';
+    indexStatus.textContent = 'Processing PDFs (this may take a minute)...';
+    indexStatus.className = 'setup-index-status';
+    const result = await indexCorpus();
+    indexBtn.disabled = false;
+    indexBtn.textContent = 'Index Corpus';
+    if (result && result.status === 'ok') {
+      const cached = result.fromCache ? ' (cached)' : '';
+      indexStatus.textContent = result.totalChunks + ' chunks from ' + result.totalDocs + ' files' + cached;
+      indexStatus.className = 'setup-index-status setup-index-status--ok';
+    } else {
+      indexStatus.textContent = 'Indexing failed';
+      indexStatus.className = 'setup-index-status setup-index-status--err';
+    }
+  });
+
+  indexRow.appendChild(indexBtn);
+  indexRow.appendChild(indexStatus);
+  panel.appendChild(indexRow);
+
+  // Separator
+  const hr = document.createElement('hr');
+  hr.style.cssText = 'border:none;border-top:1px solid var(--border);margin:var(--sp-4) 0';
+  panel.appendChild(hr);
+
+  // Upload dropzone
   const dropzone = document.createElement('div');
   dropzone.className = 'setup-dropzone';
-  dropzone.textContent = 'Drop PDF here or click to select';
+  dropzone.textContent = 'Drop PDF here or click to upload';
 
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
