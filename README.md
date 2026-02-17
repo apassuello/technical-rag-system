@@ -1,4 +1,5 @@
 [![CI](https://github.com/apassuello/technical-rag-system/actions/workflows/ci.yml/badge.svg)](https://github.com/apassuello/technical-rag-system/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/apassuello/technical-rag-system/graph/badge.svg)](https://codecov.io/gh/apassuello/technical-rag-system)
 ![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -22,10 +23,14 @@ with complexity-based routing across LLM providers. Epic 2 adds hybrid search
 agent with tool use and working memory. Epic 8 built microservices and Helm
 charts, then was archived in favor of the monolith.
 
-This is a portfolio project. It has ~2,700 passing tests at 63% code coverage.
-Some components (Weaviate backend, cache service) are partially implemented and
-gated behind test markers. The system runs locally without external services — a
-mock LLM adapter handles answer generation when Ollama is unavailable.
+This is a portfolio project. It has 2,300+ passing tests with coverage tracked
+via Codecov. Some components (Weaviate backend, cache service) are partially
+implemented and gated behind test markers. The system runs locally without
+external services — a mock LLM adapter handles answer generation when Ollama
+is unavailable.
+
+<!-- TODO: add screenshot of frontend dashboard -->
+<!-- ![Dashboard](docs/images/dashboard.png) -->
 
 ## Architecture
 
@@ -95,6 +100,9 @@ python demo.py
 
 # Streamlit UI (requires Ollama for real LLM answers)
 streamlit run app.py
+
+# Static frontend dashboard (no backend required)
+python frontend/serve.py
 ```
 
 Note: the first `PlatformOrchestrator` call downloads the embedding model (~22MB).
@@ -204,8 +212,8 @@ pytest tests/unit tests/integration tests/validation \
   --cov=src --cov-report=term-missing --cov-fail-under=70
 ```
 
-Current baseline: ~2,700 passing, ~229 known failures (isolated behind markers).
-Coverage: 63% overall.
+Current baseline: 2,300+ passing, ~230 known failures (isolated behind markers).
+Coverage tracked via [Codecov](https://codecov.io/gh/apassuello/technical-rag-system).
 
 Test file naming: `ut_` (unit), `it_` (integration), `vt_` (validation).
 
