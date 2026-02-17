@@ -17,21 +17,27 @@ logger = logging.getLogger(__name__)
 class RRFFusion(FusionStrategy):
     """
     Reciprocal Rank Fusion (RRF) implementation.
-    
-    This is a direct implementation of the RRF algorithm that combines
-    dense and sparse retrieval results using rank-based scoring.
-    No external dependencies are required.
-    
-    RRF Formula: score = Σ weight_i / (k + rank_i)
-    Where rank_i is the 1-based rank of document in result list i
-    
-    Features:
-    - Configurable RRF constant (k) parameter
-    - Weighted fusion with dense/sparse weights
-    - Handles empty result sets gracefully
-    - Preserves rank-based scoring benefits
-    - Optimized for performance
-    
+
+    RRF combines ranked lists using rank-reciprocal scores:
+        rrf_score(doc) = Σ weight_i / (k + rank_i)
+
+    This discards the original scores entirely — only rank positions matter.
+
+    When to use RRF:
+        - Combining 10+ heterogeneous ranked lists where scores are fundamentally
+          incomparable (e.g., web meta-search across different search engines)
+        - When individual score magnitudes are unreliable or on different scales
+
+    When NOT to use RRF (use ScoreAwareFusion instead):
+        - Combining 2-3 lists where scores have known semantics (e.g., cosine
+          similarity + IDF-normalized BM25, both in [0, 1])
+        - When downstream consumers need absolute quality scores
+        - When you need to distinguish "all results are good" from "all results
+          are bad" — RRF cannot do this because rank 1 always gets the same score
+
+    For this project's dense+sparse retrieval, ScoreAwareFusion is preferred
+    because it preserves the absolute cosine similarity signal.
+
     Example:
         config = {
             "k": 60,

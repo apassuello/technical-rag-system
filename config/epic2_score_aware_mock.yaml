@@ -62,10 +62,7 @@ retriever:
         # Alternative rank weights: 0.1 (minimal), 0.2 (higher), 0.25 (significant)
         overlap_weight: 0.05   # γ - both-retriever bonus
         # Alternative overlap weights: 0.0 (disabled), 0.1 (moderate), 0.15 (high)
-        normalize_scores: true # Enable score normalization
-        # Alternative: false (raw scores)
-        k: 60                  # RRF constant for rank component
-        # Alternative k values: 30 (higher discrimination), 90 (smoother)
+        k: 10                  # Rank discrimination for 2 result lists
     
     # Epic 2 Feature: Neural Reranking - ENABLED
     reranker:

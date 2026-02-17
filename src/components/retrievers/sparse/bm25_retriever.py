@@ -300,21 +300,23 @@ class BM25Retriever(SparseRetriever):
             scores = scores - min_raw_score  # Shift all scores to be non-negative
             logger.debug(f"Shifted negative BM25 scores by {-min_raw_score:.6f}")
         
-        # Normalize scores to [0,1] range for fusion compatibility
-        max_score = np.max(scores)
-        min_score = np.min(scores)
-        
-        if max_score > min_score:
-            # Standard min-max normalization to [0,1]
-            normalized_scores = (scores - min_score) / (max_score - min_score)
+        # IDF-ratio normalization: absolute scores in [0, 1]
+        # Divides raw BM25 by theoretical maximum for this query.
+        # Maximum = sum(positive IDFs) * (k1 + 1), which occurs when every
+        # query term is present at TF saturation in an average-length document.
+        # Terms with IDF <= 0 (appearing in every document) are non-discriminative
+        # and excluded from the normalization factor.
+        positive_idf_sum = sum(
+            max(0.0, self.bm25.idf.get(t, 0.0)) for t in query_tokens
+        )
+        max_possible = positive_idf_sum * (self.k1 + 1)
+
+        if max_possible > 0:
+            normalized_scores = np.clip(scores / max_possible, 0.0, 1.0)
         else:
-            # All scores are the same - check if any actual matches exist
-            if np.any(scores != 0):
-                # Scores are equal and non-zero (all docs equally relevant)
-                normalized_scores = np.ones_like(scores)
-            else:
-                # All scores are exactly zero (no matches)
-                normalized_scores = np.zeros_like(scores)
+            # All query terms have non-positive IDF (appear in every document)
+            # — they cannot discriminate, so all scores are effectively zero
+            normalized_scores = np.zeros_like(scores)
         
         # Create results with original document indices
         results = [

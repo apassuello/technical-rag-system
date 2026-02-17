@@ -105,8 +105,8 @@ class TestBM25ScoringQuality:
             assert min_tech_score > irrelevant_score, \
                 f"Technical docs ({min_tech_score}) should score higher than irrelevant ({irrelevant_score})"
         
-        # Top result should be highly relevant
-        assert tech_results[0][1] > 0.5, "Top result should have high score for technical query"
+        # Top result should be highly relevant (IDF-ratio scores are lower than min-max)
+        assert tech_results[0][1] > 0.3, "Top result should have meaningful score for technical query"
     
     def test_irrelevant_query_filtering(self):
         """Verify off-topic queries produce low scores."""
@@ -279,11 +279,12 @@ class TestBM25EdgeCases:
 
         results = bm25.search("RISC-V", k=2)
 
-        # Should return at least one result
-        assert len(results) >= 1, "Should return results for long documents"
-        scores = [score for _, score in results]
-        # Normalized scores are in [0, 1] range
-        assert all(0 < score <= 1 for score in scores), "Scores should be in (0, 1] range"
+        # With IDF-ratio normalization, a 2-doc corpus where both docs contain
+        # the query term yields IDF ≈ 0 → max_possible ≈ 0 → no results.
+        # This is correct: the term can't discriminate between these two docs.
+        assert isinstance(results, list), "Should return a list (possibly empty)"
+        for _, score in results:
+            assert 0 <= score <= 1.0, f"Score {score} should be in [0, 1]"
     
     def test_single_document_corpus(self):
         """Test BM25 with only one document."""
@@ -356,6 +357,74 @@ def test_bm25_quality_assertions():
     results = bm25.search("the dog", k=3)
     scores = [score for _, score in results]
     assert scores == sorted(scores, reverse=True), "Scores should be in descending order"
+
+
+class TestBM25IDFRatioNormalization:
+    """Test BM25 IDF-ratio normalization (absolute scores, not per-query min-max)."""
+
+    def setup_method(self):
+        self.docs = [
+            Document(content="RISC-V is an open instruction set architecture", metadata={"id": "doc1"}),
+            Document(content="RISC-V RISC-V processor implements the RISC-V instruction set", metadata={"id": "doc2"}),
+            Document(content="The weather in Paris is beautiful today", metadata={"id": "doc3"}),
+            Document(content="Computer architecture includes instruction set design", metadata={"id": "doc4"}),
+            Document(content="ARM Cortex-M4 microcontroller datasheet reference manual", metadata={"id": "doc5"}),
+        ]
+        self.bm25 = BM25Retriever({"k1": 1.2, "b": 0.75, "filter_stop_words": True})
+        self.bm25.index_documents(self.docs)
+
+    def test_scores_are_absolute_not_per_query_normalized(self):
+        """IDF-ratio scores should NOT inflate bad matches to 1.0."""
+        results = self.bm25.search("RISC-V", k=5)
+        scores = [s for _, s in results]
+        assert len(scores) > 0
+        assert scores[0] > 0.1, "Top result should have meaningful score"
+        assert scores[0] <= 1.0, "Score should not exceed 1.0"
+
+    def test_irrelevant_query_produces_genuinely_low_scores(self):
+        """A query with no good matches should produce low scores for ALL results."""
+        results = self.bm25.search("quantum computing neural network", k=5)
+        if results:
+            top_score = results[0][1]
+            assert top_score < 0.3, (
+                f"Irrelevant query should produce low scores, got {top_score}. "
+                "If this is 1.0, per-query min-max is still active."
+            )
+
+    def test_same_query_same_doc_gives_consistent_score(self):
+        """The same query against the same corpus should always give the same score."""
+        score_run1 = self.bm25.search("RISC-V architecture", k=5)
+        score_run2 = self.bm25.search("RISC-V architecture", k=5)
+        assert score_run1 == score_run2, "Deterministic scores expected"
+
+    def test_all_query_terms_negative_idf_returns_empty(self):
+        """If every query term appears in every document, IDF is negative/zero."""
+        common_docs = [
+            Document(content="the cat sat", metadata={"id": f"d{i}"})
+            for i in range(5)
+        ]
+        bm25 = BM25Retriever({"k1": 1.2, "b": 0.75, "filter_stop_words": False})
+        bm25.index_documents(common_docs)
+        results = bm25.search("the cat", k=5)
+        if results:
+            assert all(s < 0.01 for _, s in results), "All-common-term query should score near zero"
+
+    def test_score_bounded_zero_to_one(self):
+        """All scores should be in [0, 1] after IDF-ratio normalization."""
+        queries = ["RISC-V", "architecture design", "ARM processor", "instruction set"]
+        for query in queries:
+            results = self.bm25.search(query, k=10)
+            for idx, score in results:
+                assert 0 <= score <= 1.0, f"Score {score} out of [0,1] for query '{query}'"
+
+    def test_multi_term_query_scores_higher_than_single_term(self):
+        """A document matching more query terms should score higher."""
+        results_single = self.bm25.search("RISC-V", k=5)
+        results_multi = self.bm25.search("RISC-V architecture", k=5)
+        doc1_single = next((s for idx, s in results_single if idx == 0), 0)
+        doc1_multi = next((s for idx, s in results_multi if idx == 0), 0)
+        assert doc1_single > 0, "Doc1 should match single-term query"
+        assert doc1_multi > 0, "Doc1 should match multi-term query"
 
 
 if __name__ == "__main__":

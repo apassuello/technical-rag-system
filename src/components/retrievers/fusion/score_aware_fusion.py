@@ -34,7 +34,6 @@ class ScoreAwareFusion(FusionStrategy):
     - Adds rank-based stability to prevent score noise issues
     - Rewards documents found by both dense and sparse retrievers
     - Configurable balance between score, rank, and overlap factors
-    - Score normalization for fair comparison across retrievers
     - Graceful handling of empty result sets
     
     Example:
@@ -42,7 +41,6 @@ class ScoreAwareFusion(FusionStrategy):
             "score_weight": 0.6,     # α - semantic score importance
             "rank_weight": 0.3,      # β - rank stability factor
             "overlap_weight": 0.1,   # γ - both-retriever bonus
-            "normalize_scores": True,
             "k": 60                  # RRF constant for rank component
         }
         fusion = ScoreAwareFusion(config)
@@ -58,7 +56,6 @@ class ScoreAwareFusion(FusionStrategy):
                 - score_weight: Weight for original scores (default: 0.6)
                 - rank_weight: Weight for rank-based component (default: 0.3)
                 - overlap_weight: Weight for overlap bonus (default: 0.1)
-                - normalize_scores: Whether to normalize scores (default: True)
                 - k: RRF constant for rank component (default: 60)
         """
         self.config = config
@@ -67,7 +64,6 @@ class ScoreAwareFusion(FusionStrategy):
         self.score_weight = config.get("score_weight", 0.6)
         self.rank_weight = config.get("rank_weight", 0.3)
         self.overlap_weight = config.get("overlap_weight", 0.1)
-        self.normalize_scores = config.get("normalize_scores", True)
         self.k = config.get("k", 60)
         
         # Validation
@@ -130,13 +126,12 @@ class ScoreAwareFusion(FusionStrategy):
             top_sparse = sparse_results[0] 
             logger.info(f"📊 INPUT SPARSE TOP: [{top_sparse[0]}] → {top_sparse[1]:.4f}")
         
-        # Normalize scores if requested
-        normalized_dense = self._normalize_scores(dense_results) if self.normalize_scores else dense_results
-        normalized_sparse = self._normalize_scores(sparse_results) if self.normalize_scores else sparse_results
-        
+        # Scores are used as-is — both dense (cosine similarity) and sparse
+        # (IDF-ratio normalized BM25) are already absolute in [0, 1].
+
         # Convert to dictionaries for efficient lookup
-        dense_scores = dict(normalized_dense)
-        sparse_scores = dict(normalized_sparse)
+        dense_scores = dict(dense_results)
+        sparse_scores = dict(sparse_results)
         
         # Create rank mappings (1-based indexing for RRF compatibility)
         dense_ranks = {doc_idx: rank for rank, (doc_idx, _) in enumerate(dense_results, 1)}
@@ -217,46 +212,14 @@ class ScoreAwareFusion(FusionStrategy):
             "score_weight": self.score_weight,
             "rank_weight": self.rank_weight,
             "overlap_weight": self.overlap_weight,
-            "normalize_scores": self.normalize_scores,
             "k": self.k,
             "parameters": {
                 "score_weight": self.score_weight,
                 "rank_weight": self.rank_weight,
                 "overlap_weight": self.overlap_weight,
-                "normalize_scores": self.normalize_scores,
                 "k": self.k
             }
         }
-    
-    def _normalize_scores(self, results: List[Tuple[int, float]]) -> List[Tuple[int, float]]:
-        """
-        Normalize scores to [0,1] range using min-max normalization.
-        
-        Args:
-            results: List of (document_index, score) tuples
-            
-        Returns:
-            List of (document_index, normalized_score) tuples
-        """
-        if not results:
-            return []
-        
-        scores = [score for _, score in results]
-        max_score = max(scores)
-        min_score = min(scores)
-        score_range = max_score - min_score
-        
-        if score_range == 0:
-            # All scores are the same, return as-is
-            return results
-        
-        # Normalize to [0,1] range
-        normalized_results = [
-            (doc_id, (score - min_score) / score_range)
-            for doc_id, score in results
-        ]
-        
-        return normalized_results
     
     def update_weights(self, score_weight: float, rank_weight: float, overlap_weight: float) -> None:
         """
@@ -314,12 +277,8 @@ class ScoreAwareFusion(FusionStrategy):
         Returns:
             Dictionary mapping document_index to individual score components
         """
-        # Normalize scores if requested
-        normalized_dense = self._normalize_scores(dense_results) if self.normalize_scores else dense_results
-        normalized_sparse = self._normalize_scores(sparse_results) if self.normalize_scores else sparse_results
-        
-        dense_scores = dict(normalized_dense)
-        sparse_scores = dict(normalized_sparse)
+        dense_scores = dict(dense_results)
+        sparse_scores = dict(sparse_results)
         
         # Create rank mappings
         dense_ranks = {doc_idx: rank for rank, (doc_idx, _) in enumerate(dense_results, 1)}

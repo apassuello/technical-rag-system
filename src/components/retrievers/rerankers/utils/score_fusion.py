@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class NormalizationConfig:
     """Configuration for score normalization."""
-    method: str = "min_max"  # "min_max", "z_score", "softmax", "sigmoid"
-    clip_outliers: bool = True
+    method: str = "sigmoid"  # "none", "sigmoid", "min_max", "z_score", "softmax"
+    clip_outliers: bool = False  # disabled by default — sigmoid handles range naturally
     outlier_threshold: float = 3.0
 
 
@@ -69,7 +69,11 @@ class ScoreNormalizer:
             return scores
         
         scores_array = np.array(scores)
-        
+
+        # Pass-through: return input unchanged
+        if self.config.method == "none":
+            return scores_array.tolist()
+
         # Clip outliers if enabled
         if self.config.clip_outliers:
             scores_array = self._clip_outliers(scores_array)
@@ -369,16 +373,14 @@ class ScoreFusion:
             if not retrieval_scores or not neural_scores:
                 return retrieval_scores or neural_scores or []
             
-            # Normalize scores first
-            norm_retrieval = self.normalizer.normalize(retrieval_scores)
+            # Retrieval scores are already absolute [0, ~0.85] from ScoreAwareFusion.
+            # Neural scores are raw cross-encoder logits — sigmoid maps them to [0, 1].
+            # We do NOT normalize retrieval scores (pass-through preserves absolute signal).
+            norm_retrieval = retrieval_scores
             norm_neural = self.normalizer.normalize(neural_scores)
             
             # Apply fusion strategy
             fused_scores = self.strategy.fuse(norm_retrieval, norm_neural, query, documents)
-            
-            # Final normalization for adaptive method
-            if self.method == "adaptive":
-                fused_scores = self.normalizer.normalize(fused_scores)
             
             self.stats["total_fusions"] += 1
             return fused_scores
