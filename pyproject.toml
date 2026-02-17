@@ -6,11 +6,15 @@ target-version = "py311"
 select = ["F", "E", "W", "I"]
 ignore = ["E501"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["src", "components", "config", "core", "shared_utils", "training", "evaluation"]
+
 [tool.ruff.lint.per-file-ignores]
 # E402: Module level import not at top of file
 # These files manipulate sys.path before importing project modules — structural, not fixable.
 "src/components/embedders/batch_processors/dynamic_batch_processor.py" = ["E402"]
 "src/components/embedders/caches/memory_cache.py" = ["E402"]
+"src/components/embedders/models/sentence_transformer_model.py" = ["E402"]
 "src/components/embedders/modular_embedder.py" = ["E402"]
 "src/components/generators/adaptive_generator.py" = ["E402"]
 "src/components/generators/answer_generator.py" = ["E402"]

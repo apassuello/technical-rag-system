@@ -195,6 +195,7 @@ except Exception as e:
         finally:
             analyzer.shutdown()
     
+    @pytest.mark.requires_ollama
     def test_integration_component_availability(self, project_root):
         """Test that all Epic1 integration components are available."""
         self.project_root = project_root

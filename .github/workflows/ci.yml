@@ -7,6 +7,29 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install linters
+        run: pip install ruff ty mypy
+
+      - name: Ruff lint
+        run: ruff check src/
+
+      - name: ty type check
+        continue-on-error: true
+        run: ty check src/
+
+      - name: mypy type check
+        continue-on-error: true
+        run: mypy src/ --ignore-missing-imports
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -17,19 +40,36 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install PyTorch CPU
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Unit tests
+      - name: Install dependencies
+        run: pip install -r requirements-ci.txt
+
+      - name: Unit tests with coverage
         run: |
           pytest tests/unit \
-            -m "not requires_ml and not requires_ollama and not requires_postgres and not requires_redis and not integration" \
+            -m "not requires_ml and not requires_ollama and not requires_postgres and not requires_redis" \
             --override-ini="addopts=--strict-markers --strict-config --tb=short" \
-            -x -q
-
-      - name: Coverage
-        run: |
-          pytest tests/unit tests/integration tests/validation \
-            -m "not requires_ml and not requires_ollama" \
-            --tb=short --cov=src --cov-report=term-missing \
+            --override-ini="timeout=120" \
+            -n auto \
+            --cov=src --cov-report=term-missing --cov-report=xml:coverage.xml \
             -q
+
+      - name: Integration and validation tests
+        run: |
+          pytest tests/integration tests/validation \
+            -m "not requires_ollama and not requires_weaviate and not requires_postgres and not requires_redis" \
+            --override-ini="addopts=--strict-markers --strict-config --tb=short" \
+            --override-ini="timeout=120" \
+            -n auto \
+            --cov=src --cov-append --cov-report=term-missing --cov-report=xml:coverage.xml \
+            -q
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 30
