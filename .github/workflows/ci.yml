@@ -66,10 +66,10 @@ jobs:
             --cov=src --cov-append --cov-report=term-missing --cov-report=xml:coverage.xml \
             -q
 
-      - name: Upload coverage
+      - name: Upload to Codecov
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: codecov/codecov-action@v5
         with:
-          name: coverage-report
-          path: coverage.xml
-          retention-days: 30
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          fail_ci_if_error: false
