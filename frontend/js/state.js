@@ -4,7 +4,6 @@
 
 const AppState = (() => {
   const _state = {
-    mode: 'demo',
     activePage: 'home',
     isLoading: false,
     currentQuery: '',
@@ -15,6 +14,7 @@ const AppState = (() => {
     compareResults: null,
     selectedTrainingQuery: null,
     connectionStatus: 'disconnected',
+    apiError: null,
   };
 
   /** @type {Map<string, Set<Function>>} */
@@ -54,7 +54,7 @@ const AppState = (() => {
 // Hash Router
 // ---------------------------------------------------------------------------
 
-const VALID_PAGES = ['home', 'query', 'corpus', 'architecture', 'performance'];
+const VALID_PAGES = ['home', 'query', 'corpus', 'architecture', 'performance', 'setup'];
 
 function parseHash() {
   const raw = location.hash.replace(/^#/, '');

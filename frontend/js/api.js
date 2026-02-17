@@ -1,57 +1,37 @@
 // ---------------------------------------------------------------------------
-// api.js -- Dual-mode API client (demo mock / live backend)
+// api.js -- API client (always hits the real backend served by serve.py)
 // ---------------------------------------------------------------------------
 
 import { AppState } from './state.js';
-import { MOCK_DATA } from './data.js';
 
-const API_BASE = 'http://localhost:8080/api/v1/';
+const API_BASE = '/api/v1/';
 
-function delay(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-function mockLatency() {
-  return delay(200 + Math.random() * 200);
-}
-
-function classifyQuery(text) {
-  const lower = text.toLowerCase();
-  if (lower.includes('calculate') || lower.includes('how many') || lower.includes('what is'))
-    return 'agent';
-  if (lower.includes('compare') || lower.includes('versus') || text.length > 100)
-    return 'complex';
-  return 'simple';
-}
-
-async function dispatch(endpoint, payload) {
-  if (AppState.get('mode') === 'demo') {
-    await mockLatency();
-    if (endpoint === 'query') return MOCK_DATA.queryMocks[classifyQuery(payload.query)];
-    if (endpoint === 'compare') return MOCK_DATA.configComparison;
-    if (endpoint === 'status') return getStatus();
-    return null;
-  }
-
+async function dispatch(endpoint, payload, method = 'POST') {
   try {
-    const res = await fetch(API_BASE + endpoint, {
-      method: 'POST',
+    const options = {
+      method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    };
+    if (method !== 'GET') {
+      options.body = JSON.stringify(payload);
+    }
+
+    const res = await fetch(API_BASE + endpoint, options);
+    if (!res.ok) {
+      const detail = await res.text().catch(() => res.statusText);
+      throw new Error(`${res.status}: ${detail}`);
+    }
     return await res.json();
   } catch (err) {
-    console.warn(`Live API failed (${endpoint}), falling back to demo data:`, err.message);
-    await mockLatency();
-    if (endpoint === 'query') return MOCK_DATA.queryMocks[classifyQuery(payload.query)];
-    if (endpoint === 'compare') return MOCK_DATA.configComparison;
+    console.error(`API error (${endpoint}):`, err.message);
+    AppState.set('apiError', err.message);
     return null;
   }
 }
 
 async function submitQuery(text, strategy) {
   AppState.set('isLoading', true);
+  AppState.set('apiError', null);
   try {
     const result = await dispatch('query', { query: text, strategy });
     AppState.set('queryResult', result);
@@ -63,6 +43,7 @@ async function submitQuery(text, strategy) {
 
 async function compareConfigs(query) {
   AppState.set('isLoading', true);
+  AppState.set('apiError', null);
   try {
     const result = await dispatch('compare', { query });
     AppState.set('compareResults', result);
@@ -84,12 +65,72 @@ async function checkConnection() {
   }
 }
 
-function getStatus() {
-  return {
-    status: 'operational',
-    mode: AppState.get('mode'),
-    services: { gateway: true, retriever: true, generator: true, analyzer: true },
-  };
+async function fetchStats() {
+  return dispatch('stats', null, 'GET');
 }
 
-export { submitQuery, compareConfigs, checkConnection, getStatus };
+async function fetchCorpus() {
+  return dispatch('corpus', null, 'GET');
+}
+
+async function fetchComponents() {
+  return dispatch('components', null, 'GET');
+}
+
+async function fetchConfigs() {
+  return dispatch('configs', null, 'GET');
+}
+
+async function fetchServices() {
+  return dispatch('services', null, 'GET');
+}
+
+async function fetchTrainingMetrics() {
+  return dispatch('metrics/training', null, 'GET');
+}
+
+async function activateConfig(configName) {
+  return dispatch('config/activate', { config_name: configName });
+}
+
+async function startService(name) {
+  return dispatch('services/' + name + '/start', {});
+}
+
+async function uploadDocument(file) {
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const res = await fetch(API_BASE + 'documents/upload', {
+      method: 'POST',
+      body: form,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return await res.json();
+  } catch (err) {
+    console.error('Upload error:', err.message);
+    AppState.set('apiError', err.message);
+    return null;
+  }
+}
+
+async function fetchWithFallback(endpoint, fallbackData) {
+  const result = await dispatch(endpoint, null, 'GET');
+  return result ?? fallbackData;
+}
+
+export {
+  submitQuery,
+  compareConfigs,
+  checkConnection,
+  fetchStats,
+  fetchCorpus,
+  fetchComponents,
+  fetchConfigs,
+  fetchServices,
+  fetchTrainingMetrics,
+  activateConfig,
+  startService,
+  uploadDocument,
+  fetchWithFallback,
+};

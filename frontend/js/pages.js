@@ -4,7 +4,7 @@
 
 import { AppState, navigateTo } from './state.js';
 import { MOCK_DATA } from './data.js';
-import { submitQuery, compareConfigs } from './api.js';
+import { submitQuery, compareConfigs, fetchStats, fetchServices, fetchConfigs, fetchComponents, fetchTrainingMetrics, fetchWithFallback, activateConfig, startService, uploadDocument } from './api.js';
 import {
   renderConfidenceGauge,
   renderBadge,
@@ -28,6 +28,9 @@ import {
   getOrCreateCanvas,
 } from './charts.js';
 
+// Unsubscribe functions for reactive listeners (prevents leak on re-render)
+let _queryCleanups = [];
+let _perfCleanups = [];
 
 // ===========================================================================
 // HOME PAGE
@@ -43,6 +46,16 @@ export function renderHomePage() {
   container.appendChild(buildStatsBar());
   container.appendChild(buildTechStack());
   container.appendChild(buildCTA());
+
+  // Async: replace mock stats with real API data
+  fetchStats().then(stats => {
+    if (!stats) return;
+    const bar = container.querySelector('.stats-bar');
+    if (!bar) return;
+    const items = bar.querySelectorAll('.stat-item__value');
+    const values = [stats.documents, stats.chunks || stats.trainingQueries, stats.configurations, stats.components, stats.tests];
+    items.forEach((el, i) => { if (values[i] != null) el.textContent = String(values[i]); });
+  });
 }
 
 // -- Hero -------------------------------------------------------------------
@@ -246,6 +259,10 @@ const COMPLEXITY_VARIANT = {
 };
 
 export function renderQueryPage() {
+  // Clean up previous listeners before re-render
+  _queryCleanups.forEach(fn => fn());
+  _queryCleanups = [];
+
   const container = document.getElementById('query-content');
   if (!container) return;
   container.innerHTML = '';
@@ -271,19 +288,19 @@ export function renderQueryPage() {
   // Right panel (empty state)
   showEmptyState(rightPanel);
 
-  // Reactive subscriptions
-  AppState.on('queryResult', (result) => {
+  // Reactive subscriptions (store unsubscribe fns to prevent leak)
+  _queryCleanups.push(AppState.on('queryResult', (result) => {
     if (!result) return;
     renderResults(rightPanel, result);
-  });
+  }));
 
-  AppState.on('isLoading', (loading) => {
+  _queryCleanups.push(AppState.on('isLoading', (loading) => {
     const btn = leftPanel.querySelector('.query-submit-btn');
     if (btn) {
       btn.disabled = loading;
       btn.textContent = loading ? 'Processing...' : 'Submit Query';
     }
-  });
+  }));
 }
 
 function buildQueryInput(panel) {
@@ -379,9 +396,9 @@ function buildModeIndicator(panel) {
   indicator.className = 'mode-indicator';
   indicator.textContent = AppState.get('mode') === 'demo' ? 'DEMO MODE' : 'LIVE MODE';
 
-  AppState.on('mode', (mode) => {
+  _queryCleanups.push(AppState.on('mode', (mode) => {
     indicator.textContent = mode === 'demo' ? 'DEMO MODE' : 'LIVE MODE';
-  });
+  }));
 
   panel.appendChild(indicator);
 }
@@ -424,7 +441,7 @@ function renderResults(panel, result) {
   }
 
   const scoreText = document.createElement('div');
-  scoreText.style.cssText = 'margin-bottom: var(--sp-4); font-family: var(--font-mono); color: var(--text-secondary);';
+  scoreText.className = 'complexity-score';
   scoreText.textContent = 'Overall: ' + (result.complexity.overall * 100).toFixed(0) + '%';
   complexitySection.appendChild(scoreText);
 
@@ -436,6 +453,7 @@ function renderResults(panel, result) {
   panel.appendChild(complexitySection);
 
   requestAnimationFrame(() => {
+    if (!document.getElementById('complexity-radar')) return;
     const scores = result.complexity.scores;
     createRadarChart(
       'complexity-radar',
@@ -570,6 +588,7 @@ function buildCorpusChartsRow() {
   const data = categories.map((c) => c.count);
 
   requestAnimationFrame(() => {
+    if (!document.getElementById('corpus-doughnut')) return;
     createDoughnutChart('corpus-doughnut', labels, data, CATEGORY_COLORS);
   });
 
@@ -621,6 +640,7 @@ function buildCorpusChartsRow() {
   subcats.sort((a, b) => b.count - a.count);
 
   requestAnimationFrame(() => {
+    if (!document.getElementById('corpus-subcategories')) return;
     createHorizontalBarChart('corpus-subcategories', subcats.map((s) => s.name), subcats.map((s) => s.count));
   });
 
@@ -1025,12 +1045,12 @@ function renderConfigDisplay(container, config) {
   container.innerHTML = '';
 
   const nameEl = document.createElement('h4');
-  nameEl.style.cssText = 'font-family: var(--font-display); font-weight: var(--fw-semibold); font-size: var(--fs-lg); color: var(--text-primary); margin-bottom: var(--sp-2);';
+  nameEl.className = 'config-display__name';
   nameEl.textContent = config.name;
   container.appendChild(nameEl);
 
   const descEl = document.createElement('p');
-  descEl.style.cssText = 'color: var(--text-secondary); font-size: var(--fs-sm); margin-bottom: var(--sp-4);';
+  descEl.className = 'config-display__desc';
   descEl.textContent = config.description;
   container.appendChild(descEl);
 
@@ -1048,6 +1068,10 @@ function renderConfigDisplay(container, config) {
 // ===========================================================================
 
 export function renderPerformancePage() {
+  // Clean up previous listeners before re-render
+  _perfCleanups.forEach(fn => fn());
+  _perfCleanups = [];
+
   const container = document.getElementById('performance-content');
   if (!container) return;
   container.innerHTML = '';
@@ -1129,6 +1153,7 @@ function buildFeatureImportanceSection() {
   const dataAsPercent = sorted.map(([, val]) => +(val * 100).toFixed(2));
 
   requestAnimationFrame(() => {
+    if (!document.getElementById('feature-importance')) return;
     createHorizontalBarChart('feature-importance', labels, dataAsPercent);
   });
 
@@ -1167,6 +1192,7 @@ function buildFusionComparisonSection() {
   ];
 
   requestAnimationFrame(() => {
+    if (!document.getElementById('fusion-comparison')) return;
     createGroupedBarChart('fusion-comparison', chartLabels, datasets);
   });
 
@@ -1244,6 +1270,7 @@ function buildCostStrategySection() {
   section.appendChild(chartContainer);
 
   requestAnimationFrame(() => {
+    if (!document.getElementById('cost-comparison')) return;
     createCostComparisonChart('cost-comparison', ['Cost Optimized', 'Balanced', 'Quality First'], [0.0003, 0.0036, 0.0475]);
   });
 
@@ -1290,10 +1317,10 @@ function buildConfigComparisonTool() {
   resultsArea.id = 'config-compare-results';
   section.appendChild(resultsArea);
 
-  AppState.on('compareResults', (result) => {
+  _perfCleanups.push(AppState.on('compareResults', (result) => {
     if (!result || !result.results) return;
     renderConfigCompareResults(resultsArea, result.results);
-  });
+  }));
 
   return section;
 }
@@ -1317,15 +1344,14 @@ function renderConfigCompareResults(container, results) {
     card.appendChild(header);
 
     const modelRow = document.createElement('div');
-    modelRow.style.marginBottom = 'var(--sp-3)';
+    modelRow.className = 'config-result-card__model';
     modelRow.appendChild(renderBadge(r.model, 'info'));
     card.appendChild(modelRow);
 
     card.appendChild(buildCompareRow('Confidence', (r.confidence * 100).toFixed(1) + '%'));
 
     const gaugeTrack = document.createElement('div');
-    gaugeTrack.className = 'gauge__track';
-    gaugeTrack.style.marginBottom = 'var(--sp-3)';
+    gaugeTrack.className = 'gauge__track config-result-card__gauge';
     const gaugeFill = document.createElement('div');
     gaugeFill.className = 'gauge__fill';
     gaugeFill.style.width = (r.confidence * 100) + '%';
@@ -1369,4 +1395,507 @@ function buildCompareRow(label, value) {
   row.appendChild(labelEl);
   row.appendChild(valueEl);
   return row;
+}
+
+
+// ===========================================================================
+// SETUP PAGE
+// ===========================================================================
+
+export function renderSetupPage() {
+  const container = document.getElementById('setup-content');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const title = document.createElement('h1');
+  title.className = 'page-title';
+  title.textContent = 'System Setup';
+  container.appendChild(title);
+
+  const subtitle = document.createElement('p');
+  subtitle.className = 'page-subtitle';
+  subtitle.textContent = 'Configure services, LLM provider, and manage documents';
+  container.appendChild(subtitle);
+
+  const grid = document.createElement('div');
+  grid.className = 'setup-grid';
+
+  grid.appendChild(buildServicesPanel());
+  grid.appendChild(buildLLMPanel());
+  grid.appendChild(buildVectorStorePanel());
+  grid.appendChild(buildConfigProfilePanel());
+  grid.appendChild(buildDocumentPanel());
+  grid.appendChild(buildComponentStatusPanel());
+
+  container.appendChild(grid);
+}
+
+// -- Services Panel ---------------------------------------------------------
+
+function buildServicesPanel() {
+  const panel = createSetupPanel('Services', 'Local service status');
+
+  const list = document.createElement('div');
+  list.className = 'setup-services';
+  list.innerHTML = '<div class="loading">Detecting services...</div>';
+
+  fetchServices().then(data => {
+    list.innerHTML = '';
+    if (!data) {
+      list.innerHTML = '<div class="setup-empty">Unable to detect services</div>';
+      return;
+    }
+
+    const services = [
+      { key: 'ollama', label: 'Ollama', running: data.ollama?.running, models: data.ollama?.models },
+      { key: 'llama_server', label: 'llama-server', running: data.llama_server?.running },
+      { key: 'weaviate', label: 'Weaviate', running: data.weaviate?.running, warning: 'v3\u2192v4 migration pending' },
+    ];
+
+    for (const svc of services) {
+      const row = document.createElement('div');
+      row.className = 'setup-service-row';
+
+      const info = document.createElement('div');
+      info.className = 'setup-service-info';
+
+      const name = document.createElement('span');
+      name.className = 'setup-service-name';
+      name.textContent = svc.label;
+      info.appendChild(name);
+
+      const badge = document.createElement('span');
+      badge.className = 'badge badge--' + (svc.running ? 'accent' : 'muted');
+      badge.textContent = svc.running ? 'Running' : 'Stopped';
+      info.appendChild(badge);
+
+      if (svc.warning) {
+        const warn = document.createElement('span');
+        warn.className = 'setup-warning';
+        warn.textContent = svc.warning;
+        info.appendChild(warn);
+      }
+
+      row.appendChild(info);
+
+      if (svc.models && svc.models.length > 0) {
+        const modelList = document.createElement('div');
+        modelList.className = 'setup-models';
+        modelList.textContent = 'Models: ' + svc.models.join(', ');
+        row.appendChild(modelList);
+      }
+
+      if (!svc.running && svc.key !== 'llama_server') {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn--accent setup-btn';
+        btn.textContent = 'Start';
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          btn.textContent = 'Starting...';
+          const result = await startService(svc.key);
+          if (result && result.status === 'started') {
+            badge.className = 'badge badge--accent';
+            badge.textContent = 'Running';
+            btn.textContent = 'Started';
+          } else {
+            btn.textContent = 'Failed';
+            btn.disabled = false;
+          }
+        });
+        row.appendChild(btn);
+      }
+
+      list.appendChild(row);
+    }
+  });
+
+  panel.appendChild(list);
+  return panel;
+}
+
+// -- LLM Panel --------------------------------------------------------------
+
+function buildLLMPanel() {
+  const panel = createSetupPanel('LLM Configuration', 'Select provider, model, and API key');
+
+  const PROVIDERS = [
+    { value: 'local', label: 'llama-server' },
+    { value: 'ollama', label: 'Ollama' },
+    { value: 'openai', label: 'OpenAI' },
+    { value: 'anthropic', label: 'Anthropic' },
+    { value: 'mistral', label: 'Mistral' },
+    { value: 'huggingface', label: 'HuggingFace' },
+    { value: 'mock', label: 'Mock' },
+  ];
+
+  const MODEL_DEFAULTS = {
+    local: 'qwen2.5-1.5b-instruct',
+    ollama: 'mistral:latest',
+    openai: 'gpt-4o-mini',
+    anthropic: 'claude-3-haiku-20240307',
+    mistral: 'mistral-small-latest',
+    huggingface: 'mistralai/Mistral-7B-Instruct-v0.2',
+    mock: 'mock-model',
+  };
+
+  const CLOUD = new Set(['openai', 'anthropic', 'mistral', 'huggingface']);
+
+  const form = document.createElement('div');
+  form.className = 'setup-form';
+
+  // Provider
+  const providerSelect = document.createElement('select');
+  providerSelect.className = 'config-select';
+  for (const p of PROVIDERS) {
+    const opt = document.createElement('option');
+    opt.value = p.value;
+    opt.textContent = p.label;
+    providerSelect.appendChild(opt);
+  }
+  form.appendChild(createFormRow('Provider', providerSelect));
+
+  // Model
+  const modelInput = document.createElement('input');
+  modelInput.type = 'text';
+  modelInput.className = 'query-input setup-text-input';
+  modelInput.placeholder = 'Model name';
+  form.appendChild(createFormRow('Model', modelInput));
+
+  // API Key
+  const keyInput = document.createElement('input');
+  keyInput.type = 'password';
+  keyInput.className = 'query-input setup-text-input';
+  keyInput.placeholder = 'API key (cloud providers only)';
+  const keyRow = createFormRow('API Key', keyInput);
+  keyRow.style.display = 'none';
+  form.appendChild(keyRow);
+
+  // Base URL
+  const urlInput = document.createElement('input');
+  urlInput.type = 'text';
+  urlInput.className = 'query-input setup-text-input';
+  urlInput.placeholder = 'http://localhost:11434';
+  form.appendChild(createFormRow('Base URL', urlInput));
+
+  // Status + Apply
+  const actionRow = document.createElement('div');
+  actionRow.className = 'setup-action-row';
+
+  const statusEl = document.createElement('span');
+  statusEl.className = 'setup-status';
+
+  const applyBtn = document.createElement('button');
+  applyBtn.className = 'btn btn--accent';
+  applyBtn.textContent = 'Apply';
+
+  actionRow.appendChild(statusEl);
+  actionRow.appendChild(applyBtn);
+  form.appendChild(actionRow);
+
+  // Sync visibility
+  function syncUI() {
+    const provider = providerSelect.value;
+    modelInput.value = MODEL_DEFAULTS[provider] || '';
+    keyRow.style.display = CLOUD.has(provider) ? '' : 'none';
+    // Restore saved key
+    const saved = localStorage.getItem('llm_key_' + provider);
+    if (saved) keyInput.value = saved;
+  }
+  providerSelect.addEventListener('change', syncUI);
+
+  applyBtn.addEventListener('click', async () => {
+    const provider = providerSelect.value;
+    const body = { provider, model: modelInput.value };
+    if (keyInput.value) {
+      body.api_key = keyInput.value;
+      localStorage.setItem('llm_key_' + provider, keyInput.value);
+    }
+    if (urlInput.value) body.base_url = urlInput.value;
+
+    statusEl.textContent = 'Applying...';
+    statusEl.className = 'setup-status';
+
+    try {
+      const res = await fetch('/api/v1/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        statusEl.textContent = 'Applied';
+        statusEl.className = 'setup-status setup-status--ok';
+      } else {
+        statusEl.textContent = 'Failed';
+        statusEl.className = 'setup-status setup-status--err';
+      }
+    } catch {
+      statusEl.textContent = 'Error';
+      statusEl.className = 'setup-status setup-status--err';
+    }
+  });
+
+  // Initialize from backend
+  fetch('/api/v1/status').then(r => r.json()).then(data => {
+    if (data.llm) {
+      providerSelect.value = data.llm.provider || 'mock';
+      modelInput.value = data.llm.model || '';
+      keyRow.style.display = CLOUD.has(providerSelect.value) ? '' : 'none';
+    }
+  }).catch(() => {});
+
+  panel.appendChild(form);
+  return panel;
+}
+
+// -- Vector Store Panel -----------------------------------------------------
+
+function buildVectorStorePanel() {
+  const panel = createSetupPanel('Vector Store', 'Select backend for document storage');
+
+  const options = document.createElement('div');
+  options.className = 'setup-radio-group';
+
+  const faissOpt = createRadioOption('vector-store', 'faiss', 'FAISS (In-Memory)', true);
+  const weavOpt = createRadioOption('vector-store', 'weaviate', 'Weaviate (Docker)', false);
+
+  options.appendChild(faissOpt);
+  options.appendChild(weavOpt);
+
+  const note = document.createElement('div');
+  note.className = 'setup-note';
+  note.textContent = 'Weaviate backend has v3\u2192v4 migration pending. FAISS is recommended.';
+
+  panel.appendChild(options);
+  panel.appendChild(note);
+  return panel;
+}
+
+// -- Config Profile Panel ---------------------------------------------------
+
+function buildConfigProfilePanel() {
+  const panel = createSetupPanel('Configuration Profile', 'Switch pipeline configuration');
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = '<div class="loading">Loading configs...</div>';
+
+  fetchConfigs().then(data => {
+    wrapper.innerHTML = '';
+    if (!data || !data.configs) {
+      wrapper.innerHTML = '<div class="setup-empty">No configs found</div>';
+      return;
+    }
+
+    const select = document.createElement('select');
+    select.className = 'config-select';
+
+    for (const cfg of data.configs) {
+      const opt = document.createElement('option');
+      opt.value = cfg.name;
+      opt.textContent = cfg.name;
+      if (data.active && cfg.name === data.active) opt.selected = true;
+      select.appendChild(opt);
+    }
+    wrapper.appendChild(select);
+
+    const featureArea = document.createElement('div');
+    featureArea.className = 'setup-features';
+    wrapper.appendChild(featureArea);
+
+    function showFeatures() {
+      featureArea.innerHTML = '';
+      const cfg = data.configs.find(c => c.name === select.value);
+      if (cfg && cfg.features) {
+        for (const f of cfg.features) {
+          const badge = document.createElement('span');
+          badge.className = 'badge badge--muted';
+          badge.textContent = f;
+          featureArea.appendChild(badge);
+        }
+      }
+    }
+    select.addEventListener('change', showFeatures);
+    showFeatures();
+
+    const warn = document.createElement('div');
+    warn.className = 'setup-note';
+    warn.textContent = 'Activating reinitializes the pipeline (~10-30s)';
+    wrapper.appendChild(warn);
+
+    const activateBtn = document.createElement('button');
+    activateBtn.className = 'btn btn--accent';
+    activateBtn.textContent = 'Activate';
+    activateBtn.addEventListener('click', async () => {
+      activateBtn.disabled = true;
+      activateBtn.textContent = 'Activating...';
+      const result = await activateConfig(select.value);
+      if (result && result.status === 'ok') {
+        activateBtn.textContent = 'Active';
+      } else {
+        activateBtn.textContent = 'Failed';
+        activateBtn.disabled = false;
+      }
+    });
+    wrapper.appendChild(activateBtn);
+  });
+
+  panel.appendChild(wrapper);
+  return panel;
+}
+
+// -- Document Management Panel ----------------------------------------------
+
+function buildDocumentPanel() {
+  const panel = createSetupPanel('Document Management', 'Upload PDFs to the corpus');
+
+  const dropzone = document.createElement('div');
+  dropzone.className = 'setup-dropzone';
+  dropzone.textContent = 'Drop PDF here or click to select';
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.pdf';
+  fileInput.style.display = 'none';
+
+  const resultArea = document.createElement('div');
+  resultArea.className = 'setup-upload-result';
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleUpload(file, resultArea);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleUpload(fileInput.files[0], resultArea);
+  });
+
+  panel.appendChild(dropzone);
+  panel.appendChild(fileInput);
+  panel.appendChild(resultArea);
+  return panel;
+}
+
+async function handleUpload(file, resultArea) {
+  resultArea.textContent = 'Uploading ' + file.name + '...';
+  const result = await uploadDocument(file);
+  if (result) {
+    resultArea.textContent = file.name + ' \u2014 ' + (result.chunks || 0) + ' chunks indexed';
+    resultArea.className = 'setup-upload-result setup-upload-result--ok';
+  } else {
+    resultArea.textContent = 'Upload failed';
+    resultArea.className = 'setup-upload-result setup-upload-result--err';
+  }
+}
+
+// -- Component Status Panel -------------------------------------------------
+
+function buildComponentStatusPanel() {
+  const panel = createSetupPanel('Component Status', 'Live component health');
+
+  const table = document.createElement('div');
+  table.className = 'setup-component-table';
+  table.innerHTML = '<div class="loading">Loading components...</div>';
+
+  fetchComponents().then(data => {
+    table.innerHTML = '';
+    if (!data || !data.active) {
+      table.innerHTML = '<div class="setup-empty">System not initialized</div>';
+      return;
+    }
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'setup-comp-row setup-comp-header';
+    for (const h of ['Slot', 'Type', 'Health']) {
+      const cell = document.createElement('span');
+      cell.textContent = h;
+      header.appendChild(cell);
+    }
+    table.appendChild(header);
+
+    for (const [slot, info] of Object.entries(data.active)) {
+      const row = document.createElement('div');
+      row.className = 'setup-comp-row';
+
+      const slotEl = document.createElement('span');
+      slotEl.className = 'setup-comp-slot';
+      slotEl.textContent = slot;
+
+      const typeEl = document.createElement('span');
+      typeEl.className = 'setup-comp-type';
+      typeEl.textContent = info.type || 'unknown';
+
+      const healthEl = document.createElement('span');
+      healthEl.className = 'badge badge--' + (info.healthy ? 'accent' : 'error');
+      healthEl.textContent = info.healthy ? 'Healthy' : 'Unhealthy';
+
+      row.appendChild(slotEl);
+      row.appendChild(typeEl);
+      row.appendChild(healthEl);
+      table.appendChild(row);
+    }
+  });
+
+  panel.appendChild(table);
+  return panel;
+}
+
+// -- Setup Helpers ----------------------------------------------------------
+
+function createSetupPanel(title, subtitle) {
+  const panel = document.createElement('div');
+  panel.className = 'setup-panel card';
+
+  const header = document.createElement('div');
+  header.className = 'setup-panel__header';
+
+  const h3 = document.createElement('h3');
+  h3.className = 'setup-panel__title';
+  h3.textContent = title;
+  header.appendChild(h3);
+
+  if (subtitle) {
+    const sub = document.createElement('p');
+    sub.className = 'setup-panel__subtitle';
+    sub.textContent = subtitle;
+    header.appendChild(sub);
+  }
+
+  panel.appendChild(header);
+  return panel;
+}
+
+function createFormRow(label, input) {
+  const row = document.createElement('div');
+  row.className = 'setup-form-row';
+
+  const lbl = document.createElement('label');
+  lbl.className = 'setup-form-label';
+  lbl.textContent = label;
+
+  row.appendChild(lbl);
+  row.appendChild(input);
+  return row;
+}
+
+function createRadioOption(groupName, value, label, checked) {
+  const wrapper = document.createElement('label');
+  wrapper.className = 'setup-radio';
+
+  const input = document.createElement('input');
+  input.type = 'radio';
+  input.name = groupName;
+  input.value = value;
+  if (checked) input.checked = true;
+
+  const text = document.createElement('span');
+  text.textContent = label;
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(text);
+  return wrapper;
 }

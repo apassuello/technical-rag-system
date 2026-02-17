@@ -25,12 +25,23 @@
           <li><button class="nav-tab" data-page="corpus">Corpus</button></li>
           <li><button class="nav-tab" data-page="architecture">Architecture</button></li>
           <li><button class="nav-tab" data-page="performance">Performance</button></li>
+          <li><button class="nav-tab" data-page="setup">Setup</button></li>
         </ul>
       </nav>
-      <div class="mode-toggle">
-        <span class="mode-toggle__indicator"></span>
-        <span class="mode-toggle__label">DEMO</span>
-        <button class="mode-toggle__btn" id="mode-btn">Switch to Live</button>
+      <div class="llm-settings" id="llm-settings">
+        <select id="llm-provider" class="llm-select">
+          <option value="local">llama-server</option>
+          <option value="ollama">Ollama</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="mistral">Mistral</option>
+          <option value="huggingface">HuggingFace</option>
+          <option value="mock">Mock</option>
+        </select>
+        <input type="text" id="llm-model" class="llm-input" placeholder="Model" />
+        <input type="password" id="llm-key" class="llm-input llm-key-input" placeholder="API key" />
+        <button id="llm-apply" class="llm-apply-btn">Apply</button>
+        <span id="llm-status" class="llm-status"></span>
       </div>
     </div>
   </header>
@@ -55,6 +66,10 @@
 
     <section id="page-performance" class="page">
       <div class="container" id="performance-content"></div>
+    </section>
+
+    <section id="page-setup" class="page">
+      <div class="container" id="setup-content"></div>
     </section>
   </main>
 
