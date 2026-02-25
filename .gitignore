@@ -85,6 +85,7 @@ data/.demo_cache/
 tmp/
 temp/
 *.tmp
+*.bak
 
 # HuggingFace
 .hf/
