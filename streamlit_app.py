@@ -134,7 +134,7 @@ def main():
     st.markdown("""
     **Technical Documentation RAG with Advanced Features**
     
-    This system demonstrates production-ready RAG capabilities with:
+    This system demonstrates advanced RAG capabilities including:
     - 📈 **48.7% MRR improvement** with graph-enhanced fusion
     - 🧠 **Neural reranking** for improved relevance
     - 🔗 **Graph enhancement** for document relationships  

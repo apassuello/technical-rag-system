@@ -7,7 +7,7 @@ including sub-component integration, performance optimization, error handling, a
 advanced fusion/reranking scenarios. Extends existing coverage from 20.5% to 85%.
 
 Target Coverage: 85% (~640 additional test lines for 993 component lines)
-Priority: HIGH (Enhance existing 20.5% coverage to production-ready 85%)
+Priority: HIGH (Enhance existing 20.5% coverage to 85%)
 """
 
 import pytest
