@@ -363,19 +363,18 @@ query_processor:
             simple:
               provider: "local"
               model: "qwen2.5-1.5b-instruct"
-              base_url: "http://localhost:11434/v1"
-              max_cost: 0.001
-              expected_latency: 2.0
+              max_cost_per_query: 0.001
+              avg_latency_ms: 2000
             medium:
               provider: "mistral"
               model: "mistral-small"
-              max_cost: 0.01
-              expected_latency: 3.0
+              max_cost_per_query: 0.01
+              avg_latency_ms: 3000
             complex:
               provider: "openai"
               model: "gpt-4-turbo"
-              max_cost: 0.10
-              expected_latency: 5.0
+              max_cost_per_query: 0.10
+              avg_latency_ms: 5000
     selector:
       implementation: "mmr"
       config:
